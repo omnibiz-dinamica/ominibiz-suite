@@ -37,11 +37,15 @@ export const Route = createRootRoute({
       { title: "OmniBiz — Operação inteligente para empresas" },
       { name: "description", content: "Plataforma SaaS modular para gestão operacional: tarefas, ponto, notificações e mais." },
       { name: "author", content: "OmniBiz" },
-      { property: "og:title", content: "OmniBiz — Operação inteligente" },
-      { property: "og:description", content: "Centralize tarefas, ponto e equipe com automações inteligentes." },
+      { property: "og:title", content: "OmniBiz — Operação inteligente para empresas" },
+      { property: "og:description", content: "Plataforma SaaS modular para gestão operacional: tarefas, ponto, notificações e mais." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "OmniBiz — Operação inteligente para empresas" },
+      { name: "twitter:description", content: "Plataforma SaaS modular para gestão operacional: tarefas, ponto, notificações e mais." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/09fbc8cf-0012-4b66-bdad-be5e3a43b4d2" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/09fbc8cf-0012-4b66-bdad-be5e3a43b4d2" },
     ],
     links: [
       {
