@@ -12,10 +12,12 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/app'
+import { Route as AceitarConviteRouteImport } from './routes/aceitar-convite'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppTarefasRouteImport } from './routes/app.tarefas'
 import { Route as AppEquipeRouteImport } from './routes/app.equipe'
+import { Route as AppEmpresaRouteImport } from './routes/app.empresa'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -30,6 +32,11 @@ const LoginRoute = LoginRouteImport.update({
 const AppRoute = AppRouteImport.update({
   id: '/app',
   path: '/app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AceitarConviteRoute = AceitarConviteRouteImport.update({
+  id: '/aceitar-convite',
+  path: '/aceitar-convite',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -52,20 +59,29 @@ const AppEquipeRoute = AppEquipeRouteImport.update({
   path: '/equipe',
   getParentRoute: () => AppRoute,
 } as any)
+const AppEmpresaRoute = AppEmpresaRouteImport.update({
+  id: '/empresa',
+  path: '/empresa',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/aceitar-convite': typeof AceitarConviteRoute
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/app/empresa': typeof AppEmpresaRoute
   '/app/equipe': typeof AppEquipeRoute
   '/app/tarefas': typeof AppTarefasRoute
   '/app/': typeof AppIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/aceitar-convite': typeof AceitarConviteRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/app/empresa': typeof AppEmpresaRoute
   '/app/equipe': typeof AppEquipeRoute
   '/app/tarefas': typeof AppTarefasRoute
   '/app': typeof AppIndexRoute
@@ -73,9 +89,11 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/aceitar-convite': typeof AceitarConviteRoute
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/app/empresa': typeof AppEmpresaRoute
   '/app/equipe': typeof AppEquipeRoute
   '/app/tarefas': typeof AppTarefasRoute
   '/app/': typeof AppIndexRoute
@@ -84,20 +102,32 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/aceitar-convite'
     | '/app'
     | '/login'
     | '/signup'
+    | '/app/empresa'
     | '/app/equipe'
     | '/app/tarefas'
     | '/app/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/signup' | '/app/equipe' | '/app/tarefas' | '/app'
+  to:
+    | '/'
+    | '/aceitar-convite'
+    | '/login'
+    | '/signup'
+    | '/app/empresa'
+    | '/app/equipe'
+    | '/app/tarefas'
+    | '/app'
   id:
     | '__root__'
     | '/'
+    | '/aceitar-convite'
     | '/app'
     | '/login'
     | '/signup'
+    | '/app/empresa'
     | '/app/equipe'
     | '/app/tarefas'
     | '/app/'
@@ -105,6 +135,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AceitarConviteRoute: typeof AceitarConviteRoute
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
@@ -131,6 +162,13 @@ declare module '@tanstack/react-router' {
       path: '/app'
       fullPath: '/app'
       preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/aceitar-convite': {
+      id: '/aceitar-convite'
+      path: '/aceitar-convite'
+      fullPath: '/aceitar-convite'
+      preLoaderRoute: typeof AceitarConviteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -161,16 +199,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppEquipeRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/empresa': {
+      id: '/app/empresa'
+      path: '/empresa'
+      fullPath: '/app/empresa'
+      preLoaderRoute: typeof AppEmpresaRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppEmpresaRoute: typeof AppEmpresaRoute
   AppEquipeRoute: typeof AppEquipeRoute
   AppTarefasRoute: typeof AppTarefasRoute
   AppIndexRoute: typeof AppIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppEmpresaRoute: AppEmpresaRoute,
   AppEquipeRoute: AppEquipeRoute,
   AppTarefasRoute: AppTarefasRoute,
   AppIndexRoute: AppIndexRoute,
@@ -180,6 +227,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AceitarConviteRoute: AceitarConviteRoute,
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
@@ -187,3 +235,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
