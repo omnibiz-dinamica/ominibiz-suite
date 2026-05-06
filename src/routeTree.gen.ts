@@ -16,6 +16,7 @@ import { Route as AceitarConviteRouteImport } from './routes/aceitar-convite'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppTarefasRouteImport } from './routes/app.tarefas'
+import { Route as AppPontoRouteImport } from './routes/app.ponto'
 import { Route as AppEquipeRouteImport } from './routes/app.equipe'
 import { Route as AppEmpresaRouteImport } from './routes/app.empresa'
 
@@ -54,6 +55,11 @@ const AppTarefasRoute = AppTarefasRouteImport.update({
   path: '/tarefas',
   getParentRoute: () => AppRoute,
 } as any)
+const AppPontoRoute = AppPontoRouteImport.update({
+  id: '/ponto',
+  path: '/ponto',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppEquipeRoute = AppEquipeRouteImport.update({
   id: '/equipe',
   path: '/equipe',
@@ -73,6 +79,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/app/empresa': typeof AppEmpresaRoute
   '/app/equipe': typeof AppEquipeRoute
+  '/app/ponto': typeof AppPontoRoute
   '/app/tarefas': typeof AppTarefasRoute
   '/app/': typeof AppIndexRoute
 }
@@ -83,6 +90,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/app/empresa': typeof AppEmpresaRoute
   '/app/equipe': typeof AppEquipeRoute
+  '/app/ponto': typeof AppPontoRoute
   '/app/tarefas': typeof AppTarefasRoute
   '/app': typeof AppIndexRoute
 }
@@ -95,6 +103,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/app/empresa': typeof AppEmpresaRoute
   '/app/equipe': typeof AppEquipeRoute
+  '/app/ponto': typeof AppPontoRoute
   '/app/tarefas': typeof AppTarefasRoute
   '/app/': typeof AppIndexRoute
 }
@@ -108,6 +117,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/app/empresa'
     | '/app/equipe'
+    | '/app/ponto'
     | '/app/tarefas'
     | '/app/'
   fileRoutesByTo: FileRoutesByTo
@@ -118,6 +128,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/app/empresa'
     | '/app/equipe'
+    | '/app/ponto'
     | '/app/tarefas'
     | '/app'
   id:
@@ -129,6 +140,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/app/empresa'
     | '/app/equipe'
+    | '/app/ponto'
     | '/app/tarefas'
     | '/app/'
   fileRoutesById: FileRoutesById
@@ -192,6 +204,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTarefasRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/ponto': {
+      id: '/app/ponto'
+      path: '/ponto'
+      fullPath: '/app/ponto'
+      preLoaderRoute: typeof AppPontoRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/equipe': {
       id: '/app/equipe'
       path: '/equipe'
@@ -212,6 +231,7 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppEmpresaRoute: typeof AppEmpresaRoute
   AppEquipeRoute: typeof AppEquipeRoute
+  AppPontoRoute: typeof AppPontoRoute
   AppTarefasRoute: typeof AppTarefasRoute
   AppIndexRoute: typeof AppIndexRoute
 }
@@ -219,6 +239,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppEmpresaRoute: AppEmpresaRoute,
   AppEquipeRoute: AppEquipeRoute,
+  AppPontoRoute: AppPontoRoute,
   AppTarefasRoute: AppTarefasRoute,
   AppIndexRoute: AppIndexRoute,
 }
