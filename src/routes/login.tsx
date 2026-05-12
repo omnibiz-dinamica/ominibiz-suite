@@ -51,8 +51,8 @@ function LoginPage() {
             {loading ? "Entrando..." : "Entrar"}
           </Button>
         </form>
-        <p className="mt-6 text-center text-sm text-muted-foreground">
-          Sem conta? <Link to="/signup" className="text-primary hover:underline">Criar empresa</Link>
+        <p className="mt-6 text-center text-xs text-muted-foreground">
+          OmniBiz é uma plataforma por convite. Solicite acesso ao seu administrador.
         </p>
       </div>
     </div>

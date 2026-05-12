@@ -9,7 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AceitarConviteRouteImport } from './routes/aceitar-convite'
@@ -24,11 +23,6 @@ import { Route as AppEmpresaRouteImport } from './routes/app.empresa'
 import { Route as AppAssistenteRouteImport } from './routes/app.assistente'
 import { Route as AppAdminRouteImport } from './routes/app.admin'
 
-const SignupRoute = SignupRouteImport.update({
-  id: '/signup',
-  path: '/signup',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -100,7 +94,6 @@ export interface FileRoutesByFullPath {
   '/aceitar-convite': typeof AceitarConviteRoute
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
-  '/signup': typeof SignupRoute
   '/app/admin': typeof AppAdminRoute
   '/app/assistente': typeof AppAssistenteRoute
   '/app/empresa': typeof AppEmpresaRoute
@@ -115,7 +108,6 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/aceitar-convite': typeof AceitarConviteRoute
   '/login': typeof LoginRoute
-  '/signup': typeof SignupRoute
   '/app/admin': typeof AppAdminRoute
   '/app/assistente': typeof AppAssistenteRoute
   '/app/empresa': typeof AppEmpresaRoute
@@ -132,7 +124,6 @@ export interface FileRoutesById {
   '/aceitar-convite': typeof AceitarConviteRoute
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
-  '/signup': typeof SignupRoute
   '/app/admin': typeof AppAdminRoute
   '/app/assistente': typeof AppAssistenteRoute
   '/app/empresa': typeof AppEmpresaRoute
@@ -150,7 +141,6 @@ export interface FileRouteTypes {
     | '/aceitar-convite'
     | '/app'
     | '/login'
-    | '/signup'
     | '/app/admin'
     | '/app/assistente'
     | '/app/empresa'
@@ -165,7 +155,6 @@ export interface FileRouteTypes {
     | '/'
     | '/aceitar-convite'
     | '/login'
-    | '/signup'
     | '/app/admin'
     | '/app/assistente'
     | '/app/empresa'
@@ -181,7 +170,6 @@ export interface FileRouteTypes {
     | '/aceitar-convite'
     | '/app'
     | '/login'
-    | '/signup'
     | '/app/admin'
     | '/app/assistente'
     | '/app/empresa'
@@ -198,18 +186,10 @@ export interface RootRouteChildren {
   AceitarConviteRoute: typeof AceitarConviteRoute
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
-  SignupRoute: typeof SignupRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/signup': {
-      id: '/signup'
-      path: '/signup'
-      fullPath: '/signup'
-      preLoaderRoute: typeof SignupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -335,7 +315,6 @@ const rootRouteChildren: RootRouteChildren = {
   AceitarConviteRoute: AceitarConviteRoute,
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
-  SignupRoute: SignupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
