@@ -2,6 +2,7 @@ import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-route
 import {
   LayoutDashboard,
   ClipboardList,
+  Shield,
   Clock,
   Bell,
   Users,
@@ -31,6 +32,7 @@ const items: Item[] = [
   { to: "/app/empresa", label: "Empresa", icon: Building2, managerOnly: true },
   { to: "/app/notas", label: "Notas", icon: FileText, soon: true },
   { to: "/app/assistente", label: "Assistente IA", icon: Sparkles, soon: true },
+  { to: "/app/admin", label: "Super Admin", icon: Shield, superOnly: true },
 ];
 
 export function AppLayout({ children }: { children?: ReactNode }) {
