@@ -28,17 +28,11 @@ function AcceptInvite() {
     (async () => {
       if (!token) return;
       // Try to fetch invite (only invitee with matching email or super admin can read)
-      const { data } = await supabase
-        .from("invites")
-        .select("email, company_id, status, expires_at, companies(name)")
-        .eq("token", token)
-        .maybeSingle();
+      const { data } = await supabase.rpc("get_invite_preview", { _token: token });
       if (!active) return;
-      if (data) {
-        setInvite({
-          email: data.email,
-          company_name: (data.companies as { name?: string } | null)?.name ?? "sua empresa",
-        });
+      const row = Array.isArray(data) ? data[0] : data;
+      if (row && row.status === "pending") {
+        setInvite({ email: row.email, company_name: row.company_name });
       }
     })();
     return () => { active = false; };
