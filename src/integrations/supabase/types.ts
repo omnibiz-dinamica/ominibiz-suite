@@ -266,6 +266,15 @@ export type Database = {
         Args: { _country?: string; _name: string; _slug: string }
         Returns: string
       }
+      get_invite_preview: {
+        Args: { _token: string }
+        Returns: {
+          company_name: string
+          email: string
+          expires_at: string
+          status: Database["public"]["Enums"]["invite_status"]
+        }[]
+      }
       has_role: {
         Args: {
           _company_id?: string
