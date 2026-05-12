@@ -19,30 +19,39 @@ export type Database = {
           country: string
           created_at: string
           created_by: string | null
+          currency: string
           id: string
+          language: string
           name: string
           slug: string
           status: Database["public"]["Enums"]["company_status"]
+          timezone: string
           updated_at: string
         }
         Insert: {
           country?: string
           created_at?: string
           created_by?: string | null
+          currency?: string
           id?: string
+          language?: string
           name: string
           slug: string
           status?: Database["public"]["Enums"]["company_status"]
+          timezone?: string
           updated_at?: string
         }
         Update: {
           country?: string
           created_at?: string
           created_by?: string | null
+          currency?: string
           id?: string
+          language?: string
           name?: string
           slug?: string
           status?: Database["public"]["Enums"]["company_status"]
+          timezone?: string
           updated_at?: string
         }
         Relationships: []
@@ -238,6 +247,21 @@ export type Database = {
     }
     Functions: {
       accept_invite: { Args: { _token: string }; Returns: string }
+      admin_create_company_with_invite: {
+        Args: {
+          _admin_email: string
+          _country: string
+          _currency: string
+          _language: string
+          _name: string
+          _slug: string
+          _timezone: string
+        }
+        Returns: {
+          company_id: string
+          invite_token: string
+        }[]
+      }
       create_company_with_owner: {
         Args: { _country?: string; _name: string; _slug: string }
         Returns: string
