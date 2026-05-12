@@ -30,8 +30,7 @@ function Landing() {
           <Button variant="ghost" size="icon" onClick={toggle} aria-label="Tema">
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
-          <Button variant="ghost" asChild><Link to="/login">Entrar</Link></Button>
-          <Button asChild><Link to="/signup">Começar grátis</Link></Button>
+          <Button asChild><Link to="/login">Entrar</Link></Button>
         </div>
       </header>
 
@@ -50,12 +49,12 @@ function Landing() {
           </p>
           <div className="mt-10 flex flex-wrap justify-center gap-3">
             <Button size="lg" asChild>
-              <Link to="/signup">Criar minha empresa <ArrowRight className="ml-2 h-4 w-4" /></Link>
-            </Button>
-            <Button size="lg" variant="outline" asChild>
-              <Link to="/login">Já tenho conta</Link>
+              <Link to="/login">Acessar plataforma <ArrowRight className="ml-2 h-4 w-4" /></Link>
             </Button>
           </div>
+          <p className="mt-4 text-xs text-muted-foreground">
+            Plataforma por convite — fale com nossa equipe para provisionar sua empresa.
+          </p>
         </div>
 
         <div className="mt-24 grid gap-4 md:grid-cols-3">
