@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Pause, Play, Square, Coffee, Clock as ClockIcon, AlertCircle, Flame, Plus } from "lucide-react";
+import { Pause, Play, Square, Coffee, Clock as ClockIcon, AlertCircle, Flame, Plus, Building2 } from "lucide-react";
 import {
   type TimeEntryRow,
   type TaskRow,
@@ -95,6 +95,22 @@ function PontoPage() {
       return (data ?? []) as unknown as TaskRow[];
     },
     enabled: !!user && !openEntry,
+  });
+
+  // Mapa de clientes da empresa para exibir nome
+  const { data: clientsMap } = useQuery({
+    queryKey: ["clients-map", currentCompanyId],
+    queryFn: async () => {
+      if (!currentCompanyId) return {} as Record<string, string>;
+      const { data, error } = await (supabase.from("clients" as never) as never as ReturnType<typeof supabase.from>)
+        .select("id,name")
+        .eq("company_id", currentCompanyId);
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      for (const r of (data ?? []) as unknown as { id: string; name: string }[]) map[r.id] = r.name;
+      return map;
+    },
+    enabled: !!currentCompanyId,
   });
 
   // Histórico recente
@@ -209,6 +225,7 @@ function PontoPage() {
         <ActiveTaskCard
           entry={openEntry}
           task={openTask}
+          clientName={openTask.client_id ? clientsMap?.[openTask.client_id] : undefined}
           liveMin={liveMin}
           state={state}
           onPause={() => pauseMut.mutate()}
@@ -221,6 +238,7 @@ function PontoPage() {
       ) : (
         <UpcomingTasks
           tasks={upcoming ?? []}
+          clientsMap={clientsMap ?? {}}
           isManager={isManager}
           onStart={(id) => startMut.mutate(id)}
           starting={startMut.isPending}
@@ -265,6 +283,7 @@ function PontoPage() {
 function ActiveTaskCard({
   entry,
   task,
+  clientName,
   liveMin,
   state,
   onPause,
@@ -276,6 +295,7 @@ function ActiveTaskCard({
 }: {
   entry: TimeEntryRow;
   task: TaskRow;
+  clientName?: string;
   liveMin: number;
   state: "aberto" | "pausado" | "encerrado";
   onPause: () => void;
@@ -293,6 +313,11 @@ function ActiveTaskCard({
       <div className="space-y-5 p-5 sm:p-6">
         <div>
           <h2 className="font-display text-2xl font-semibold leading-tight sm:text-3xl">{task.title}</h2>
+          {clientName && (
+            <div className="mt-1 inline-flex items-center gap-1 text-sm text-muted-foreground">
+              <Building2 className="h-3.5 w-3.5" /> {clientName}
+            </div>
+          )}
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_TONE[task.status]}`}>
               {STATUS_LABELS[task.status]}
@@ -350,12 +375,14 @@ function ActiveTaskCard({
 
 function UpcomingTasks({
   tasks,
+  clientsMap,
   isManager,
   onStart,
   starting,
   startingId,
 }: {
   tasks: TaskRow[];
+  clientsMap: Record<string, string>;
   isManager: boolean;
   onStart: (id: string) => void;
   starting: boolean;
@@ -392,6 +419,7 @@ function UpcomingTasks({
   const nextIsStartable = nextStartable.status === "autorizado";
   const nextStarting = starting && startingId === nextStartable.id;
   const nextLate = isVisuallyLate(nextStartable);
+  const nextClient = nextStartable.client_id ? clientsMap[nextStartable.client_id] : undefined;
 
   return (
     <div className="space-y-4">
@@ -432,6 +460,11 @@ function UpcomingTasks({
             <h2 className="mt-2 font-display text-2xl font-semibold leading-tight sm:text-3xl">
               {nextStartable.title}
             </h2>
+            {nextClient && (
+              <div className="mt-1 inline-flex items-center gap-1 text-sm text-muted-foreground">
+                <Building2 className="h-3.5 w-3.5" /> {nextClient}
+              </div>
+            )}
             {nextStartable.description && (
               <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
                 {nextStartable.description}
@@ -462,6 +495,7 @@ function UpcomingTasks({
         {rest.map((t) => {
           const late = isVisuallyLate(t);
           const isStarting = starting && startingId === t.id;
+          const clientName = t.client_id ? clientsMap[t.client_id] : undefined;
           return (
             <li key={t.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
               <div className="min-w-0 flex-1">
@@ -479,6 +513,11 @@ function UpcomingTasks({
                   </span>
                 </div>
                 <div className="mt-1 truncate font-medium">{t.title}</div>
+                {clientName && (
+                  <div className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <Building2 className="h-3 w-3" /> {clientName}
+                  </div>
+                )}
                 <div className="mt-0.5 text-xs text-muted-foreground">
                   {t.scheduled_for
                     ? new Date(t.scheduled_for).toLocaleString([], {
