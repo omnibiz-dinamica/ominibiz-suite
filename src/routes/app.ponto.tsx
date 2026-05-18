@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Pause, Play, Square, Coffee, Clock as ClockIcon, AlertCircle } from "lucide-react";
+import { Pause, Play, Square, Coffee, Clock as ClockIcon, AlertCircle, Flame } from "lucide-react";
 import {
   type TimeEntryRow,
   type TaskRow,
@@ -357,14 +357,83 @@ function UpcomingTasks({
       </section>
     );
   }
+
+  // Próxima tarefa pronta para iniciar (autorizada). Caso não exista,
+  // destacamos a primeira da lista (pendente, aguardando autorização)
+  // para dar contexto operacional imediato.
+  const nextStartable = tasks.find((t) => t.status === "autorizado") ?? tasks[0];
+  const rest = tasks.filter((t) => t.id !== nextStartable.id);
+  const nextIsStartable = nextStartable.status === "autorizado";
+  const nextStarting = starting && startingId === nextStartable.id;
+  const nextLate = isVisuallyLate(nextStartable);
+
   return (
-    <section className="rounded-2xl border border-border bg-card">
+    <div className="space-y-4">
+      {/* HERO — próxima tarefa do funcionário, ação imediata */}
+      <section className="overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card shadow-lg">
+        <div className="flex items-center justify-between border-b border-border/60 px-5 py-3">
+          <span className="text-xs font-medium uppercase tracking-wide text-primary">
+            Próxima tarefa
+          </span>
+          {nextStartable.scheduled_for && (
+            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+              <ClockIcon className="h-3 w-3" />
+              {new Date(nextStartable.scheduled_for).toLocaleString([], {
+                day: "2-digit",
+                month: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
+          )}
+        </div>
+        <div className="space-y-5 p-5 sm:p-6">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${PRIORITY_TONE[nextStartable.priority] ?? PRIORITY_TONE.media}`}>
+                {nextStartable.priority === "urgente" && <Flame className="mr-1 h-3 w-3" />}
+                {nextStartable.priority}
+              </span>
+              <span className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${STATUS_TONE[nextStartable.status]}`}>
+                {STATUS_LABELS[nextStartable.status]}
+              </span>
+              {nextLate && (
+                <span className="inline-flex items-center gap-1 rounded bg-destructive/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-destructive">
+                  <AlertCircle className="h-3 w-3" /> atrasada
+                </span>
+              )}
+            </div>
+            <h2 className="mt-2 font-display text-2xl font-semibold leading-tight sm:text-3xl">
+              {nextStartable.title}
+            </h2>
+            {nextStartable.description && (
+              <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                {nextStartable.description}
+              </p>
+            )}
+          </div>
+
+          <Button
+            size="lg"
+            className="h-16 w-full text-base"
+            disabled={!nextIsStartable || nextStarting}
+            onClick={() => onStart(nextStartable.id)}
+            title={!nextIsStartable ? "Aguardando autorização do gestor" : undefined}
+          >
+            <Play className="mr-2 h-6 w-6" />
+            {nextIsStartable ? "Iniciar tarefa" : "Aguardando autorização"}
+          </Button>
+        </div>
+      </section>
+
+      {rest.length > 0 && (
+        <section className="rounded-2xl border border-border bg-card">
       <div className="flex items-center justify-between border-b border-border px-5 py-3">
-        <div className="text-sm font-medium">Próximas tarefas</div>
-        <div className="text-xs text-muted-foreground">{tasks.length} pendente(s)</div>
+        <div className="text-sm font-medium">Depois</div>
+        <div className="text-xs text-muted-foreground">{rest.length} na fila</div>
       </div>
       <ul className="divide-y divide-border">
-        {tasks.map((t) => {
+        {rest.map((t) => {
           const late = isVisuallyLate(t);
           const isStarting = starting && startingId === t.id;
           return (
@@ -409,6 +478,8 @@ function UpcomingTasks({
           );
         })}
       </ul>
-    </section>
+        </section>
+      )}
+    </div>
   );
 }
