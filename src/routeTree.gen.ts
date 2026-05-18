@@ -21,6 +21,7 @@ import { Route as AppNotificacoesRouteImport } from './routes/app.notificacoes'
 import { Route as AppNotasRouteImport } from './routes/app.notas'
 import { Route as AppEquipeRouteImport } from './routes/app.equipe'
 import { Route as AppEmpresaRouteImport } from './routes/app.empresa'
+import { Route as AppClientesRouteImport } from './routes/app.clientes'
 import { Route as AppAssistenteRouteImport } from './routes/app.assistente'
 import { Route as AppAdminRouteImport } from './routes/app.admin'
 
@@ -84,6 +85,11 @@ const AppEmpresaRoute = AppEmpresaRouteImport.update({
   path: '/empresa',
   getParentRoute: () => AppRoute,
 } as any)
+const AppClientesRoute = AppClientesRouteImport.update({
+  id: '/clientes',
+  path: '/clientes',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAssistenteRoute = AppAssistenteRouteImport.update({
   id: '/assistente',
   path: '/assistente',
@@ -103,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/app/admin': typeof AppAdminRoute
   '/app/assistente': typeof AppAssistenteRoute
+  '/app/clientes': typeof AppClientesRoute
   '/app/empresa': typeof AppEmpresaRoute
   '/app/equipe': typeof AppEquipeRoute
   '/app/notas': typeof AppNotasRoute
@@ -118,6 +125,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/app/admin': typeof AppAdminRoute
   '/app/assistente': typeof AppAssistenteRoute
+  '/app/clientes': typeof AppClientesRoute
   '/app/empresa': typeof AppEmpresaRoute
   '/app/equipe': typeof AppEquipeRoute
   '/app/notas': typeof AppNotasRoute
@@ -135,6 +143,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/app/admin': typeof AppAdminRoute
   '/app/assistente': typeof AppAssistenteRoute
+  '/app/clientes': typeof AppClientesRoute
   '/app/empresa': typeof AppEmpresaRoute
   '/app/equipe': typeof AppEquipeRoute
   '/app/notas': typeof AppNotasRoute
@@ -153,6 +162,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/app/admin'
     | '/app/assistente'
+    | '/app/clientes'
     | '/app/empresa'
     | '/app/equipe'
     | '/app/notas'
@@ -168,6 +178,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/app/admin'
     | '/app/assistente'
+    | '/app/clientes'
     | '/app/empresa'
     | '/app/equipe'
     | '/app/notas'
@@ -184,6 +195,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/app/admin'
     | '/app/assistente'
+    | '/app/clientes'
     | '/app/empresa'
     | '/app/equipe'
     | '/app/notas'
@@ -287,6 +299,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppEmpresaRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/clientes': {
+      id: '/app/clientes'
+      path: '/clientes'
+      fullPath: '/app/clientes'
+      preLoaderRoute: typeof AppClientesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/assistente': {
       id: '/app/assistente'
       path: '/assistente'
@@ -307,6 +326,7 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppAdminRoute: typeof AppAdminRoute
   AppAssistenteRoute: typeof AppAssistenteRoute
+  AppClientesRoute: typeof AppClientesRoute
   AppEmpresaRoute: typeof AppEmpresaRoute
   AppEquipeRoute: typeof AppEquipeRoute
   AppNotasRoute: typeof AppNotasRoute
@@ -319,6 +339,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppAdminRoute: AppAdminRoute,
   AppAssistenteRoute: AppAssistenteRoute,
+  AppClientesRoute: AppClientesRoute,
   AppEmpresaRoute: AppEmpresaRoute,
   AppEquipeRoute: AppEquipeRoute,
   AppNotasRoute: AppNotasRoute,
@@ -340,3 +361,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
