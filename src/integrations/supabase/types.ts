@@ -103,6 +103,63 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          body: string | null
+          company_id: string
+          created_at: string
+          event: Database["public"]["Enums"]["notification_event"]
+          id: string
+          metadata: Json
+          priority: Database["public"]["Enums"]["notification_priority"]
+          read_at: string | null
+          task_id: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          company_id: string
+          created_at?: string
+          event: Database["public"]["Enums"]["notification_event"]
+          id?: string
+          metadata?: Json
+          priority?: Database["public"]["Enums"]["notification_priority"]
+          read_at?: string | null
+          task_id?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          company_id?: string
+          created_at?: string
+          event?: Database["public"]["Enums"]["notification_event"]
+          id?: string
+          metadata?: Json
+          priority?: Database["public"]["Enums"]["notification_priority"]
+          read_at?: string | null
+          task_id?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -160,6 +217,7 @@ export type Database = {
           description: string | null
           due_at: string | null
           id: string
+          late_notified_at: string | null
           location: string | null
           marked_absent_at: string | null
           notes: string | null
@@ -186,6 +244,7 @@ export type Database = {
           description?: string | null
           due_at?: string | null
           id?: string
+          late_notified_at?: string | null
           location?: string | null
           marked_absent_at?: string | null
           notes?: string | null
@@ -212,6 +271,7 @@ export type Database = {
           description?: string | null
           due_at?: string | null
           id?: string
+          late_notified_at?: string | null
           location?: string | null
           marked_absent_at?: string | null
           notes?: string | null
@@ -330,6 +390,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _notify: {
+        Args: {
+          _body: string
+          _company_id: string
+          _event: Database["public"]["Enums"]["notification_event"]
+          _metadata?: Json
+          _priority?: Database["public"]["Enums"]["notification_priority"]
+          _task_id: string
+          _title: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
       accept_invite: { Args: { _token: string }; Returns: string }
       admin_create_company_with_invite: {
         Args: {
@@ -376,6 +449,14 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      notification_mark_read: {
+        Args: { _all?: boolean; _id?: string }
+        Returns: number
+      }
+      notifications_sweep_late: {
+        Args: { _company_id?: string }
+        Returns: number
+      }
       punch_pause: {
         Args: { _note?: string }
         Returns: {
@@ -439,6 +520,7 @@ export type Database = {
           description: string | null
           due_at: string | null
           id: string
+          late_notified_at: string | null
           location: string | null
           marked_absent_at: string | null
           notes: string | null
@@ -463,6 +545,18 @@ export type Database = {
       app_role: "super_admin" | "manager" | "employee"
       company_status: "pending" | "active" | "suspended"
       invite_status: "pending" | "accepted" | "revoked" | "expired"
+      notification_event:
+        | "task_created"
+        | "task_assigned"
+        | "task_authorization_requested"
+        | "task_authorized"
+        | "task_rejected"
+        | "task_started"
+        | "task_completed"
+        | "task_cancelled"
+        | "task_marked_absent"
+        | "task_late"
+      notification_priority: "baixa" | "media" | "alta" | "urgente"
       task_priority: "baixa" | "media" | "alta" | "urgente"
       task_status:
         | "pendente"
@@ -601,6 +695,19 @@ export const Constants = {
       app_role: ["super_admin", "manager", "employee"],
       company_status: ["pending", "active", "suspended"],
       invite_status: ["pending", "accepted", "revoked", "expired"],
+      notification_event: [
+        "task_created",
+        "task_assigned",
+        "task_authorization_requested",
+        "task_authorized",
+        "task_rejected",
+        "task_started",
+        "task_completed",
+        "task_cancelled",
+        "task_marked_absent",
+        "task_late",
+      ],
+      notification_priority: ["baixa", "media", "alta", "urgente"],
       task_priority: ["baixa", "media", "alta", "urgente"],
       task_status: [
         "pendente",
