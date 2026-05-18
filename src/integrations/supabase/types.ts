@@ -233,6 +233,66 @@ export type Database = {
           },
         ]
       }
+      time_entries: {
+        Row: {
+          company_id: string
+          created_at: string
+          effective_minutes: number | null
+          ended_at: string | null
+          id: string
+          notes: string | null
+          paused_at: string | null
+          resumed_at: string | null
+          started_at: string
+          task_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          effective_minutes?: number | null
+          ended_at?: string | null
+          id?: string
+          notes?: string | null
+          paused_at?: string | null
+          resumed_at?: string | null
+          started_at?: string
+          task_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          effective_minutes?: number | null
+          ended_at?: string | null
+          id?: string
+          notes?: string | null
+          paused_at?: string | null
+          resumed_at?: string | null
+          started_at?: string
+          task_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_entries_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           company_id: string | null
@@ -316,6 +376,52 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      punch_pause: {
+        Args: { _note?: string }
+        Returns: {
+          company_id: string
+          created_at: string
+          effective_minutes: number | null
+          ended_at: string | null
+          id: string
+          notes: string | null
+          paused_at: string | null
+          resumed_at: string | null
+          started_at: string
+          task_id: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "time_entries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      punch_resume: {
+        Args: never
+        Returns: {
+          company_id: string
+          created_at: string
+          effective_minutes: number | null
+          ended_at: string | null
+          id: string
+          notes: string | null
+          paused_at: string | null
+          resumed_at: string | null
+          started_at: string
+          task_id: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "time_entries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       task_transition: {
         Args: { _action: string; _task_id: string }
         Returns: {
