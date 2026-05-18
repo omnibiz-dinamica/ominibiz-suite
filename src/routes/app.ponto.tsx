@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Pause, Play, Square, Coffee, Clock as ClockIcon, AlertCircle, Flame, Plus } from "lucide-react";
+import { Pause, Play, Square, Coffee, Clock as ClockIcon, AlertCircle, Flame, Plus, Building2 } from "lucide-react";
 import {
   type TimeEntryRow,
   type TaskRow,
@@ -95,6 +95,22 @@ function PontoPage() {
       return (data ?? []) as unknown as TaskRow[];
     },
     enabled: !!user && !openEntry,
+  });
+
+  // Mapa de clientes da empresa para exibir nome
+  const { data: clientsMap } = useQuery({
+    queryKey: ["clients-map", currentCompanyId],
+    queryFn: async () => {
+      if (!currentCompanyId) return {} as Record<string, string>;
+      const { data, error } = await (supabase.from("clients" as never) as never as ReturnType<typeof supabase.from>)
+        .select("id,name")
+        .eq("company_id", currentCompanyId);
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      for (const r of (data ?? []) as unknown as { id: string; name: string }[]) map[r.id] = r.name;
+      return map;
+    },
+    enabled: !!currentCompanyId,
   });
 
   // Histórico recente
@@ -221,6 +237,7 @@ function PontoPage() {
       ) : (
         <UpcomingTasks
           tasks={upcoming ?? []}
+          clientsMap={clientsMap ?? {}}
           isManager={isManager}
           onStart={(id) => startMut.mutate(id)}
           starting={startMut.isPending}
@@ -265,6 +282,7 @@ function PontoPage() {
 function ActiveTaskCard({
   entry,
   task,
+  clientName,
   liveMin,
   state,
   onPause,
@@ -276,6 +294,7 @@ function ActiveTaskCard({
 }: {
   entry: TimeEntryRow;
   task: TaskRow;
+  clientName?: string;
   liveMin: number;
   state: "aberto" | "pausado" | "encerrado";
   onPause: () => void;
