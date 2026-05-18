@@ -221,6 +221,7 @@ function PontoPage() {
       ) : (
         <UpcomingTasks
           tasks={upcoming ?? []}
+          isManager={isManager}
           onStart={(id) => startMut.mutate(id)}
           starting={startMut.isPending}
           startingId={startMut.variables ?? null}
@@ -349,11 +350,13 @@ function ActiveTaskCard({
 
 function UpcomingTasks({
   tasks,
+  isManager,
   onStart,
   starting,
   startingId,
 }: {
   tasks: TaskRow[];
+  isManager: boolean;
   onStart: (id: string) => void;
   starting: boolean;
   startingId: string | null;
@@ -366,8 +369,17 @@ function UpcomingTasks({
         </div>
         <h2 className="mt-4 font-display text-xl font-semibold">Sem tarefas pendentes</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Você está livre. Quando uma nova tarefa for atribuída, ela aparecerá aqui.
+          {isManager
+            ? "Nenhuma tarefa pendente na empresa. Crie uma nova para começar a operação."
+            : "Você está livre. Quando uma nova tarefa for atribuída, ela aparecerá aqui."}
         </p>
+        {isManager && (
+          <Button asChild size="lg" className="mt-5">
+            <Link to="/app/tarefas">
+              <Plus className="mr-2 h-5 w-5" /> Criar nova tarefa
+            </Link>
+          </Button>
+        )}
       </section>
     );
   }
