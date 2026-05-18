@@ -74,18 +74,23 @@ function PontoPage() {
 
   // Próximas tarefas do dia (quando não há ponto aberto)
   const { data: upcoming } = useQuery({
-    queryKey: ["punch-upcoming", user?.id, currentCompanyId],
+    queryKey: ["punch-upcoming", user?.id, isManager, currentCompanyId],
     queryFn: async () => {
       if (!user) return [];
-      const end = new Date();
-      end.setHours(23, 59, 59, 999);
-      const { data, error } = await supabase
+      let q = supabase
         .from("tasks")
         .select("*")
-        .eq("assigned_to", user.id)
         .in("status", ["pendente", "autorizado"])
         .order("scheduled_for", { ascending: true, nullsFirst: false })
-        .limit(8);
+        .limit(12);
+      // Gestor/super admin: vê tarefas da empresa (toda a operação).
+      // Funcionário: vê apenas as suas.
+      if (isManager) {
+        if (currentCompanyId) q = q.eq("company_id", currentCompanyId);
+      } else {
+        q = q.eq("assigned_to", user.id);
+      }
+      const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as unknown as TaskRow[];
     },
