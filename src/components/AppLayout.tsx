@@ -27,7 +27,7 @@ const items: Item[] = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard },
   { to: "/app/tarefas", label: "Tarefas", icon: ClipboardList },
   { to: "/app/ponto", label: "Folha de Ponto", icon: Clock, soon: true },
-  { to: "/app/notificacoes", label: "Notificações", icon: Bell, soon: true },
+  { to: "/app/notificacoes", label: "Notificações", icon: Bell },
   { to: "/app/equipe", label: "Equipe", icon: Users, managerOnly: true },
   { to: "/app/empresa", label: "Empresa", icon: Building2, managerOnly: true },
   { to: "/app/notas", label: "Notas", icon: FileText, soon: true },
