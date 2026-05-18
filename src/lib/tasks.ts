@@ -130,3 +130,62 @@ export async function sweepAbsent(companyId: string | null): Promise<number> {
   if (error) throw error;
   return (data as number) ?? 0;
 }
+
+// =========================================================
+// Folha de ponto — extensão operacional da tarefa
+// =========================================================
+export interface TimeEntryRow {
+  id: string;
+  company_id: string;
+  task_id: string;
+  user_id: string;
+  started_at: string;
+  paused_at: string | null;
+  resumed_at: string | null;
+  ended_at: string | null;
+  effective_minutes: number | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type PunchState = "aberto" | "pausado" | "encerrado";
+
+export function punchState(entry: Pick<TimeEntryRow, "paused_at" | "resumed_at" | "ended_at">): PunchState {
+  if (entry.ended_at) return "encerrado";
+  if (entry.paused_at && !entry.resumed_at) return "pausado";
+  return "aberto";
+}
+
+export async function punchPause(note?: string): Promise<TimeEntryRow> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("punch_pause", { _note: note ?? null });
+  if (error) throw error;
+  return data as TimeEntryRow;
+}
+
+export async function punchResume(): Promise<TimeEntryRow> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("punch_resume");
+  if (error) throw error;
+  return data as TimeEntryRow;
+}
+
+/** Duração efetiva (minutos) considerando pausa em curso para exibição. */
+export function effectiveMinutesNow(e: TimeEntryRow): number {
+  const start = new Date(e.started_at).getTime();
+  const end = e.ended_at ? new Date(e.ended_at).getTime() : Date.now();
+  let pauseMs = 0;
+  if (e.paused_at) {
+    const p = new Date(e.paused_at).getTime();
+    const r = e.resumed_at ? new Date(e.resumed_at).getTime() : (e.ended_at ? new Date(e.ended_at).getTime() : Date.now());
+    pauseMs = Math.max(0, r - p);
+  }
+  return Math.max(0, Math.floor((end - start - pauseMs) / 60000));
+}
+
+export function formatDuration(min: number): string {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return h > 0 ? `${h}h${m.toString().padStart(2, "0")}` : `${m}min`;
+}
