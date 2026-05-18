@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AceitarConviteRouteImport } from './routes/aceitar-convite'
@@ -23,6 +24,11 @@ import { Route as AppEmpresaRouteImport } from './routes/app.empresa'
 import { Route as AppAssistenteRouteImport } from './routes/app.assistente'
 import { Route as AppAdminRouteImport } from './routes/app.admin'
 
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -94,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/aceitar-convite': typeof AceitarConviteRoute
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/app/admin': typeof AppAdminRoute
   '/app/assistente': typeof AppAssistenteRoute
   '/app/empresa': typeof AppEmpresaRoute
@@ -108,6 +115,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/aceitar-convite': typeof AceitarConviteRoute
   '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/app/admin': typeof AppAdminRoute
   '/app/assistente': typeof AppAssistenteRoute
   '/app/empresa': typeof AppEmpresaRoute
@@ -124,6 +132,7 @@ export interface FileRoutesById {
   '/aceitar-convite': typeof AceitarConviteRoute
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/app/admin': typeof AppAdminRoute
   '/app/assistente': typeof AppAssistenteRoute
   '/app/empresa': typeof AppEmpresaRoute
@@ -141,6 +150,7 @@ export interface FileRouteTypes {
     | '/aceitar-convite'
     | '/app'
     | '/login'
+    | '/reset-password'
     | '/app/admin'
     | '/app/assistente'
     | '/app/empresa'
@@ -155,6 +165,7 @@ export interface FileRouteTypes {
     | '/'
     | '/aceitar-convite'
     | '/login'
+    | '/reset-password'
     | '/app/admin'
     | '/app/assistente'
     | '/app/empresa'
@@ -170,6 +181,7 @@ export interface FileRouteTypes {
     | '/aceitar-convite'
     | '/app'
     | '/login'
+    | '/reset-password'
     | '/app/admin'
     | '/app/assistente'
     | '/app/empresa'
@@ -186,10 +198,18 @@ export interface RootRouteChildren {
   AceitarConviteRoute: typeof AceitarConviteRoute
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -315,7 +335,17 @@ const rootRouteChildren: RootRouteChildren = {
   AceitarConviteRoute: AceitarConviteRoute,
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
