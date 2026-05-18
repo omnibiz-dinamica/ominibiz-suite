@@ -313,6 +313,11 @@ function ActiveTaskCard({
       <div className="space-y-5 p-5 sm:p-6">
         <div>
           <h2 className="font-display text-2xl font-semibold leading-tight sm:text-3xl">{task.title}</h2>
+          {clientName && (
+            <div className="mt-1 inline-flex items-center gap-1 text-sm text-muted-foreground">
+              <Building2 className="h-3.5 w-3.5" /> {clientName}
+            </div>
+          )}
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_TONE[task.status]}`}>
               {STATUS_LABELS[task.status]}
