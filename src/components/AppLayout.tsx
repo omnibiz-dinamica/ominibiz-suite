@@ -26,7 +26,7 @@ type Item = { to: string; label: string; icon: typeof LayoutDashboard; managerOn
 const items: Item[] = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard },
   { to: "/app/tarefas", label: "Tarefas", icon: ClipboardList },
-  { to: "/app/ponto", label: "Folha de Ponto", icon: Clock, soon: true },
+  { to: "/app/ponto", label: "Folha de Ponto", icon: Clock },
   { to: "/app/notificacoes", label: "Notificações", icon: Bell },
   { to: "/app/equipe", label: "Equipe", icon: Users, managerOnly: true },
   { to: "/app/empresa", label: "Empresa", icon: Building2, managerOnly: true },
