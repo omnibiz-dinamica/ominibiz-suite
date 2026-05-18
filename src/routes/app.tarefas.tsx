@@ -65,6 +65,21 @@ function TasksPage() {
     enabled: isManager && !!currentCompanyId,
   });
 
+  const { data: clientsList } = useQuery({
+    queryKey: ["clients-min", currentCompanyId],
+    queryFn: async () => {
+      if (!currentCompanyId) return [] as { id: string; name: string }[];
+      const { data, error } = await (supabase.from("clients" as never) as never as ReturnType<typeof supabase.from>)
+        .select("id,name")
+        .eq("company_id", currentCompanyId)
+        .eq("status", "ativo")
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as { id: string; name: string }[];
+    },
+    enabled: isManager && !!currentCompanyId,
+  });
+
   // Varredura de ausentes por evento: ao carregar a tela. Nunca em loop.
   useEffect(() => {
     if (!user || !isManager) return;
@@ -115,7 +130,7 @@ function TasksPage() {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader><DialogTitle>Nova tarefa</DialogTitle></DialogHeader>
-              <NewTaskForm members={members ?? []} companyId={currentCompanyId} userId={user!.id} onCreated={() => { setOpen(false); qc.invalidateQueries({ queryKey: ["tasks"] }); }} />
+              <NewTaskForm members={members ?? []} clients={clientsList ?? []} companyId={currentCompanyId} userId={user!.id} onCreated={() => { setOpen(false); qc.invalidateQueries({ queryKey: ["tasks"] }); }} />
             </DialogContent>
           </Dialog>
         )}
@@ -207,11 +222,13 @@ function ActionButton({
 
 function NewTaskForm({
   members,
+  clients,
   companyId,
   userId,
   onCreated,
 }: {
   members: { id: string; full_name: string | null }[];
+  clients: { id: string; name: string }[];
   companyId: string;
   userId: string;
   onCreated: () => void;
@@ -219,6 +236,7 @@ function NewTaskForm({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [assignedTo, setAssignedTo] = useState<string>("");
+  const [clientId, setClientId] = useState<string>("");
   const [priority, setPriority] = useState<"baixa" | "media" | "alta" | "urgente">("media");
   const [scheduledFor, setScheduledFor] = useState<string>("");
   const [graceMinutes, setGraceMinutes] = useState<number>(15);
@@ -235,6 +253,7 @@ function NewTaskForm({
           title: title.trim(),
           description: description.trim() || null,
           assigned_to: assignedTo || null,
+          client_id: clientId || null,
           priority,
           created_by: userId,
           scheduled_for: scheduledFor ? new Date(scheduledFor).toISOString() : null,
@@ -265,6 +284,17 @@ function NewTaskForm({
             <SelectContent>
               {members.map((m) => (
                 <SelectItem key={m.id} value={m.id}>{m.full_name ?? m.id.slice(0, 8)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Cliente</Label>
+          <Select value={clientId} onValueChange={setClientId}>
+            <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
+            <SelectContent>
+              {clients.map((c) => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
