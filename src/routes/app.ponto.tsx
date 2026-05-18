@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Pause, Play, Square, Coffee } from "lucide-react";
+import { Pause, Play, Square, Coffee, Clock as ClockIcon, AlertCircle } from "lucide-react";
 import {
   type TimeEntryRow,
   type TaskRow,
@@ -17,16 +17,24 @@ import {
   transitionTask,
   STATUS_LABELS,
   STATUS_TONE,
+  isVisuallyLate,
 } from "@/lib/tasks";
 
 export const Route = createFileRoute("/app/ponto")({ component: PontoPage });
 
+const PRIORITY_TONE: Record<string, string> = {
+  baixa: "bg-muted text-muted-foreground",
+  media: "bg-info/15 text-info",
+  alta: "bg-warning/15 text-warning-foreground",
+  urgente: "bg-destructive/15 text-destructive",
+};
+
 function PontoPage() {
   const { user, isManager, currentCompanyId } = useAuth();
   const qc = useQueryClient();
-  const [now, setNow] = useState(() => Date.now());
+  const [, setNow] = useState(() => Date.now());
 
-  // Tick visual (1s) — apenas para renderização do cronômetro. Não toca dados.
+  // Tick visual (1s) — apenas para renderização.
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
@@ -64,21 +72,41 @@ function PontoPage() {
     enabled: !!openEntry,
   });
 
-  // Histórico recente do usuário (ou da empresa, se gestor)
+  // Próximas tarefas do dia (quando não há ponto aberto)
+  const { data: upcoming } = useQuery({
+    queryKey: ["punch-upcoming", user?.id, currentCompanyId],
+    queryFn: async () => {
+      if (!user) return [];
+      const end = new Date();
+      end.setHours(23, 59, 59, 999);
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("assigned_to", user.id)
+        .in("status", ["pendente", "autorizado"])
+        .order("scheduled_for", { ascending: true, nullsFirst: false })
+        .limit(8);
+      if (error) throw error;
+      return (data ?? []) as unknown as TaskRow[];
+    },
+    enabled: !!user && !openEntry,
+  });
+
+  // Histórico recente
   const { data: history } = useQuery({
     queryKey: ["punch-history", user?.id, isManager, currentCompanyId],
     queryFn: async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let q: any = (supabase.from("time_entries" as any) as any)
-        .select("*")
+        .select("*, tasks(title)")
         .not("ended_at", "is", null)
         .order("ended_at", { ascending: false })
-        .limit(20);
+        .limit(15);
       if (!isManager) q = q.eq("user_id", user!.id);
       else if (currentCompanyId) q = q.eq("company_id", currentCompanyId);
       const { data, error } = await q;
       if (error) throw error;
-      return (data ?? []) as TimeEntryRow[];
+      return (data ?? []) as (TimeEntryRow & { tasks: { title: string } | null })[];
     },
     enabled: !!user,
   });
@@ -95,6 +123,15 @@ function PontoPage() {
           qc.invalidateQueries({ queryKey: ["punch-open"] });
           qc.invalidateQueries({ queryKey: ["punch-open-task"] });
           qc.invalidateQueries({ queryKey: ["punch-history"] });
+          qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "tasks" },
+        () => {
+          qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
+          qc.invalidateQueries({ queryKey: ["punch-open-task"] });
         },
       )
       .subscribe();
@@ -125,108 +162,253 @@ function PontoPage() {
       toast.success("Tarefa concluída e ponto encerrado");
       qc.invalidateQueries({ queryKey: ["punch-open"] });
       qc.invalidateQueries({ queryKey: ["punch-history"] });
+      qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const startMut = useMutation({
+    mutationFn: (taskId: string) => transitionTask(taskId, "iniciar"),
+    onSuccess: () => {
+      toast.success("Tarefa iniciada — ponto aberto");
+      qc.invalidateQueries({ queryKey: ["punch-open"] });
+      qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
       qc.invalidateQueries({ queryKey: ["tasks"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const state = openEntry ? punchState(openEntry) : "encerrado";
-  const liveMin = openEntry ? effectiveMinutesNow({ ...openEntry, ended_at: openEntry.ended_at }) : 0;
-  // forçar dependência do tick
-  void now;
+  const liveMin = openEntry ? effectiveMinutesNow(openEntry) : 0;
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-3xl space-y-6">
       <div>
         <h1 className="font-display text-3xl font-semibold tracking-tight">Folha de Ponto</h1>
-        <p className="mt-1 text-muted-foreground">
-          Cada ponto é uma extensão operacional de uma tarefa. Inicie tarefas em <strong>Tarefas</strong>; o ponto abre automaticamente.
+        <p className="mt-1 text-sm text-muted-foreground">
+          Sua central operacional do dia. Inicie, pause e conclua tarefas em um clique.
         </p>
       </div>
 
-      {/* Card do ponto aberto */}
-      <div className="rounded-2xl border border-border bg-card p-6">
-        {!openEntry && (
-          <div className="text-sm text-muted-foreground">
-            Nenhum ponto aberto no momento. Vá em <strong>Tarefas</strong> e clique em <em>Iniciar</em> para abrir um.
-          </div>
-        )}
-        {openEntry && openTask && (
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <div className="text-xs uppercase tracking-wide text-muted-foreground">Tarefa em andamento</div>
-                <div className="mt-1 text-lg font-semibold">{openTask.title}</div>
-                <div className="mt-1 flex items-center gap-2">
-                  <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_TONE[openTask.status]}`}>
-                    {STATUS_LABELS[openTask.status]}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    iniciado às {new Date(openEntry.started_at).toLocaleTimeString()}
-                  </span>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-xs uppercase tracking-wide text-muted-foreground">Tempo efetivo</div>
-                <div className="font-display text-3xl font-semibold tabular-nums">{formatDuration(liveMin)}</div>
-                {state === "pausado" && (
-                  <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-warning-foreground">
-                    <Coffee className="h-3 w-3" /> em pausa
-                  </div>
-                )}
-              </div>
-            </div>
+      {/* === CENTRAL OPERACIONAL === */}
+      {openEntry && openTask ? (
+        <ActiveTaskCard
+          entry={openEntry}
+          task={openTask}
+          liveMin={liveMin}
+          state={state}
+          onPause={() => pauseMut.mutate()}
+          onResume={() => resumeMut.mutate()}
+          onComplete={() => endMut.mutate()}
+          pausing={pauseMut.isPending}
+          resuming={resumeMut.isPending}
+          ending={endMut.isPending}
+        />
+      ) : (
+        <UpcomingTasks
+          tasks={upcoming ?? []}
+          onStart={(id) => startMut.mutate(id)}
+          starting={startMut.isPending}
+          startingId={startMut.variables ?? null}
+        />
+      )}
 
-            <div className="flex flex-wrap gap-2 border-t border-border pt-4">
-              {state === "aberto" && (
-                <Button variant="outline" disabled={pauseMut.isPending} onClick={() => pauseMut.mutate()}>
-                  <Pause className="mr-2 h-4 w-4" /> Pausar (almoço)
-                </Button>
-              )}
-              {state === "pausado" && (
-                <Button variant="outline" disabled={resumeMut.isPending} onClick={() => resumeMut.mutate()}>
-                  <Play className="mr-2 h-4 w-4" /> Retornar
-                </Button>
-              )}
-              <Button
-                variant="default"
-                disabled={endMut.isPending}
-                onClick={() => endMut.mutate()}
-              >
-                <Square className="mr-2 h-4 w-4" /> Concluir tarefa e encerrar ponto
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Histórico */}
-      <div className="rounded-2xl border border-border bg-card">
+      {/* === HISTÓRICO === */}
+      <section className="rounded-2xl border border-border bg-card">
         <div className="border-b border-border px-5 py-3 text-sm font-medium">
-          {isManager ? "Histórico recente da empresa" : "Seus últimos registros"}
+          {isManager ? "Histórico recente da equipe" : "Seu histórico recente"}
         </div>
-        {(history ?? []).length === 0 && (
-          <div className="px-5 py-8 text-center text-sm text-muted-foreground">Sem registros encerrados ainda.</div>
+        {(history ?? []).length === 0 ? (
+          <div className="px-5 py-10 text-center text-sm text-muted-foreground">
+            Sem registros encerrados ainda.
+          </div>
+        ) : (
+          <ul className="divide-y divide-border">
+            {(history ?? []).map((h) => (
+              <li key={h.id} className="grid grid-cols-12 items-center gap-3 px-5 py-3 text-sm">
+                <div className="col-span-7 min-w-0">
+                  <div className="truncate font-medium">{h.tasks?.title ?? "Tarefa"}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {new Date(h.started_at).toLocaleString()} → {h.ended_at ? new Date(h.ended_at).toLocaleTimeString() : "—"}
+                  </div>
+                </div>
+                <div className="col-span-2 text-xs text-muted-foreground">
+                  {h.paused_at ? "c/ pausa" : "s/ pausa"}
+                </div>
+                <div className="col-span-3 text-right font-mono text-sm">
+                  {formatDuration(h.effective_minutes ?? 0)}
+                </div>
+              </li>
+            ))}
+          </ul>
         )}
-        <ul className="divide-y divide-border">
-          {(history ?? []).map((h) => (
-            <li key={h.id} className="grid grid-cols-12 items-center gap-2 px-5 py-3 text-sm">
-              <div className="col-span-6 truncate">
-                <div className="font-medium">{new Date(h.started_at).toLocaleString()}</div>
-                <div className="text-xs text-muted-foreground">
-                  fim {h.ended_at ? new Date(h.ended_at).toLocaleTimeString() : "—"}
+      </section>
+    </div>
+  );
+}
+
+function ActiveTaskCard({
+  entry,
+  task,
+  liveMin,
+  state,
+  onPause,
+  onResume,
+  onComplete,
+  pausing,
+  resuming,
+  ending,
+}: {
+  entry: TimeEntryRow;
+  task: TaskRow;
+  liveMin: number;
+  state: "aberto" | "pausado" | "encerrado";
+  onPause: () => void;
+  onResume: () => void;
+  onComplete: () => void;
+  pausing: boolean;
+  resuming: boolean;
+  ending: boolean;
+}) {
+  return (
+    <section className="overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card shadow-lg">
+      <div className="border-b border-border/60 px-5 py-3 text-xs font-medium uppercase tracking-wide text-primary">
+        Tarefa em andamento
+      </div>
+      <div className="space-y-5 p-5 sm:p-6">
+        <div>
+          <h2 className="font-display text-2xl font-semibold leading-tight sm:text-3xl">{task.title}</h2>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_TONE[task.status]}`}>
+              {STATUS_LABELS[task.status]}
+            </span>
+            {task.scheduled_for && (
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                <ClockIcon className="h-3 w-3" />
+                {new Date(task.scheduled_for).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </span>
+            )}
+            <span className="text-xs text-muted-foreground">
+              iniciado às {new Date(entry.started_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            </span>
+          </div>
+        </div>
+
+        {/* Cronômetro */}
+        <div className="flex flex-col items-center justify-center rounded-xl bg-background/60 py-6">
+          <div className="text-[11px] uppercase tracking-widest text-muted-foreground">Tempo efetivo</div>
+          <div className="font-display text-5xl font-semibold tabular-nums sm:text-6xl">
+            {formatDuration(liveMin)}
+          </div>
+          {state === "pausado" && (
+            <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-warning/15 px-2.5 py-1 text-xs font-medium text-warning-foreground">
+              <Coffee className="h-3 w-3" /> Em pausa
+            </div>
+          )}
+        </div>
+
+        {/* Ações grandes */}
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {state === "aberto" && (
+            <Button size="lg" variant="outline" className="h-14 text-base" disabled={pausing} onClick={onPause}>
+              <Pause className="mr-2 h-5 w-5" /> Pausa almoço
+            </Button>
+          )}
+          {state === "pausado" && (
+            <Button size="lg" variant="outline" className="h-14 text-base" disabled={resuming} onClick={onResume}>
+              <Play className="mr-2 h-5 w-5" /> Retorno almoço
+            </Button>
+          )}
+          <Button
+            size="lg"
+            className="h-14 text-base sm:col-span-1"
+            disabled={ending}
+            onClick={onComplete}
+          >
+            <Square className="mr-2 h-5 w-5" /> Concluir tarefa
+          </Button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function UpcomingTasks({
+  tasks,
+  onStart,
+  starting,
+  startingId,
+}: {
+  tasks: TaskRow[];
+  onStart: (id: string) => void;
+  starting: boolean;
+  startingId: string | null;
+}) {
+  if (tasks.length === 0) {
+    return (
+      <section className="rounded-2xl border border-border bg-card p-8 text-center">
+        <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-muted text-muted-foreground">
+          <ClockIcon className="h-6 w-6" />
+        </div>
+        <h2 className="mt-4 font-display text-xl font-semibold">Sem tarefas pendentes</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Você está livre. Quando uma nova tarefa for atribuída, ela aparecerá aqui.
+        </p>
+      </section>
+    );
+  }
+  return (
+    <section className="rounded-2xl border border-border bg-card">
+      <div className="flex items-center justify-between border-b border-border px-5 py-3">
+        <div className="text-sm font-medium">Próximas tarefas</div>
+        <div className="text-xs text-muted-foreground">{tasks.length} pendente(s)</div>
+      </div>
+      <ul className="divide-y divide-border">
+        {tasks.map((t) => {
+          const late = isVisuallyLate(t);
+          const isStarting = starting && startingId === t.id;
+          return (
+            <li key={t.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${PRIORITY_TONE[t.priority] ?? PRIORITY_TONE.media}`}>
+                    {t.priority}
+                  </span>
+                  {late && (
+                    <span className="inline-flex items-center gap-1 rounded bg-destructive/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-destructive">
+                      <AlertCircle className="h-3 w-3" /> atrasada
+                    </span>
+                  )}
+                  <span className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${STATUS_TONE[t.status]}`}>
+                    {STATUS_LABELS[t.status]}
+                  </span>
+                </div>
+                <div className="mt-1 truncate font-medium">{t.title}</div>
+                <div className="mt-0.5 text-xs text-muted-foreground">
+                  {t.scheduled_for
+                    ? new Date(t.scheduled_for).toLocaleString([], {
+                        day: "2-digit",
+                        month: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : "sem horário"}
                 </div>
               </div>
-              <div className="col-span-3 text-xs text-muted-foreground">
-                {h.paused_at ? "com pausa" : "sem pausa"}
-              </div>
-              <div className="col-span-3 text-right font-mono">
-                {formatDuration(h.effective_minutes ?? 0)}
-              </div>
+              <Button
+                size="lg"
+                className="h-12 w-full sm:w-auto"
+                disabled={t.status === "pendente" || isStarting}
+                onClick={() => onStart(t.id)}
+                title={t.status === "pendente" ? "Aguardando autorização do gestor" : undefined}
+              >
+                <Play className="mr-2 h-5 w-5" />
+                {t.status === "pendente" ? "Aguardando autorização" : "Iniciar"}
+              </Button>
             </li>
-          ))}
-        </ul>
-      </div>
-    </div>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
