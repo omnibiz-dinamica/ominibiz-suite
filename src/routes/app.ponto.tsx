@@ -1,11 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Pause, Play, Square, Coffee, Clock as ClockIcon, AlertCircle, Flame } from "lucide-react";
+import { Pause, Play, Square, Coffee, Clock as ClockIcon, AlertCircle, Flame, Plus } from "lucide-react";
 import {
   type TimeEntryRow,
   type TaskRow,
@@ -188,11 +188,20 @@ function PontoPage() {
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
-      <div>
-        <h1 className="font-display text-3xl font-semibold tracking-tight">Folha de Ponto</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Sua central operacional do dia. Inicie, pause e conclua tarefas em um clique.
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">Folha de Ponto</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Sua central operacional do dia. Inicie, pause e conclua tarefas em um clique.
+          </p>
+        </div>
+        {isManager && (
+          <Button asChild size="sm" className="shrink-0">
+            <Link to="/app/tarefas">
+              <Plus className="mr-1 h-4 w-4" /> Nova tarefa
+            </Link>
+          </Button>
+        )}
       </div>
 
       {/* === CENTRAL OPERACIONAL === */}
@@ -212,6 +221,7 @@ function PontoPage() {
       ) : (
         <UpcomingTasks
           tasks={upcoming ?? []}
+          isManager={isManager}
           onStart={(id) => startMut.mutate(id)}
           starting={startMut.isPending}
           startingId={startMut.variables ?? null}
@@ -340,11 +350,13 @@ function ActiveTaskCard({
 
 function UpcomingTasks({
   tasks,
+  isManager,
   onStart,
   starting,
   startingId,
 }: {
   tasks: TaskRow[];
+  isManager: boolean;
   onStart: (id: string) => void;
   starting: boolean;
   startingId: string | null;
@@ -357,8 +369,17 @@ function UpcomingTasks({
         </div>
         <h2 className="mt-4 font-display text-xl font-semibold">Sem tarefas pendentes</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Você está livre. Quando uma nova tarefa for atribuída, ela aparecerá aqui.
+          {isManager
+            ? "Nenhuma tarefa pendente na empresa. Crie uma nova para começar a operação."
+            : "Você está livre. Quando uma nova tarefa for atribuída, ela aparecerá aqui."}
         </p>
+        {isManager && (
+          <Button asChild size="lg" className="mt-5">
+            <Link to="/app/tarefas">
+              <Plus className="mr-2 h-5 w-5" /> Criar nova tarefa
+            </Link>
+          </Button>
+        )}
       </section>
     );
   }
