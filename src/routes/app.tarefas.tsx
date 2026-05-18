@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -10,29 +10,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Play, Check, X } from "lucide-react";
+import { Plus, Play, Check, X, ShieldCheck, UserX, Clock } from "lucide-react";
+import {
+  STATUS_LABELS,
+  STATUS_TONE,
+  type TaskAction,
+  type TaskRow,
+  ACTION_LABELS,
+  availableActions,
+  isVisuallyLate,
+  sweepAbsent,
+  transitionTask,
+} from "@/lib/tasks";
 
 export const Route = createFileRoute("/app/tarefas")({
   component: TasksPage,
 });
-
-type TaskStatus = "pendente" | "em_andamento" | "concluido" | "cancelado" | "ausente" | "autorizado";
-const STATUS_LABELS: Record<TaskStatus, string> = {
-  pendente: "Pendente",
-  em_andamento: "Em andamento",
-  concluido: "Concluído",
-  cancelado: "Cancelado",
-  ausente: "Ausente",
-  autorizado: "Autorizado",
-};
-const STATUS_TONE: Record<TaskStatus, string> = {
-  pendente: "bg-info/15 text-info",
-  em_andamento: "bg-primary/15 text-primary",
-  concluido: "bg-success/15 text-success",
-  cancelado: "bg-muted text-muted-foreground",
-  ausente: "bg-destructive/15 text-destructive",
-  autorizado: "bg-warning/15 text-warning-foreground",
-};
 
 function TasksPage() {
   const { user, isManager, currentCompanyId } = useAuth();
@@ -45,12 +38,13 @@ function TasksPage() {
       let q = supabase
         .from("tasks")
         .select("*")
+        .order("scheduled_for", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: false });
       if (!isManager) q = q.eq("assigned_to", user!.id);
       else if (currentCompanyId) q = q.eq("company_id", currentCompanyId);
       const { data, error } = await q;
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as unknown as TaskRow[];
     },
     enabled: !!user,
   });
@@ -71,14 +65,33 @@ function TasksPage() {
     enabled: isManager && !!currentCompanyId,
   });
 
-  const updateStatus = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: TaskStatus }) => {
-      const patch: { status: TaskStatus; started_at?: string; completed_at?: string } = { status };
-      if (status === "em_andamento") patch.started_at = new Date().toISOString();
-      if (status === "concluido") patch.completed_at = new Date().toISOString();
-      const { error } = await supabase.from("tasks").update(patch).eq("id", id);
-      if (error) throw error;
-    },
+  // Varredura de ausentes por evento: ao carregar a tela. Nunca em loop.
+  useEffect(() => {
+    if (!user || !isManager) return;
+    void sweepAbsent(currentCompanyId).then((n) => {
+      if (n > 0) qc.invalidateQueries({ queryKey: ["tasks"] });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, isManager, currentCompanyId]);
+
+  // Realtime: APENAS sincroniza a UI. Nenhuma lógica de negócio aqui.
+  useEffect(() => {
+    if (!user) return;
+    const ch = supabase
+      .channel("tasks-ui-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "tasks" },
+        () => qc.invalidateQueries({ queryKey: ["tasks"] }),
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(ch);
+    };
+  }, [user?.id, qc]);
+
+  const transition = useMutation({
+    mutationFn: ({ id, action }: { id: string; action: TaskAction }) => transitionTask(id, action),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
       toast.success("Tarefa atualizada");
@@ -127,35 +140,36 @@ function TasksPage() {
         )}
         <ul className="divide-y divide-border">
           {(tasks ?? []).map((t) => {
-            const isAssignee = t.assigned_to === user?.id;
+            const late = isVisuallyLate(t);
+            const actions = availableActions(t, { userId: user!.id, isManager });
             return (
               <li key={t.id} className="grid grid-cols-12 items-center px-5 py-4">
                 <div className="col-span-5">
-                  <div className="font-medium">{t.title}</div>
+                  <div className="flex items-center gap-2 font-medium">
+                    <span>{t.title}</span>
+                    {late && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-destructive">
+                        <Clock className="h-3 w-3" /> atrasado
+                      </span>
+                    )}
+                  </div>
                   {t.description && <div className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{t.description}</div>}
                 </div>
                 <div className="col-span-2">
-                  <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_TONE[t.status as TaskStatus]}`}>
-                    {STATUS_LABELS[t.status as TaskStatus]}
+                  <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_TONE[t.status]}`}>
+                    {STATUS_LABELS[t.status]}
                   </span>
                 </div>
                 <div className="col-span-2 text-sm capitalize text-muted-foreground">{t.priority}</div>
                 <div className="col-span-3 flex justify-end gap-2">
-                  {isAssignee && t.status === "pendente" && (
-                    <Button size="sm" variant="outline" onClick={() => updateStatus.mutate({ id: t.id, status: "em_andamento" })}>
-                      <Play className="mr-1 h-3 w-3" /> Iniciar
-                    </Button>
-                  )}
-                  {isAssignee && t.status === "em_andamento" && (
-                    <Button size="sm" onClick={() => updateStatus.mutate({ id: t.id, status: "concluido" })}>
-                      <Check className="mr-1 h-3 w-3" /> Concluir
-                    </Button>
-                  )}
-                  {isManager && t.status !== "cancelado" && t.status !== "concluido" && (
-                    <Button size="sm" variant="ghost" onClick={() => updateStatus.mutate({ id: t.id, status: "cancelado" })}>
-                      <X className="h-3 w-3" />
-                    </Button>
-                  )}
+                  {actions.map((a) => (
+                    <ActionButton
+                      key={a}
+                      action={a}
+                      disabled={transition.isPending}
+                      onClick={() => transition.mutate({ id: t.id, action: a })}
+                    />
+                  ))}
                 </div>
               </li>
             );
@@ -163,6 +177,31 @@ function TasksPage() {
         </ul>
       </div>
     </div>
+  );
+}
+
+function ActionButton({
+  action,
+  onClick,
+  disabled,
+}: {
+  action: TaskAction;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  const map = {
+    autorizar: { Icon: ShieldCheck, variant: "outline" as const },
+    iniciar: { Icon: Play, variant: "outline" as const },
+    concluir: { Icon: Check, variant: "default" as const },
+    marcar_ausente: { Icon: UserX, variant: "ghost" as const },
+    cancelar: { Icon: X, variant: "ghost" as const },
+  }[action];
+  const { Icon, variant } = map;
+  return (
+    <Button size="sm" variant={variant} onClick={onClick} disabled={disabled} title={ACTION_LABELS[action]}>
+      <Icon className="h-3 w-3" />
+      <span className="ml-1 hidden sm:inline">{ACTION_LABELS[action]}</span>
+    </Button>
   );
 }
 
@@ -181,6 +220,8 @@ function NewTaskForm({
   const [description, setDescription] = useState("");
   const [assignedTo, setAssignedTo] = useState<string>("");
   const [priority, setPriority] = useState<"baixa" | "media" | "alta" | "urgente">("media");
+  const [scheduledFor, setScheduledFor] = useState<string>("");
+  const [graceMinutes, setGraceMinutes] = useState<number>(15);
   const [loading, setLoading] = useState(false);
 
   return (
@@ -196,6 +237,8 @@ function NewTaskForm({
           assigned_to: assignedTo || null,
           priority,
           created_by: userId,
+          scheduled_for: scheduledFor ? new Date(scheduledFor).toISOString() : null,
+          absence_grace_minutes: graceMinutes,
         });
         setLoading(false);
         if (error) {
@@ -237,6 +280,20 @@ function NewTaskForm({
               <SelectItem value="urgente">Urgente</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Agendado para</Label>
+          <Input type="datetime-local" value={scheduledFor} onChange={(e) => setScheduledFor(e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Tolerância de ausência (min)</Label>
+          <Input
+            type="number"
+            min={0}
+            max={1440}
+            value={graceMinutes}
+            onChange={(e) => setGraceMinutes(Number(e.target.value) || 0)}
+          />
         </div>
       </div>
       <Button type="submit" className="w-full" disabled={loading}>
