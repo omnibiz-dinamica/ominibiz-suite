@@ -15,6 +15,7 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -27,6 +28,23 @@ function LoginPage() {
     }
     toast.success("Bem-vindo!");
     nav({ to: "/app" });
+  };
+
+  const onForgotPassword = async () => {
+    if (!email) {
+      toast.error("Informe seu email acima para receber o link de recuperação.");
+      return;
+    }
+    setResetting(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setResetting(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Enviámos um link de recuperação para o seu email.");
   };
 
   return (
@@ -46,6 +64,16 @@ function LoginPage() {
           <div className="space-y-1.5">
             <Label htmlFor="password">Senha</Label>
             <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+          </div>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={onForgotPassword}
+              disabled={resetting}
+              className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:opacity-50"
+            >
+              {resetting ? "Enviando..." : "Esqueci minha senha"}
+            </button>
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Entrando..." : "Entrar"}
