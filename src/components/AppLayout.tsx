@@ -38,7 +38,7 @@ const items: Item[] = [
 ];
 
 export function AppLayout({ children }: { children?: ReactNode }) {
-  const { user, isManager, isSuperAdmin, signOut } = useAuth();
+  const { user, isManager, isSuperAdmin, currentCompanyId, signOut } = useAuth();
   const { theme, toggle } = useTheme();
   const nav = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
@@ -95,7 +95,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
           })}
         </nav>
 
-        {isSuperAdmin && !user?.user_metadata?.current_company_id && (
+        {isSuperAdmin && !currentCompanyId && (
           <div className="mx-3 rounded-lg border border-sidebar-border bg-sidebar-accent/60 p-3 text-xs text-sidebar-foreground">
             Abra <strong>Super Admin</strong>, crie ou selecione uma empresa para operar usuários, clientes e tarefas.
           </div>
