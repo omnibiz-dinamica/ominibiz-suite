@@ -84,7 +84,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const switchCompany = async (companyId: string | null) => {
     if (!session?.user) return;
-    const { error } = await (supabase as any).rpc("set_current_company", { _company_id: companyId });
+    const { error } = await (supabase as any).rpc("set_current_company", {
+      _company_id: companyId,
+    });
     if (error) throw error;
     setCurrentCompanyId(companyId);
   };
