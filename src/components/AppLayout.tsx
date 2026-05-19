@@ -22,7 +22,14 @@ import { useTheme } from "@/lib/theme";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type Item = { to: string; label: string; icon: typeof LayoutDashboard; managerOnly?: boolean; superOnly?: boolean; soon?: boolean };
+type Item = {
+  to: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  managerOnly?: boolean;
+  superOnly?: boolean;
+  soon?: boolean;
+};
 
 const items: Item[] = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard },
@@ -44,7 +51,9 @@ export function AppLayout({ children }: { children?: ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
 
-  const visible = items.filter((i) => (!i.managerOnly || isManager) && (!i.superOnly || isSuperAdmin));
+  const visible = items.filter(
+    (i) => (!i.managerOnly || isManager) && (!i.superOnly || isSuperAdmin),
+  );
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -97,13 +106,22 @@ export function AppLayout({ children }: { children?: ReactNode }) {
 
         {isSuperAdmin && !currentCompanyId && (
           <div className="mx-3 rounded-lg border border-sidebar-border bg-sidebar-accent/60 p-3 text-xs text-sidebar-foreground">
-            Abra <strong>Super Admin</strong>, crie ou selecione uma empresa para operar usuários, clientes e tarefas.
+            Abra <strong>Super Admin</strong>, crie ou selecione uma empresa para operar usuários,
+            clientes e tarefas.
           </div>
         )}
 
         <div className="absolute inset-x-0 bottom-0 border-t border-sidebar-border p-3">
           <div className="mb-2 px-2 text-xs text-muted-foreground truncate">{user?.email}</div>
-          <Button variant="ghost" size="sm" className="w-full justify-start" onClick={async () => { await signOut(); nav({ to: "/login" }); }}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start"
+            onClick={async () => {
+              await signOut();
+              nav({ to: "/login" });
+            }}
+          >
             <LogOut className="mr-2 h-4 w-4" /> Sair
           </Button>
         </div>

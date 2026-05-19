@@ -6,8 +6,21 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Building2, CheckCircle2, Copy, Plus } from "lucide-react";
 import { COUNTRIES, countryDefaults, slugify, type CountryCode } from "@/lib/locale";
@@ -83,11 +96,21 @@ function AdminPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-semibold tracking-tight">Super Admin</h1>
-          <p className="mt-1 text-muted-foreground">Crie empresas e escolha em qual operação o super admin está trabalhando.</p>
+          <p className="mt-1 text-muted-foreground">
+            Crie empresas e escolha em qual operação o super admin está trabalhando.
+          </p>
         </div>
-        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setCreatedLink(null); }}>
+        <Dialog
+          open={open}
+          onOpenChange={(v) => {
+            setOpen(v);
+            if (!v) setCreatedLink(null);
+          }}
+        >
           <DialogTrigger asChild>
-            <Button><Plus className="mr-2 h-4 w-4" /> Criar empresa</Button>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" /> Criar empresa
+            </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
@@ -98,28 +121,48 @@ function AdminPage() {
                 <p className="text-sm text-muted-foreground">
                   Empresa criada. Envie este link ao administrador para concluir o acesso:
                 </p>
-                <div className="rounded-lg border border-border bg-muted p-3 text-xs break-all">{createdLink}</div>
-                <Button className="w-full" onClick={() => { navigator.clipboard.writeText(createdLink); toast.success("Link copiado"); }}>
+                <div className="rounded-lg border border-border bg-muted p-3 text-xs break-all">
+                  {createdLink}
+                </div>
+                <Button
+                  className="w-full"
+                  onClick={() => {
+                    navigator.clipboard.writeText(createdLink);
+                    toast.success("Link copiado");
+                  }}
+                >
                   <Copy className="mr-2 h-4 w-4" /> Copiar link do convite
                 </Button>
               </div>
             ) : (
               <form
                 className="space-y-4"
-                onSubmit={(e) => { e.preventDefault(); create.mutate(); }}
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  create.mutate();
+                }}
               >
                 <div className="space-y-1.5">
                   <Label>Nome da empresa</Label>
-                  <Input required value={name} onChange={(e) => setName(e.target.value)} maxLength={120} />
+                  <Input
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    maxLength={120}
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label>País operacional</Label>
                     <Select value={country} onValueChange={(v) => setCountry(v as CountryCode)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
                       <SelectContent>
                         {COUNTRIES.map((c) => (
-                          <SelectItem key={c.code} value={c.code}>{c.label}</SelectItem>
+                          <SelectItem key={c.code} value={c.code}>
+                            {c.label}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -127,17 +170,28 @@ function AdminPage() {
                   <div className="space-y-1.5">
                     <Label>Configuração</Label>
                     <div className="rounded-md border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
-                      {countryDefaults(country).currency} · {countryDefaults(country).language} · {countryDefaults(country).timezone}
+                      {countryDefaults(country).currency} · {countryDefaults(country).language} ·{" "}
+                      {countryDefaults(country).timezone}
                     </div>
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label>Nome do administrador</Label>
-                  <Input required value={adminName} onChange={(e) => setAdminName(e.target.value)} maxLength={100} />
+                  <Input
+                    required
+                    value={adminName}
+                    onChange={(e) => setAdminName(e.target.value)}
+                    maxLength={100}
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Email do administrador</Label>
-                  <Input type="email" required value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} />
+                  <Input
+                    type="email"
+                    required
+                    value={adminEmail}
+                    onChange={(e) => setAdminEmail(e.target.value)}
+                  />
                 </div>
                 <DialogFooter>
                   <Button type="submit" disabled={create.isPending} className="w-full">
@@ -188,7 +242,9 @@ function AdminPage() {
             </li>
           ))}
           {(companies ?? []).length === 0 && (
-            <li className="py-8 text-center text-sm text-muted-foreground">Nenhuma empresa criada ainda.</li>
+            <li className="py-8 text-center text-sm text-muted-foreground">
+              Nenhuma empresa criada ainda.
+            </li>
           )}
         </ul>
       </div>

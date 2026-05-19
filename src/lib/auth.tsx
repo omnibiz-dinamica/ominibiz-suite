@@ -32,7 +32,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ]);
     const nextRoles = (roleData ?? []) as { role: AppRole; company_id: string | null }[];
     const isSuper = nextRoles.some((r) => r.role === "super_admin");
-    let companyId = profile?.current_company_id ?? nextRoles.find((r) => r.company_id)?.company_id ?? null;
+    let companyId =
+      profile?.current_company_id ?? nextRoles.find((r) => r.company_id)?.company_id ?? null;
 
     if (!companyId && isSuper) {
       const { data: firstCompany } = await supabase
@@ -96,7 +97,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isSuperAdmin: roles.some((r) => r.role === "super_admin"),
     isManager:
       roles.some((r) => r.role === "super_admin") ||
-      roles.some((r) => r.role === "manager" && (!currentCompanyId || r.company_id === currentCompanyId)),
+      roles.some(
+        (r) => r.role === "manager" && (!currentCompanyId || r.company_id === currentCompanyId),
+      ),
   };
 
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;

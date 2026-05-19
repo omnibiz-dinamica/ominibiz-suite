@@ -29,7 +29,9 @@ function Dashboard() {
     pendente: tasks?.filter((t) => t.status === "pendente").length ?? 0,
     em_andamento: tasks?.filter((t) => t.status === "em_andamento").length ?? 0,
     concluido: tasks?.filter((t) => t.status === "concluido").length ?? 0,
-    atrasadas: tasks?.filter((t) => t.due_at && new Date(t.due_at) < new Date() && t.status !== "concluido").length ?? 0,
+    atrasadas:
+      tasks?.filter((t) => t.due_at && new Date(t.due_at) < new Date() && t.status !== "concluido")
+        .length ?? 0,
   };
 
   const cards = [
@@ -48,10 +50,15 @@ function Dashboard() {
               <Building2 className="h-5 w-5" />
               <div>
                 <div className="font-medium">Nenhuma empresa operacional selecionada</div>
-                <div className="text-sm opacity-90">Crie ou selecione uma empresa para liberar Usuários, Clientes, Tarefas e Folha de Ponto.</div>
+                <div className="text-sm opacity-90">
+                  Crie ou selecione uma empresa para liberar Usuários, Clientes, Tarefas e Folha de
+                  Ponto.
+                </div>
               </div>
             </div>
-            <Button asChild variant="outline"><Link to="/app/admin">Ir para Super Admin</Link></Button>
+            <Button asChild variant="outline">
+              <Link to="/app/admin">Ir para Super Admin</Link>
+            </Button>
           </div>
         </div>
       )}
@@ -81,11 +88,15 @@ function Dashboard() {
           {(tasks ?? []).slice(0, 5).map((t) => (
             <li key={t.id} className="flex items-center justify-between py-3">
               <span className="text-sm">{t.title}</span>
-              <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{t.status}</span>
+              <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                {t.status}
+              </span>
             </li>
           ))}
           {(!tasks || tasks.length === 0) && (
-            <li className="py-8 text-center text-sm text-muted-foreground">Nenhuma tarefa ainda.</li>
+            <li className="py-8 text-center text-sm text-muted-foreground">
+              Nenhuma tarefa ainda.
+            </li>
           )}
         </ul>
       </div>
