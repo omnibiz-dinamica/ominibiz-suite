@@ -30,7 +30,7 @@ const PRIORITY_TONE: Record<string, string> = {
 };
 
 function PontoPage() {
-  const { user, isManager, isSuperAdmin, currentCompanyId } = useAuth();
+  const { user, isManager, currentCompanyId } = useAuth();
   const qc = useQueryClient();
   const [, setNow] = useState(() => Date.now());
 
@@ -94,7 +94,7 @@ function PontoPage() {
       if (error) throw error;
       return (data ?? []) as unknown as TaskRow[];
     },
-    enabled: !!user && (!openEntry || isSuperAdmin),
+    enabled: !!user && !openEntry,
   });
 
   // Mapa de clientes da empresa para exibir nome
@@ -221,7 +221,7 @@ function PontoPage() {
       </div>
 
       {/* === CENTRAL OPERACIONAL === */}
-      {openEntry && openTask && (
+      {openEntry && openTask ? (
         <ActiveTaskCard
           entry={openEntry}
           task={openTask}
@@ -235,8 +235,7 @@ function PontoPage() {
           resuming={resumeMut.isPending}
           ending={endMut.isPending}
         />
-      )}
-      {(!openEntry || isSuperAdmin) && (
+      ) : (
         <UpcomingTasks
           tasks={upcoming ?? []}
           clientsMap={clientsMap ?? {}}
