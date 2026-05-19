@@ -580,6 +580,42 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      task_request_authorization: {
+        Args: { _note?: string; _task_id: string }
+        Returns: {
+          absence_grace_minutes: number
+          assigned_to: string | null
+          authorized_at: string | null
+          authorized_by: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          client_id: string | null
+          company_id: string
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          due_at: string | null
+          id: string
+          late_notified_at: string | null
+          location: string | null
+          marked_absent_at: string | null
+          notes: string | null
+          priority: Database["public"]["Enums"]["task_priority"]
+          scheduled_end: string | null
+          scheduled_for: string | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tasks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       task_transition: {
         Args: { _action: string; _task_id: string }
         Returns: {
