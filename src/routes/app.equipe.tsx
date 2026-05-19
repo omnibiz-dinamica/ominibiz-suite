@@ -7,8 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Copy, Trash2 } from "lucide-react";
+import { Copy, Trash2, Pencil, Power } from "lucide-react";
+
+interface MemberRow {
+  user_id: string;
+  role: "manager" | "employee" | "super_admin";
+  profile?: { id: string; full_name: string | null; phone: string | null; is_active: boolean } | null;
+}
 
 export const Route = createFileRoute("/app/equipe")({
   component: TeamPage,
@@ -43,10 +50,49 @@ function TeamPage() {
         .eq("company_id", currentCompanyId!);
       const ids = (roles ?? []).map((r) => r.user_id);
       if (ids.length === 0) return [];
-      const { data: profs } = await supabase.from("profiles").select("id, full_name").in("id", ids);
-      return (roles ?? []).map((r) => ({ ...r, profile: profs?.find((p) => p.id === r.user_id) }));
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, full_name, phone, is_active")
+        .in("id", ids);
+      return (roles ?? []).map((r) => ({
+        ...r,
+        profile: profs?.find((p) => p.id === r.user_id) ?? null,
+      })) as MemberRow[];
     },
     enabled: !!currentCompanyId && isManager,
+  });
+
+  const [editing, setEditing] = useState<MemberRow | null>(null);
+
+  const toggleActive = useMutation({
+    mutationFn: async (m: MemberRow) => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ is_active: !(m.profile?.is_active ?? true) })
+        .eq("id", m.user_id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Status atualizado");
+      qc.invalidateQueries({ queryKey: ["team-members"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const removeMember = useMutation({
+    mutationFn: async (m: MemberRow) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.rpc as any)("remove_member", {
+        _user_id: m.user_id,
+        _company_id: currentCompanyId!,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Usuário removido");
+      qc.invalidateQueries({ queryKey: ["team-members"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const createInvite = useMutation({
@@ -152,16 +198,152 @@ function TeamPage() {
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-6">
-        <h2 className="font-display text-lg font-semibold">Membros</h2>
+        <h2 className="font-display text-lg font-semibold">Usuários</h2>
         <ul className="mt-4 divide-y divide-border">
-          {(members ?? []).map((m) => (
-            <li key={m.user_id + m.role} className="flex items-center justify-between py-3">
-              <span className="font-medium">{m.profile?.full_name ?? m.user_id.slice(0, 8)}</span>
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">{m.role}</span>
-            </li>
-          ))}
+          {(members ?? []).map((m) => {
+            const active = m.profile?.is_active ?? true;
+            const isSelf = m.user_id === user?.id;
+            return (
+              <li key={m.user_id + m.role} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 font-medium">
+                    <span className="truncate">{m.profile?.full_name ?? m.user_id.slice(0, 8)}</span>
+                    {!active && (
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase text-muted-foreground">
+                        inativo
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {m.role} {m.profile?.phone ? `· ${m.profile.phone}` : ""}
+                  </div>
+                </div>
+                {m.role !== "super_admin" && (
+                  <div className="flex shrink-0 gap-1">
+                    <Button size="icon" variant="ghost" title="Editar" onClick={() => setEditing(m)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      title={active ? "Desativar" : "Ativar"}
+                      onClick={() => toggleActive.mutate(m)}
+                      disabled={toggleActive.isPending}
+                    >
+                      <Power className="h-4 w-4" />
+                    </Button>
+                    {!isSelf && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        title="Remover"
+                        onClick={() => {
+                          if (confirm(`Remover "${m.profile?.full_name ?? "usuário"}" da empresa?`))
+                            removeMember.mutate(m);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </li>
+            );
+          })}
+          {(members ?? []).length === 0 && (
+            <li className="py-6 text-center text-sm text-muted-foreground">Nenhum usuário ainda.</li>
+          )}
         </ul>
       </div>
+
+      <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar usuário</DialogTitle>
+          </DialogHeader>
+          {editing && (
+            <EditMemberForm
+              member={editing}
+              companyId={currentCompanyId!}
+              onDone={() => {
+                setEditing(null);
+                qc.invalidateQueries({ queryKey: ["team-members"] });
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+function EditMemberForm({
+  member,
+  companyId,
+  onDone,
+}: {
+  member: MemberRow;
+  companyId: string;
+  onDone: () => void;
+}) {
+  const [fullName, setFullName] = useState(member.profile?.full_name ?? "");
+  const [phone, setPhone] = useState(member.profile?.phone ?? "");
+  const [role, setRole] = useState<"manager" | "employee">(
+    member.role === "manager" ? "manager" : "employee",
+  );
+  const [loading, setLoading] = useState(false);
+
+  return (
+    <form
+      className="space-y-4"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+          const { error: pErr } = await supabase
+            .from("profiles")
+            .update({ full_name: fullName.trim() || null, phone: phone.trim() || null })
+            .eq("id", member.user_id);
+          if (pErr) throw pErr;
+          if (role !== member.role) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { error: rErr } = await (supabase.rpc as any)("set_member_role", {
+              _user_id: member.user_id,
+              _company_id: companyId,
+              _role: role,
+            });
+            if (rErr) throw rErr;
+          }
+          toast.success("Usuário atualizado");
+          onDone();
+        } catch (err) {
+          toast.error((err as Error).message);
+        } finally {
+          setLoading(false);
+        }
+      }}
+    >
+      <div className="space-y-1.5">
+        <Label>Nome</Label>
+        <Input maxLength={150} value={fullName} onChange={(e) => setFullName(e.target.value)} />
+      </div>
+      <div className="space-y-1.5">
+        <Label>Telefone</Label>
+        <Input maxLength={40} value={phone} onChange={(e) => setPhone(e.target.value)} />
+      </div>
+      <div className="space-y-1.5">
+        <Label>Papel</Label>
+        <Select value={role} onValueChange={(v) => setRole(v as typeof role)}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="employee">Funcionário</SelectItem>
+            <SelectItem value="manager">Gestor</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <Button type="submit" className="w-full" disabled={loading}>
+        {loading ? "Salvando..." : "Salvar"}
+      </Button>
+    </form>
   );
 }
