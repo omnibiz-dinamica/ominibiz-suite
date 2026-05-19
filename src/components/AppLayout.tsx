@@ -30,7 +30,7 @@ const items: Item[] = [
   { to: "/app/ponto", label: "Folha de Ponto", icon: Clock },
   { to: "/app/notificacoes", label: "Notificações", icon: Bell },
   { to: "/app/clientes", label: "Clientes", icon: Briefcase },
-  { to: "/app/equipe", label: "Equipe", icon: Users, managerOnly: true },
+  { to: "/app/equipe", label: "Usuários", icon: Users, managerOnly: true },
   { to: "/app/empresa", label: "Empresa", icon: Building2, managerOnly: true },
   { to: "/app/notas", label: "Notas", icon: FileText, soon: true },
   { to: "/app/assistente", label: "Assistente IA", icon: Sparkles, soon: true },
