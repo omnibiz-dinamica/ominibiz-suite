@@ -8,14 +8,14 @@ export const Route = createFileRoute("/app")({
 });
 
 function AppShell() {
-  const { loading, user } = useAuth();
+  const { loading, initialized, user } = useAuth();
   const nav = useNavigate();
 
   useEffect(() => {
-    if (!loading && !user) nav({ to: "/login" });
-  }, [loading, user, nav]);
+    if (initialized && !loading && !user) nav({ to: "/login" });
+  }, [initialized, loading, user, nav]);
 
-  if (loading) {
+  if (!initialized || loading) {
     return (
       <div className="grid min-h-screen place-items-center bg-background text-muted-foreground">
         Carregando...
