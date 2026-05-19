@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Play, Check, X, ShieldCheck, UserX, Clock } from "lucide-react";
+import { Plus, Play, Check, X, ShieldCheck, UserX, Clock, Pencil } from "lucide-react";
 import {
   STATUS_LABELS,
   STATUS_TONE,
@@ -31,6 +31,7 @@ function TasksPage() {
   const { user, isManager, currentCompanyId } = useAuth();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<TaskRow | null>(null);
 
   const { data: tasks, isLoading } = useQuery({
     queryKey: ["tasks", currentCompanyId, user?.id, isManager],
@@ -130,11 +131,27 @@ function TasksPage() {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader><DialogTitle>Nova tarefa</DialogTitle></DialogHeader>
-              <NewTaskForm members={members ?? []} clients={clientsList ?? []} companyId={currentCompanyId} userId={user!.id} onCreated={() => { setOpen(false); qc.invalidateQueries({ queryKey: ["tasks"] }); }} />
+              <TaskForm members={members ?? []} clients={clientsList ?? []} companyId={currentCompanyId} userId={user!.id} onDone={() => { setOpen(false); qc.invalidateQueries({ queryKey: ["tasks"] }); }} />
             </DialogContent>
           </Dialog>
         )}
       </div>
+
+      <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar tarefa</DialogTitle></DialogHeader>
+          {editing && (
+            <TaskForm
+              initial={editing}
+              members={members ?? []}
+              clients={clientsList ?? []}
+              companyId={editing.company_id}
+              userId={user!.id}
+              onDone={() => { setEditing(null); qc.invalidateQueries({ queryKey: ["tasks"] }); }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {!currentCompanyId && isManager && (
         <div className="rounded-2xl border border-warning/40 bg-warning/10 p-4 text-sm text-warning-foreground">
@@ -177,6 +194,11 @@ function TasksPage() {
                 </div>
                 <div className="col-span-2 text-sm capitalize text-muted-foreground">{t.priority}</div>
                 <div className="col-span-3 flex justify-end gap-2">
+                  {isManager && (
+                    <Button size="sm" variant="ghost" title="Editar" onClick={() => setEditing(t)}>
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                  )}
                   {actions.map((a) => (
                     <ActionButton
                       key={a}
@@ -220,26 +242,35 @@ function ActionButton({
   );
 }
 
-function NewTaskForm({
+function TaskForm({
   members,
   clients,
   companyId,
   userId,
-  onCreated,
+  initial,
+  onDone,
 }: {
   members: { id: string; full_name: string | null }[];
   clients: { id: string; name: string }[];
   companyId: string;
   userId: string;
-  onCreated: () => void;
+  initial?: TaskRow;
+  onDone: () => void;
 }) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [assignedTo, setAssignedTo] = useState<string>("");
-  const [clientId, setClientId] = useState<string>("");
-  const [priority, setPriority] = useState<"baixa" | "media" | "alta" | "urgente">("media");
-  const [scheduledFor, setScheduledFor] = useState<string>("");
-  const [graceMinutes, setGraceMinutes] = useState<number>(15);
+  const toLocalInput = (iso: string | null) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+  const [title, setTitle] = useState(initial?.title ?? "");
+  const [description, setDescription] = useState(initial?.description ?? "");
+  const [assignedTo, setAssignedTo] = useState<string>(initial?.assigned_to ?? "");
+  const [clientId, setClientId] = useState<string>(initial?.client_id ?? "");
+  const [priority, setPriority] = useState<"baixa" | "media" | "alta" | "urgente">(initial?.priority ?? "media");
+  const [scheduledFor, setScheduledFor] = useState<string>(toLocalInput(initial?.scheduled_for ?? null));
+  const [scheduledEnd, setScheduledEnd] = useState<string>(toLocalInput(initial?.scheduled_end ?? null));
+  const [graceMinutes, setGraceMinutes] = useState<number>(initial?.absence_grace_minutes ?? 15);
   const [loading, setLoading] = useState(false);
 
   return (
@@ -248,24 +279,26 @@ function NewTaskForm({
       onSubmit={async (e) => {
         e.preventDefault();
         setLoading(true);
-        const { error } = await supabase.from("tasks").insert({
-          company_id: companyId,
+        const payload = {
           title: title.trim(),
           description: description.trim() || null,
           assigned_to: assignedTo || null,
           client_id: clientId || null,
           priority,
-          created_by: userId,
           scheduled_for: scheduledFor ? new Date(scheduledFor).toISOString() : null,
+          scheduled_end: scheduledEnd ? new Date(scheduledEnd).toISOString() : null,
           absence_grace_minutes: graceMinutes,
-        });
+        };
+        const { error } = initial
+          ? await supabase.from("tasks").update(payload).eq("id", initial.id)
+          : await supabase.from("tasks").insert({ ...payload, company_id: companyId, created_by: userId });
         setLoading(false);
         if (error) {
           toast.error(error.message);
           return;
         }
-        toast.success("Tarefa criada");
-        onCreated();
+        toast.success(initial ? "Tarefa atualizada" : "Tarefa criada");
+        onDone();
       }}
     >
       <div className="space-y-1.5">
@@ -312,8 +345,12 @@ function NewTaskForm({
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label>Agendado para</Label>
+          <Label>Início</Label>
           <Input type="datetime-local" value={scheduledFor} onChange={(e) => setScheduledFor(e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Fim</Label>
+          <Input type="datetime-local" value={scheduledEnd} onChange={(e) => setScheduledEnd(e.target.value)} />
         </div>
         <div className="space-y-1.5">
           <Label>Tolerância de ausência (min)</Label>
@@ -327,7 +364,7 @@ function NewTaskForm({
         </div>
       </div>
       <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Criando..." : "Criar tarefa"}
+        {loading ? "Salvando..." : initial ? "Salvar alterações" : "Criar tarefa"}
       </Button>
     </form>
   );
