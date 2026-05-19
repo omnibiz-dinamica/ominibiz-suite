@@ -1,15 +1,16 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { ClipboardList, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
+import { ClipboardList, CheckCircle2, Clock, AlertTriangle, Building2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/app/")({
   component: Dashboard,
 });
 
 function Dashboard() {
-  const { user, isManager, currentCompanyId } = useAuth();
+  const { user, isManager, isSuperAdmin, currentCompanyId } = useAuth();
 
   const { data: tasks } = useQuery({
     queryKey: ["dashboard-tasks", currentCompanyId, user?.id, isManager],
@@ -40,6 +41,21 @@ function Dashboard() {
 
   return (
     <div className="space-y-8">
+      {isSuperAdmin && !currentCompanyId && (
+        <div className="rounded-2xl border border-warning/40 bg-warning/10 p-5 text-warning-foreground">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Building2 className="h-5 w-5" />
+              <div>
+                <div className="font-medium">Nenhuma empresa operacional selecionada</div>
+                <div className="text-sm opacity-90">Crie ou selecione uma empresa para liberar Usuários, Clientes, Tarefas e Folha de Ponto.</div>
+              </div>
+            </div>
+            <Button asChild variant="outline"><Link to="/app/admin">Ir para Super Admin</Link></Button>
+          </div>
+        </div>
+      )}
+
       <div>
         <h1 className="font-display text-3xl font-semibold tracking-tight">Visão geral</h1>
         <p className="mt-1 text-muted-foreground">
