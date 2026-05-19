@@ -1,66 +1,171 @@
-## Reestruturação do Onboarding OmniBiz
+## Diagnóstico objetivo encontrado
 
-Transformar o fluxo atual (self-signup aberto) em um SaaS controlado, onde apenas o Super Admin cria empresas e convida administradores.
+O `src/lib/auth.tsx` hoje faz este fluxo:
 
-### 1. Banco de dados (migration)
+```text
+AuthProvider monta
+  -> loading = true
+  -> supabase.auth.getSession()
+      -> applySession(session)
+          -> setSession(session)
+          -> se user existe:
+              setLoading(true)
+              setTimeout(0)
+                -> loadProfile(user.id)
+                    -> supabase.rpc("get_auth_context")
+                    -> lê row.current_company_id
+                    -> lê row.roles
+                    -> setRoles(...)
+                    -> setCurrentCompanyId(...)
+              -> finally setLoading(false)
+          -> se user não existe:
+              setRoles([])
+              setCurrentCompanyId(null)
+              setLoading(false)
 
-**Ampliar tabela `companies`** com campos operacionais:
-- `currency` (text, default 'EUR')
-- `language` (text, default 'pt-PT')
-- `timezone` (text, default 'Europe/Lisbon')
-- País já existe — restringir via CHECK ou validação a `PT`, `BR`, `ES`
-- Mudar default de `status` para `active` (super admin já cria ativa)
+  -> supabase.auth.onAuthStateChange(...)
+      -> ignora INITIAL_SESSION
+      -> para outros eventos chama applySession(session)
+```
 
-**Seed do Super Admin**: criar trigger `on_auth_user_created` que detecta `edurts.pt@gmail.com` e insere automaticamente em `user_roles` com role `super_admin` (company_id NULL). Isso resolve o caso de o usuário ainda não existir.
+## Causa provável da quebra no frontend
 
-**Nova RPC `admin_create_company_with_invite`** (SECURITY DEFINER, restrita a super_admin):
-- Cria a empresa já como `active` com país/moeda/idioma/timezone
-- Cria invite com role `manager` para o email do administrador
-- Retorna `{ company_id, invite_token }` para o frontend montar o link
+1. **Ordem incorreta do listener de sessão**
+   - O padrão seguro é registrar `onAuthStateChange()` antes de chamar `getSession()`.
+   - O arquivo atual faz o contrário: chama `getSession()` antes e só depois registra o listener.
+   - Isso abre janela de corrida no login/navegação, principalmente porque `/login` faz `signInWithPassword()` e navega imediatamente para `/app`.
 
-**Estrutura inicial automática**: a RPC também insere uma tarefa de boas-vindas (ex: "Configurar sua equipe") para a empresa não abrir vazia.
+2. **Race condition real em `applySession()`**
+   - `loadId` é usado para controlar corrida, mas ele só impede `setLoading(false)` antigo.
+   - Ele **não impede** um `loadProfile()` antigo de executar `setRoles([])` e `setCurrentCompanyId(null)` no `catch`, nem impede `setRoles/setCurrentCompanyId` de uma chamada antiga.
+   - Resultado possível: `get_auth_context()` pode retornar certo, mas depois um evento antigo/erro antigo sobrescreve o estado React.
 
-**Bloquear self-signup**: revogar/remover RPC `create_company_with_owner` ou restringir a super_admin.
+3. **Estado incompleto para diagnosticar**
+   - O contexto não tem `initialized` nem `profile`.
+   - Só existem `session`, `loading`, `roles`, `currentCompanyId`.
+   - Por isso a UI não consegue distinguir:
+     - “ainda carregando auth”
+     - “logado mas contexto ainda não carregou”
+     - “RPC falhou”
+     - “sem empresa de verdade”
 
-### 2. Edge function de envio de email do convite
+4. **Queries das telas podem rodar cedo demais**
+   - Exemplo: `src/routes/app.index.tsx` habilita dashboard com `enabled: !!user`.
+   - Se `user` já existe mas `currentCompanyId` ainda não foi carregado, a query roda antes do contexto operacional estar pronto.
+   - Para super admin isso pode virar consulta ampla ou estado visual inconsistente.
 
-Criar função `send-invite-email` que:
-- Recebe `{ token, email, company_name, inviter_name }`
-- Envia email branded via Lovable Emails (após setup) com link `https://app/aceitar-convite?token=...`
-- Por enquanto (até DNS), pode logar e retornar o link para copiar
+## O que vou alterar
 
-### 3. Frontend
+### 1. Instrumentar `src/lib/auth.tsx` com logs temporários detalhados
+Adicionar logs com prefixo único, por exemplo `[auth-flow]`, mostrando:
 
-**Remover `/signup`** — redireciona para `/login` com mensagem "OmniBiz é por convite".
+```text
+provider mounted
+listener registered
+getSession start/end
+onAuthStateChange event
+applySession start
+loadProfile start
+rpc get_auth_context success/error
+parsed roles/currentCompanyId
+state commit skipped/applied
+loading false
+```
 
-**Nova rota `/app/admin`** (super_admin only):
-- Dashboard com lista de empresas
-- Botão "Criar empresa" → modal com campos: nome, país (select PT/BR/ES), moeda (auto-preenchida), idioma (auto), timezone (auto), email do administrador, nome do administrador
-- Após criar: mostra confirmação + link do convite (copiar) e estado do email enviado
+Também logar snapshots seguros:
 
-**Sidebar**: adicionar item "Super Admin" visível apenas para `isSuperAdmin`.
+```text
+loading
+initialized
+user id/email
+roles
+currentCompanyId
+isSuperAdmin
+isManager
+```
 
-**Atualizar `/aceitar-convite`**: fluxo simplificado — só pede senha (e nome se ainda não tiver), confirma o convite via RPC `accept_invite` e redireciona direto para `/app` com toast "Bem-vindo a [empresa]".
+### 2. Corrigir a ordem do fluxo auth
+Reestruturar o `useEffect` para:
 
-**Atualizar landing `/`**: remover CTAs de "criar conta", manter apenas "Entrar".
+```text
+1. registrar onAuthStateChange primeiro
+2. chamar getSession depois
+3. aplicar sessão com controle de versão único
+4. só finalizar loading quando a chamada atual terminar
+```
 
-### 4. Sensação de "plataforma pronta"
+### 3. Tornar `loadProfile()` imune a chamadas antigas
+Alterar `loadProfile` para retornar dados, sem fazer `setState` diretamente.
 
-- Dashboard `/app` já exibe a tarefa de boas-vindas criada automaticamente
-- Empresa criada já vem com `status = active` (sem tela de "aguardando aprovação")
-- Página `/app/equipe` para o admin convidar funcionários (já existe)
+Novo modelo:
 
-### Detalhes técnicos
+```text
+loadAuthContext(user)
+  -> rpc get_auth_context
+  -> retorna { roles, currentCompanyId }
 
-- Mapeamento país→moeda/idioma/timezone no frontend (helper):
-  - PT → EUR / pt-PT / Europe/Lisbon
-  - BR → BRL / pt-BR / America/Sao_Paulo
-  - ES → EUR / es-ES / Europe/Madrid
-- Email infra: como ainda não há domínio configurado, na primeira versão a função retorna o link do convite para o super admin copiar/enviar manualmente; assim que o usuário configurar domínio, ativamos envio automático.
-- Atualizar `src/integrations/supabase/types.ts` é automático após migration.
+applySession(session)
+  -> cria requestId
+  -> chama loadAuthContext
+  -> antes de setState confere se requestId ainda é o atual
+  -> só então aplica roles/currentCompanyId/loading
+```
 
-### Fora do escopo desta entrega
+Isso remove a causa onde uma chamada antiga sobrescreve estado novo.
 
-- Configuração completa de domínio de email (depende do usuário)
-- Suporte multi-idioma na UI (apenas armazenamos a preferência por enquanto)
-- Painel financeiro / faturamento
+### 4. Adicionar `initialized` e `profile` no AuthContext
+Sem mock, sem hardcode, sem fallback fake.
+
+`profile` será carregado do banco real após o RPC, usando o `current_company_id` retornado, ou opcionalmente adicionado como leitura direta segura:
+
+```text
+profiles.select("id, full_name, current_company_id, is_active, created_at, updated_at")
+  .eq("id", user.id)
+  .maybeSingle()
+```
+
+Se essa leitura falhar por RLS, o erro será logado explicitamente; não será mascarado como estado vazio.
+
+### 5. Ajustar gates das telas principais
+Onde a tela depende de empresa operacional, trocar `enabled: !!user` por condição baseada no contexto carregado:
+
+```text
+enabled: initialized && !!user && (!!currentCompanyId || !isManager)
+```
+
+No dashboard, evitar query operacional antes do `currentCompanyId` estar definido para manager/super admin.
+
+### 6. Resultado esperado nos logs
+Após login com `edurts.pt@gmail.com`, a sequência esperada deve ficar:
+
+```text
+[auth-flow] provider mounted
+[auth-flow] listener registered
+[auth-flow] getSession:start
+[auth-flow] auth event SIGNED_IN/TOKEN_REFRESHED/INITIAL_SESSION
+[auth-flow] applySession:start user=edurts.pt@gmail.com requestId=N
+[auth-flow] get_auth_context:start requestId=N
+[auth-flow] get_auth_context:success currentCompanyId=e83a... roles=[super_admin]
+[auth-flow] profile:success current_company_id=e83a...
+[auth-flow] state:commit requestId=N loading=false initialized=true
+```
+
+## Arquivos a alterar
+
+- `src/lib/auth.tsx`
+  - Corrigir fluxo, logs, controle de corrida, `initialized`, `profile`.
+
+- Possivelmente `src/routes/app.tsx`
+  - Usar `initialized/loading` corretamente para não renderizar app antes do contexto auth estar pronto.
+
+- Possivelmente `src/routes/app.index.tsx`
+  - Evitar query de dashboard antes de carregar `currentCompanyId`.
+
+## Critério de sucesso
+
+- `get_auth_context()` chamado exatamente pelo cliente autenticado.
+- Retorno não descartado.
+- `current_company_id` aplicado no React context.
+- `roles` contém `super_admin`.
+- Nenhum evento antigo consegue sobrescrever estado novo.
+- As telas só consultam dados operacionais depois do contexto auth estar inicializado.
