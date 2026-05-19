@@ -55,7 +55,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!companyId) {
           const { data: created, error: createErr } = await supabase
             .from("companies")
-            .insert({ name: "Minha Empresa", created_by: uid })
+            .insert({
+              name: "Minha Empresa",
+              slug: `empresa-${uid.slice(0, 8)}-${Date.now().toString(36)}`,
+              created_by: uid,
+            })
             .select("id")
             .single();
           if (createErr) {
