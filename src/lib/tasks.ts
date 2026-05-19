@@ -171,6 +171,17 @@ export async function punchResume(): Promise<TimeEntryRow> {
   return data as TimeEntryRow;
 }
 
+/** Solicita nova autorização para uma tarefa ausente/rejeitada. Volta a 'pendente'. */
+export async function requestTaskAuthorization(taskId: string, note?: string): Promise<TaskRow> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("task_request_authorization", {
+    _task_id: taskId,
+    _note: note ?? null,
+  });
+  if (error) throw error;
+  return data as TaskRow;
+}
+
 /** Duração efetiva (minutos) considerando pausa em curso para exibição. */
 export function effectiveMinutesNow(e: TimeEntryRow): number {
   const start = new Date(e.started_at).getTime();
