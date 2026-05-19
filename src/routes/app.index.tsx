@@ -10,7 +10,7 @@ export const Route = createFileRoute("/app/")({
 });
 
 function Dashboard() {
-  const { user, isManager, isSuperAdmin, currentCompanyId } = useAuth();
+  const { user, isManager, isSuperAdmin, currentCompanyId, initialized } = useAuth();
 
   const { data: tasks } = useQuery({
     queryKey: ["dashboard-tasks", currentCompanyId, user?.id, isManager],
@@ -22,7 +22,7 @@ function Dashboard() {
       if (error) throw error;
       return data ?? [];
     },
-    enabled: !!user,
+    enabled: initialized && !!user && (!isManager || !!currentCompanyId || isSuperAdmin),
   });
 
   const counts = {
