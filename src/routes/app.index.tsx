@@ -1,15 +1,16 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { ClipboardList, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
+import { ClipboardList, CheckCircle2, Clock, AlertTriangle, Building2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/app/")({
   component: Dashboard,
 });
 
 function Dashboard() {
-  const { user, isManager, currentCompanyId } = useAuth();
+  const { user, isManager, isSuperAdmin, currentCompanyId } = useAuth();
 
   const { data: tasks } = useQuery({
     queryKey: ["dashboard-tasks", currentCompanyId, user?.id, isManager],
@@ -28,7 +29,9 @@ function Dashboard() {
     pendente: tasks?.filter((t) => t.status === "pendente").length ?? 0,
     em_andamento: tasks?.filter((t) => t.status === "em_andamento").length ?? 0,
     concluido: tasks?.filter((t) => t.status === "concluido").length ?? 0,
-    atrasadas: tasks?.filter((t) => t.due_at && new Date(t.due_at) < new Date() && t.status !== "concluido").length ?? 0,
+    atrasadas:
+      tasks?.filter((t) => t.due_at && new Date(t.due_at) < new Date() && t.status !== "concluido")
+        .length ?? 0,
   };
 
   const cards = [
@@ -40,6 +43,26 @@ function Dashboard() {
 
   return (
     <div className="space-y-8">
+      {isSuperAdmin && !currentCompanyId && (
+        <div className="rounded-2xl border border-warning/40 bg-warning/10 p-5 text-warning-foreground">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Building2 className="h-5 w-5" />
+              <div>
+                <div className="font-medium">Nenhuma empresa operacional selecionada</div>
+                <div className="text-sm opacity-90">
+                  Crie ou selecione uma empresa para liberar Usuários, Clientes, Tarefas e Folha de
+                  Ponto.
+                </div>
+              </div>
+            </div>
+            <Button asChild variant="outline">
+              <Link to="/app/admin">Ir para Super Admin</Link>
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div>
         <h1 className="font-display text-3xl font-semibold tracking-tight">Visão geral</h1>
         <p className="mt-1 text-muted-foreground">
@@ -65,11 +88,15 @@ function Dashboard() {
           {(tasks ?? []).slice(0, 5).map((t) => (
             <li key={t.id} className="flex items-center justify-between py-3">
               <span className="text-sm">{t.title}</span>
-              <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{t.status}</span>
+              <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                {t.status}
+              </span>
             </li>
           ))}
           {(!tasks || tasks.length === 0) && (
-            <li className="py-8 text-center text-sm text-muted-foreground">Nenhuma tarefa ainda.</li>
+            <li className="py-8 text-center text-sm text-muted-foreground">
+              Nenhuma tarefa ainda.
+            </li>
           )}
         </ul>
       </div>
