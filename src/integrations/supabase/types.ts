@@ -500,6 +500,13 @@ export type Database = {
         Args: { _country?: string; _name: string; _slug: string }
         Returns: string
       }
+      get_auth_context: {
+        Args: never
+        Returns: {
+          current_company_id: string
+          roles: Json
+        }[]
+      }
       get_invite_preview: {
         Args: { _token: string }
         Returns: {
@@ -584,6 +591,7 @@ export type Database = {
         Args: { _company_id: string; _user_id: string }
         Returns: undefined
       }
+      set_current_company: { Args: { _company_id: string }; Returns: string }
       set_member_role: {
         Args: {
           _company_id: string
