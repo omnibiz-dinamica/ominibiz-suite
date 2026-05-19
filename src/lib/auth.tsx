@@ -27,78 +27,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadProfile = async (uid: string) => {
     try {
-      const [rolesRes, profileRes] = await Promise.all([
-        supabase.from("user_roles").select("role, company_id").eq("user_id", uid),
-        supabase.from("profiles").select("current_company_id").eq("id", uid).maybeSingle(),
-      ]);
-      if (rolesRes.error) console.error("[auth] user_roles error", rolesRes.error);
-      if (profileRes.error) console.error("[auth] profiles error", profileRes.error);
+      const { data, error } = await (supabase as any).rpc("get_auth_context");
+      if (error) throw error;
 
-      const nextRoles = (rolesRes.data ?? []) as { role: AppRole; company_id: string | null }[];
-      const isSuper = nextRoles.some((r) => r.role === "super_admin");
-      let companyId =
-        profileRes.data?.current_company_id ??
-        nextRoles.find((r) => r.company_id)?.company_id ??
-        null;
-
-      if (!companyId && isSuper) {
-        const { data: firstCompany, error: cErr } = await supabase
-          .from("companies")
-          .select("id")
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (cErr) console.error("[auth] companies fetch error", cErr);
-        companyId = firstCompany?.id ?? null;
-
-        // Bootstrap: super admin sem nenhuma empresa → cria automaticamente
-        if (!companyId) {
-          const { data: created, error: createErr } = await supabase
-            .from("companies")
-            .insert({
-              name: "Minha Empresa",
-              slug: `empresa-${uid.slice(0, 8)}-${Date.now().toString(36)}`,
-              created_by: uid,
-            })
-            .select("id")
-            .single();
-          if (createErr) {
-            console.error("[auth] auto-create company failed", createErr);
-          } else if (created) {
-            companyId = created.id;
-          }
-        }
-
-        if (companyId) {
-          await supabase.from("profiles").update({ current_company_id: companyId }).eq("id", uid);
-        }
-      }
+      const row = Array.isArray(data) ? data[0] : data;
+      const nextRoles = (row?.roles ?? []) as { role: AppRole; company_id: string | null }[];
 
       setRoles(nextRoles);
-      setCurrentCompanyId(companyId);
+      setCurrentCompanyId(row?.current_company_id ?? null);
     } catch (e) {
-      console.error("[auth] loadProfile failed", e);
+      console.error("[auth] loadProfile failed", e, { uid });
+      setRoles([]);
+      setCurrentCompanyId(null);
     }
   };
 
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+    let active = true;
+    let loadId = 0;
+
+    const applySession = (s: Session | null) => {
+      const currentLoad = ++loadId;
       setSession(s);
       if (s?.user) {
         setLoading(true);
-        setTimeout(() => void loadProfile(s.user.id).finally(() => setLoading(false)), 0);
+        setTimeout(() => {
+          void loadProfile(s.user.id).finally(() => {
+            if (active && currentLoad === loadId) setLoading(false);
+          });
+        }, 0);
       } else {
         setRoles([]);
         setCurrentCompanyId(null);
         setLoading(false);
       }
+    };
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (active) applySession(data.session);
     });
-    supabase.auth.getSession().then(async ({ data }) => {
-      setSession(data.session);
-      if (data.session?.user) await loadProfile(data.session.user.id);
-      setLoading(false);
+
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
+      if (event === "INITIAL_SESSION") return;
+      applySession(s);
     });
-    return () => sub.subscription.unsubscribe();
+
+    return () => {
+      active = false;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   const refresh = async () => {
@@ -107,10 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const switchCompany = async (companyId: string | null) => {
     if (!session?.user) return;
-    const { error } = await supabase
-      .from("profiles")
-      .update({ current_company_id: companyId })
-      .eq("id", session.user.id);
+    const { error } = await (supabase as any).rpc("set_current_company", { _company_id: companyId });
     if (error) throw error;
     setCurrentCompanyId(companyId);
   };
