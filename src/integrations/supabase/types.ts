@@ -580,6 +580,18 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      remove_member: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: undefined
+      }
+      set_member_role: {
+        Args: {
+          _company_id: string
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: undefined
+      }
       task_request_authorization: {
         Args: { _note?: string; _task_id: string }
         Returns: {
