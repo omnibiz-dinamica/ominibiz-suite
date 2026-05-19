@@ -393,6 +393,9 @@ function UpcomingTasks({
   onStart,
   starting,
   startingId,
+  onRequestAuth,
+  requestingAuth,
+  requestingAuthId,
 }: {
   tasks: TaskRow[];
   clientsMap: Record<string, string>;
@@ -400,6 +403,9 @@ function UpcomingTasks({
   onStart: (id: string) => void;
   starting: boolean;
   startingId: string | null;
+  onRequestAuth: (id: string) => void;
+  requestingAuth: boolean;
+  requestingAuthId: string | null;
 }) {
   if (tasks.length === 0) {
     return (
@@ -427,10 +433,14 @@ function UpcomingTasks({
   // Próxima tarefa pronta para iniciar (autorizada). Caso não exista,
   // destacamos a primeira da lista (pendente, aguardando autorização)
   // para dar contexto operacional imediato.
-  const nextStartable = tasks.find((t) => t.status === "autorizado") ?? tasks[0];
+  // Prioriza tarefa pronta para iniciar; senão a primeira da fila.
+  const nextStartable =
+    tasks.find((t) => t.status === "autorizado") ?? tasks[0];
   const rest = tasks.filter((t) => t.id !== nextStartable.id);
   const nextIsStartable = nextStartable.status === "autorizado";
+  const nextIsAbsent = nextStartable.status === "ausente";
   const nextStarting = starting && startingId === nextStartable.id;
+  const nextRequesting = requestingAuth && requestingAuthId === nextStartable.id;
   const nextLate = isVisuallyLate(nextStartable);
   const nextClient = nextStartable.client_id ? clientsMap[nextStartable.client_id] : undefined;
 
@@ -485,16 +495,37 @@ function UpcomingTasks({
             )}
           </div>
 
-          <Button
-            size="lg"
-            className="h-16 w-full text-base"
-            disabled={!nextIsStartable || nextStarting}
-            onClick={() => onStart(nextStartable.id)}
-            title={!nextIsStartable ? "Aguardando autorização do gestor" : undefined}
-          >
-            <Play className="mr-2 h-6 w-6" />
-            {nextIsStartable ? "Iniciar tarefa" : "Aguardando autorização"}
-          </Button>
+          {nextIsAbsent ? (
+            <div className="space-y-2">
+              <div className="flex items-start gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>
+                  Tarefa marcada como <b>ausente</b>. Solicite nova autorização ao gestor para retomar a execução.
+                </span>
+              </div>
+              <Button
+                size="lg"
+                variant="outline"
+                className="h-16 w-full text-base"
+                disabled={nextRequesting}
+                onClick={() => onRequestAuth(nextStartable.id)}
+              >
+                <Send className="mr-2 h-5 w-5" />
+                {nextRequesting ? "Enviando..." : "Solicitar autorização"}
+              </Button>
+            </div>
+          ) : (
+            <Button
+              size="lg"
+              className="h-16 w-full text-base"
+              disabled={!nextIsStartable || nextStarting}
+              onClick={() => onStart(nextStartable.id)}
+              title={!nextIsStartable ? "Aguardando autorização do gestor" : undefined}
+            >
+              <Play className="mr-2 h-6 w-6" />
+              {nextIsStartable ? "Iniciar tarefa" : "Aguardando autorização"}
+            </Button>
+          )}
         </div>
       </section>
 
@@ -545,12 +576,28 @@ function UpcomingTasks({
               <Button
                 size="lg"
                 className="h-12 w-full sm:w-auto"
-                disabled={t.status === "pendente" || isStarting}
-                onClick={() => onStart(t.id)}
+                variant={t.status === "ausente" ? "outline" : "default"}
+                disabled={
+                  t.status === "pendente" ||
+                  isStarting ||
+                  (t.status === "ausente" && requestingAuth && requestingAuthId === t.id)
+                }
+                onClick={() =>
+                  t.status === "ausente" ? onRequestAuth(t.id) : onStart(t.id)
+                }
                 title={t.status === "pendente" ? "Aguardando autorização do gestor" : undefined}
               >
-                <Play className="mr-2 h-5 w-5" />
-                {t.status === "pendente" ? "Aguardando autorização" : "Iniciar"}
+                {t.status === "ausente" ? (
+                  <>
+                    <Send className="mr-2 h-5 w-5" />
+                    Solicitar autorização
+                  </>
+                ) : (
+                  <>
+                    <Play className="mr-2 h-5 w-5" />
+                    {t.status === "pendente" ? "Aguardando autorização" : "Iniciar"}
+                  </>
+                )}
               </Button>
             </li>
           );
