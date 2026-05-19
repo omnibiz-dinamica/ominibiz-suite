@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Pause, Play, Square, Coffee, Clock as ClockIcon, AlertCircle, Flame, Plus, Building2 } from "lucide-react";
+import { Pause, Play, Square, Coffee, Clock as ClockIcon, AlertCircle, Flame, Plus, Building2, ShieldAlert, Send } from "lucide-react";
 import {
   type TimeEntryRow,
   type TaskRow,
@@ -15,6 +15,7 @@ import {
   effectiveMinutesNow,
   formatDuration,
   transitionTask,
+  requestTaskAuthorization,
   STATUS_LABELS,
   STATUS_TONE,
   isVisuallyLate,
@@ -80,7 +81,7 @@ function PontoPage() {
       let q = supabase
         .from("tasks")
         .select("*")
-        .in("status", ["pendente", "autorizado"])
+        .in("status", ["pendente", "autorizado", "ausente"])
         .order("scheduled_for", { ascending: true, nullsFirst: false })
         .limit(12);
       // Gestor/super admin: vê tarefas da empresa (toda a operação).
@@ -198,6 +199,15 @@ function PontoPage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+  const requestAuthMut = useMutation({
+    mutationFn: (taskId: string) => requestTaskAuthorization(taskId),
+    onSuccess: () => {
+      toast.success("Solicitação enviada ao gestor");
+      qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const state = openEntry ? punchState(openEntry) : "encerrado";
   const liveMin = openEntry ? effectiveMinutesNow(openEntry) : 0;
@@ -243,6 +253,9 @@ function PontoPage() {
           onStart={(id) => startMut.mutate(id)}
           starting={startMut.isPending}
           startingId={startMut.variables ?? null}
+          onRequestAuth={(id) => requestAuthMut.mutate(id)}
+          requestingAuth={requestAuthMut.isPending}
+          requestingAuthId={requestAuthMut.variables ?? null}
         />
       )}
 
