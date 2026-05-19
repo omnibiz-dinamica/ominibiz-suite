@@ -26,27 +26,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentCompanyId, setCurrentCompanyId] = useState<string | null>(null);
 
   const loadProfile = async (uid: string) => {
-    const [{ data: roleData }, { data: profile }] = await Promise.all([
-      supabase.from("user_roles").select("role, company_id").eq("user_id", uid),
-      supabase.from("profiles").select("current_company_id").eq("id", uid).maybeSingle(),
-    ]);
-    const nextRoles = (roleData ?? []) as { role: AppRole; company_id: string | null }[];
-    const isSuper = nextRoles.some((r) => r.role === "super_admin");
-    let companyId =
-      profile?.current_company_id ?? nextRoles.find((r) => r.company_id)?.company_id ?? null;
+    try {
+      const [rolesRes, profileRes] = await Promise.all([
+        supabase.from("user_roles").select("role, company_id").eq("user_id", uid),
+        supabase.from("profiles").select("current_company_id").eq("id", uid).maybeSingle(),
+      ]);
+      if (rolesRes.error) console.error("[auth] user_roles error", rolesRes.error);
+      if (profileRes.error) console.error("[auth] profiles error", profileRes.error);
 
-    if (!companyId && isSuper) {
-      const { data: firstCompany } = await supabase
-        .from("companies")
-        .select("id")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      companyId = firstCompany?.id ?? null;
+      const nextRoles = (rolesRes.data ?? []) as { role: AppRole; company_id: string | null }[];
+      const isSuper = nextRoles.some((r) => r.role === "super_admin");
+      let companyId =
+        profileRes.data?.current_company_id ??
+        nextRoles.find((r) => r.company_id)?.company_id ??
+        null;
+
+      if (!companyId && isSuper) {
+        const { data: firstCompany, error: cErr } = await supabase
+          .from("companies")
+          .select("id")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (cErr) console.error("[auth] companies fetch error", cErr);
+        companyId = firstCompany?.id ?? null;
+
+        // Bootstrap: super admin sem nenhuma empresa → cria automaticamente
+        if (!companyId) {
+          const { data: created, error: createErr } = await supabase
+            .from("companies")
+            .insert({ name: "Minha Empresa", created_by: uid })
+            .select("id")
+            .single();
+          if (createErr) {
+            console.error("[auth] auto-create company failed", createErr);
+          } else if (created) {
+            companyId = created.id;
+          }
+        }
+
+        if (companyId) {
+          await supabase.from("profiles").update({ current_company_id: companyId }).eq("id", uid);
+        }
+      }
+
+      setRoles(nextRoles);
+      setCurrentCompanyId(companyId);
+    } catch (e) {
+      console.error("[auth] loadProfile failed", e);
     }
-
-    setRoles(nextRoles);
-    setCurrentCompanyId(companyId);
   };
 
   useEffect(() => {
