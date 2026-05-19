@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Building2, Copy, Plus } from "lucide-react";
+import { Building2, CheckCircle2, Copy, Plus } from "lucide-react";
 import { COUNTRIES, countryDefaults, slugify, type CountryCode } from "@/lib/locale";
 
 export const Route = createFileRoute("/app/admin")({
@@ -17,7 +17,7 @@ export const Route = createFileRoute("/app/admin")({
 });
 
 function AdminPage() {
-  const { isSuperAdmin, loading } = useAuth();
+  const { isSuperAdmin, loading, currentCompanyId, switchCompany, refresh } = useAuth();
   const nav = useNavigate();
   const qc = useQueryClient();
 
@@ -62,12 +62,14 @@ function AdminPage() {
       const row = Array.isArray(data) ? data[0] : data;
       return row as { company_id: string; invite_token: string };
     },
-    onSuccess: (row) => {
+    onSuccess: async (row) => {
       const link = `${window.location.origin}/aceitar-convite?token=${row.invite_token}`;
       setCreatedLink(link);
       setName("");
       setAdminName("");
       setAdminEmail("");
+      await switchCompany(row.company_id);
+      await refresh();
       qc.invalidateQueries({ queryKey: ["admin-companies"] });
       toast.success("Empresa criada e convite gerado");
     },
@@ -81,7 +83,7 @@ function AdminPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-semibold tracking-tight">Super Admin</h1>
-          <p className="mt-1 text-muted-foreground">Provisione empresas e envie o convite para o administrador.</p>
+          <p className="mt-1 text-muted-foreground">Crie empresas e escolha em qual operação o super admin está trabalhando.</p>
         </div>
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setCreatedLink(null); }}>
           <DialogTrigger asChild>
@@ -152,7 +154,7 @@ function AdminPage() {
         <h2 className="font-display text-lg font-semibold">Empresas</h2>
         <ul className="mt-4 divide-y divide-border">
           {(companies ?? []).map((c) => (
-            <li key={c.id} className="flex items-center justify-between gap-3 py-3">
+            <li key={c.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
               <div className="flex items-center gap-3">
                 <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary">
                   <Building2 className="h-4 w-4" />
@@ -164,9 +166,25 @@ function AdminPage() {
                   </div>
                 </div>
               </div>
-              <span className="rounded-full border border-border px-2 py-0.5 text-xs uppercase tracking-wide text-muted-foreground">
-                {c.status}
-              </span>
+              <div className="flex items-center gap-2">
+                {currentCompanyId === c.id && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-xs text-success">
+                    <CheckCircle2 className="h-3 w-3" /> Em operação
+                  </span>
+                )}
+                <Button
+                  size="sm"
+                  variant={currentCompanyId === c.id ? "secondary" : "outline"}
+                  onClick={async () => {
+                    await switchCompany(c.id);
+                    await refresh();
+                    qc.invalidateQueries();
+                    toast.success(`Operando ${c.name}`);
+                  }}
+                >
+                  {currentCompanyId === c.id ? "Selecionada" : "Operar empresa"}
+                </Button>
+              </div>
             </li>
           ))}
           {(companies ?? []).length === 0 && (
