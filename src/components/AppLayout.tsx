@@ -21,6 +21,8 @@ import {
   ListChecks,
   Plane,
   Car,
+  Briefcase as BriefcaseIcon,
+  FileSignature,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
@@ -38,6 +40,7 @@ type Item = {
 const SUPER_ADMIN_MENU: Item[] = [
   { to: "/app", label: "Dashboard Global", icon: LayoutDashboard },
   { to: "/app/admin", label: "Empresas", icon: Building2 },
+  { to: "/app/comercial", label: "Comercial", icon: FileSignature },
   { to: "/app/notificacoes", label: "Notificações", icon: Bell },
   { to: "/app/perfil", label: "Perfil", icon: UserCircle },
 ];
