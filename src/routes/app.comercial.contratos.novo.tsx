@@ -126,13 +126,25 @@ function WizardPage() {
         {step === 0 && (
           <div className="space-y-3">
             <Label>Cliente</Label>
-            <Select value={clientId} onValueChange={setClientId}>
-              <SelectTrigger><SelectValue placeholder="Selecione um cliente" /></SelectTrigger>
-              <SelectContent>
-                {clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.company_name}{c.nif ? ` · ${c.nif}` : ""}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">Não vê o cliente? Crie em Comercial → Clientes.</p>
+            {clients.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border bg-background p-6 text-center">
+                <p className="text-sm font-medium">Nenhum cliente encontrado.</p>
+                <p className="mt-1 text-xs text-muted-foreground">Crie um cliente antes de gerar um contrato.</p>
+                <Button asChild className="mt-3" size="sm">
+                  <Link to="/app/comercial/clientes">Criar cliente</Link>
+                </Button>
+              </div>
+            ) : (
+              <>
+                <Select value={clientId} onValueChange={setClientId}>
+                  <SelectTrigger><SelectValue placeholder="Selecione um cliente" /></SelectTrigger>
+                  <SelectContent>
+                    {clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.company_name}{c.nif ? ` · ${c.nif}` : ""}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Não vê o cliente? Crie em Comercial → Clientes.</p>
+              </>
+            )}
           </div>
         )}
         {step === 1 && (
