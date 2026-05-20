@@ -1,61 +1,88 @@
-## Módulo Comercial & Gestão de Contratos (Super Admin)
+## Módulo Avançado de Contratos SaaS — OmniBiz Comercial
 
-Vou implementar um módulo grande e novo. Antes de codar, confirmo escopo e divisão em fases para garantir entrega utilizável.
+Vou expandir o módulo Comercial existente de forma **incremental e isolada**, preservando 100% das funcionalidades atuais (clientes, contratos, templates, wizard, assinatura, PDF dinâmico que já implementamos). Adicionarei o que ainda falta para chegar ao escopo Reportei-like, sem refatorar nada fora de `/app/comercial/*`.
 
-### Escopo confirmado
-- Acesso restrito a **super_admin** (rota `/app/comercial/*` com `RoleGuard`).
-- 7 tabelas novas: `commercial_clients`, `contracts`, `contract_templates`, `contract_services`, `contract_workflow`, `invoices`, `ai_usage`.
-  - Uso prefixo `commercial_clients` para não colidir com a tabela `clients` existente (que pertence à operação de cada empresa).
-- Wizard de criação de contrato (5 passos), lista, dashboard comercial.
-- Templates com variáveis `{{company_name}}`, `{{nif}}`, `{{plan_name}}`, `{{monthly_fee}}`, `{{credits_limit}}`, `{{services}}`.
-- Geração de PDF (client-side via jsPDF) com armazenamento em Supabase Storage (bucket `contracts`).
-- Fluxo de assinatura digital via URL pública assinada (`/sign/$token`) com captura de IP, user-agent, timestamp, hash SHA-256.
-- Ao assinar → criar automaticamente 7 tarefas de onboarding em `contract_workflow`.
-- Dashboard analítico: MRR, contratos ativos/pendentes, taxa conversão, serviços mais vendidos.
+### O que já existe e será mantido
+- Tabelas: `commercial_clients`, `contract_templates`, `contracts`, `contract_services`, `contract_workflow`, `invoices`, `ai_usage` — com RLS `is_super_admin` ✅
+- Rotas: dashboard, clientes, contratos, novo (wizard 5 etapas), detalhe, templates ✅
+- Página pública `/sign/$token` com `contract_sign_submit` ✅
+- Geração de PDF dinâmico com pdf-lib + master template ✅
+- Guard `RoleGuard allow={["super_admin"]}` no layout ✅
 
-### Banco (1 migration)
-- Enums: `contract_status` (draft, sent, signed, implementation, promo_period, active, suspended, cancelled), `workflow_step_status`, `invoice_status`.
-- `commercial_clients`: razão social, NIF, email, telefone, endereço, contacto, criado_por.
-- `contract_templates`: nome, corpo (markdown com variáveis), versão, ativo.
-- `contracts`: client_id, template_id, plan_name, monthly_fee, credits_limit, promo_months, start_date, status, signed metadata (ip, user_agent, hash, signed_at, signer_name), pdf_path, sign_token, sign_expires_at.
-- `contract_services`: contract_id, service (enum: whatsapp, instagram, website, dashboard, ai_support, reports, scheduling), config jsonb.
-- `contract_workflow`: contract_id, step (enum 7 passos), status, assigned_to, due_at, completed_at, notes.
-- `invoices`: contract_id, amount, due_date, paid_at, status, reference.
-- `ai_usage`: contract_id, month, credits_used, cost.
-- Trigger `contracts_after_signed` → cria os 7 passos de workflow.
-- RLS: tudo restrito a `is_super_admin(auth.uid())`. `contracts` tem policy adicional **pública por sign_token** (SELECT/UPDATE limitada) via RPC `contract_sign_get(token)` + `contract_sign_submit(token, signer_name, signature_data_url)` (security definer).
-- Bucket storage `contracts` (privado) com policies para super_admin.
+### Lacunas a fechar (foco desta entrega)
 
-### Frontend
-- `src/routes/app.comercial.tsx` (layout com sub-nav + RoleGuard super_admin) + Outlet.
-- `src/routes/app.comercial.index.tsx` (dashboard).
-- `src/routes/app.comercial.clientes.tsx` (lista + criar/editar em dialog).
-- `src/routes/app.comercial.contratos.tsx` (lista com status badges + ações: ver, copiar link assinatura, baixar PDF, marcar implementation/active, suspender).
-- `src/routes/app.comercial.contratos.novo.tsx` (wizard 5 passos com `useState` por etapa + `Stepper`).
-- `src/routes/app.comercial.templates.tsx` (CRUD de templates).
-- `src/routes/app.comercial.contratos.$id.tsx` (detalhe + workflow checklist + faturas).
-- `src/routes/sign.$token.tsx` (rota PÚBLICA — sem AppLayout — exibe contrato renderizado + canvas de assinatura + confirmação).
-- Adicionar item "Comercial" no menu visível só para super_admin.
+**1. Banco — extensões mínimas (migração isolada, sem quebrar nada)**
+- `commercial_clients`: + `legal_name`, `tax_id_kind` (cnpj/cpf/nif), `city`, `state`, `country`, `website`, `status` (lead/negotiation/active/inactive)
+- Nova tabela `commercial_client_contacts` (id, client_id, name, role, email, phone, is_primary_signer)
+- `contract_templates`: + `category`, `description`, `status` (active/draft/archived)
+- `contracts`: + `title`, `billing_cycle` (monthly/quarterly/annual), `end_date`, `auto_renew`, `notice_days`, `jurisdiction`, `contract_data` jsonb (escopo/cláusulas)
+- Nova tabela `contract_audit_events` (id, contract_id, actor_id, event_type, metadata, created_at) + trigger que registra criação/edição/envio/visualização/assinatura/cancelamento
+- RLS `is_super_admin` em todas as novas tabelas + leitura pública limitada de audit por token
 
-### PDF
-- `src/lib/contract-pdf.ts`: usa `jspdf` para renderizar template processado em PDF; upload ao bucket `contracts` via `supabase.storage.from('contracts').upload(...)`.
-- `src/lib/contract-vars.ts`: substituição de variáveis + helper de moeda EUR.
+**2. Sistema de variáveis dinâmicas (expandir `contract-vars.ts`)**
+- Novo dialect com namespaces: `{{organization.*}}`, `{{client.*}}`, `{{contract.*}}`, `{{today}}`
+- Filtros: `| uppercase`, `| lowercase`, `| currency`, `| date`
+- Helper `extractMissingVars(template, vars)` para checklist
+- Preview destaca pendentes com `<mark class="bg-amber-200">{{var}}</mark>`
 
-### Assinatura
-- `signature_pad` (lib leve) para canvas; submete dataURL para RPC `contract_sign_submit` que calcula hash, marca `signed`, dispara trigger de workflow.
-- IP capturado via `request_ip` no RPC (`inet_client_addr()`).
+**3. Dashboard Comercial (substituir página atual)**
+- Cards: total clientes, rascunhos, enviados, assinados, vencendo em 30d, MRR contratado, aguardando assinatura
+- Lista de atividades recentes (últimos 10 audit events)
 
-### Fases de entrega
-1. **Migration** (tabelas, enums, RLS, RPCs, bucket, trigger workflow).
-2. **Tipos + rotas base**: layout `/app/comercial` + clientes + templates.
-3. **Wizard de contrato + listagem + dashboard**.
-4. **PDF + página pública de assinatura `/sign/$token`**.
-5. **Workflow de onboarding (UI) + faturas básicas + ai_usage placeholder**.
+**4. Clientes — formulário completo**
+- Adicionar campos novos no form
+- Sub-aba "Contatos" com CRUD de `commercial_client_contacts`
+- Sub-aba "Contratos vinculados" mostrando lista filtrada
 
-### Fora do escopo MVP (para não inflar)
-- Envio de e-mail real do contrato (apenas botão "copiar link de assinatura").
-- Cobrança automática / integração Stripe nas invoices (apenas registo manual).
-- Editor rich-text de templates (apenas textarea com preview de variáveis).
-- Métricas IA reais (registo manual em `ai_usage`).
+**5. Templates — biblioteca com categorias + seed**
+- Filtros por categoria/status
+- Seed 6 templates iniciais (Assinatura SaaS, Proposta, Prestação Serviços, NDA, DPA, Renovação) com corpo Markdown e variáveis novas
+- Status badge
 
-Confirmas para eu seguir com a migration + implementação completa nas 5 fases?
+**6. Wizard "Novo contrato" — 5 etapas (refinado)**
+- Etapa 1 Cliente (existente + botão "criar rápido" inline)
+- Etapa 2 Template (com descrição/categoria)
+- Etapa 3 Dados comerciais: plano, valor, ciclo, início/fim, auto_renew, notice_days, jurisdição
+- Etapa 4 Escopo & cláusulas: checkboxes de módulos + SLA + suporte + cláusulas opcionais (gravadas em `contract_data`)
+- Etapa 5 Revisão: preview A4 + checklist de variáveis pendentes + 3 botões (salvar rascunho / gerar / enviar assinatura)
+
+**7. Detalhe do contrato**
+- Cabeçalho com badges de status (draft, in_review, approved, sent, viewed, signed, expired, cancelled)
+- Preview A4 com Markdown renderizado
+- Timeline de audit events
+- Painel de signatários
+- Ações conforme status (copiar link, reenviar, cancelar, baixar PDF)
+- Registro automático de evento `viewed` quando público acessa /sign/$token
+
+**8. Preview documento A4**
+- Componente `<ContractPreviewA4>` reutilizável (formulário ↔ preview toggle)
+- Renderiza Markdown via `react-markdown` (já leve), aplica `renderTemplate`, destaca pendentes
+- CSS `@page A4` com margens, fonte serif
+
+**9. Assinatura MVP — já funciona**
+- Garantir registro de evento `signed` na timeline (trigger)
+- Mostrar evento `viewed` quando link é aberto (RPC pública incrementa)
+
+### Arquivos a criar/editar
+- `supabase/migrations/...` — colunas + tabelas + RLS + trigger audit
+- `src/lib/contract-vars.ts` — expandir com filtros e namespaces (manter retro-compat)
+- `src/lib/contract-audit.ts` — helper para registrar eventos
+- `src/components/contracts/ContractPreviewA4.tsx`
+- `src/components/contracts/ContractTimeline.tsx`
+- `src/components/contracts/StatusBadge.tsx`
+- `src/routes/app.comercial.index.tsx` — dashboard com KPIs reais
+- `src/routes/app.comercial.clientes.tsx` — campos novos + contatos
+- `src/routes/app.comercial.contratos.tsx` — colunas/status atualizados
+- `src/routes/app.comercial.contratos.$id.tsx` — preview A4 + timeline
+- `src/routes/app.comercial.contratos.novo.tsx` — etapas refinadas
+- `src/routes/app.comercial.templates.tsx` — categorias + status
+- `src/routes/sign.$token.tsx` — registra evento viewed
+
+### Garantias
+- Nenhuma tabela existente fora do módulo é tocada
+- Nenhuma rota fora de `/app/comercial/*` e `/sign/$token` é alterada
+- RoleGuard + RLS `is_super_admin` em todas as superfícies (defesa em profundidade)
+- Migração só adiciona colunas com defaults — zero impacto em dados existentes
+- Funcionalidades atuais continuam funcionando (PDF master template, assinatura, workflow pós-assinatura)
+
+Posso prosseguir?

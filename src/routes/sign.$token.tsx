@@ -34,6 +34,12 @@ function SignPage() {
     },
   });
 
+  // Register a "viewed" audit event the first time the link is opened
+  useEffect(() => {
+    if (!token) return;
+    supabase.rpc("contract_sign_register_view", { _token: token }).then(() => {});
+  }, [token]);
+
   useEffect(() => {
     if (!canvasRef.current) return;
     if (data?.status !== "draft" && data?.status !== "sent") return;

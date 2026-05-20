@@ -4,33 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { formatEUR } from "@/lib/contract-vars";
+import { StatusBadge } from "@/components/contracts/StatusBadge";
 import { FilePlus2, Link as LinkIcon, Eye } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/comercial/contratos")({
   component: ContractsPage,
 });
-
-const STATUS_LABEL: Record<string, string> = {
-  draft: "Rascunho",
-  sent: "Enviado",
-  signed: "Assinado",
-  implementation: "Implementação",
-  promo_period: "Período promo",
-  active: "Ativo",
-  suspended: "Suspenso",
-  cancelled: "Cancelado",
-};
-const STATUS_TONE: Record<string, string> = {
-  draft: "bg-muted text-muted-foreground",
-  sent: "bg-blue-500/15 text-blue-500",
-  signed: "bg-purple-500/15 text-purple-500",
-  implementation: "bg-amber-500/15 text-amber-500",
-  promo_period: "bg-teal-500/15 text-teal-500",
-  active: "bg-success/15 text-success",
-  suspended: "bg-orange-500/15 text-orange-500",
-  cancelled: "bg-destructive/15 text-destructive",
-};
 
 function ContractsPage() {
   const childMatches = useChildMatches();
@@ -115,14 +94,7 @@ function ContractsListPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span
-                      className={cn(
-                        "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-                        STATUS_TONE[c.status],
-                      )}
-                    >
-                      {STATUS_LABEL[c.status]}
-                    </span>
+                    <StatusBadge status={c.status} />
                     {c.status === "signed" && (
                       <Button
                         size="sm"
