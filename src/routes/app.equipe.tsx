@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Copy, Trash2, Pencil, Power } from "lucide-react";
+import { RoleGuard } from "@/components/RoleGuard";
 
 interface MemberRow {
   user_id: string;
@@ -18,7 +19,11 @@ interface MemberRow {
 }
 
 export const Route = createFileRoute("/app/equipe")({
-  component: TeamPage,
+  component: () => (
+    <RoleGuard allow={["manager", "super_admin"]}>
+      <TeamPage />
+    </RoleGuard>
+  ),
 });
 
 function TeamPage() {

@@ -2,9 +2,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { RoleGuard } from "@/components/RoleGuard";
 
 export const Route = createFileRoute("/app/empresa")({
-  component: CompanyPage,
+  component: () => (
+    <RoleGuard allow={["manager", "super_admin"]}>
+      <CompanyPage />
+    </RoleGuard>
+  ),
 });
 
 function CompanyPage() {

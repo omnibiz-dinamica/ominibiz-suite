@@ -15,6 +15,8 @@ import {
   Sun,
   Menu,
   X,
+  UserCircle,
+  ListChecks,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
@@ -26,34 +28,61 @@ type Item = {
   to: string;
   label: string;
   icon: typeof LayoutDashboard;
-  managerOnly?: boolean;
-  superOnly?: boolean;
   soon?: boolean;
 };
 
-const items: Item[] = [
+const SUPER_ADMIN_MENU: Item[] = [
+  { to: "/app", label: "Dashboard Global", icon: LayoutDashboard },
+  { to: "/app/admin", label: "Empresas", icon: Building2 },
+  { to: "/app/notificacoes", label: "Notificações", icon: Bell },
+  { to: "/app/perfil", label: "Perfil", icon: UserCircle },
+];
+
+const MANAGER_MENU: Item[] = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard },
   { to: "/app/tarefas", label: "Tarefas", icon: ClipboardList },
   { to: "/app/ponto", label: "Folha de Ponto", icon: Clock },
   { to: "/app/notificacoes", label: "Notificações", icon: Bell },
   { to: "/app/clientes", label: "Clientes", icon: Briefcase },
-  { to: "/app/equipe", label: "Usuários", icon: Users, managerOnly: true },
-  { to: "/app/empresa", label: "Empresa", icon: Building2, managerOnly: true },
+  { to: "/app/equipe", label: "Usuários", icon: Users },
+  { to: "/app/empresa", label: "Empresa", icon: Building2 },
   { to: "/app/notas", label: "Notas", icon: FileText, soon: true },
   { to: "/app/assistente", label: "Assistente IA", icon: Sparkles, soon: true },
-  { to: "/app/admin", label: "Super Admin", icon: Shield, superOnly: true },
+  { to: "/app/perfil", label: "Perfil", icon: UserCircle },
+];
+
+const EMPLOYEE_MENU: Item[] = [
+  { to: "/app", label: "Minha Operação", icon: LayoutDashboard },
+  { to: "/app/ponto", label: "Folha de Ponto", icon: Clock },
+  { to: "/app/tarefas", label: "Minhas Tarefas", icon: ListChecks },
+  { to: "/app/notificacoes", label: "Notificações", icon: Bell },
+  { to: "/app/perfil", label: "Perfil", icon: UserCircle },
 ];
 
 export function AppLayout({ children }: { children?: ReactNode }) {
-  const { user, isManager, isSuperAdmin, currentCompanyId, signOut } = useAuth();
+  const { user, isSuperAdmin, currentCompanyId, signOut, effectiveRole } = useAuth();
   const { theme, toggle } = useTheme();
   const nav = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
 
-  const visible = items.filter(
-    (i) => (!i.managerOnly || isManager) && (!i.superOnly || isSuperAdmin),
-  );
+  const visible =
+    effectiveRole === "super_admin"
+      ? SUPER_ADMIN_MENU
+      : effectiveRole === "manager"
+        ? MANAGER_MENU
+        : effectiveRole === "employee"
+          ? EMPLOYEE_MENU
+          : [];
+
+  const roleBadge =
+    effectiveRole === "super_admin"
+      ? { label: "Super Admin", tone: "bg-destructive/15 text-destructive" }
+      : effectiveRole === "manager"
+        ? { label: "Gestor", tone: "bg-primary/15 text-primary" }
+        : effectiveRole === "employee"
+          ? { label: "Funcionário", tone: "bg-success/15 text-success" }
+          : null;
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -75,6 +104,19 @@ export function AppLayout({ children }: { children?: ReactNode }) {
             <X className="h-5 w-5" />
           </button>
         </div>
+
+        {roleBadge && (
+          <div className="px-3 pt-3">
+            <span
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide",
+                roleBadge.tone,
+              )}
+            >
+              <Shield className="h-3 w-3" /> {roleBadge.label}
+            </span>
+          </div>
+        )}
 
         <nav className="space-y-1 p-3">
           {visible.map((it) => {

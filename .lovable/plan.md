@@ -1,171 +1,74 @@
-## Diagnóstico objetivo encontrado
+# Segregação real por papel — OmniBiz
 
-O `src/lib/auth.tsx` hoje faz este fluxo:
+Hoje os três papéis veem praticamente o mesmo shell. Vou separar **backend + frontend** para que cada papel tenha uma experiência distinta, com proteção real de RLS e rotas.
 
-```text
-AuthProvider monta
-  -> loading = true
-  -> supabase.auth.getSession()
-      -> applySession(session)
-          -> setSession(session)
-          -> se user existe:
-              setLoading(true)
-              setTimeout(0)
-                -> loadProfile(user.id)
-                    -> supabase.rpc("get_auth_context")
-                    -> lê row.current_company_id
-                    -> lê row.roles
-                    -> setRoles(...)
-                    -> setCurrentCompanyId(...)
-              -> finally setLoading(false)
-          -> se user não existe:
-              setRoles([])
-              setCurrentCompanyId(null)
-              setLoading(false)
+## 1. Backend (RLS + funções)
 
-  -> supabase.auth.onAuthStateChange(...)
-      -> ignora INITIAL_SESSION
-      -> para outros eventos chama applySession(session)
-```
+Auditar e ajustar para garantir:
 
-## Causa provável da quebra no frontend
+- **funcionário** só vê/edita **as próprias tarefas**, **próprias notificações**, **próprio ponto**, **próprio perfil**.
+  - Bloquear `SELECT` em `clients`, `companies`, `user_roles`, `profiles` de terceiros, `time_entries` de outros, `tasks` de outros.
+  - Hoje `clients` permite `members view company clients` (qualquer membro). Trocar para apenas managers + super_admin.
+  - `companies` permite `members view their company` — manter (funcionário precisa do nome da empresa), mas remover qualquer leitura cruzada.
+  - `time_entries` já está OK (user vê só os próprios; managers veem da empresa).
+- **gestor** opera dentro da **própria empresa** (já está via `is_company_manager`).
+- **super_admin** mantém acesso global mas **não cria tarefas operacionais** (regra de UI; backend continua permitindo para auditoria).
+- Adicionar policy explícita: funcionário **não** vê `user_roles` de outros (hoje vê só os próprios — OK).
 
-1. **Ordem incorreta do listener de sessão**
-   - O padrão seguro é registrar `onAuthStateChange()` antes de chamar `getSession()`.
-   - O arquivo atual faz o contrário: chama `getSession()` antes e só depois registra o listener.
-   - Isso abre janela de corrida no login/navegação, principalmente porque `/login` faz `signInWithPassword()` e navega imediatamente para `/app`.
+## 2. Auth context (frontend)
 
-2. **Race condition real em `applySession()`**
-   - `loadId` é usado para controlar corrida, mas ele só impede `setLoading(false)` antigo.
-   - Ele **não impede** um `loadProfile()` antigo de executar `setRoles([])` e `setCurrentCompanyId(null)` no `catch`, nem impede `setRoles/setCurrentCompanyId` de uma chamada antiga.
-   - Resultado possível: `get_auth_context()` pode retornar certo, mas depois um evento antigo/erro antigo sobrescreve o estado React.
+`AuthProvider` já carrega `user`, `roles`, `currentCompanyId`, `profile` antes do render (`initialized + loading`). Vou:
 
-3. **Estado incompleto para diagnosticar**
-   - O contexto não tem `initialized` nem `profile`.
-   - Só existem `session`, `loading`, `roles`, `currentCompanyId`.
-   - Por isso a UI não consegue distinguir:
-     - “ainda carregando auth”
-     - “logado mas contexto ainda não carregou”
-     - “RPC falhou”
-     - “sem empresa de verdade”
+- Derivar um `role` efetivo: `super_admin` > `manager` > `employee`.
+- Expor `isEmployee`, `isManager`, `isSuperAdmin` consistentes.
+- O `AppShell` continua bloqueando render até `initialized`.
 
-4. **Queries das telas podem rodar cedo demais**
-   - Exemplo: `src/routes/app.index.tsx` habilita dashboard com `enabled: !!user`.
-   - Se `user` já existe mas `currentCompanyId` ainda não foi carregado, a query roda antes do contexto operacional estar pronto.
-   - Para super admin isso pode virar consulta ampla ou estado visual inconsistente.
+## 3. Rotas (proteção real, não só menu)
 
-## O que vou alterar
+Criar guards em cada rota sensível usando o context. Em vez de só esconder no menu, cada rota faz check e redireciona:
 
-### 1. Instrumentar `src/lib/auth.tsx` com logs temporários detalhados
-Adicionar logs com prefixo único, por exemplo `[auth-flow]`, mostrando:
+- **Funcionário** só pode acessar: `/app` (dashboard simplificado), `/app/tarefas`, `/app/ponto`, `/app/notificacoes`, `/app/perfil`.
+- **Gestor** acessa tudo da empresa, **menos** `/app/admin`.
+- **Super admin** acessa `/app/admin` + visão global. Páginas operacionais (tarefas/clientes/equipe) ficam **somente leitura/auditoria** para super_admin.
 
-```text
-provider mounted
-listener registered
-getSession start/end
-onAuthStateChange event
-applySession start
-loadProfile start
-rpc get_auth_context success/error
-parsed roles/currentCompanyId
-state commit skipped/applied
-loading false
-```
+Implementação: helper `<RoleGuard allow={['manager','super_admin']}>` que renderiza children ou redireciona para `/app`.
 
-Também logar snapshots seguros:
+## 4. Shell e menu por papel
 
-```text
-loading
-initialized
-user id/email
-roles
-currentCompanyId
-isSuperAdmin
-isManager
-```
+`AppLayout` passa a montar **3 menus diferentes** (não um menu único filtrado):
 
-### 2. Corrigir a ordem do fluxo auth
-Reestruturar o `useEffect` para:
+- **Super admin**: Dashboard Global, Empresas, Auditoria, Configurações SaaS, Perfil.
+- **Gestor**: Dashboard, Tarefas, Ponto, Notificações, Clientes, Usuários, Empresa, Notas, Assistente, Perfil.
+- **Funcionário**: Minha Operação (ponto), Minhas Tarefas, Notificações, Perfil.
 
-```text
-1. registrar onAuthStateChange primeiro
-2. chamar getSession depois
-3. aplicar sessão com controle de versão único
-4. só finalizar loading quando a chamada atual terminar
-```
+## 5. Dashboards distintos
 
-### 3. Tornar `loadProfile()` imune a chamadas antigas
-Alterar `loadProfile` para retornar dados, sem fazer `setState` diretamente.
+`/app` (index) detecta o papel e renderiza componente específico:
 
-Novo modelo:
+- `SuperAdminDashboard` — métricas globais (total empresas, usuários, tarefas no SaaS).
+- `ManagerDashboard` — atual (operação da empresa).
+- `EmployeeDashboard` — só as próprias tarefas de hoje + botão "Bater ponto".
 
-```text
-loadAuthContext(user)
-  -> rpc get_auth_context
-  -> retorna { roles, currentCompanyId }
+## 6. Páginas
 
-applySession(session)
-  -> cria requestId
-  -> chama loadAuthContext
-  -> antes de setState confere se requestId ainda é o atual
-  -> só então aplica roles/currentCompanyId/loading
-```
+- `/app/tarefas`: funcionário vê lista enxuta só das suas; sem botões de criar/atribuir/cancelar (só iniciar/pausar/concluir/solicitar autorização).
+- `/app/clientes`, `/app/equipe`, `/app/empresa`: redirecionar funcionário para `/app`.
+- `/app/admin`: redirecionar não-super para `/app`.
+- Criar `/app/perfil` (faltava) com dados do próprio usuário.
 
-Isso remove a causa onde uma chamada antiga sobrescreve estado novo.
+## 7. Páginas marcadas "em breve" (Férias, Frota, Filiais)
 
-### 4. Adicionar `initialized` e `profile` no AuthContext
-Sem mock, sem hardcode, sem fallback fake.
+Não vou criar agora — fora do escopo desta correção. Mantenho menu coerente sem itens fantasma.
 
-`profile` será carregado do banco real após o RPC, usando o `current_company_id` retornado, ou opcionalmente adicionado como leitura direta segura:
+## Detalhes técnicos
 
-```text
-profiles.select("id, full_name, current_company_id, is_active, created_at, updated_at")
-  .eq("id", user.id)
-  .maybeSingle()
-```
+- Sem mudança em `auth.tsx` além de pequenos helpers.
+- Novo: `src/components/RoleGuard.tsx`, `src/components/dashboards/{Employee,SuperAdmin}Dashboard.tsx`, `src/routes/app.perfil.tsx`.
+- Refactor: `AppLayout.tsx` (menus por papel), `app.index.tsx` (switch de dashboard), `app.tarefas.tsx` (modo funcionário), guards nas rotas restritas.
+- Migration: tightening RLS em `clients` (remover leitura para `employee`).
 
-Se essa leitura falhar por RLS, o erro será logado explicitamente; não será mascarado como estado vazio.
+## Fora do escopo
 
-### 5. Ajustar gates das telas principais
-Onde a tela depende de empresa operacional, trocar `enabled: !!user` por condição baseada no contexto carregado:
-
-```text
-enabled: initialized && !!user && (!!currentCompanyId || !isManager)
-```
-
-No dashboard, evitar query operacional antes do `currentCompanyId` estar definido para manager/super admin.
-
-### 6. Resultado esperado nos logs
-Após login com `edurts.pt@gmail.com`, a sequência esperada deve ficar:
-
-```text
-[auth-flow] provider mounted
-[auth-flow] listener registered
-[auth-flow] getSession:start
-[auth-flow] auth event SIGNED_IN/TOKEN_REFRESHED/INITIAL_SESSION
-[auth-flow] applySession:start user=edurts.pt@gmail.com requestId=N
-[auth-flow] get_auth_context:start requestId=N
-[auth-flow] get_auth_context:success currentCompanyId=e83a... roles=[super_admin]
-[auth-flow] profile:success current_company_id=e83a...
-[auth-flow] state:commit requestId=N loading=false initialized=true
-```
-
-## Arquivos a alterar
-
-- `src/lib/auth.tsx`
-  - Corrigir fluxo, logs, controle de corrida, `initialized`, `profile`.
-
-- Possivelmente `src/routes/app.tsx`
-  - Usar `initialized/loading` corretamente para não renderizar app antes do contexto auth estar pronto.
-
-- Possivelmente `src/routes/app.index.tsx`
-  - Evitar query de dashboard antes de carregar `currentCompanyId`.
-
-## Critério de sucesso
-
-- `get_auth_context()` chamado exatamente pelo cliente autenticado.
-- Retorno não descartado.
-- `current_company_id` aplicado no React context.
-- `roles` contém `super_admin`.
-- Nenhum evento antigo consegue sobrescrever estado novo.
-- As telas só consultam dados operacionais depois do contexto auth estar inicializado.
+- Implementar Férias/Frota/Filiais (só estrutura de menu).
+- Auditoria detalhada / logs SaaS.
+- Painel "Configurações SaaS" — placeholder.

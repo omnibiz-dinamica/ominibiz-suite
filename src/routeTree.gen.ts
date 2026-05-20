@@ -17,6 +17,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppTarefasRouteImport } from './routes/app.tarefas'
 import { Route as AppPontoRouteImport } from './routes/app.ponto'
+import { Route as AppPerfilRouteImport } from './routes/app.perfil'
 import { Route as AppNotificacoesRouteImport } from './routes/app.notificacoes'
 import { Route as AppNotasRouteImport } from './routes/app.notas'
 import { Route as AppEquipeRouteImport } from './routes/app.equipe'
@@ -63,6 +64,11 @@ const AppTarefasRoute = AppTarefasRouteImport.update({
 const AppPontoRoute = AppPontoRouteImport.update({
   id: '/ponto',
   path: '/ponto',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPerfilRoute = AppPerfilRouteImport.update({
+  id: '/perfil',
+  path: '/perfil',
   getParentRoute: () => AppRoute,
 } as any)
 const AppNotificacoesRoute = AppNotificacoesRouteImport.update({
@@ -114,6 +120,7 @@ export interface FileRoutesByFullPath {
   '/app/equipe': typeof AppEquipeRoute
   '/app/notas': typeof AppNotasRoute
   '/app/notificacoes': typeof AppNotificacoesRoute
+  '/app/perfil': typeof AppPerfilRoute
   '/app/ponto': typeof AppPontoRoute
   '/app/tarefas': typeof AppTarefasRoute
   '/app/': typeof AppIndexRoute
@@ -130,6 +137,7 @@ export interface FileRoutesByTo {
   '/app/equipe': typeof AppEquipeRoute
   '/app/notas': typeof AppNotasRoute
   '/app/notificacoes': typeof AppNotificacoesRoute
+  '/app/perfil': typeof AppPerfilRoute
   '/app/ponto': typeof AppPontoRoute
   '/app/tarefas': typeof AppTarefasRoute
   '/app': typeof AppIndexRoute
@@ -148,6 +156,7 @@ export interface FileRoutesById {
   '/app/equipe': typeof AppEquipeRoute
   '/app/notas': typeof AppNotasRoute
   '/app/notificacoes': typeof AppNotificacoesRoute
+  '/app/perfil': typeof AppPerfilRoute
   '/app/ponto': typeof AppPontoRoute
   '/app/tarefas': typeof AppTarefasRoute
   '/app/': typeof AppIndexRoute
@@ -167,6 +176,7 @@ export interface FileRouteTypes {
     | '/app/equipe'
     | '/app/notas'
     | '/app/notificacoes'
+    | '/app/perfil'
     | '/app/ponto'
     | '/app/tarefas'
     | '/app/'
@@ -183,6 +193,7 @@ export interface FileRouteTypes {
     | '/app/equipe'
     | '/app/notas'
     | '/app/notificacoes'
+    | '/app/perfil'
     | '/app/ponto'
     | '/app/tarefas'
     | '/app'
@@ -200,6 +211,7 @@ export interface FileRouteTypes {
     | '/app/equipe'
     | '/app/notas'
     | '/app/notificacoes'
+    | '/app/perfil'
     | '/app/ponto'
     | '/app/tarefas'
     | '/app/'
@@ -271,6 +283,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPontoRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/perfil': {
+      id: '/app/perfil'
+      path: '/perfil'
+      fullPath: '/app/perfil'
+      preLoaderRoute: typeof AppPerfilRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/notificacoes': {
       id: '/app/notificacoes'
       path: '/notificacoes'
@@ -331,6 +350,7 @@ interface AppRouteChildren {
   AppEquipeRoute: typeof AppEquipeRoute
   AppNotasRoute: typeof AppNotasRoute
   AppNotificacoesRoute: typeof AppNotificacoesRoute
+  AppPerfilRoute: typeof AppPerfilRoute
   AppPontoRoute: typeof AppPontoRoute
   AppTarefasRoute: typeof AppTarefasRoute
   AppIndexRoute: typeof AppIndexRoute
@@ -344,6 +364,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppEquipeRoute: AppEquipeRoute,
   AppNotasRoute: AppNotasRoute,
   AppNotificacoesRoute: AppNotificacoesRoute,
+  AppPerfilRoute: AppPerfilRoute,
   AppPontoRoute: AppPontoRoute,
   AppTarefasRoute: AppTarefasRoute,
   AppIndexRoute: AppIndexRoute,
@@ -361,12 +382,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
