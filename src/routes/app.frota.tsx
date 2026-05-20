@@ -810,3 +810,115 @@ function FuelForm({
     </section>
   );
 }
+
+function BrandModelPicker({
+  companyId, kind, brandsForKind, brand, model,
+  onBrandChange, onModelChange, onCatalogChanged,
+}: {
+  companyId: string;
+  kind: string;
+  brandsForKind: Record<string, string[]>;
+  brand: string;
+  model: string;
+  onBrandChange: (b: string) => void;
+  onModelChange: (m: string) => void;
+  onCatalogChanged: () => void;
+}) {
+  const [newBrand, setNewBrand] = useState("");
+  const [newModel, setNewModel] = useState("");
+  const [addingBrand, setAddingBrand] = useState(false);
+  const [addingModel, setAddingModel] = useState(false);
+
+  const modelsForBrand = brand ? brandsForKind[brand] ?? [] : [];
+
+  const addBrand = useMutation({
+    mutationFn: async () => {
+      const b = newBrand.trim();
+      if (!b) throw new Error("Informe a marca");
+      const { error } = await supabase.from("vehicle_catalog").insert({
+        company_id: companyId, kind: kind as any, brand: b, model: null,
+      });
+      if (error && !String(error.message).includes("duplicate")) throw error;
+    },
+    onSuccess: () => {
+      const b = newBrand.trim();
+      toast.success("Marca adicionada");
+      onBrandChange(b);
+      setNewBrand(""); setAddingBrand(false);
+      onCatalogChanged();
+    },
+    onError: (e: any) => toast.error(e.message ?? "Falha"),
+  });
+
+  const addModel = useMutation({
+    mutationFn: async () => {
+      const m = newModel.trim();
+      if (!brand) throw new Error("Selecione a marca antes");
+      if (!m) throw new Error("Informe o modelo");
+      const { error } = await supabase.from("vehicle_catalog").insert({
+        company_id: companyId, kind: kind as any, brand, model: m,
+      });
+      if (error && !String(error.message).includes("duplicate")) throw error;
+    },
+    onSuccess: () => {
+      const m = newModel.trim();
+      toast.success("Modelo adicionado");
+      onModelChange(m);
+      setNewModel(""); setAddingModel(false);
+      onCatalogChanged();
+    },
+    onError: (e: any) => toast.error(e.message ?? "Falha"),
+  });
+
+  const brandOptions = Object.keys(brandsForKind).sort((a, b) => a.localeCompare(b));
+
+  return (
+    <>
+      <div>
+        <Label>Marca</Label>
+        {addingBrand ? (
+          <div className="flex gap-2">
+            <Input value={newBrand} onChange={(e) => setNewBrand(e.target.value)} placeholder="Nova marca" autoFocus />
+            <Button size="sm" onClick={() => addBrand.mutate()} disabled={addBrand.isPending}>Salvar</Button>
+            <Button size="sm" variant="ghost" onClick={() => { setAddingBrand(false); setNewBrand(""); }}>×</Button>
+          </div>
+        ) : (
+          <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+            value={brand}
+            onChange={(e) => {
+              if (e.target.value === OTHER_SENTINEL) { setAddingBrand(true); return; }
+              onBrandChange(e.target.value);
+            }}>
+            <option value="">Selecionar…</option>
+            {brandOptions.map((b) => <option key={b} value={b}>{b}</option>)}
+            {brand && !brandsForKind[brand] && <option value={brand}>{brand}</option>}
+            <option value={OTHER_SENTINEL}>+ Outra marca…</option>
+          </select>
+        )}
+      </div>
+      <div>
+        <Label>Modelo</Label>
+        {addingModel ? (
+          <div className="flex gap-2">
+            <Input value={newModel} onChange={(e) => setNewModel(e.target.value)} placeholder="Novo modelo" autoFocus />
+            <Button size="sm" onClick={() => addModel.mutate()} disabled={addModel.isPending}>Salvar</Button>
+            <Button size="sm" variant="ghost" onClick={() => { setAddingModel(false); setNewModel(""); }}>×</Button>
+          </div>
+        ) : (
+          <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+            value={model}
+            disabled={!brand}
+            onChange={(e) => {
+              if (e.target.value === OTHER_SENTINEL) { setAddingModel(true); return; }
+              onModelChange(e.target.value);
+            }}>
+            <option value="">{brand ? "Selecionar…" : "Escolha marca antes"}</option>
+            {modelsForBrand.map((m) => <option key={m} value={m}>{m}</option>)}
+            {model && !modelsForBrand.includes(model) && <option value={model}>{model}</option>}
+            {brand && <option value={OTHER_SENTINEL}>+ Outro modelo…</option>}
+          </select>
+        )}
+      </div>
+    </>
+  );
+}
