@@ -40,6 +40,10 @@ function CommercialLayout() {
               <Link
                 key={t.to}
                 to={t.to}
+                onClick={() => {
+                  if (t.to === "/app/comercial/contratos/novo")
+                    console.log("Novo contrato clicked");
+                }}
                 className={cn(
                   "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                   active
