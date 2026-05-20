@@ -12,8 +12,9 @@ import {
   punchPause,
   punchResume,
   punchState,
-  effectiveMinutesNow,
+  effectiveSecondsNow,
   formatDuration,
+  formatHMS,
   transitionTask,
   requestTaskAuthorization,
   STATUS_LABELS,
@@ -210,7 +211,7 @@ function PontoPage() {
   });
 
   const state = openEntry ? punchState(openEntry) : "encerrado";
-  const liveMin = openEntry ? effectiveMinutesNow(openEntry) : 0;
+  const liveSec = openEntry ? effectiveSecondsNow(openEntry) : 0;
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
@@ -236,7 +237,7 @@ function PontoPage() {
           entry={openEntry}
           task={openTask}
           clientName={openTask.client_id ? clientsMap?.[openTask.client_id] : undefined}
-          liveMin={liveMin}
+          liveSec={liveSec}
           state={state}
           onPause={() => pauseMut.mutate()}
           onResume={() => resumeMut.mutate()}
