@@ -462,6 +462,54 @@ export type Database = {
           },
         ]
       }
+      vacation_requests: {
+        Row: {
+          cancelled_at: string | null
+          company_id: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_reason: string | null
+          end_date: string
+          id: string
+          note: string | null
+          start_date: string
+          status: Database["public"]["Enums"]["vacation_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cancelled_at?: string | null
+          company_id: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_reason?: string | null
+          end_date: string
+          id?: string
+          note?: string | null
+          start_date: string
+          status?: Database["public"]["Enums"]["vacation_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cancelled_at?: string | null
+          company_id?: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_reason?: string | null
+          end_date?: string
+          id?: string
+          note?: string | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["vacation_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -673,6 +721,30 @@ export type Database = {
         }
       }
       tasks_sweep_absent: { Args: { _company_id?: string }; Returns: number }
+      vacation_decide: {
+        Args: { _action: string; _id: string; _reason?: string }
+        Returns: {
+          cancelled_at: string | null
+          company_id: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_reason: string | null
+          end_date: string
+          id: string
+          note: string | null
+          start_date: string
+          status: Database["public"]["Enums"]["vacation_status"]
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "vacation_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       app_role: "super_admin" | "manager" | "employee"
@@ -690,6 +762,10 @@ export type Database = {
         | "task_cancelled"
         | "task_marked_absent"
         | "task_late"
+        | "vacation_requested"
+        | "vacation_approved"
+        | "vacation_rejected"
+        | "vacation_cancelled"
       notification_priority: "baixa" | "media" | "alta" | "urgente"
       task_priority: "baixa" | "media" | "alta" | "urgente"
       task_status:
@@ -699,6 +775,7 @@ export type Database = {
         | "cancelado"
         | "ausente"
         | "autorizado"
+      vacation_status: "pendente" | "aprovado" | "rejeitado" | "cancelado"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -841,6 +918,10 @@ export const Constants = {
         "task_cancelled",
         "task_marked_absent",
         "task_late",
+        "vacation_requested",
+        "vacation_approved",
+        "vacation_rejected",
+        "vacation_cancelled",
       ],
       notification_priority: ["baixa", "media", "alta", "urgente"],
       task_priority: ["baixa", "media", "alta", "urgente"],
@@ -852,6 +933,7 @@ export const Constants = {
         "ausente",
         "autorizado",
       ],
+      vacation_status: ["pendente", "aprovado", "rejeitado", "cancelado"],
     },
   },
 } as const
