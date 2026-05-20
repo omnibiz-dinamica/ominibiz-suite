@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Car, Fuel, CreditCard, Plus, History, X } from "lucide-react";
+import { Car, Fuel, CreditCard, Plus, History, X, Pencil, Power, Trash2 } from "lucide-react";
 import { VEHICLE_BRANDS, VEHICLE_KIND_LABELS, VEHICLE_KINDS } from "@/lib/vehicle-brands";
 
 export const Route = createFileRoute("/app/frota")({ component: FrotaPage });
@@ -425,53 +425,201 @@ function VehicleManager({
             const linked = assignments.filter((a) => a.vehicle_id === v.id);
             const available = members.filter((m) => !linked.some((l) => l.user_id === m.id));
             return (
-              <li key={v.id} className="rounded-lg border border-border p-3">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <div className="font-display text-lg font-semibold">{v.plate}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {[v.brand, v.model, v.year].filter(Boolean).join(" • ")}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {v.current_km.toLocaleString()} km • {v.fuel_type} • {VEHICLE_KIND_LABELS[v.kind] ?? v.kind} • {v.status}
-                    </div>
-                  </div>
-                  <div className="min-w-[240px] flex-1">
-                    <Label className="text-xs">Vincular motoristas</Label>
-                    <select
-                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm"
-                      value=""
-                      onChange={(e) => {
-                        const uid = e.target.value;
-                        if (uid) assign.mutate({ vehicleId: v.id, userId: uid });
-                      }}
-                    >
-                      <option value="">{available.length === 0 ? "Todos já vinculados" : "Adicionar motorista…"}</option>
-                      {available.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-                    </select>
-                    {linked.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {linked.map((l) => {
-                          const member = members.find((m) => m.id === l.user_id);
-                          return (
-                            <span key={l.id} className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs">
-                              {member?.name ?? "Usuário"}
-                              <button className="text-destructive" onClick={() => unassign.mutate(l.id)} aria-label="Remover">
-                                <X className="h-3 w-3" />
-                              </button>
-                            </span>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </li>
+              <VehicleRow
+                key={v.id}
+                v={v}
+                linked={linked}
+                available={available}
+                members={members}
+                onAssign={(uid) => assign.mutate({ vehicleId: v.id, userId: uid })}
+                onUnassign={(id) => unassign.mutate(id)}
+                onChanged={onChange}
+              />
             );
           })}
         </ul>
       )}
     </section>
+  );
+}
+
+function VehicleRow({
+  v, linked, available, members, onAssign, onUnassign, onChanged,
+}: {
+  v: Vehicle;
+  linked: Assignment[];
+  available: { id: string; name: string }[];
+  members: { id: string; name: string }[];
+  onAssign: (userId: string) => void;
+  onUnassign: (assignmentId: string) => void;
+  onChanged: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [plate, setPlate] = useState(v.plate);
+  const [kind, setKind] = useState(v.kind);
+  const [brand, setBrand] = useState(v.brand ?? "");
+  const [model, setModel] = useState(v.model ?? "");
+  const [year, setYear] = useState(v.year != null ? String(v.year) : "");
+  const [km, setKm] = useState(String(v.current_km ?? 0));
+  const [fuelTypeV, setFuelTypeV] = useState(v.fuel_type);
+  const [status, setStatus] = useState(v.status);
+
+  const brandsForKind = VEHICLE_BRANDS[kind] ?? {};
+  const modelsForBrand = brand ? brandsForKind[brand] ?? [] : [];
+
+  const resetForm = () => {
+    setPlate(v.plate); setKind(v.kind); setBrand(v.brand ?? "");
+    setModel(v.model ?? ""); setYear(v.year != null ? String(v.year) : "");
+    setKm(String(v.current_km ?? 0)); setFuelTypeV(v.fuel_type); setStatus(v.status);
+  };
+
+  const save = useMutation({
+    mutationFn: async () => {
+      if (!plate.trim()) throw new Error("Matrícula obrigatória");
+      const { error } = await supabase.from("vehicles").update({
+        plate: plate.trim().toUpperCase(),
+        brand: brand || null, model: model || null,
+        year: year ? Number(year) : null,
+        current_km: Number(km) || 0,
+        fuel_type: fuelTypeV as any, kind: kind as any,
+        status: status as any,
+      }).eq("id", v.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Veículo atualizado"); setEditing(false); onChanged(); },
+    onError: (e: any) => toast.error(e.message ?? "Falha"),
+  });
+
+  const toggleStatus = useMutation({
+    mutationFn: async () => {
+      const next = v.status === "ativo" ? "inativo" : "ativo";
+      const { error } = await supabase.from("vehicles").update({ status: next as any }).eq("id", v.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Status atualizado"); onChanged(); },
+    onError: (e: any) => toast.error(e.message ?? "Falha"),
+  });
+
+  const remove = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("vehicles").delete().eq("id", v.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Veículo excluído"); onChanged(); },
+    onError: (e: any) => toast.error(e.message ?? "Falha"),
+  });
+
+  return (
+    <li className="rounded-lg border border-border p-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-[200px]">
+          <div className="font-display text-lg font-semibold">{v.plate}</div>
+          <div className="text-sm text-muted-foreground">
+            {[v.brand, v.model, v.year].filter(Boolean).join(" • ") || "—"}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {v.current_km.toLocaleString()} km • {v.fuel_type} • {VEHICLE_KIND_LABELS[v.kind] ?? v.kind} •{" "}
+            <span className={v.status === "ativo" ? "text-success" : ""}>{v.status}</span>
+          </div>
+        </div>
+        <div className="min-w-[240px] flex-1">
+          <Label className="text-xs">Vincular motoristas</Label>
+          <select
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm"
+            value=""
+            onChange={(e) => { if (e.target.value) onAssign(e.target.value); }}
+          >
+            <option value="">{available.length === 0 ? "Todos já vinculados" : "Adicionar motorista…"}</option>
+            {available.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+          </select>
+          {linked.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {linked.map((l) => {
+                const member = members.find((m) => m.id === l.user_id);
+                return (
+                  <span key={l.id} className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs">
+                    {member?.name ?? "Usuário"}
+                    <button className="text-destructive" onClick={() => onUnassign(l.id)} aria-label="Remover">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => { resetForm(); setEditing((o) => !o); }}>
+            <Pencil className="h-4 w-4" /> {editing ? "Cancelar" : "Editar"}
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => toggleStatus.mutate()} disabled={toggleStatus.isPending}>
+            <Power className="h-4 w-4" /> {v.status === "ativo" ? "Desativar" : "Ativar"}
+          </Button>
+          <Button size="sm" variant="ghost" className="text-destructive"
+            onClick={() => { if (confirm(`Excluir veículo ${v.plate}?`)) remove.mutate(); }}
+            disabled={remove.isPending}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {editing && (
+        <div className="mt-3 grid gap-3 rounded-lg border border-border bg-background p-3 md:grid-cols-3">
+          <div>
+            <Label>Matrícula / Placa</Label>
+            <Input value={plate} onChange={(e) => setPlate(e.target.value)} />
+          </div>
+          <div>
+            <Label>Tipo</Label>
+            <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+              value={kind} onChange={(e) => { setKind(e.target.value); setBrand(""); setModel(""); }}>
+              {VEHICLE_KINDS.map((x) => <option key={x} value={x}>{VEHICLE_KIND_LABELS[x]}</option>)}
+            </select>
+          </div>
+          <div>
+            <Label>Combustível</Label>
+            <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+              value={fuelTypeV} onChange={(e) => setFuelTypeV(e.target.value)}>
+              {["gasolina","diesel","etanol","flex","gnv","eletrico","hibrido"].map((x) =>
+                <option key={x} value={x}>{x}</option>)}
+            </select>
+          </div>
+          <div>
+            <Label>Marca</Label>
+            <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+              value={brand} onChange={(e) => { setBrand(e.target.value); setModel(""); }}>
+              <option value="">Selecionar…</option>
+              {Object.keys(brandsForKind).map((b) => <option key={b} value={b}>{b}</option>)}
+              {brand && !brandsForKind[brand] && <option value={brand}>{brand}</option>}
+            </select>
+          </div>
+          <div>
+            <Label>Modelo</Label>
+            <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+              value={model} onChange={(e) => setModel(e.target.value)} disabled={!brand}>
+              <option value="">{brand ? "Selecionar…" : "Escolha marca antes"}</option>
+              {modelsForBrand.map((m) => <option key={m} value={m}>{m}</option>)}
+              {model && !modelsForBrand.includes(model) && <option value={model}>{model}</option>}
+            </select>
+          </div>
+          <div><Label>Ano</Label><Input type="number" value={year} onChange={(e) => setYear(e.target.value)} /></div>
+          <div><Label>KM atual</Label><Input type="number" value={km} onChange={(e) => setKm(e.target.value)} /></div>
+          <div>
+            <Label>Status</Label>
+            <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+              value={status} onChange={(e) => setStatus(e.target.value)}>
+              <option value="ativo">ativo</option>
+              <option value="inativo">inativo</option>
+              <option value="manutencao">manutencao</option>
+            </select>
+          </div>
+          <div className="md:col-span-3 flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setEditing(false)}>Cancelar</Button>
+            <Button onClick={() => save.mutate()} disabled={save.isPending}>Salvar alterações</Button>
+          </div>
+        </div>
+      )}
+    </li>
   );
 }
 
