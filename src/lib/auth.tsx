@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-export type AppRole = "super_admin" | "manager" | "employee";
+export type AppRole = "super_admin" | "owner" | "manager" | "employee";
 
 export interface AuthProfile {
   id: string;
@@ -23,6 +23,7 @@ export interface AuthContextValue {
   refresh: () => Promise<void>;
   signOut: () => Promise<void>;
   isManager: boolean;
+  isOwner: boolean;
   isSuperAdmin: boolean;
   isEmployee: boolean;
   effectiveRole: AppRole | null;
@@ -182,19 +183,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await supabase.auth.signOut();
     },
     isSuperAdmin: roles.some((r) => r.role === "super_admin"),
+    isOwner:
+      roles.some((r) => r.role === "super_admin") ||
+      roles.some(
+        (r) => r.role === "owner" && (!currentCompanyId || r.company_id === currentCompanyId),
+      ),
     isManager:
       roles.some((r) => r.role === "super_admin") ||
       roles.some(
-        (r) => r.role === "manager" && (!currentCompanyId || r.company_id === currentCompanyId),
+        (r) =>
+          (r.role === "manager" || r.role === "owner") &&
+          (!currentCompanyId || r.company_id === currentCompanyId),
       ),
     isEmployee:
       !roles.some((r) => r.role === "super_admin") &&
       !roles.some(
-        (r) => r.role === "manager" && (!currentCompanyId || r.company_id === currentCompanyId),
+        (r) =>
+          (r.role === "manager" || r.role === "owner") &&
+          (!currentCompanyId || r.company_id === currentCompanyId),
       ) &&
       roles.some((r) => r.role === "employee"),
     effectiveRole: roles.some((r) => r.role === "super_admin")
       ? "super_admin"
+      : roles.some(
+          (r) =>
+            r.role === "owner" && (!currentCompanyId || r.company_id === currentCompanyId),
+        )
+      ? "owner"
       : roles.some(
           (r) =>
             r.role === "manager" && (!currentCompanyId || r.company_id === currentCompanyId),

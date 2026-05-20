@@ -133,6 +133,41 @@ export type Database = {
         }
         Relationships: []
       }
+      company_hr_settings: {
+        Row: {
+          company_id: string
+          employee_approver_kind: Database["public"]["Enums"]["employee_approver_kind"]
+          employee_approver_user_id: string | null
+          manager_approver_kind: Database["public"]["Enums"]["manager_approver_kind"]
+          manager_approver_user_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          employee_approver_kind?: Database["public"]["Enums"]["employee_approver_kind"]
+          employee_approver_user_id?: string | null
+          manager_approver_kind?: Database["public"]["Enums"]["manager_approver_kind"]
+          manager_approver_user_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          employee_approver_kind?: Database["public"]["Enums"]["employee_approver_kind"]
+          employee_approver_user_id?: string | null
+          manager_approver_kind?: Database["public"]["Enums"]["manager_approver_kind"]
+          manager_approver_user_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_hr_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fuel_card_users: {
         Row: {
           card_id: string
@@ -652,6 +687,7 @@ export type Database = {
       }
       vacation_requests: {
         Row: {
+          assigned_approver_id: string | null
           cancelled_at: string | null
           company_id: string
           created_at: string
@@ -670,6 +706,7 @@ export type Database = {
           work_location: string | null
         }
         Insert: {
+          assigned_approver_id?: string | null
           cancelled_at?: string | null
           company_id: string
           created_at?: string
@@ -688,6 +725,7 @@ export type Database = {
           work_location?: string | null
         }
         Update: {
+          assigned_approver_id?: string | null
           cancelled_at?: string | null
           company_id?: string
           created_at?: string
@@ -893,6 +931,10 @@ export type Database = {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
       }
+      is_company_owner: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       notification_mark_read: {
         Args: { _all?: boolean; _id?: string }
@@ -951,6 +993,10 @@ export type Database = {
       remove_member: {
         Args: { _company_id: string; _user_id: string }
         Returns: undefined
+      }
+      resolve_vacation_approver: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: string
       }
       set_current_company: { Args: { _company_id: string }; Returns: string }
       set_member_role: {
@@ -1037,6 +1083,7 @@ export type Database = {
       vacation_decide: {
         Args: { _action: string; _id: string; _reason?: string }
         Returns: {
+          assigned_approver_id: string | null
           cancelled_at: string | null
           company_id: string
           created_at: string
@@ -1063,9 +1110,14 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "super_admin" | "manager" | "employee"
+      app_role: "super_admin" | "manager" | "employee" | "owner"
       client_status: "ativo" | "inativo"
       company_status: "pending" | "active" | "suspended"
+      employee_approver_kind:
+        | "manager"
+        | "supervisor"
+        | "owner"
+        | "specific_user"
       fuel_card_status: "ativo" | "inativo"
       fuel_purpose: "profissional" | "pessoal"
       fuel_type:
@@ -1077,6 +1129,11 @@ export type Database = {
         | "eletrico"
         | "hibrido"
       invite_status: "pending" | "accepted" | "revoked" | "expired"
+      manager_approver_kind:
+        | "owner"
+        | "other_manager"
+        | "specific_user"
+        | "self_allowed"
       notification_event:
         | "task_created"
         | "task_assigned"
@@ -1239,9 +1296,15 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["super_admin", "manager", "employee"],
+      app_role: ["super_admin", "manager", "employee", "owner"],
       client_status: ["ativo", "inativo"],
       company_status: ["pending", "active", "suspended"],
+      employee_approver_kind: [
+        "manager",
+        "supervisor",
+        "owner",
+        "specific_user",
+      ],
       fuel_card_status: ["ativo", "inativo"],
       fuel_purpose: ["profissional", "pessoal"],
       fuel_type: [
@@ -1254,6 +1317,12 @@ export const Constants = {
         "hibrido",
       ],
       invite_status: ["pending", "accepted", "revoked", "expired"],
+      manager_approver_kind: [
+        "owner",
+        "other_manager",
+        "specific_user",
+        "self_allowed",
+      ],
       notification_event: [
         "task_created",
         "task_assigned",

@@ -28,6 +28,7 @@ type VacationRow = {
   work_location: string | null;
   prior_validation: boolean;
   validated_by: string | null;
+  assigned_approver_id: string | null;
 };
 
 const STATUS_TONE: Record<VacationStatus, string> = {
@@ -49,7 +50,7 @@ function FeriasPage() {
 
   const { data: myProfile } = useQuery({
     queryKey: ["my-op-profile", user?.id],
-    enabled: !!user?.id && isEmployee,
+    enabled: !!user?.id,
     queryFn: async () => {
       const { data } = await supabase
         .from("profiles")
@@ -77,10 +78,20 @@ function FeriasPage() {
   });
 
   // Names for manager view
-  const userIds = useMemo(() => Array.from(new Set(rows.map((r) => r.user_id))), [rows]);
+  const userIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          rows.flatMap((r) =>
+            [r.user_id, r.assigned_approver_id].filter(Boolean) as string[],
+          ),
+        ),
+      ),
+    [rows],
+  );
   const { data: names = {} } = useQuery({
     queryKey: ["vac-profiles", userIds.join(",")],
-    enabled: userIds.length > 0 && isManager,
+    enabled: userIds.length > 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
@@ -144,6 +155,11 @@ function FeriasPage() {
   const approved = rows.filter((r) => r.status === "aprovado");
   const history = rows.filter((r) => r.status === "rejeitado" || r.status === "cancelado");
 
+  // Requests this user needs to decide on
+  const toApprove = rows.filter(
+    (r) => r.status === "pendente" && r.assigned_approver_id === user?.id && r.user_id !== user?.id,
+  );
+
   return (
     <div className="space-y-6">
       <header className="flex items-center gap-3">
@@ -158,8 +174,8 @@ function FeriasPage() {
         </div>
       </header>
 
-      {/* Employee form */}
-      {isEmployee && (
+      {/* New request form — any member can request */}
+      {!!user && !!currentCompanyId && (
         <section className="rounded-2xl border border-border bg-card p-5">
           <h2 className="mb-3 flex items-center gap-2 font-semibold"><Plus className="h-4 w-4" /> Nova solicitação</h2>
           <div className="grid gap-3 md:grid-cols-3">
@@ -219,14 +235,14 @@ function FeriasPage() {
       )}
 
       {/* Manager: pending */}
-      {isManager && (
+      {(isManager || toApprove.length > 0) && (
         <section className="rounded-2xl border border-border bg-card p-5">
-          <h2 className="mb-3 font-semibold">Pendentes ({pending.length})</h2>
-          {pending.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhuma solicitação pendente.</p>
+          <h2 className="mb-3 font-semibold">Aguardando sua aprovação ({toApprove.length})</h2>
+          {toApprove.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nada para aprovar agora.</p>
           ) : (
             <ul className="space-y-2">
-              {pending.map((r) => (
+              {toApprove.map((r) => (
                 <PendingRow
                   key={r.id}
                   row={r}
@@ -273,22 +289,30 @@ function FeriasPage() {
         )}
       </section>
 
-      {/* Employee: own pending list */}
-      {isEmployee && pending.length > 0 && (
+      {/* Own pending list */}
+      {pending.some((r) => r.user_id === user?.id) && (
         <section className="rounded-2xl border border-border bg-card p-5">
           <h2 className="mb-3 font-semibold">Minhas pendentes</h2>
           <ul className="divide-y divide-border">
-            {pending.map((r) => (
-              <li key={r.id} className="flex items-center justify-between py-2">
-                <div>
-                  <div className="font-medium">{fmt(r.start_date)} → {fmt(r.end_date)}</div>
-                  {r.note && <div className="text-xs text-muted-foreground">{r.note}</div>}
-                </div>
-                <Button size="sm" variant="ghost" onClick={() => decide.mutate({ id: r.id, action: "cancelar" })}>
-                  Cancelar
-                </Button>
-              </li>
-            ))}
+            {pending
+              .filter((r) => r.user_id === user?.id)
+              .map((r) => (
+                <li key={r.id} className="flex items-center justify-between py-2">
+                  <div>
+                    <div className="font-medium">{fmt(r.start_date)} → {fmt(r.end_date)}</div>
+                    <div className="text-xs text-muted-foreground">
+                      Aprovador:{" "}
+                      {r.assigned_approver_id
+                        ? names[r.assigned_approver_id] ?? "—"
+                        : "Não definido"}
+                    </div>
+                    {r.note && <div className="text-xs text-muted-foreground">{r.note}</div>}
+                  </div>
+                  <Button size="sm" variant="ghost" onClick={() => decide.mutate({ id: r.id, action: "cancelar" })}>
+                    Cancelar
+                  </Button>
+                </li>
+              ))}
           </ul>
         </section>
       )}
