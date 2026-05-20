@@ -35,7 +35,8 @@ function SignPage() {
   });
 
   useEffect(() => {
-    if (!canvasRef.current || data?.status !== "draft" && data?.status !== "sent") return;
+    if (!canvasRef.current) return;
+    if (data?.status !== "draft" && data?.status !== "sent") return;
     const canvas = canvasRef.current;
     const resize = () => {
       const ratio = Math.max(window.devicePixelRatio || 1, 1);
