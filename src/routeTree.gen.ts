@@ -31,6 +31,7 @@ import { Route as AppAdminRouteImport } from './routes/app.admin'
 import { Route as AppComercialIndexRouteImport } from './routes/app.comercial.index'
 import { Route as AppFrotaCartoesRouteImport } from './routes/app.frota.cartoes'
 import { Route as AppComercialTemplatesRouteImport } from './routes/app.comercial.templates'
+import { Route as AppComercialContratosRouteImport } from './routes/app.comercial.contratos'
 import { Route as AppComercialClientesRouteImport } from './routes/app.comercial.clientes'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -143,6 +144,11 @@ const AppComercialTemplatesRoute = AppComercialTemplatesRouteImport.update({
   path: '/templates',
   getParentRoute: () => AppComercialRoute,
 } as any)
+const AppComercialContratosRoute = AppComercialContratosRouteImport.update({
+  id: '/contratos',
+  path: '/contratos',
+  getParentRoute: () => AppComercialRoute,
+} as any)
 const AppComercialClientesRoute = AppComercialClientesRouteImport.update({
   id: '/clientes',
   path: '/clientes',
@@ -170,6 +176,7 @@ export interface FileRoutesByFullPath {
   '/app/tarefas': typeof AppTarefasRoute
   '/app/': typeof AppIndexRoute
   '/app/comercial/clientes': typeof AppComercialClientesRoute
+  '/app/comercial/contratos': typeof AppComercialContratosRoute
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
   '/app/comercial/': typeof AppComercialIndexRoute
@@ -193,6 +200,7 @@ export interface FileRoutesByTo {
   '/app/tarefas': typeof AppTarefasRoute
   '/app': typeof AppIndexRoute
   '/app/comercial/clientes': typeof AppComercialClientesRoute
+  '/app/comercial/contratos': typeof AppComercialContratosRoute
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
   '/app/comercial': typeof AppComercialIndexRoute
@@ -219,6 +227,7 @@ export interface FileRoutesById {
   '/app/tarefas': typeof AppTarefasRoute
   '/app/': typeof AppIndexRoute
   '/app/comercial/clientes': typeof AppComercialClientesRoute
+  '/app/comercial/contratos': typeof AppComercialContratosRoute
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
   '/app/comercial/': typeof AppComercialIndexRoute
@@ -246,6 +255,7 @@ export interface FileRouteTypes {
     | '/app/tarefas'
     | '/app/'
     | '/app/comercial/clientes'
+    | '/app/comercial/contratos'
     | '/app/comercial/templates'
     | '/app/frota/cartoes'
     | '/app/comercial/'
@@ -269,6 +279,7 @@ export interface FileRouteTypes {
     | '/app/tarefas'
     | '/app'
     | '/app/comercial/clientes'
+    | '/app/comercial/contratos'
     | '/app/comercial/templates'
     | '/app/frota/cartoes'
     | '/app/comercial'
@@ -294,6 +305,7 @@ export interface FileRouteTypes {
     | '/app/tarefas'
     | '/app/'
     | '/app/comercial/clientes'
+    | '/app/comercial/contratos'
     | '/app/comercial/templates'
     | '/app/frota/cartoes'
     | '/app/comercial/'
@@ -463,6 +475,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppComercialTemplatesRouteImport
       parentRoute: typeof AppComercialRoute
     }
+    '/app/comercial/contratos': {
+      id: '/app/comercial/contratos'
+      path: '/contratos'
+      fullPath: '/app/comercial/contratos'
+      preLoaderRoute: typeof AppComercialContratosRouteImport
+      parentRoute: typeof AppComercialRoute
+    }
     '/app/comercial/clientes': {
       id: '/app/comercial/clientes'
       path: '/clientes'
@@ -475,12 +494,14 @@ declare module '@tanstack/react-router' {
 
 interface AppComercialRouteChildren {
   AppComercialClientesRoute: typeof AppComercialClientesRoute
+  AppComercialContratosRoute: typeof AppComercialContratosRoute
   AppComercialTemplatesRoute: typeof AppComercialTemplatesRoute
   AppComercialIndexRoute: typeof AppComercialIndexRoute
 }
 
 const AppComercialRouteChildren: AppComercialRouteChildren = {
   AppComercialClientesRoute: AppComercialClientesRoute,
+  AppComercialContratosRoute: AppComercialContratosRoute,
   AppComercialTemplatesRoute: AppComercialTemplatesRoute,
   AppComercialIndexRoute: AppComercialIndexRoute,
 }
