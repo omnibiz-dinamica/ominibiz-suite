@@ -325,10 +325,12 @@ function VehicleCard({ v }: { v: Vehicle }) {
 }
 
 function VehicleManager({
-  vehicles, assignments, members, companyId, onChange,
+  vehicles, assignments, members, companyId, brandsByKind, onChange,
 }: {
   vehicles: Vehicle[]; assignments: Assignment[];
-  members: { id: string; name: string }[]; companyId: string; onChange: () => void;
+  members: { id: string; name: string }[]; companyId: string;
+  brandsByKind: Record<string, Record<string, string[]>>;
+  onChange: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [plate, setPlate] = useState("");
@@ -339,8 +341,7 @@ function VehicleManager({
   const [km, setKm] = useState<string>("0");
   const [fuelTypeV, setFuelTypeV] = useState("flex");
 
-  const brandsForKind = VEHICLE_BRANDS[kind] ?? {};
-  const modelsForBrand = brand ? brandsForKind[brand] ?? [] : [];
+  const brandsForKind = brandsByKind[kind] ?? {};
 
   useEffect(() => { setBrand(""); setModel(""); }, [kind]);
   useEffect(() => { setModel(""); }, [brand]);
@@ -417,22 +418,16 @@ function VehicleManager({
                 <option key={x} value={x}>{x}</option>)}
             </select>
           </div>
-          <div>
-            <Label>Marca</Label>
-            <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-              value={brand} onChange={(e) => setBrand(e.target.value)}>
-              <option value="">Selecionar…</option>
-              {Object.keys(brandsForKind).map((b) => <option key={b} value={b}>{b}</option>)}
-            </select>
-          </div>
-          <div>
-            <Label>Modelo</Label>
-            <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-              value={model} onChange={(e) => setModel(e.target.value)} disabled={!brand}>
-              <option value="">{brand ? "Selecionar…" : "Escolha marca antes"}</option>
-              {modelsForBrand.map((m) => <option key={m} value={m}>{m}</option>)}
-            </select>
-          </div>
+          <BrandModelPicker
+            companyId={companyId}
+            kind={kind}
+            brandsForKind={brandsForKind}
+            brand={brand}
+            model={model}
+            onBrandChange={setBrand}
+            onModelChange={setModel}
+            onCatalogChanged={onChange}
+          />
           <div><Label>Ano</Label><Input type="number" value={year} onChange={(e) => setYear(e.target.value)} /></div>
           <div><Label>KM atual</Label><Input type="number" value={km} onChange={(e) => setKm(e.target.value)} /></div>
           <div className="md:col-span-3 flex justify-end">
@@ -455,6 +450,8 @@ function VehicleManager({
                 linked={linked}
                 available={available}
                 members={members}
+                companyId={companyId}
+                brandsByKind={brandsByKind}
                 onAssign={(uid) => assign.mutate({ vehicleId: v.id, userId: uid })}
                 onUnassign={(id) => unassign.mutate(id)}
                 onChanged={onChange}
@@ -468,12 +465,14 @@ function VehicleManager({
 }
 
 function VehicleRow({
-  v, linked, available, members, onAssign, onUnassign, onChanged,
+  v, linked, available, members, companyId, brandsByKind, onAssign, onUnassign, onChanged,
 }: {
   v: Vehicle;
   linked: Assignment[];
   available: { id: string; name: string }[];
   members: { id: string; name: string }[];
+  companyId: string;
+  brandsByKind: Record<string, Record<string, string[]>>;
   onAssign: (userId: string) => void;
   onUnassign: (assignmentId: string) => void;
   onChanged: () => void;
@@ -488,8 +487,7 @@ function VehicleRow({
   const [fuelTypeV, setFuelTypeV] = useState(v.fuel_type);
   const [status, setStatus] = useState(v.status);
 
-  const brandsForKind = VEHICLE_BRANDS[kind] ?? {};
-  const modelsForBrand = brand ? brandsForKind[brand] ?? [] : [];
+  const brandsForKind = brandsByKind[kind] ?? {};
 
   const resetForm = () => {
     setPlate(v.plate); setKind(v.kind); setBrand(v.brand ?? "");
@@ -608,24 +606,16 @@ function VehicleRow({
                 <option key={x} value={x}>{x}</option>)}
             </select>
           </div>
-          <div>
-            <Label>Marca</Label>
-            <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-              value={brand} onChange={(e) => { setBrand(e.target.value); setModel(""); }}>
-              <option value="">Selecionar…</option>
-              {Object.keys(brandsForKind).map((b) => <option key={b} value={b}>{b}</option>)}
-              {brand && !brandsForKind[brand] && <option value={brand}>{brand}</option>}
-            </select>
-          </div>
-          <div>
-            <Label>Modelo</Label>
-            <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-              value={model} onChange={(e) => setModel(e.target.value)} disabled={!brand}>
-              <option value="">{brand ? "Selecionar…" : "Escolha marca antes"}</option>
-              {modelsForBrand.map((m) => <option key={m} value={m}>{m}</option>)}
-              {model && !modelsForBrand.includes(model) && <option value={model}>{model}</option>}
-            </select>
-          </div>
+          <BrandModelPicker
+            companyId={companyId}
+            kind={kind}
+            brandsForKind={brandsForKind}
+            brand={brand}
+            model={model}
+            onBrandChange={(b) => { setBrand(b); setModel(""); }}
+            onModelChange={setModel}
+            onCatalogChanged={onChanged}
+          />
           <div><Label>Ano</Label><Input type="number" value={year} onChange={(e) => setYear(e.target.value)} /></div>
           <div><Label>KM atual</Label><Input type="number" value={km} onChange={(e) => setKm(e.target.value)} /></div>
           <div>
