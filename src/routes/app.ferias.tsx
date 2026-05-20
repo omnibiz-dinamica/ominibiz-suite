@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Calendar as CalendarIcon, Check, X as XIcon, Plus, Plane } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 export const Route = createFileRoute("/app/ferias")({ component: FeriasPage });
 
@@ -24,6 +25,9 @@ type VacationRow = {
   decision_reason: string | null;
   decided_at: string | null;
   created_at: string;
+  work_location: string | null;
+  prior_validation: boolean;
+  validated_by: string | null;
 };
 
 const STATUS_TONE: Record<VacationStatus, string> = {
@@ -42,6 +46,19 @@ function FeriasPage() {
   const { user, currentCompanyId, effectiveRole, isManager } = useAuth();
   const qc = useQueryClient();
   const isEmployee = effectiveRole === "employee";
+
+  const { data: myProfile } = useQuery({
+    queryKey: ["my-op-profile", user?.id],
+    enabled: !!user?.id && isEmployee,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("work_location")
+        .eq("id", user!.id)
+        .maybeSingle();
+      return data ?? null;
+    },
+  });
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["vacations", currentCompanyId, effectiveRole, user?.id],
@@ -77,24 +94,32 @@ function FeriasPage() {
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [note, setNote] = useState("");
+  const [priorValidation, setPriorValidation] = useState<"sim" | "nao">("nao");
+  const [validatedBy, setValidatedBy] = useState("");
 
   const create = useMutation({
     mutationFn: async () => {
       if (!start || !end) throw new Error("Informe início e fim");
       if (end < start) throw new Error("Data final deve ser após o início");
       if (!currentCompanyId || !user?.id) throw new Error("Empresa não selecionada");
+      if (priorValidation === "sim" && !validatedBy.trim()) {
+        throw new Error("Informe quem realizou a validação prévia");
+      }
       const { error } = await supabase.from("vacation_requests").insert({
         company_id: currentCompanyId,
         user_id: user.id,
         start_date: start,
         end_date: end,
         note: note.trim() || null,
+        prior_validation: priorValidation === "sim",
+        validated_by: priorValidation === "sim" ? validatedBy.trim() : null,
       });
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Solicitação enviada");
       setStart(""); setEnd(""); setNote("");
+      setPriorValidation("nao"); setValidatedBy("");
       qc.invalidateQueries({ queryKey: ["vacations"] });
     },
     onError: (e: any) => toast.error(e.message ?? "Falha ao solicitar"),
@@ -146,9 +171,43 @@ function FeriasPage() {
               <Label htmlFor="end">Fim</Label>
               <Input id="end" type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
             </div>
+            <div>
+              <Label>Local de trabalho</Label>
+              <Input value={myProfile?.work_location ?? "Não definido"} readOnly disabled />
+            </div>
             <div className="md:col-span-3">
               <Label htmlFor="note">Observação (opcional)</Label>
               <Textarea id="note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Motivo, contexto..." />
+            </div>
+            <div className="md:col-span-3 space-y-2 rounded-lg border border-border/60 bg-muted/30 p-3">
+              <Label>No local de trabalho já houve validação prévia?</Label>
+              <RadioGroup
+                value={priorValidation}
+                onValueChange={(v) => setPriorValidation(v as "sim" | "nao")}
+                className="flex gap-6"
+              >
+                <label className="flex items-center gap-2 text-sm">
+                  <RadioGroupItem value="sim" id="pv-sim" /> Sim
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <RadioGroupItem value="nao" id="pv-nao" /> Não
+                </label>
+              </RadioGroup>
+              {priorValidation === "sim" && (
+                <div>
+                  <Label htmlFor="validated-by">Quem validou?</Label>
+                  <Input
+                    id="validated-by"
+                    value={validatedBy}
+                    onChange={(e) => setValidatedBy(e.target.value)}
+                    placeholder="Ex.: Supervisor João, Cliente Happy Kot..."
+                    maxLength={200}
+                  />
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Isto não substitui a aprovação do gestor — é apenas contexto operacional.
+              </p>
             </div>
           </div>
           <div className="mt-3 flex justify-end">
