@@ -174,8 +174,8 @@ function FeriasPage() {
         </div>
       </header>
 
-      {/* Employee form */}
-      {isEmployee && (
+      {/* New request form — any member can request */}
+      {!!user && !!currentCompanyId && (
         <section className="rounded-2xl border border-border bg-card p-5">
           <h2 className="mb-3 flex items-center gap-2 font-semibold"><Plus className="h-4 w-4" /> Nova solicitação</h2>
           <div className="grid gap-3 md:grid-cols-3">
