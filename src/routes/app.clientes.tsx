@@ -23,8 +23,15 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Plus, Users, Phone, Mail, MapPin, Pencil, Power, Trash2 } from "lucide-react";
+import { RoleGuard } from "@/components/RoleGuard";
 
-export const Route = createFileRoute("/app/clientes")({ component: ClientsPage });
+export const Route = createFileRoute("/app/clientes")({
+  component: () => (
+    <RoleGuard allow={["manager", "super_admin"]}>
+      <ClientsPage />
+    </RoleGuard>
+  ),
+});
 
 interface ClientRow {
   id: string;

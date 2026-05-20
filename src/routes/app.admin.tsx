@@ -24,9 +24,14 @@ import {
 import { toast } from "sonner";
 import { Building2, CheckCircle2, Copy, Plus } from "lucide-react";
 import { COUNTRIES, countryDefaults, slugify, type CountryCode } from "@/lib/locale";
+import { RoleGuard } from "@/components/RoleGuard";
 
 export const Route = createFileRoute("/app/admin")({
-  component: AdminPage,
+  component: () => (
+    <RoleGuard allow={["super_admin"]}>
+      <AdminPage />
+    </RoleGuard>
+  ),
 });
 
 function AdminPage() {
