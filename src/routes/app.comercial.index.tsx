@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatEUR } from "@/lib/contract-vars";
-import { ContractTimeline } from "@/components/contracts/ContractTimeline";
 import { FileText, Users, CircleDollarSign, CheckCircle2, Clock, Send, AlertTriangle } from "lucide-react";
 
 export const Route = createFileRoute("/app/comercial/")({
@@ -116,6 +115,3 @@ function CommercialDashboard() {
     </div>
   );
 }
-
-// keep unused import allowed
-void ContractTimeline;
