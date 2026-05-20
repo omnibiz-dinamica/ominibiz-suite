@@ -721,6 +721,36 @@ export type Database = {
           },
         ]
       }
+      vehicle_catalog: {
+        Row: {
+          brand: string
+          company_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: Database["public"]["Enums"]["vehicle_kind"]
+          model: string | null
+        }
+        Insert: {
+          brand: string
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind: Database["public"]["Enums"]["vehicle_kind"]
+          model?: string | null
+        }
+        Update: {
+          brand?: string
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["vehicle_kind"]
+          model?: string | null
+        }
+        Relationships: []
+      }
       vehicles: {
         Row: {
           brand: string | null
