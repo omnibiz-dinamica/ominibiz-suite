@@ -126,45 +126,110 @@ export type Database = {
         }
         Relationships: []
       }
+      commercial_client_contacts: {
+        Row: {
+          client_id: string
+          created_at: string
+          email: string | null
+          id: string
+          is_primary_signer: boolean
+          name: string
+          phone: string | null
+          role: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_primary_signer?: boolean
+          name: string
+          phone?: string | null
+          role?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_primary_signer?: boolean
+          name?: string
+          phone?: string | null
+          role?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_client_contacts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commercial_clients: {
         Row: {
           address: string | null
+          city: string | null
           company_name: string
           contact_name: string | null
+          country: string | null
           created_at: string
           created_by: string | null
           email: string | null
           id: string
+          legal_name: string | null
           nif: string | null
           notes: string | null
           phone: string | null
+          state: string | null
+          status: Database["public"]["Enums"]["commercial_client_status"]
+          tax_id_kind: string | null
           updated_at: string
+          website: string | null
         }
         Insert: {
           address?: string | null
+          city?: string | null
           company_name: string
           contact_name?: string | null
+          country?: string | null
           created_at?: string
           created_by?: string | null
           email?: string | null
           id?: string
+          legal_name?: string | null
           nif?: string | null
           notes?: string | null
           phone?: string | null
+          state?: string | null
+          status?: Database["public"]["Enums"]["commercial_client_status"]
+          tax_id_kind?: string | null
           updated_at?: string
+          website?: string | null
         }
         Update: {
           address?: string | null
+          city?: string | null
           company_name?: string
           contact_name?: string | null
+          country?: string | null
           created_at?: string
           created_by?: string | null
           email?: string | null
           id?: string
+          legal_name?: string | null
           nif?: string | null
           notes?: string | null
           phone?: string | null
+          state?: string | null
+          status?: Database["public"]["Enums"]["commercial_client_status"]
+          tax_id_kind?: string | null
           updated_at?: string
+          website?: string | null
         }
         Relationships: []
       }
@@ -245,6 +310,41 @@ export type Database = {
           },
         ]
       }
+      contract_audit_events: {
+        Row: {
+          actor_id: string | null
+          contract_id: string
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json
+        }
+        Insert: {
+          actor_id?: string | null
+          contract_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json
+        }
+        Update: {
+          actor_id?: string | null
+          contract_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_audit_events_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_services: {
         Row: {
           config: Json
@@ -280,37 +380,46 @@ export type Database = {
       contract_templates: {
         Row: {
           body: string | null
+          category: string | null
           created_at: string
           created_by: string | null
+          description: string | null
           id: string
           is_active: boolean
           name: string
           pdf_path: string | null
           placeholder_map: Json
+          status: string
           updated_at: string
           version: number
         }
         Insert: {
           body?: string | null
+          category?: string | null
           created_at?: string
           created_by?: string | null
+          description?: string | null
           id?: string
           is_active?: boolean
           name: string
           pdf_path?: string | null
           placeholder_map?: Json
+          status?: string
           updated_at?: string
           version?: number
         }
         Update: {
           body?: string | null
+          category?: string | null
           created_at?: string
           created_by?: string | null
+          description?: string | null
           id?: string
           is_active?: boolean
           name?: string
           pdf_path?: string | null
           placeholder_map?: Json
+          status?: string
           updated_at?: string
           version?: number
         }
@@ -365,13 +474,19 @@ export type Database = {
       }
       contracts: {
         Row: {
+          auto_renew: boolean
+          billing_cycle: string
           client_id: string
+          contract_data: Json
           created_at: string
           created_by: string | null
           credits_limit: number
+          end_date: string | null
           id: string
+          jurisdiction: string | null
           monthly_fee: number
           notes: string | null
+          notice_days: number
           pdf_path: string | null
           plan_name: string
           promo_fee: number | null
@@ -387,16 +502,23 @@ export type Database = {
           start_date: string
           status: Database["public"]["Enums"]["contract_status"]
           template_id: string | null
+          title: string | null
           updated_at: string
         }
         Insert: {
+          auto_renew?: boolean
+          billing_cycle?: string
           client_id: string
+          contract_data?: Json
           created_at?: string
           created_by?: string | null
           credits_limit?: number
+          end_date?: string | null
           id?: string
+          jurisdiction?: string | null
           monthly_fee?: number
           notes?: string | null
+          notice_days?: number
           pdf_path?: string | null
           plan_name: string
           promo_fee?: number | null
@@ -412,16 +534,23 @@ export type Database = {
           start_date?: string
           status?: Database["public"]["Enums"]["contract_status"]
           template_id?: string | null
+          title?: string | null
           updated_at?: string
         }
         Update: {
+          auto_renew?: boolean
+          billing_cycle?: string
           client_id?: string
+          contract_data?: Json
           created_at?: string
           created_by?: string | null
           credits_limit?: number
+          end_date?: string | null
           id?: string
+          jurisdiction?: string | null
           monthly_fee?: number
           notes?: string | null
+          notice_days?: number
           pdf_path?: string | null
           plan_name?: string
           promo_fee?: number | null
@@ -437,6 +566,7 @@ export type Database = {
           start_date?: string
           status?: Database["public"]["Enums"]["contract_status"]
           template_id?: string | null
+          title?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1230,6 +1360,23 @@ export type Database = {
           invite_token: string
         }[]
       }
+      audit_list: {
+        Args: { _contract_id: string }
+        Returns: {
+          actor_id: string | null
+          contract_id: string
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "contract_audit_events"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       contract_sign_get: {
         Args: { _token: string }
         Returns: {
@@ -1247,6 +1394,10 @@ export type Database = {
           start_date: string
           status: Database["public"]["Enums"]["contract_status"]
         }[]
+      }
+      contract_sign_register_view: {
+        Args: { _token: string }
+        Returns: undefined
       }
       contract_sign_submit: {
         Args: {
@@ -1474,6 +1625,7 @@ export type Database = {
     Enums: {
       app_role: "super_admin" | "manager" | "employee" | "owner"
       client_status: "ativo" | "inativo"
+      commercial_client_status: "lead" | "negotiation" | "active" | "inactive"
       company_status: "pending" | "active" | "suspended"
       contract_service:
         | "whatsapp"
@@ -1687,6 +1839,7 @@ export const Constants = {
     Enums: {
       app_role: ["super_admin", "manager", "employee", "owner"],
       client_status: ["ativo", "inativo"],
+      commercial_client_status: ["lead", "negotiation", "active", "inactive"],
       company_status: ["pending", "active", "suspended"],
       contract_service: [
         "whatsapp",
