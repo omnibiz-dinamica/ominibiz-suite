@@ -307,10 +307,13 @@ function EditMemberForm({
   companyId: string;
   onDone: () => void;
 }) {
+  const { isOwner, isSuperAdmin } = useAuth();
   const [fullName, setFullName] = useState(member.profile?.full_name ?? "");
   const [phone, setPhone] = useState(member.profile?.phone ?? "");
-  const [role, setRole] = useState<"manager" | "employee">(
-    member.role === "manager" ? "manager" : "employee",
+  const [role, setRole] = useState<"manager" | "employee" | "owner">(
+    member.role === "manager" || member.role === "owner" || member.role === "employee"
+      ? (member.role as "manager" | "owner" | "employee")
+      : "employee",
   );
   const [jobTitle, setJobTitle] = useState(member.profile?.job_title ?? "");
   const [workLocation, setWorkLocation] = useState(member.profile?.work_location ?? "");
@@ -415,6 +418,9 @@ function EditMemberForm({
           <SelectContent>
             <SelectItem value="employee">Funcionário</SelectItem>
             <SelectItem value="manager">Gestor</SelectItem>
+            {(isOwner || isSuperAdmin) && (
+              <SelectItem value="owner">Owner / Proprietário</SelectItem>
+            )}
           </SelectContent>
         </Select>
       </div>
