@@ -24,6 +24,8 @@ export interface AuthContextValue {
   signOut: () => Promise<void>;
   isManager: boolean;
   isSuperAdmin: boolean;
+  isEmployee: boolean;
+  effectiveRole: AppRole | null;
 }
 
 const AuthCtx = createContext<AuthContextValue | null>(null);
@@ -185,6 +187,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       roles.some(
         (r) => r.role === "manager" && (!currentCompanyId || r.company_id === currentCompanyId),
       ),
+    isEmployee:
+      !roles.some((r) => r.role === "super_admin") &&
+      !roles.some(
+        (r) => r.role === "manager" && (!currentCompanyId || r.company_id === currentCompanyId),
+      ) &&
+      roles.some((r) => r.role === "employee"),
+    effectiveRole: roles.some((r) => r.role === "super_admin")
+      ? "super_admin"
+      : roles.some(
+          (r) =>
+            r.role === "manager" && (!currentCompanyId || r.company_id === currentCompanyId),
+        )
+      ? "manager"
+      : roles.some((r) => r.role === "employee")
+      ? "employee"
+      : null,
   };
 
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
