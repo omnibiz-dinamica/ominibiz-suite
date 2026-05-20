@@ -133,6 +133,77 @@ export type Database = {
         }
         Relationships: []
       }
+      fuel_card_users: {
+        Row: {
+          card_id: string
+          company_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          card_id: string
+          company_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          card_id?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fuel_card_users_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "fuel_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fuel_card_vehicles: {
+        Row: {
+          card_id: string
+          company_id: string
+          created_at: string
+          id: string
+          vehicle_id: string
+        }
+        Insert: {
+          card_id: string
+          company_id: string
+          created_at?: string
+          id?: string
+          vehicle_id: string
+        }
+        Update: {
+          card_id?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fuel_card_vehicles_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "fuel_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fuel_card_vehicles_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fuel_cards: {
         Row: {
           company_id: string
@@ -142,6 +213,7 @@ export type Database = {
           label: string | null
           number: string
           photo_path: string | null
+          status: Database["public"]["Enums"]["fuel_card_status"]
           updated_at: string
         }
         Insert: {
@@ -152,6 +224,7 @@ export type Database = {
           label?: string | null
           number: string
           photo_path?: string | null
+          status?: Database["public"]["Enums"]["fuel_card_status"]
           updated_at?: string
         }
         Update: {
@@ -162,6 +235,7 @@ export type Database = {
           label?: string | null
           number?: string
           photo_path?: string | null
+          status?: Database["public"]["Enums"]["fuel_card_status"]
           updated_at?: string
         }
         Relationships: []
@@ -177,6 +251,8 @@ export type Database = {
           km: number
           liters: number
           note: string | null
+          plate_photo_path: string | null
+          price_per_liter: number | null
           pump_photo_path: string | null
           purpose: Database["public"]["Enums"]["fuel_purpose"]
           recorded_at: string
@@ -192,6 +268,8 @@ export type Database = {
           km: number
           liters: number
           note?: string | null
+          plate_photo_path?: string | null
+          price_per_liter?: number | null
           pump_photo_path?: string | null
           purpose?: Database["public"]["Enums"]["fuel_purpose"]
           recorded_at?: string
@@ -207,6 +285,8 @@ export type Database = {
           km?: number
           liters?: number
           note?: string | null
+          plate_photo_path?: string | null
+          price_per_liter?: number | null
           pump_photo_path?: string | null
           purpose?: Database["public"]["Enums"]["fuel_purpose"]
           recorded_at?: string
@@ -932,6 +1012,7 @@ export type Database = {
       app_role: "super_admin" | "manager" | "employee"
       client_status: "ativo" | "inativo"
       company_status: "pending" | "active" | "suspended"
+      fuel_card_status: "ativo" | "inativo"
       fuel_purpose: "profissional" | "pessoal"
       fuel_type:
         | "gasolina"
@@ -974,6 +1055,8 @@ export type Database = {
         | "caminhao"
         | "utilitario"
         | "outro"
+        | "furgao"
+        | "particular"
       vehicle_status: "ativo" | "inativo" | "manutencao"
     }
     CompositeTypes: {
@@ -1105,6 +1188,7 @@ export const Constants = {
       app_role: ["super_admin", "manager", "employee"],
       client_status: ["ativo", "inativo"],
       company_status: ["pending", "active", "suspended"],
+      fuel_card_status: ["ativo", "inativo"],
       fuel_purpose: ["profissional", "pessoal"],
       fuel_type: [
         "gasolina",
@@ -1143,7 +1227,16 @@ export const Constants = {
         "autorizado",
       ],
       vacation_status: ["pendente", "aprovado", "rejeitado", "cancelado"],
-      vehicle_kind: ["carro", "moto", "van", "caminhao", "utilitario", "outro"],
+      vehicle_kind: [
+        "carro",
+        "moto",
+        "van",
+        "caminhao",
+        "utilitario",
+        "outro",
+        "furgao",
+        "particular",
+      ],
       vehicle_status: ["ativo", "inativo", "manutencao"],
     },
   },
