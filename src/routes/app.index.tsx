@@ -12,11 +12,14 @@ export const Route = createFileRoute("/app/")({
 });
 
 function Dashboard() {
-  const { user, isManager, isSuperAdmin, currentCompanyId, initialized, effectiveRole } =
-    useAuth();
-
+  const { effectiveRole } = useAuth();
   if (effectiveRole === "super_admin") return <SuperAdminDashboard />;
   if (effectiveRole === "employee") return <EmployeeDashboard />;
+  return <ManagerDashboard />;
+}
+
+function ManagerDashboard() {
+  const { user, isManager, isSuperAdmin, currentCompanyId, initialized } = useAuth();
 
   const { data: tasks } = useQuery({
     queryKey: ["dashboard-tasks", currentCompanyId, user?.id, isManager],
