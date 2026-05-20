@@ -17,6 +17,7 @@ import {
   X,
   UserCircle,
   ListChecks,
+  Plane,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
@@ -46,6 +47,7 @@ const MANAGER_MENU: Item[] = [
   { to: "/app/clientes", label: "Clientes", icon: Briefcase },
   { to: "/app/equipe", label: "Usuários", icon: Users },
   { to: "/app/empresa", label: "Empresa", icon: Building2 },
+  { to: "/app/ferias", label: "Férias", icon: Plane },
   { to: "/app/notas", label: "Notas", icon: FileText, soon: true },
   { to: "/app/assistente", label: "Assistente IA", icon: Sparkles, soon: true },
   { to: "/app/perfil", label: "Perfil", icon: UserCircle },
@@ -55,6 +57,7 @@ const EMPLOYEE_MENU: Item[] = [
   { to: "/app", label: "Minha Operação", icon: LayoutDashboard },
   { to: "/app/ponto", label: "Folha de Ponto", icon: Clock },
   { to: "/app/tarefas", label: "Minhas Tarefas", icon: ListChecks },
+  { to: "/app/ferias", label: "Férias", icon: Plane },
   { to: "/app/notificacoes", label: "Notificações", icon: Bell },
   { to: "/app/perfil", label: "Perfil", icon: UserCircle },
 ];
