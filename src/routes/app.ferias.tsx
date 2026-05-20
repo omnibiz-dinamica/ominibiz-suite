@@ -289,22 +289,30 @@ function FeriasPage() {
         )}
       </section>
 
-      {/* Employee: own pending list */}
-      {isEmployee && pending.length > 0 && (
+      {/* Own pending list */}
+      {pending.some((r) => r.user_id === user?.id) && (
         <section className="rounded-2xl border border-border bg-card p-5">
           <h2 className="mb-3 font-semibold">Minhas pendentes</h2>
           <ul className="divide-y divide-border">
-            {pending.map((r) => (
-              <li key={r.id} className="flex items-center justify-between py-2">
-                <div>
-                  <div className="font-medium">{fmt(r.start_date)} → {fmt(r.end_date)}</div>
-                  {r.note && <div className="text-xs text-muted-foreground">{r.note}</div>}
-                </div>
-                <Button size="sm" variant="ghost" onClick={() => decide.mutate({ id: r.id, action: "cancelar" })}>
-                  Cancelar
-                </Button>
-              </li>
-            ))}
+            {pending
+              .filter((r) => r.user_id === user?.id)
+              .map((r) => (
+                <li key={r.id} className="flex items-center justify-between py-2">
+                  <div>
+                    <div className="font-medium">{fmt(r.start_date)} → {fmt(r.end_date)}</div>
+                    <div className="text-xs text-muted-foreground">
+                      Aprovador:{" "}
+                      {r.assigned_approver_id
+                        ? names[r.assigned_approver_id] ?? "—"
+                        : "Não definido"}
+                    </div>
+                    {r.note && <div className="text-xs text-muted-foreground">{r.note}</div>}
+                  </div>
+                  <Button size="sm" variant="ghost" onClick={() => decide.mutate({ id: r.id, action: "cancelar" })}>
+                    Cancelar
+                  </Button>
+                </li>
+              ))}
           </ul>
         </section>
       )}
