@@ -142,6 +142,21 @@ function FrotaIndex() {
     },
   });
 
+  const { data: catalog = [] } = useQuery({
+    queryKey: ["fleet-catalog", currentCompanyId],
+    enabled: ready,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("vehicle_catalog")
+        .select("id, company_id, kind, brand, model")
+        .or(`company_id.is.null,company_id.eq.${currentCompanyId}`);
+      if (error) throw error;
+      return (data ?? []) as CatalogRow[];
+    },
+  });
+
+  const brandsByKind = useMemo(() => mergeCatalog(catalog), [catalog]);
+
   const memberIds = useMemo(
     () => Array.from(new Set(assignments.map((a) => a.user_id).concat(records.map((r) => r.driver_id)))),
     [assignments, records],
@@ -207,9 +222,11 @@ function FrotaIndex() {
           assignments={assignments}
           members={companyMembers}
           companyId={currentCompanyId!}
+          brandsByKind={brandsByKind}
           onChange={() => {
             qc.invalidateQueries({ queryKey: ["fleet-vehicles"] });
             qc.invalidateQueries({ queryKey: ["fleet-assignments"] });
+            qc.invalidateQueries({ queryKey: ["fleet-catalog"] });
           }}
         />
       )}
