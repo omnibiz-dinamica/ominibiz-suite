@@ -14,7 +14,7 @@ import { RoleGuard } from "@/components/RoleGuard";
 
 interface MemberRow {
   user_id: string;
-  role: "manager" | "employee" | "super_admin";
+  role: "manager" | "employee" | "super_admin" | "owner";
   profile?: {
     id: string;
     full_name: string | null;
