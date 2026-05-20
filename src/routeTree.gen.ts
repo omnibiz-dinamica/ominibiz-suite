@@ -24,10 +24,17 @@ import { Route as AppFrotaRouteImport } from './routes/app.frota'
 import { Route as AppFeriasRouteImport } from './routes/app.ferias'
 import { Route as AppEquipeRouteImport } from './routes/app.equipe'
 import { Route as AppEmpresaRouteImport } from './routes/app.empresa'
+import { Route as AppComercialRouteImport } from './routes/app.comercial'
 import { Route as AppClientesRouteImport } from './routes/app.clientes'
 import { Route as AppAssistenteRouteImport } from './routes/app.assistente'
 import { Route as AppAdminRouteImport } from './routes/app.admin'
+import { Route as AppComercialIndexRouteImport } from './routes/app.comercial.index'
 import { Route as AppFrotaCartoesRouteImport } from './routes/app.frota.cartoes'
+import { Route as AppComercialTemplatesRouteImport } from './routes/app.comercial.templates'
+import { Route as AppComercialContratosRouteImport } from './routes/app.comercial.contratos'
+import { Route as AppComercialClientesRouteImport } from './routes/app.comercial.clientes'
+import { Route as AppComercialContratosNovoRouteImport } from './routes/app.comercial.contratos.novo'
+import { Route as AppComercialContratosIdRouteImport } from './routes/app.comercial.contratos.$id'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
@@ -104,6 +111,11 @@ const AppEmpresaRoute = AppEmpresaRouteImport.update({
   path: '/empresa',
   getParentRoute: () => AppRoute,
 } as any)
+const AppComercialRoute = AppComercialRouteImport.update({
+  id: '/comercial',
+  path: '/comercial',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppClientesRoute = AppClientesRouteImport.update({
   id: '/clientes',
   path: '/clientes',
@@ -119,10 +131,41 @@ const AppAdminRoute = AppAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AppRoute,
 } as any)
+const AppComercialIndexRoute = AppComercialIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppComercialRoute,
+} as any)
 const AppFrotaCartoesRoute = AppFrotaCartoesRouteImport.update({
   id: '/cartoes',
   path: '/cartoes',
   getParentRoute: () => AppFrotaRoute,
+} as any)
+const AppComercialTemplatesRoute = AppComercialTemplatesRouteImport.update({
+  id: '/templates',
+  path: '/templates',
+  getParentRoute: () => AppComercialRoute,
+} as any)
+const AppComercialContratosRoute = AppComercialContratosRouteImport.update({
+  id: '/contratos',
+  path: '/contratos',
+  getParentRoute: () => AppComercialRoute,
+} as any)
+const AppComercialClientesRoute = AppComercialClientesRouteImport.update({
+  id: '/clientes',
+  path: '/clientes',
+  getParentRoute: () => AppComercialRoute,
+} as any)
+const AppComercialContratosNovoRoute =
+  AppComercialContratosNovoRouteImport.update({
+    id: '/novo',
+    path: '/novo',
+    getParentRoute: () => AppComercialContratosRoute,
+  } as any)
+const AppComercialContratosIdRoute = AppComercialContratosIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppComercialContratosRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -134,6 +177,7 @@ export interface FileRoutesByFullPath {
   '/app/admin': typeof AppAdminRoute
   '/app/assistente': typeof AppAssistenteRoute
   '/app/clientes': typeof AppClientesRoute
+  '/app/comercial': typeof AppComercialRouteWithChildren
   '/app/empresa': typeof AppEmpresaRoute
   '/app/equipe': typeof AppEquipeRoute
   '/app/ferias': typeof AppFeriasRoute
@@ -144,7 +188,13 @@ export interface FileRoutesByFullPath {
   '/app/ponto': typeof AppPontoRoute
   '/app/tarefas': typeof AppTarefasRoute
   '/app/': typeof AppIndexRoute
+  '/app/comercial/clientes': typeof AppComercialClientesRoute
+  '/app/comercial/contratos': typeof AppComercialContratosRouteWithChildren
+  '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
+  '/app/comercial/': typeof AppComercialIndexRoute
+  '/app/comercial/contratos/$id': typeof AppComercialContratosIdRoute
+  '/app/comercial/contratos/novo': typeof AppComercialContratosNovoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -164,7 +214,13 @@ export interface FileRoutesByTo {
   '/app/ponto': typeof AppPontoRoute
   '/app/tarefas': typeof AppTarefasRoute
   '/app': typeof AppIndexRoute
+  '/app/comercial/clientes': typeof AppComercialClientesRoute
+  '/app/comercial/contratos': typeof AppComercialContratosRouteWithChildren
+  '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
+  '/app/comercial': typeof AppComercialIndexRoute
+  '/app/comercial/contratos/$id': typeof AppComercialContratosIdRoute
+  '/app/comercial/contratos/novo': typeof AppComercialContratosNovoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -176,6 +232,7 @@ export interface FileRoutesById {
   '/app/admin': typeof AppAdminRoute
   '/app/assistente': typeof AppAssistenteRoute
   '/app/clientes': typeof AppClientesRoute
+  '/app/comercial': typeof AppComercialRouteWithChildren
   '/app/empresa': typeof AppEmpresaRoute
   '/app/equipe': typeof AppEquipeRoute
   '/app/ferias': typeof AppFeriasRoute
@@ -186,7 +243,13 @@ export interface FileRoutesById {
   '/app/ponto': typeof AppPontoRoute
   '/app/tarefas': typeof AppTarefasRoute
   '/app/': typeof AppIndexRoute
+  '/app/comercial/clientes': typeof AppComercialClientesRoute
+  '/app/comercial/contratos': typeof AppComercialContratosRouteWithChildren
+  '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
+  '/app/comercial/': typeof AppComercialIndexRoute
+  '/app/comercial/contratos/$id': typeof AppComercialContratosIdRoute
+  '/app/comercial/contratos/novo': typeof AppComercialContratosNovoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -199,6 +262,7 @@ export interface FileRouteTypes {
     | '/app/admin'
     | '/app/assistente'
     | '/app/clientes'
+    | '/app/comercial'
     | '/app/empresa'
     | '/app/equipe'
     | '/app/ferias'
@@ -209,7 +273,13 @@ export interface FileRouteTypes {
     | '/app/ponto'
     | '/app/tarefas'
     | '/app/'
+    | '/app/comercial/clientes'
+    | '/app/comercial/contratos'
+    | '/app/comercial/templates'
     | '/app/frota/cartoes'
+    | '/app/comercial/'
+    | '/app/comercial/contratos/$id'
+    | '/app/comercial/contratos/novo'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -229,7 +299,13 @@ export interface FileRouteTypes {
     | '/app/ponto'
     | '/app/tarefas'
     | '/app'
+    | '/app/comercial/clientes'
+    | '/app/comercial/contratos'
+    | '/app/comercial/templates'
     | '/app/frota/cartoes'
+    | '/app/comercial'
+    | '/app/comercial/contratos/$id'
+    | '/app/comercial/contratos/novo'
   id:
     | '__root__'
     | '/'
@@ -240,6 +316,7 @@ export interface FileRouteTypes {
     | '/app/admin'
     | '/app/assistente'
     | '/app/clientes'
+    | '/app/comercial'
     | '/app/empresa'
     | '/app/equipe'
     | '/app/ferias'
@@ -250,7 +327,13 @@ export interface FileRouteTypes {
     | '/app/ponto'
     | '/app/tarefas'
     | '/app/'
+    | '/app/comercial/clientes'
+    | '/app/comercial/contratos'
+    | '/app/comercial/templates'
     | '/app/frota/cartoes'
+    | '/app/comercial/'
+    | '/app/comercial/contratos/$id'
+    | '/app/comercial/contratos/novo'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -368,6 +451,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppEmpresaRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/comercial': {
+      id: '/app/comercial'
+      path: '/comercial'
+      fullPath: '/app/comercial'
+      preLoaderRoute: typeof AppComercialRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/clientes': {
       id: '/app/clientes'
       path: '/clientes'
@@ -389,6 +479,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/comercial/': {
+      id: '/app/comercial/'
+      path: '/'
+      fullPath: '/app/comercial/'
+      preLoaderRoute: typeof AppComercialIndexRouteImport
+      parentRoute: typeof AppComercialRoute
+    }
     '/app/frota/cartoes': {
       id: '/app/frota/cartoes'
       path: '/cartoes'
@@ -396,8 +493,76 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppFrotaCartoesRouteImport
       parentRoute: typeof AppFrotaRoute
     }
+    '/app/comercial/templates': {
+      id: '/app/comercial/templates'
+      path: '/templates'
+      fullPath: '/app/comercial/templates'
+      preLoaderRoute: typeof AppComercialTemplatesRouteImport
+      parentRoute: typeof AppComercialRoute
+    }
+    '/app/comercial/contratos': {
+      id: '/app/comercial/contratos'
+      path: '/contratos'
+      fullPath: '/app/comercial/contratos'
+      preLoaderRoute: typeof AppComercialContratosRouteImport
+      parentRoute: typeof AppComercialRoute
+    }
+    '/app/comercial/clientes': {
+      id: '/app/comercial/clientes'
+      path: '/clientes'
+      fullPath: '/app/comercial/clientes'
+      preLoaderRoute: typeof AppComercialClientesRouteImport
+      parentRoute: typeof AppComercialRoute
+    }
+    '/app/comercial/contratos/novo': {
+      id: '/app/comercial/contratos/novo'
+      path: '/novo'
+      fullPath: '/app/comercial/contratos/novo'
+      preLoaderRoute: typeof AppComercialContratosNovoRouteImport
+      parentRoute: typeof AppComercialContratosRoute
+    }
+    '/app/comercial/contratos/$id': {
+      id: '/app/comercial/contratos/$id'
+      path: '/$id'
+      fullPath: '/app/comercial/contratos/$id'
+      preLoaderRoute: typeof AppComercialContratosIdRouteImport
+      parentRoute: typeof AppComercialContratosRoute
+    }
   }
 }
+
+interface AppComercialContratosRouteChildren {
+  AppComercialContratosIdRoute: typeof AppComercialContratosIdRoute
+  AppComercialContratosNovoRoute: typeof AppComercialContratosNovoRoute
+}
+
+const AppComercialContratosRouteChildren: AppComercialContratosRouteChildren = {
+  AppComercialContratosIdRoute: AppComercialContratosIdRoute,
+  AppComercialContratosNovoRoute: AppComercialContratosNovoRoute,
+}
+
+const AppComercialContratosRouteWithChildren =
+  AppComercialContratosRoute._addFileChildren(
+    AppComercialContratosRouteChildren,
+  )
+
+interface AppComercialRouteChildren {
+  AppComercialClientesRoute: typeof AppComercialClientesRoute
+  AppComercialContratosRoute: typeof AppComercialContratosRouteWithChildren
+  AppComercialTemplatesRoute: typeof AppComercialTemplatesRoute
+  AppComercialIndexRoute: typeof AppComercialIndexRoute
+}
+
+const AppComercialRouteChildren: AppComercialRouteChildren = {
+  AppComercialClientesRoute: AppComercialClientesRoute,
+  AppComercialContratosRoute: AppComercialContratosRouteWithChildren,
+  AppComercialTemplatesRoute: AppComercialTemplatesRoute,
+  AppComercialIndexRoute: AppComercialIndexRoute,
+}
+
+const AppComercialRouteWithChildren = AppComercialRoute._addFileChildren(
+  AppComercialRouteChildren,
+)
 
 interface AppFrotaRouteChildren {
   AppFrotaCartoesRoute: typeof AppFrotaCartoesRoute
@@ -415,6 +580,7 @@ interface AppRouteChildren {
   AppAdminRoute: typeof AppAdminRoute
   AppAssistenteRoute: typeof AppAssistenteRoute
   AppClientesRoute: typeof AppClientesRoute
+  AppComercialRoute: typeof AppComercialRouteWithChildren
   AppEmpresaRoute: typeof AppEmpresaRoute
   AppEquipeRoute: typeof AppEquipeRoute
   AppFeriasRoute: typeof AppFeriasRoute
@@ -431,6 +597,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAdminRoute: AppAdminRoute,
   AppAssistenteRoute: AppAssistenteRoute,
   AppClientesRoute: AppClientesRoute,
+  AppComercialRoute: AppComercialRouteWithChildren,
   AppEmpresaRoute: AppEmpresaRoute,
   AppEquipeRoute: AppEquipeRoute,
   AppFeriasRoute: AppFeriasRoute,
@@ -455,12 +622,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

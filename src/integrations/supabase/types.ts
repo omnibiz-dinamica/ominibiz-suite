@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_usage: {
+        Row: {
+          contract_id: string
+          cost: number
+          created_at: string
+          credits_used: number
+          id: string
+          period_month: string
+        }
+        Insert: {
+          contract_id: string
+          cost?: number
+          created_at?: string
+          credits_used?: number
+          id?: string
+          period_month: string
+        }
+        Update: {
+          contract_id?: string
+          cost?: number
+          created_at?: string
+          credits_used?: number
+          id?: string
+          period_month?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_usage_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_assignees: {
         Row: {
           client_id: string
@@ -91,6 +126,48 @@ export type Database = {
         }
         Relationships: []
       }
+      commercial_clients: {
+        Row: {
+          address: string | null
+          company_name: string
+          contact_name: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          id: string
+          nif: string | null
+          notes: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          company_name: string
+          contact_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          nif?: string | null
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          company_name?: string
+          contact_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          nif?: string | null
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       companies: {
         Row: {
           country: string
@@ -164,6 +241,211 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: true
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_services: {
+        Row: {
+          config: Json
+          contract_id: string
+          created_at: string
+          id: string
+          service: Database["public"]["Enums"]["contract_service"]
+        }
+        Insert: {
+          config?: Json
+          contract_id: string
+          created_at?: string
+          id?: string
+          service: Database["public"]["Enums"]["contract_service"]
+        }
+        Update: {
+          config?: Json
+          contract_id?: string
+          created_at?: string
+          id?: string
+          service?: Database["public"]["Enums"]["contract_service"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_services_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_templates: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
+      contract_workflow: {
+        Row: {
+          assigned_to: string | null
+          completed_at: string | null
+          contract_id: string
+          created_at: string
+          due_at: string | null
+          id: string
+          notes: string | null
+          status: Database["public"]["Enums"]["workflow_step_status"]
+          step: Database["public"]["Enums"]["workflow_step"]
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          contract_id: string
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["workflow_step_status"]
+          step: Database["public"]["Enums"]["workflow_step"]
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          contract_id?: string
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["workflow_step_status"]
+          step?: Database["public"]["Enums"]["workflow_step"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_workflow_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contracts: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string | null
+          credits_limit: number
+          id: string
+          monthly_fee: number
+          notes: string | null
+          pdf_path: string | null
+          plan_name: string
+          promo_fee: number | null
+          promo_months: number
+          rendered_body: string | null
+          sign_expires_at: string | null
+          sign_token: string | null
+          signature_hash: string | null
+          signed_at: string | null
+          signed_ip: unknown
+          signed_user_agent: string | null
+          signer_name: string | null
+          start_date: string
+          status: Database["public"]["Enums"]["contract_status"]
+          template_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          credits_limit?: number
+          id?: string
+          monthly_fee?: number
+          notes?: string | null
+          pdf_path?: string | null
+          plan_name: string
+          promo_fee?: number | null
+          promo_months?: number
+          rendered_body?: string | null
+          sign_expires_at?: string | null
+          sign_token?: string | null
+          signature_hash?: string | null
+          signed_at?: string | null
+          signed_ip?: unknown
+          signed_user_agent?: string | null
+          signer_name?: string | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["contract_status"]
+          template_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          credits_limit?: number
+          id?: string
+          monthly_fee?: number
+          notes?: string | null
+          pdf_path?: string | null
+          plan_name?: string
+          promo_fee?: number | null
+          promo_months?: number
+          rendered_body?: string | null
+          sign_expires_at?: string | null
+          sign_token?: string | null
+          signature_hash?: string | null
+          signed_at?: string | null
+          signed_ip?: unknown
+          signed_user_agent?: string | null
+          signer_name?: string | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["contract_status"]
+          template_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "contract_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -387,6 +669,53 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          amount: number
+          contract_id: string
+          created_at: string
+          due_date: string
+          id: string
+          notes: string | null
+          paid_at: string | null
+          reference: string | null
+          status: Database["public"]["Enums"]["invoice_status"]
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          contract_id: string
+          created_at?: string
+          due_date: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          reference?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          contract_id?: string
+          created_at?: string
+          due_date?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          reference?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
             referencedColumns: ["id"]
           },
         ]
@@ -895,6 +1224,33 @@ export type Database = {
           invite_token: string
         }[]
       }
+      contract_sign_get: {
+        Args: { _token: string }
+        Returns: {
+          client_name: string
+          credits_limit: number
+          id: string
+          monthly_fee: number
+          plan_name: string
+          promo_fee: number
+          promo_months: number
+          rendered_body: string
+          sign_expires_at: string
+          signed_at: string
+          signer_name: string
+          start_date: string
+          status: Database["public"]["Enums"]["contract_status"]
+        }[]
+      }
+      contract_sign_submit: {
+        Args: {
+          _signature_hash: string
+          _signer_name: string
+          _token: string
+          _user_agent: string
+        }
+        Returns: string
+      }
       create_company_with_owner: {
         Args: { _country?: string; _name: string; _slug: string }
         Returns: string
@@ -1113,6 +1469,23 @@ export type Database = {
       app_role: "super_admin" | "manager" | "employee" | "owner"
       client_status: "ativo" | "inativo"
       company_status: "pending" | "active" | "suspended"
+      contract_service:
+        | "whatsapp"
+        | "instagram"
+        | "website"
+        | "dashboard"
+        | "ai_support"
+        | "reports"
+        | "scheduling"
+      contract_status:
+        | "draft"
+        | "sent"
+        | "signed"
+        | "implementation"
+        | "promo_period"
+        | "active"
+        | "suspended"
+        | "cancelled"
       employee_approver_kind:
         | "manager"
         | "supervisor"
@@ -1129,6 +1502,7 @@ export type Database = {
         | "eletrico"
         | "hibrido"
       invite_status: "pending" | "accepted" | "revoked" | "expired"
+      invoice_status: "pending" | "paid" | "overdue" | "cancelled"
       manager_approver_kind:
         | "owner"
         | "other_manager"
@@ -1169,6 +1543,15 @@ export type Database = {
         | "furgao"
         | "particular"
       vehicle_status: "ativo" | "inativo" | "manutencao"
+      workflow_step:
+        | "operational_assessment"
+        | "platform_configuration"
+        | "ai_configuration"
+        | "integrations"
+        | "testing"
+        | "training"
+        | "go_live"
+      workflow_step_status: "pending" | "in_progress" | "done" | "blocked"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1299,6 +1682,25 @@ export const Constants = {
       app_role: ["super_admin", "manager", "employee", "owner"],
       client_status: ["ativo", "inativo"],
       company_status: ["pending", "active", "suspended"],
+      contract_service: [
+        "whatsapp",
+        "instagram",
+        "website",
+        "dashboard",
+        "ai_support",
+        "reports",
+        "scheduling",
+      ],
+      contract_status: [
+        "draft",
+        "sent",
+        "signed",
+        "implementation",
+        "promo_period",
+        "active",
+        "suspended",
+        "cancelled",
+      ],
       employee_approver_kind: [
         "manager",
         "supervisor",
@@ -1317,6 +1719,7 @@ export const Constants = {
         "hibrido",
       ],
       invite_status: ["pending", "accepted", "revoked", "expired"],
+      invoice_status: ["pending", "paid", "overdue", "cancelled"],
       manager_approver_kind: [
         "owner",
         "other_manager",
@@ -1361,6 +1764,16 @@ export const Constants = {
         "particular",
       ],
       vehicle_status: ["ativo", "inativo", "manutencao"],
+      workflow_step: [
+        "operational_assessment",
+        "platform_configuration",
+        "ai_configuration",
+        "integrations",
+        "testing",
+        "training",
+        "go_live",
+      ],
+      workflow_step_status: ["pending", "in_progress", "done", "blocked"],
     },
   },
 } as const

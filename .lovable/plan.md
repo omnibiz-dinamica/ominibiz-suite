@@ -1,64 +1,61 @@
-## Objetivo
+## Módulo Comercial & Gestão de Contratos (Super Admin)
 
-Tornar o fluxo de aprovação de férias configurável por empresa, cobrindo corretamente férias de gestores e introduzindo o conceito de **Owner** (proprietário interno da empresa, distinto de super_admin SaaS).
+Vou implementar um módulo grande e novo. Antes de codar, confirmo escopo e divisão em fases para garantir entrega utilizável.
 
-## 1. Banco de dados (migration)
+### Escopo confirmado
+- Acesso restrito a **super_admin** (rota `/app/comercial/*` com `RoleGuard`).
+- 7 tabelas novas: `commercial_clients`, `contracts`, `contract_templates`, `contract_services`, `contract_workflow`, `invoices`, `ai_usage`.
+  - Uso prefixo `commercial_clients` para não colidir com a tabela `clients` existente (que pertence à operação de cada empresa).
+- Wizard de criação de contrato (5 passos), lista, dashboard comercial.
+- Templates com variáveis `{{company_name}}`, `{{nif}}`, `{{plan_name}}`, `{{monthly_fee}}`, `{{credits_limit}}`, `{{services}}`.
+- Geração de PDF (client-side via jsPDF) com armazenamento em Supabase Storage (bucket `contracts`).
+- Fluxo de assinatura digital via URL pública assinada (`/sign/$token`) com captura de IP, user-agent, timestamp, hash SHA-256.
+- Ao assinar → criar automaticamente 7 tarefas de onboarding em `contract_workflow`.
+- Dashboard analítico: MRR, contratos ativos/pendentes, taxa conversão, serviços mais vendidos.
 
-### Novo papel `owner`
-- Adicionar valor `owner` ao enum `app_role`.
-- Owner é membro da empresa (`user_roles.company_id` preenchido), com permissões equivalentes a manager + capacidade de aprovar férias de gestores.
-- Atualizar `is_company_manager` para considerar `owner` também como gestor (assim policies existentes continuam funcionando).
-- Criar helper `is_company_owner(_user, _company)`.
+### Banco (1 migration)
+- Enums: `contract_status` (draft, sent, signed, implementation, promo_period, active, suspended, cancelled), `workflow_step_status`, `invoice_status`.
+- `commercial_clients`: razão social, NIF, email, telefone, endereço, contacto, criado_por.
+- `contract_templates`: nome, corpo (markdown com variáveis), versão, ativo.
+- `contracts`: client_id, template_id, plan_name, monthly_fee, credits_limit, promo_months, start_date, status, signed metadata (ip, user_agent, hash, signed_at, signer_name), pdf_path, sign_token, sign_expires_at.
+- `contract_services`: contract_id, service (enum: whatsapp, instagram, website, dashboard, ai_support, reports, scheduling), config jsonb.
+- `contract_workflow`: contract_id, step (enum 7 passos), status, assigned_to, due_at, completed_at, notes.
+- `invoices`: contract_id, amount, due_date, paid_at, status, reference.
+- `ai_usage`: contract_id, month, credits_used, cost.
+- Trigger `contracts_after_signed` → cria os 7 passos de workflow.
+- RLS: tudo restrito a `is_super_admin(auth.uid())`. `contracts` tem policy adicional **pública por sign_token** (SELECT/UPDATE limitada) via RPC `contract_sign_get(token)` + `contract_sign_submit(token, signer_name, signature_data_url)` (security definer).
+- Bucket storage `contracts` (privado) com policies para super_admin.
 
-### Configuração de RH por empresa
-Nova tabela `company_hr_settings`:
-- `company_id` (PK, FK companies)
-- `employee_approver_kind` enum: `manager` | `supervisor` | `owner` | `specific_user` (default `manager`)
-- `employee_approver_user_id` uuid (quando `specific_user`)
-- `manager_approver_kind` enum: `owner` | `other_manager` | `specific_user` | `self_allowed` (default `owner`)
-- `manager_approver_user_id` uuid (quando `specific_user`)
+### Frontend
+- `src/routes/app.comercial.tsx` (layout com sub-nav + RoleGuard super_admin) + Outlet.
+- `src/routes/app.comercial.index.tsx` (dashboard).
+- `src/routes/app.comercial.clientes.tsx` (lista + criar/editar em dialog).
+- `src/routes/app.comercial.contratos.tsx` (lista com status badges + ações: ver, copiar link assinatura, baixar PDF, marcar implementation/active, suspender).
+- `src/routes/app.comercial.contratos.novo.tsx` (wizard 5 passos com `useState` por etapa + `Stepper`).
+- `src/routes/app.comercial.templates.tsx` (CRUD de templates).
+- `src/routes/app.comercial.contratos.$id.tsx` (detalhe + workflow checklist + faturas).
+- `src/routes/sign.$token.tsx` (rota PÚBLICA — sem AppLayout — exibe contrato renderizado + canvas de assinatura + confirmação).
+- Adicionar item "Comercial" no menu visível só para super_admin.
 
-RLS: managers/owners da empresa leem e atualizam; super_admin tudo.
+### PDF
+- `src/lib/contract-pdf.ts`: usa `jspdf` para renderizar template processado em PDF; upload ao bucket `contracts` via `supabase.storage.from('contracts').upload(...)`.
+- `src/lib/contract-vars.ts`: substituição de variáveis + helper de moeda EUR.
 
-### Resolução de aprovador
-- Adicionar coluna `assigned_approver_id` em `vacation_requests` (snapshot do aprovador resolvido na criação).
-- Função `resolve_vacation_approver(_user_id, _company_id)` retorna `uuid`:
-  - Detecta se o solicitante é gestor/owner ou funcionário.
-  - Aplica regras das settings (fallback para manager se config faltar).
-  - Funcionário nunca autoaprova; gestor só se `self_allowed`.
-- Atualizar trigger `vacation_fill_context` para popular `assigned_approver_id`.
-- Atualizar `vacation_decide` para permitir decisão pelo `assigned_approver_id` OU por owner OU por super_admin (não apenas `is_company_manager`).
-- Atualizar `vacation_notify_insert` para notificar **apenas o aprovador resolvido** (não todos os gestores).
+### Assinatura
+- `signature_pad` (lib leve) para canvas; submete dataURL para RPC `contract_sign_submit` que calcula hash, marca `signed`, dispara trigger de workflow.
+- IP capturado via `request_ip` no RPC (`inet_client_addr()`).
 
-## 2. Frontend
+### Fases de entrega
+1. **Migration** (tabelas, enums, RLS, RPCs, bucket, trigger workflow).
+2. **Tipos + rotas base**: layout `/app/comercial` + clientes + templates.
+3. **Wizard de contrato + listagem + dashboard**.
+4. **PDF + página pública de assinatura `/sign/$token`**.
+5. **Workflow de onboarding (UI) + faturas básicas + ai_usage placeholder**.
 
-### `src/routes/app.empresa.tsx` — nova seção "Configurações RH"
-- Visível apenas para owner/manager.
-- Dois selects:
-  - Aprovador padrão (funcionários): Gestor / Supervisor / Owner / Usuário específico
-  - Aprovador (gestores): Owner / Outro gestor / Usuário específico / Autoaprovação permitida
-- Quando "Usuário específico": combo com membros da empresa.
-- Persistir via upsert em `company_hr_settings`.
+### Fora do escopo MVP (para não inflar)
+- Envio de e-mail real do contrato (apenas botão "copiar link de assinatura").
+- Cobrança automática / integração Stripe nas invoices (apenas registo manual).
+- Editor rich-text de templates (apenas textarea com preview de variáveis).
+- Métricas IA reais (registo manual em `ai_usage`).
 
-### `src/routes/app.ferias.tsx`
-- Mostrar ao solicitante o nome do aprovador que receberá a solicitação (lookup após resolve).
-- Lista "Pendentes" do lado aprovador: filtrar por `assigned_approver_id = auth.uid()` em vez de `isManager`.
-- Cancelamento continua igual.
-
-### `src/routes/app.equipe.tsx`
-- Adicionar opção `owner` no select de papel (apenas owner/super_admin podem atribuir owner).
-
-### `src/lib/auth.tsx`
-- Tratar `owner` como manager para `isManager` (UI continua funcionando).
-- Expor `isOwner`.
-
-## 3. Notificações
-- Trigger envia para `assigned_approver_id` apenas.
-- Mantém evento `vacation_requested`.
-
-## Escopo NÃO incluído (MVP)
-- Workflow multi-step / cadeias com vários níveis.
-- Delegação temporária / férias do próprio aprovador.
-- Edição do aprovador após criação da solicitação.
-
-Confirma para eu prosseguir com a migration + código?
+Confirmas para eu seguir com a migration + implementação completa nas 5 fases?
