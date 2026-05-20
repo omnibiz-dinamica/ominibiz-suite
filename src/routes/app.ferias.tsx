@@ -340,6 +340,17 @@ function PendingRow({
           <div className="text-sm text-muted-foreground">
             {fmt(row.start_date)} → {fmt(row.end_date)}
           </div>
+          <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+            <div>Local: {row.work_location ?? "—"}</div>
+            <div>
+              Validação prévia:{" "}
+              {row.prior_validation ? (
+                <span className="text-success">Sim{row.validated_by ? ` — ${row.validated_by}` : ""}</span>
+              ) : (
+                "Não"
+              )}
+            </div>
+          </div>
           {row.note && <div className="mt-1 text-xs text-muted-foreground">"{row.note}"</div>}
         </div>
         {!rejecting ? (
