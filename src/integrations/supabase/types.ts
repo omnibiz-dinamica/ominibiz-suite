@@ -279,32 +279,38 @@ export type Database = {
       }
       contract_templates: {
         Row: {
-          body: string
+          body: string | null
           created_at: string
           created_by: string | null
           id: string
           is_active: boolean
           name: string
+          pdf_path: string | null
+          placeholder_map: Json
           updated_at: string
           version: number
         }
         Insert: {
-          body: string
+          body?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
           is_active?: boolean
           name: string
+          pdf_path?: string | null
+          placeholder_map?: Json
           updated_at?: string
           version?: number
         }
         Update: {
-          body?: string
+          body?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
           is_active?: boolean
           name?: string
+          pdf_path?: string | null
+          placeholder_map?: Json
           updated_at?: string
           version?: number
         }

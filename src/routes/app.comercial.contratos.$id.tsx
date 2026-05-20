@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { formatEUR, SERVICE_LABELS } from "@/lib/contract-vars";
 import { generateContractPDF } from "@/lib/contract-pdf";
+import { fillPdfTemplate, downloadTemplatePdf, uploadGeneratedPdf, type PlaceholderMap } from "@/lib/pdf-fill";
 import { ArrowLeft, Download, Link as LinkIcon } from "lucide-react";
 
 export const Route = createFileRoute("/app/comercial/contratos/$id")({
@@ -29,7 +30,7 @@ function ContractDetail() {
     queryKey: ["contract-detail", id],
     queryFn: async () => {
       const [{ data: c, error }, { data: svc }, { data: wf }, { data: inv }] = await Promise.all([
-        supabase.from("contracts").select("*, client:commercial_clients(*)").eq("id", id).single(),
+        supabase.from("contracts").select("*, client:commercial_clients(*), template:contract_templates(id,pdf_path,placeholder_map)").eq("id", id).single(),
         supabase.from("contract_services").select("service").eq("contract_id", id),
         supabase.from("contract_workflow").select("*").eq("contract_id", id),
         supabase.from("invoices").select("*").eq("contract_id", id).order("due_date"),
@@ -55,11 +56,49 @@ function ContractDetail() {
     id: string; plan_name: string; monthly_fee: number; credits_limit: number;
     status: string; sign_token: string | null; signer_name: string | null;
     signed_at: string | null; signed_ip: string | null; signature_hash: string | null;
-    rendered_body: string | null; start_date: string;
-    client: { company_name: string; nif: string | null } | null;
+    rendered_body: string | null; start_date: string; pdf_path: string | null;
+    promo_fee: number | null; promo_months: number;
+    client: { company_name: string; nif: string | null; address: string | null; contact_name: string | null } | null;
+    template: { id: string; pdf_path: string | null; placeholder_map: PlaceholderMap } | null;
   };
 
-  const downloadPDF = () => {
+  const downloadPDF = async () => {
+    // If template has a master PDF, fill placeholders over it
+    if (c.template?.pdf_path && c.template.placeholder_map) {
+      try {
+        const tplBytes = await downloadTemplatePdf(c.template.pdf_path);
+        const vars: Record<string, string> = {
+          company_name: c.client?.company_name ?? "",
+          nif: c.client?.nif ?? "",
+          address: c.client?.address ?? "",
+          representative_name: c.client?.contact_name ?? "",
+          plan_name: c.plan_name,
+          credits_limit: String(c.credits_limit),
+          setup_fee: formatEUR(c.promo_fee ?? 0),
+          monthly_fee: formatEUR(c.monthly_fee),
+          contract_date: new Date(c.start_date).toLocaleDateString("pt-PT"),
+        };
+        const out = await fillPdfTemplate(tplBytes, c.template.placeholder_map, vars);
+        // Save to storage and link to contract
+        try {
+          const path = await uploadGeneratedPdf(c.id, out);
+          await supabase.from("contracts").update({ pdf_path: path }).eq("id", c.id);
+          qc.invalidateQueries({ queryKey: ["contract-detail", id] });
+        } catch (e) {
+          console.warn("upload pdf failed", e);
+        }
+        const blob = new Blob([out as BlobPart], { type: "application/pdf" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = `contrato-${c.id.slice(0, 8)}.pdf`; a.click();
+        URL.revokeObjectURL(url);
+        return;
+      } catch (e) {
+        toast.error((e as Error).message || "Falha ao gerar PDF a partir do template");
+        return;
+      }
+    }
+    // Fallback: render from markdown body
     const blob = generateContractPDF({
       title: `Contrato — ${c.client?.company_name ?? ""}`,
       body: c.rendered_body ?? "",
