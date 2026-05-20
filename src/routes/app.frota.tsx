@@ -8,7 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Car, Fuel, CreditCard, Plus, History, X, Pencil, Power, Trash2 } from "lucide-react";
-import { VEHICLE_BRANDS, VEHICLE_KIND_LABELS, VEHICLE_KINDS } from "@/lib/vehicle-brands";
+import {
+  VEHICLE_BRANDS,
+  VEHICLE_KIND_LABELS,
+  VEHICLE_KINDS,
+  mergeCatalog,
+  OTHER_SENTINEL,
+  type CatalogRow,
+} from "@/lib/vehicle-brands";
 
 export const Route = createFileRoute("/app/frota")({ component: FrotaPage });
 
