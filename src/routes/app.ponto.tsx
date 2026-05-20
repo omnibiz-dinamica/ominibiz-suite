@@ -12,8 +12,9 @@ import {
   punchPause,
   punchResume,
   punchState,
-  effectiveMinutesNow,
+  effectiveSecondsNow,
   formatDuration,
+  formatHMS,
   transitionTask,
   requestTaskAuthorization,
   STATUS_LABELS,
@@ -210,7 +211,7 @@ function PontoPage() {
   });
 
   const state = openEntry ? punchState(openEntry) : "encerrado";
-  const liveMin = openEntry ? effectiveMinutesNow(openEntry) : 0;
+  const liveSec = openEntry ? effectiveSecondsNow(openEntry) : 0;
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
@@ -236,7 +237,7 @@ function PontoPage() {
           entry={openEntry}
           task={openTask}
           clientName={openTask.client_id ? clientsMap?.[openTask.client_id] : undefined}
-          liveMin={liveMin}
+          liveSec={liveSec}
           state={state}
           onPause={() => pauseMut.mutate()}
           onResume={() => resumeMut.mutate()}
@@ -297,7 +298,7 @@ function ActiveTaskCard({
   entry,
   task,
   clientName,
-  liveMin,
+  liveSec,
   state,
   onPause,
   onResume,
@@ -309,7 +310,7 @@ function ActiveTaskCard({
   entry: TimeEntryRow;
   task: TaskRow;
   clientName?: string;
-  liveMin: number;
+  liveSec: number;
   state: "aberto" | "pausado" | "encerrado";
   onPause: () => void;
   onResume: () => void;
@@ -351,7 +352,7 @@ function ActiveTaskCard({
         <div className="flex flex-col items-center justify-center rounded-xl bg-background/60 py-6">
           <div className="text-[11px] uppercase tracking-widest text-muted-foreground">Tempo efetivo</div>
           <div className="font-display text-5xl font-semibold tabular-nums sm:text-6xl">
-            {formatDuration(liveMin)}
+            {formatHMS(liveSec)}
           </div>
           {state === "pausado" && (
             <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-warning/15 px-2.5 py-1 text-xs font-medium text-warning-foreground">
@@ -435,9 +436,10 @@ function UpcomingTasks({
   // para dar contexto operacional imediato.
   // Prioriza tarefa pronta para iniciar; senão a primeira da fila.
   const nextStartable =
-    tasks.find((t) => t.status === "autorizado") ?? tasks[0];
+    tasks.find((t) => t.status === "autorizado" || t.status === "pendente") ?? tasks[0];
   const rest = tasks.filter((t) => t.id !== nextStartable.id);
-  const nextIsStartable = nextStartable.status === "autorizado";
+  const nextIsStartable =
+    nextStartable.status === "autorizado" || nextStartable.status === "pendente";
   const nextIsAbsent = nextStartable.status === "ausente";
   const nextStarting = starting && startingId === nextStartable.id;
   const nextRequesting = requestingAuth && requestingAuthId === nextStartable.id;
@@ -520,10 +522,9 @@ function UpcomingTasks({
               className="h-16 w-full text-base"
               disabled={!nextIsStartable || nextStarting}
               onClick={() => onStart(nextStartable.id)}
-              title={!nextIsStartable ? "Aguardando autorização do gestor" : undefined}
             >
               <Play className="mr-2 h-6 w-6" />
-              {nextIsStartable ? "Iniciar tarefa" : "Aguardando autorização"}
+              Iniciar tarefa
             </Button>
           )}
         </div>
@@ -578,14 +579,12 @@ function UpcomingTasks({
                 className="h-12 w-full sm:w-auto"
                 variant={t.status === "ausente" ? "outline" : "default"}
                 disabled={
-                  t.status === "pendente" ||
                   isStarting ||
                   (t.status === "ausente" && requestingAuth && requestingAuthId === t.id)
                 }
                 onClick={() =>
                   t.status === "ausente" ? onRequestAuth(t.id) : onStart(t.id)
                 }
-                title={t.status === "pendente" ? "Aguardando autorização do gestor" : undefined}
               >
                 {t.status === "ausente" ? (
                   <>
@@ -595,7 +594,7 @@ function UpcomingTasks({
                 ) : (
                   <>
                     <Play className="mr-2 h-5 w-5" />
-                    {t.status === "pendente" ? "Aguardando autorização" : "Iniciar"}
+                    Iniciar
                   </>
                 )}
               </Button>

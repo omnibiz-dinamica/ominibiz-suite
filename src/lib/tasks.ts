@@ -200,3 +200,27 @@ export function formatDuration(min: number): string {
   const m = min % 60;
   return h > 0 ? `${h}h${m.toString().padStart(2, "0")}` : `${m}min`;
 }
+
+/** Duração efetiva em SEGUNDOS para cronômetro vivo (HH:MM:SS). */
+export function effectiveSecondsNow(e: TimeEntryRow): number {
+  const start = new Date(e.started_at).getTime();
+  const end = e.ended_at ? new Date(e.ended_at).getTime() : Date.now();
+  let pauseMs = 0;
+  if (e.paused_at) {
+    const p = new Date(e.paused_at).getTime();
+    const r = e.resumed_at
+      ? new Date(e.resumed_at).getTime()
+      : (e.ended_at ? new Date(e.ended_at).getTime() : Date.now());
+    pauseMs = Math.max(0, r - p);
+  }
+  return Math.max(0, Math.floor((end - start - pauseMs) / 1000));
+}
+
+export function formatHMS(totalSec: number): string {
+  const s = Math.max(0, Math.floor(totalSec));
+  const hh = Math.floor(s / 3600);
+  const mm = Math.floor((s % 3600) / 60);
+  const ss = s % 60;
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return `${pad(hh)}:${pad(mm)}:${pad(ss)}`;
+}
