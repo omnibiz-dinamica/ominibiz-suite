@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/app/comercial/clientes")({
@@ -120,6 +120,9 @@ function ClientsPage() {
           <DialogContent className="max-w-xl">
             <DialogHeader>
               <DialogTitle>{form.id ? "Editar cliente" : "Novo cliente"}</DialogTitle>
+              <DialogDescription>
+                {form.id ? "Atualize os dados do cliente comercial." : "Preencha os dados para registar um novo cliente comercial."}
+              </DialogDescription>
             </DialogHeader>
             <div className="grid gap-3 md:grid-cols-2">
               <div className="md:col-span-2"><Label>Razão social *</Label><Input value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} /></div>
