@@ -6,7 +6,10 @@ import { toast } from "sonner";
 import { formatEUR, SERVICE_LABELS } from "@/lib/contract-vars";
 import { generateContractPDF } from "@/lib/contract-pdf";
 import { fillPdfTemplate, downloadTemplatePdf, uploadGeneratedPdf, type PlaceholderMap } from "@/lib/pdf-fill";
-import { ArrowLeft, Download, Link as LinkIcon } from "lucide-react";
+import { ContractTimeline } from "@/components/contracts/ContractTimeline";
+import { ContractPreviewA4 } from "@/components/contracts/ContractPreviewA4";
+import { StatusBadge } from "@/components/contracts/StatusBadge";
+import { ArrowLeft, Download, Link as LinkIcon, XCircle } from "lucide-react";
 
 export const Route = createFileRoute("/app/comercial/contratos/$id")({
   component: ContractDetail,
@@ -48,6 +51,19 @@ function ContractDetail() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["contract-detail", id] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const cancel = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("contracts").update({ status: "cancelled" as never }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Contrato cancelado");
+      qc.invalidateQueries({ queryKey: ["contract-detail", id] });
+      qc.invalidateQueries({ queryKey: ["contract-audit", id] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -132,11 +148,19 @@ function ContractDetail() {
           <div>
             <h2 className="font-display text-xl font-semibold">{c.client?.company_name}</h2>
             <p className="text-sm text-muted-foreground">Plano {c.plan_name} · {formatEUR(c.monthly_fee)}/mês · {c.credits_limit} créditos</p>
-            <p className="mt-1 text-xs text-muted-foreground">Estado: <strong>{c.status}</strong> · Início {c.start_date}</p>
+            <div className="mt-2 flex items-center gap-2">
+              <StatusBadge status={c.status} />
+              <span className="text-xs text-muted-foreground">Início {c.start_date}</span>
+            </div>
           </div>
           <div className="flex gap-2">
             {c.sign_token && (c.status === "draft" || c.status === "sent") && (
               <Button variant="outline" size="sm" onClick={copyLink}><LinkIcon className="mr-1 h-4 w-4" /> Copiar link</Button>
+            )}
+            {c.status !== "cancelled" && c.status !== "signed" && (
+              <Button variant="ghost" size="sm" onClick={() => { if (confirm("Cancelar contrato?")) cancel.mutate(); }}>
+                <XCircle className="mr-1 h-4 w-4" /> Cancelar
+              </Button>
             )}
             <Button size="sm" onClick={downloadPDF}><Download className="mr-1 h-4 w-4" /> PDF</Button>
           </div>
@@ -154,6 +178,22 @@ function ContractDetail() {
               {SERVICE_LABELS[s.service]}
             </span>
           ))}
+        </div>
+      </div>
+
+      {c.rendered_body && (
+        <div className="rounded-2xl border border-border bg-card p-6">
+          <h3 className="font-display text-lg font-semibold">Pré-visualização do contrato</h3>
+          <div className="mt-4">
+            <ContractPreviewA4 body={c.rendered_body} vars={{}} showPending={false} />
+          </div>
+        </div>
+      )}
+
+      <div className="rounded-2xl border border-border bg-card p-6">
+        <h3 className="font-display text-lg font-semibold">Linha do tempo</h3>
+        <div className="mt-4">
+          <ContractTimeline contractId={c.id} />
         </div>
       </div>
 
