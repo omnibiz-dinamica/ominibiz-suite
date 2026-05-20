@@ -6,7 +6,7 @@ import { RoleGuard } from "@/components/RoleGuard";
 
 export const Route = createFileRoute("/app/empresa")({
   component: () => (
-    <RoleGuard allow={["manager", "super_admin"]}>
+    <RoleGuard allow={["manager", "owner", "super_admin"]}>
       <CompanyPage />
     </RoleGuard>
   ),

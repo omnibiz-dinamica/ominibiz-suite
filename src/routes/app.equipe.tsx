@@ -29,7 +29,7 @@ interface MemberRow {
 
 export const Route = createFileRoute("/app/equipe")({
   component: () => (
-    <RoleGuard allow={["manager", "super_admin"]}>
+    <RoleGuard allow={["manager", "owner", "super_admin"]}>
       <TeamPage />
     </RoleGuard>
   ),
