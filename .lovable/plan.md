@@ -1,74 +1,64 @@
-# Segregação real por papel — OmniBiz
+## Objetivo
 
-Hoje os três papéis veem praticamente o mesmo shell. Vou separar **backend + frontend** para que cada papel tenha uma experiência distinta, com proteção real de RLS e rotas.
+Tornar o fluxo de aprovação de férias configurável por empresa, cobrindo corretamente férias de gestores e introduzindo o conceito de **Owner** (proprietário interno da empresa, distinto de super_admin SaaS).
 
-## 1. Backend (RLS + funções)
+## 1. Banco de dados (migration)
 
-Auditar e ajustar para garantir:
+### Novo papel `owner`
+- Adicionar valor `owner` ao enum `app_role`.
+- Owner é membro da empresa (`user_roles.company_id` preenchido), com permissões equivalentes a manager + capacidade de aprovar férias de gestores.
+- Atualizar `is_company_manager` para considerar `owner` também como gestor (assim policies existentes continuam funcionando).
+- Criar helper `is_company_owner(_user, _company)`.
 
-- **funcionário** só vê/edita **as próprias tarefas**, **próprias notificações**, **próprio ponto**, **próprio perfil**.
-  - Bloquear `SELECT` em `clients`, `companies`, `user_roles`, `profiles` de terceiros, `time_entries` de outros, `tasks` de outros.
-  - Hoje `clients` permite `members view company clients` (qualquer membro). Trocar para apenas managers + super_admin.
-  - `companies` permite `members view their company` — manter (funcionário precisa do nome da empresa), mas remover qualquer leitura cruzada.
-  - `time_entries` já está OK (user vê só os próprios; managers veem da empresa).
-- **gestor** opera dentro da **própria empresa** (já está via `is_company_manager`).
-- **super_admin** mantém acesso global mas **não cria tarefas operacionais** (regra de UI; backend continua permitindo para auditoria).
-- Adicionar policy explícita: funcionário **não** vê `user_roles` de outros (hoje vê só os próprios — OK).
+### Configuração de RH por empresa
+Nova tabela `company_hr_settings`:
+- `company_id` (PK, FK companies)
+- `employee_approver_kind` enum: `manager` | `supervisor` | `owner` | `specific_user` (default `manager`)
+- `employee_approver_user_id` uuid (quando `specific_user`)
+- `manager_approver_kind` enum: `owner` | `other_manager` | `specific_user` | `self_allowed` (default `owner`)
+- `manager_approver_user_id` uuid (quando `specific_user`)
 
-## 2. Auth context (frontend)
+RLS: managers/owners da empresa leem e atualizam; super_admin tudo.
 
-`AuthProvider` já carrega `user`, `roles`, `currentCompanyId`, `profile` antes do render (`initialized + loading`). Vou:
+### Resolução de aprovador
+- Adicionar coluna `assigned_approver_id` em `vacation_requests` (snapshot do aprovador resolvido na criação).
+- Função `resolve_vacation_approver(_user_id, _company_id)` retorna `uuid`:
+  - Detecta se o solicitante é gestor/owner ou funcionário.
+  - Aplica regras das settings (fallback para manager se config faltar).
+  - Funcionário nunca autoaprova; gestor só se `self_allowed`.
+- Atualizar trigger `vacation_fill_context` para popular `assigned_approver_id`.
+- Atualizar `vacation_decide` para permitir decisão pelo `assigned_approver_id` OU por owner OU por super_admin (não apenas `is_company_manager`).
+- Atualizar `vacation_notify_insert` para notificar **apenas o aprovador resolvido** (não todos os gestores).
 
-- Derivar um `role` efetivo: `super_admin` > `manager` > `employee`.
-- Expor `isEmployee`, `isManager`, `isSuperAdmin` consistentes.
-- O `AppShell` continua bloqueando render até `initialized`.
+## 2. Frontend
 
-## 3. Rotas (proteção real, não só menu)
+### `src/routes/app.empresa.tsx` — nova seção "Configurações RH"
+- Visível apenas para owner/manager.
+- Dois selects:
+  - Aprovador padrão (funcionários): Gestor / Supervisor / Owner / Usuário específico
+  - Aprovador (gestores): Owner / Outro gestor / Usuário específico / Autoaprovação permitida
+- Quando "Usuário específico": combo com membros da empresa.
+- Persistir via upsert em `company_hr_settings`.
 
-Criar guards em cada rota sensível usando o context. Em vez de só esconder no menu, cada rota faz check e redireciona:
+### `src/routes/app.ferias.tsx`
+- Mostrar ao solicitante o nome do aprovador que receberá a solicitação (lookup após resolve).
+- Lista "Pendentes" do lado aprovador: filtrar por `assigned_approver_id = auth.uid()` em vez de `isManager`.
+- Cancelamento continua igual.
 
-- **Funcionário** só pode acessar: `/app` (dashboard simplificado), `/app/tarefas`, `/app/ponto`, `/app/notificacoes`, `/app/perfil`.
-- **Gestor** acessa tudo da empresa, **menos** `/app/admin`.
-- **Super admin** acessa `/app/admin` + visão global. Páginas operacionais (tarefas/clientes/equipe) ficam **somente leitura/auditoria** para super_admin.
+### `src/routes/app.equipe.tsx`
+- Adicionar opção `owner` no select de papel (apenas owner/super_admin podem atribuir owner).
 
-Implementação: helper `<RoleGuard allow={['manager','super_admin']}>` que renderiza children ou redireciona para `/app`.
+### `src/lib/auth.tsx`
+- Tratar `owner` como manager para `isManager` (UI continua funcionando).
+- Expor `isOwner`.
 
-## 4. Shell e menu por papel
+## 3. Notificações
+- Trigger envia para `assigned_approver_id` apenas.
+- Mantém evento `vacation_requested`.
 
-`AppLayout` passa a montar **3 menus diferentes** (não um menu único filtrado):
+## Escopo NÃO incluído (MVP)
+- Workflow multi-step / cadeias com vários níveis.
+- Delegação temporária / férias do próprio aprovador.
+- Edição do aprovador após criação da solicitação.
 
-- **Super admin**: Dashboard Global, Empresas, Auditoria, Configurações SaaS, Perfil.
-- **Gestor**: Dashboard, Tarefas, Ponto, Notificações, Clientes, Usuários, Empresa, Notas, Assistente, Perfil.
-- **Funcionário**: Minha Operação (ponto), Minhas Tarefas, Notificações, Perfil.
-
-## 5. Dashboards distintos
-
-`/app` (index) detecta o papel e renderiza componente específico:
-
-- `SuperAdminDashboard` — métricas globais (total empresas, usuários, tarefas no SaaS).
-- `ManagerDashboard` — atual (operação da empresa).
-- `EmployeeDashboard` — só as próprias tarefas de hoje + botão "Bater ponto".
-
-## 6. Páginas
-
-- `/app/tarefas`: funcionário vê lista enxuta só das suas; sem botões de criar/atribuir/cancelar (só iniciar/pausar/concluir/solicitar autorização).
-- `/app/clientes`, `/app/equipe`, `/app/empresa`: redirecionar funcionário para `/app`.
-- `/app/admin`: redirecionar não-super para `/app`.
-- Criar `/app/perfil` (faltava) com dados do próprio usuário.
-
-## 7. Páginas marcadas "em breve" (Férias, Frota, Filiais)
-
-Não vou criar agora — fora do escopo desta correção. Mantenho menu coerente sem itens fantasma.
-
-## Detalhes técnicos
-
-- Sem mudança em `auth.tsx` além de pequenos helpers.
-- Novo: `src/components/RoleGuard.tsx`, `src/components/dashboards/{Employee,SuperAdmin}Dashboard.tsx`, `src/routes/app.perfil.tsx`.
-- Refactor: `AppLayout.tsx` (menus por papel), `app.index.tsx` (switch de dashboard), `app.tarefas.tsx` (modo funcionário), guards nas rotas restritas.
-- Migration: tightening RLS em `clients` (remover leitura para `employee`).
-
-## Fora do escopo
-
-- Implementar Férias/Frota/Filiais (só estrutura de menu).
-- Auditoria detalhada / logs SaaS.
-- Painel "Configurações SaaS" — placeholder.
+Confirma para eu prosseguir com a migration + código?
