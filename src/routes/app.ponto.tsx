@@ -436,9 +436,10 @@ function UpcomingTasks({
   // para dar contexto operacional imediato.
   // Prioriza tarefa pronta para iniciar; senão a primeira da fila.
   const nextStartable =
-    tasks.find((t) => t.status === "autorizado") ?? tasks[0];
+    tasks.find((t) => t.status === "autorizado" || t.status === "pendente") ?? tasks[0];
   const rest = tasks.filter((t) => t.id !== nextStartable.id);
-  const nextIsStartable = nextStartable.status === "autorizado";
+  const nextIsStartable =
+    nextStartable.status === "autorizado" || nextStartable.status === "pendente";
   const nextIsAbsent = nextStartable.status === "ausente";
   const nextStarting = starting && startingId === nextStartable.id;
   const nextRequesting = requestingAuth && requestingAuthId === nextStartable.id;
@@ -521,10 +522,9 @@ function UpcomingTasks({
               className="h-16 w-full text-base"
               disabled={!nextIsStartable || nextStarting}
               onClick={() => onStart(nextStartable.id)}
-              title={!nextIsStartable ? "Aguardando autorização do gestor" : undefined}
             >
               <Play className="mr-2 h-6 w-6" />
-              {nextIsStartable ? "Iniciar tarefa" : "Aguardando autorização"}
+              Iniciar tarefa
             </Button>
           )}
         </div>
@@ -579,14 +579,12 @@ function UpcomingTasks({
                 className="h-12 w-full sm:w-auto"
                 variant={t.status === "ausente" ? "outline" : "default"}
                 disabled={
-                  t.status === "pendente" ||
                   isStarting ||
                   (t.status === "ausente" && requestingAuth && requestingAuthId === t.id)
                 }
                 onClick={() =>
                   t.status === "ausente" ? onRequestAuth(t.id) : onStart(t.id)
                 }
-                title={t.status === "pendente" ? "Aguardando autorização do gestor" : undefined}
               >
                 {t.status === "ausente" ? (
                   <>
@@ -596,7 +594,7 @@ function UpcomingTasks({
                 ) : (
                   <>
                     <Play className="mr-2 h-5 w-5" />
-                    {t.status === "pendente" ? "Aguardando autorização" : "Iniciar"}
+                    Iniciar
                   </>
                 )}
               </Button>
