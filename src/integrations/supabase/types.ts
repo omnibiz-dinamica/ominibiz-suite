@@ -421,8 +421,12 @@ export type Database = {
           full_name: string | null
           id: string
           is_active: boolean
+          job_title: string | null
           phone: string | null
+          supervisor_id: string | null
+          team: string | null
           updated_at: string
+          work_location: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -431,8 +435,12 @@ export type Database = {
           full_name?: string | null
           id: string
           is_active?: boolean
+          job_title?: string | null
           phone?: string | null
+          supervisor_id?: string | null
+          team?: string | null
           updated_at?: string
+          work_location?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -441,8 +449,12 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_active?: boolean
+          job_title?: string | null
           phone?: string | null
+          supervisor_id?: string | null
+          team?: string | null
           updated_at?: string
+          work_location?: string | null
         }
         Relationships: [
           {
@@ -649,10 +661,13 @@ export type Database = {
           end_date: string
           id: string
           note: string | null
+          prior_validation: boolean
           start_date: string
           status: Database["public"]["Enums"]["vacation_status"]
           updated_at: string
           user_id: string
+          validated_by: string | null
+          work_location: string | null
         }
         Insert: {
           cancelled_at?: string | null
@@ -664,10 +679,13 @@ export type Database = {
           end_date: string
           id?: string
           note?: string | null
+          prior_validation?: boolean
           start_date: string
           status?: Database["public"]["Enums"]["vacation_status"]
           updated_at?: string
           user_id: string
+          validated_by?: string | null
+          work_location?: string | null
         }
         Update: {
           cancelled_at?: string | null
@@ -679,10 +697,13 @@ export type Database = {
           end_date?: string
           id?: string
           note?: string | null
+          prior_validation?: boolean
           start_date?: string
           status?: Database["public"]["Enums"]["vacation_status"]
           updated_at?: string
           user_id?: string
+          validated_by?: string | null
+          work_location?: string | null
         }
         Relationships: []
       }
@@ -1025,10 +1046,13 @@ export type Database = {
           end_date: string
           id: string
           note: string | null
+          prior_validation: boolean
           start_date: string
           status: Database["public"]["Enums"]["vacation_status"]
           updated_at: string
           user_id: string
+          validated_by: string | null
+          work_location: string | null
         }
         SetofOptions: {
           from: "*"

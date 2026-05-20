@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,29 @@ function ProfilePage() {
   const qc = useQueryClient();
   const [fullName, setFullName] = useState(profile?.full_name ?? "");
   const [phone, setPhone] = useState("");
+
+  const { data: opData } = useQuery({
+    queryKey: ["profile-operational", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("job_title, work_location, team, supervisor_id")
+        .eq("id", user!.id)
+        .maybeSingle();
+      if (error) throw error;
+      let supervisorName: string | null = null;
+      if (data?.supervisor_id) {
+        const { data: sup } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", data.supervisor_id)
+          .maybeSingle();
+        supervisorName = sup?.full_name ?? null;
+      }
+      return { ...(data ?? {}), supervisorName };
+    },
+  });
 
   const save = useMutation({
     mutationFn: async () => {
@@ -55,6 +78,31 @@ function ProfilePage() {
           <div>
             <dt className="text-xs uppercase text-muted-foreground">Papel</dt>
             <dd className="mt-0.5 font-medium">{roleLabel}</dd>
+          </div>
+        </dl>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card p-6">
+        <h2 className="font-display text-lg font-semibold">Dados operacionais</h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Definidos pelo gestor. Para alterar, fale com seu gestor.
+        </p>
+        <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="text-xs uppercase text-muted-foreground">Cargo</dt>
+            <dd className="mt-0.5 font-medium">{opData?.job_title ?? "—"}</dd>
+          </div>
+          <div>
+            <dt className="text-xs uppercase text-muted-foreground">Local de trabalho</dt>
+            <dd className="mt-0.5 font-medium">{opData?.work_location ?? "—"}</dd>
+          </div>
+          <div>
+            <dt className="text-xs uppercase text-muted-foreground">Equipa / Departamento</dt>
+            <dd className="mt-0.5 font-medium">{opData?.team ?? "—"}</dd>
+          </div>
+          <div>
+            <dt className="text-xs uppercase text-muted-foreground">Supervisor</dt>
+            <dd className="mt-0.5 font-medium">{opData?.supervisorName ?? "—"}</dd>
           </div>
         </dl>
       </div>
