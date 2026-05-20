@@ -133,6 +133,102 @@ export type Database = {
         }
         Relationships: []
       }
+      fuel_cards: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          label: string | null
+          number: string
+          photo_path: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string | null
+          number: string
+          photo_path?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string | null
+          number?: string
+          photo_path?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      fuel_records: {
+        Row: {
+          amount: number
+          card_id: string | null
+          company_id: string
+          created_at: string
+          driver_id: string
+          id: string
+          km: number
+          liters: number
+          note: string | null
+          pump_photo_path: string | null
+          purpose: Database["public"]["Enums"]["fuel_purpose"]
+          recorded_at: string
+          vehicle_id: string
+        }
+        Insert: {
+          amount: number
+          card_id?: string | null
+          company_id: string
+          created_at?: string
+          driver_id: string
+          id?: string
+          km: number
+          liters: number
+          note?: string | null
+          pump_photo_path?: string | null
+          purpose?: Database["public"]["Enums"]["fuel_purpose"]
+          recorded_at?: string
+          vehicle_id: string
+        }
+        Update: {
+          amount?: number
+          card_id?: string | null
+          company_id?: string
+          created_at?: string
+          driver_id?: string
+          id?: string
+          km?: number
+          liters?: number
+          note?: string | null
+          pump_photo_path?: string | null
+          purpose?: Database["public"]["Enums"]["fuel_purpose"]
+          recorded_at?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fuel_records_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "fuel_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fuel_records_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invites: {
         Row: {
           accepted_at: string | null
@@ -510,6 +606,92 @@ export type Database = {
         }
         Relationships: []
       }
+      vehicle_assignments: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          is_primary: boolean
+          user_id: string
+          vehicle_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          user_id: string
+          vehicle_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          user_id?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_assignments_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicles: {
+        Row: {
+          brand: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          current_km: number
+          fuel_type: Database["public"]["Enums"]["fuel_type"]
+          id: string
+          kind: Database["public"]["Enums"]["vehicle_kind"]
+          model: string | null
+          plate: string
+          plate_photo_path: string | null
+          status: Database["public"]["Enums"]["vehicle_status"]
+          updated_at: string
+          year: number | null
+        }
+        Insert: {
+          brand?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          current_km?: number
+          fuel_type?: Database["public"]["Enums"]["fuel_type"]
+          id?: string
+          kind?: Database["public"]["Enums"]["vehicle_kind"]
+          model?: string | null
+          plate: string
+          plate_photo_path?: string | null
+          status?: Database["public"]["Enums"]["vehicle_status"]
+          updated_at?: string
+          year?: number | null
+        }
+        Update: {
+          brand?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          current_km?: number
+          fuel_type?: Database["public"]["Enums"]["fuel_type"]
+          id?: string
+          kind?: Database["public"]["Enums"]["vehicle_kind"]
+          model?: string | null
+          plate?: string
+          plate_photo_path?: string | null
+          status?: Database["public"]["Enums"]["vehicle_status"]
+          updated_at?: string
+          year?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -750,6 +932,15 @@ export type Database = {
       app_role: "super_admin" | "manager" | "employee"
       client_status: "ativo" | "inativo"
       company_status: "pending" | "active" | "suspended"
+      fuel_purpose: "profissional" | "pessoal"
+      fuel_type:
+        | "gasolina"
+        | "diesel"
+        | "etanol"
+        | "flex"
+        | "gnv"
+        | "eletrico"
+        | "hibrido"
       invite_status: "pending" | "accepted" | "revoked" | "expired"
       notification_event:
         | "task_created"
@@ -776,6 +967,14 @@ export type Database = {
         | "ausente"
         | "autorizado"
       vacation_status: "pendente" | "aprovado" | "rejeitado" | "cancelado"
+      vehicle_kind:
+        | "carro"
+        | "moto"
+        | "van"
+        | "caminhao"
+        | "utilitario"
+        | "outro"
+      vehicle_status: "ativo" | "inativo" | "manutencao"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -906,6 +1105,16 @@ export const Constants = {
       app_role: ["super_admin", "manager", "employee"],
       client_status: ["ativo", "inativo"],
       company_status: ["pending", "active", "suspended"],
+      fuel_purpose: ["profissional", "pessoal"],
+      fuel_type: [
+        "gasolina",
+        "diesel",
+        "etanol",
+        "flex",
+        "gnv",
+        "eletrico",
+        "hibrido",
+      ],
       invite_status: ["pending", "accepted", "revoked", "expired"],
       notification_event: [
         "task_created",
@@ -934,6 +1143,8 @@ export const Constants = {
         "autorizado",
       ],
       vacation_status: ["pendente", "aprovado", "rejeitado", "cancelado"],
+      vehicle_kind: ["carro", "moto", "van", "caminhao", "utilitario", "outro"],
+      vehicle_status: ["ativo", "inativo", "manutencao"],
     },
   },
 } as const

@@ -1,4 +1,6 @@
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -18,6 +20,7 @@ import {
   UserCircle,
   ListChecks,
   Plane,
+  Car,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
@@ -48,6 +51,7 @@ const MANAGER_MENU: Item[] = [
   { to: "/app/equipe", label: "Usuários", icon: Users },
   { to: "/app/empresa", label: "Empresa", icon: Building2 },
   { to: "/app/ferias", label: "Férias", icon: Plane },
+  { to: "/app/frota", label: "Frota", icon: Car },
   { to: "/app/notas", label: "Notas", icon: FileText, soon: true },
   { to: "/app/assistente", label: "Assistente IA", icon: Sparkles, soon: true },
   { to: "/app/perfil", label: "Perfil", icon: UserCircle },
@@ -69,13 +73,29 @@ export function AppLayout({ children }: { children?: ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
 
+  const { data: hasVehicle = false } = useQuery({
+    queryKey: ["my-vehicle-count", user?.id],
+    enabled: !!user?.id && effectiveRole === "employee",
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("vehicle_assignments")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user!.id);
+      return (count ?? 0) > 0;
+    },
+  });
+
+  const employeeMenu = hasVehicle
+    ? [...EMPLOYEE_MENU.slice(0, 3), { to: "/app/frota", label: "Frota", icon: Car }, ...EMPLOYEE_MENU.slice(3)]
+    : EMPLOYEE_MENU;
+
   const visible =
     effectiveRole === "super_admin"
       ? SUPER_ADMIN_MENU
       : effectiveRole === "manager"
         ? MANAGER_MENU
         : effectiveRole === "employee"
-          ? EMPLOYEE_MENU
+          ? employeeMenu
           : [];
 
   const roleBadge =

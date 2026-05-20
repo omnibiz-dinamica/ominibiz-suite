@@ -20,6 +20,7 @@ import { Route as AppPontoRouteImport } from './routes/app.ponto'
 import { Route as AppPerfilRouteImport } from './routes/app.perfil'
 import { Route as AppNotificacoesRouteImport } from './routes/app.notificacoes'
 import { Route as AppNotasRouteImport } from './routes/app.notas'
+import { Route as AppFrotaRouteImport } from './routes/app.frota'
 import { Route as AppFeriasRouteImport } from './routes/app.ferias'
 import { Route as AppEquipeRouteImport } from './routes/app.equipe'
 import { Route as AppEmpresaRouteImport } from './routes/app.empresa'
@@ -82,6 +83,11 @@ const AppNotasRoute = AppNotasRouteImport.update({
   path: '/notas',
   getParentRoute: () => AppRoute,
 } as any)
+const AppFrotaRoute = AppFrotaRouteImport.update({
+  id: '/frota',
+  path: '/frota',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppFeriasRoute = AppFeriasRouteImport.update({
   id: '/ferias',
   path: '/ferias',
@@ -125,6 +131,7 @@ export interface FileRoutesByFullPath {
   '/app/empresa': typeof AppEmpresaRoute
   '/app/equipe': typeof AppEquipeRoute
   '/app/ferias': typeof AppFeriasRoute
+  '/app/frota': typeof AppFrotaRoute
   '/app/notas': typeof AppNotasRoute
   '/app/notificacoes': typeof AppNotificacoesRoute
   '/app/perfil': typeof AppPerfilRoute
@@ -143,6 +150,7 @@ export interface FileRoutesByTo {
   '/app/empresa': typeof AppEmpresaRoute
   '/app/equipe': typeof AppEquipeRoute
   '/app/ferias': typeof AppFeriasRoute
+  '/app/frota': typeof AppFrotaRoute
   '/app/notas': typeof AppNotasRoute
   '/app/notificacoes': typeof AppNotificacoesRoute
   '/app/perfil': typeof AppPerfilRoute
@@ -163,6 +171,7 @@ export interface FileRoutesById {
   '/app/empresa': typeof AppEmpresaRoute
   '/app/equipe': typeof AppEquipeRoute
   '/app/ferias': typeof AppFeriasRoute
+  '/app/frota': typeof AppFrotaRoute
   '/app/notas': typeof AppNotasRoute
   '/app/notificacoes': typeof AppNotificacoesRoute
   '/app/perfil': typeof AppPerfilRoute
@@ -184,6 +193,7 @@ export interface FileRouteTypes {
     | '/app/empresa'
     | '/app/equipe'
     | '/app/ferias'
+    | '/app/frota'
     | '/app/notas'
     | '/app/notificacoes'
     | '/app/perfil'
@@ -202,6 +212,7 @@ export interface FileRouteTypes {
     | '/app/empresa'
     | '/app/equipe'
     | '/app/ferias'
+    | '/app/frota'
     | '/app/notas'
     | '/app/notificacoes'
     | '/app/perfil'
@@ -221,6 +232,7 @@ export interface FileRouteTypes {
     | '/app/empresa'
     | '/app/equipe'
     | '/app/ferias'
+    | '/app/frota'
     | '/app/notas'
     | '/app/notificacoes'
     | '/app/perfil'
@@ -316,6 +328,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppNotasRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/frota': {
+      id: '/app/frota'
+      path: '/frota'
+      fullPath: '/app/frota'
+      preLoaderRoute: typeof AppFrotaRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/ferias': {
       id: '/app/ferias'
       path: '/ferias'
@@ -368,6 +387,7 @@ interface AppRouteChildren {
   AppEmpresaRoute: typeof AppEmpresaRoute
   AppEquipeRoute: typeof AppEquipeRoute
   AppFeriasRoute: typeof AppFeriasRoute
+  AppFrotaRoute: typeof AppFrotaRoute
   AppNotasRoute: typeof AppNotasRoute
   AppNotificacoesRoute: typeof AppNotificacoesRoute
   AppPerfilRoute: typeof AppPerfilRoute
@@ -383,6 +403,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppEmpresaRoute: AppEmpresaRoute,
   AppEquipeRoute: AppEquipeRoute,
   AppFeriasRoute: AppFeriasRoute,
+  AppFrotaRoute: AppFrotaRoute,
   AppNotasRoute: AppNotasRoute,
   AppNotificacoesRoute: AppNotificacoesRoute,
   AppPerfilRoute: AppPerfilRoute,
