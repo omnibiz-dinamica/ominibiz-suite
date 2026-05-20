@@ -28,6 +28,7 @@ type VacationRow = {
   work_location: string | null;
   prior_validation: boolean;
   validated_by: string | null;
+  assigned_approver_id: string | null;
 };
 
 const STATUS_TONE: Record<VacationStatus, string> = {
@@ -77,10 +78,20 @@ function FeriasPage() {
   });
 
   // Names for manager view
-  const userIds = useMemo(() => Array.from(new Set(rows.map((r) => r.user_id))), [rows]);
+  const userIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          rows.flatMap((r) =>
+            [r.user_id, r.assigned_approver_id].filter(Boolean) as string[],
+          ),
+        ),
+      ),
+    [rows],
+  );
   const { data: names = {} } = useQuery({
     queryKey: ["vac-profiles", userIds.join(",")],
-    enabled: userIds.length > 0 && isManager,
+    enabled: userIds.length > 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
@@ -143,6 +154,11 @@ function FeriasPage() {
   const pending = rows.filter((r) => r.status === "pendente");
   const approved = rows.filter((r) => r.status === "aprovado");
   const history = rows.filter((r) => r.status === "rejeitado" || r.status === "cancelado");
+
+  // Requests this user needs to decide on
+  const toApprove = rows.filter(
+    (r) => r.status === "pendente" && r.assigned_approver_id === user?.id && r.user_id !== user?.id,
+  );
 
   return (
     <div className="space-y-6">
@@ -219,14 +235,14 @@ function FeriasPage() {
       )}
 
       {/* Manager: pending */}
-      {isManager && (
+      {(isManager || toApprove.length > 0) && (
         <section className="rounded-2xl border border-border bg-card p-5">
-          <h2 className="mb-3 font-semibold">Pendentes ({pending.length})</h2>
-          {pending.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhuma solicitação pendente.</p>
+          <h2 className="mb-3 font-semibold">Aguardando sua aprovação ({toApprove.length})</h2>
+          {toApprove.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nada para aprovar agora.</p>
           ) : (
             <ul className="space-y-2">
-              {pending.map((r) => (
+              {toApprove.map((r) => (
                 <PendingRow
                   key={r.id}
                   row={r}
