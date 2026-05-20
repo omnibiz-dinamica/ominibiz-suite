@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useChildMatches } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,9 @@ const STATUS_TONE: Record<string, string> = {
 };
 
 function ContractsPage() {
+  const childMatches = useChildMatches();
+  if (childMatches.length > 0) return <Outlet />;
+
   const qc = useQueryClient();
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["contracts-list"],
@@ -70,7 +73,7 @@ function ContractsPage() {
       <div className="flex items-center justify-between">
         <h2 className="font-display text-xl font-semibold">Contratos</h2>
         <Button asChild>
-          <Link to="/app/comercial/contratos/novo"><FilePlus2 className="mr-2 h-4 w-4" /> Novo contrato</Link>
+          <Link to="/app/comercial/contratos/novo" onClick={() => console.log("Novo contrato clicked")}><FilePlus2 className="mr-2 h-4 w-4" /> Novo contrato</Link>
         </Button>
       </div>
       <div className="rounded-2xl border border-border bg-card">
