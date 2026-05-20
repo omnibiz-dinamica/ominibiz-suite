@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useChildMatches } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -56,6 +56,9 @@ function FrotaPage() {
   const { user, currentCompanyId, isManager, effectiveRole } = useAuth();
   const qc = useQueryClient();
   const isEmployee = effectiveRole === "employee";
+
+  const childMatches = useChildMatches();
+  if (childMatches.length > 0) return <Outlet />;
 
   const { data: vehicles = [] } = useQuery({
     queryKey: ["fleet-vehicles", currentCompanyId, effectiveRole],
