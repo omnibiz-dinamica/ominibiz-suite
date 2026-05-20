@@ -15,6 +15,7 @@ import { Route as AppRouteImport } from './routes/app'
 import { Route as AceitarConviteRouteImport } from './routes/aceitar-convite'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as SignTokenRouteImport } from './routes/sign.$token'
 import { Route as AppTarefasRouteImport } from './routes/app.tarefas'
 import { Route as AppPontoRouteImport } from './routes/app.ponto'
 import { Route as AppPerfilRouteImport } from './routes/app.perfil'
@@ -65,6 +66,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppRoute,
+} as any)
+const SignTokenRoute = SignTokenRouteImport.update({
+  id: '/sign/$token',
+  path: '/sign/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppTarefasRoute = AppTarefasRouteImport.update({
   id: '/tarefas',
@@ -187,6 +193,7 @@ export interface FileRoutesByFullPath {
   '/app/perfil': typeof AppPerfilRoute
   '/app/ponto': typeof AppPontoRoute
   '/app/tarefas': typeof AppTarefasRoute
+  '/sign/$token': typeof SignTokenRoute
   '/app/': typeof AppIndexRoute
   '/app/comercial/clientes': typeof AppComercialClientesRoute
   '/app/comercial/contratos': typeof AppComercialContratosRouteWithChildren
@@ -213,6 +220,7 @@ export interface FileRoutesByTo {
   '/app/perfil': typeof AppPerfilRoute
   '/app/ponto': typeof AppPontoRoute
   '/app/tarefas': typeof AppTarefasRoute
+  '/sign/$token': typeof SignTokenRoute
   '/app': typeof AppIndexRoute
   '/app/comercial/clientes': typeof AppComercialClientesRoute
   '/app/comercial/contratos': typeof AppComercialContratosRouteWithChildren
@@ -242,6 +250,7 @@ export interface FileRoutesById {
   '/app/perfil': typeof AppPerfilRoute
   '/app/ponto': typeof AppPontoRoute
   '/app/tarefas': typeof AppTarefasRoute
+  '/sign/$token': typeof SignTokenRoute
   '/app/': typeof AppIndexRoute
   '/app/comercial/clientes': typeof AppComercialClientesRoute
   '/app/comercial/contratos': typeof AppComercialContratosRouteWithChildren
@@ -272,6 +281,7 @@ export interface FileRouteTypes {
     | '/app/perfil'
     | '/app/ponto'
     | '/app/tarefas'
+    | '/sign/$token'
     | '/app/'
     | '/app/comercial/clientes'
     | '/app/comercial/contratos'
@@ -298,6 +308,7 @@ export interface FileRouteTypes {
     | '/app/perfil'
     | '/app/ponto'
     | '/app/tarefas'
+    | '/sign/$token'
     | '/app'
     | '/app/comercial/clientes'
     | '/app/comercial/contratos'
@@ -326,6 +337,7 @@ export interface FileRouteTypes {
     | '/app/perfil'
     | '/app/ponto'
     | '/app/tarefas'
+    | '/sign/$token'
     | '/app/'
     | '/app/comercial/clientes'
     | '/app/comercial/contratos'
@@ -342,6 +354,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  SignTokenRoute: typeof SignTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -387,6 +400,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/'
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/sign/$token': {
+      id: '/sign/$token'
+      path: '/sign/$token'
+      fullPath: '/sign/$token'
+      preLoaderRoute: typeof SignTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/app/tarefas': {
       id: '/app/tarefas'
@@ -618,6 +638,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  SignTokenRoute: SignTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
