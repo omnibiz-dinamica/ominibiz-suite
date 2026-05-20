@@ -24,6 +24,7 @@ import { Route as AppFrotaRouteImport } from './routes/app.frota'
 import { Route as AppFeriasRouteImport } from './routes/app.ferias'
 import { Route as AppEquipeRouteImport } from './routes/app.equipe'
 import { Route as AppEmpresaRouteImport } from './routes/app.empresa'
+import { Route as AppComercialRouteImport } from './routes/app.comercial'
 import { Route as AppClientesRouteImport } from './routes/app.clientes'
 import { Route as AppAssistenteRouteImport } from './routes/app.assistente'
 import { Route as AppAdminRouteImport } from './routes/app.admin'
@@ -104,6 +105,11 @@ const AppEmpresaRoute = AppEmpresaRouteImport.update({
   path: '/empresa',
   getParentRoute: () => AppRoute,
 } as any)
+const AppComercialRoute = AppComercialRouteImport.update({
+  id: '/comercial',
+  path: '/comercial',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppClientesRoute = AppClientesRouteImport.update({
   id: '/clientes',
   path: '/clientes',
@@ -134,6 +140,7 @@ export interface FileRoutesByFullPath {
   '/app/admin': typeof AppAdminRoute
   '/app/assistente': typeof AppAssistenteRoute
   '/app/clientes': typeof AppClientesRoute
+  '/app/comercial': typeof AppComercialRoute
   '/app/empresa': typeof AppEmpresaRoute
   '/app/equipe': typeof AppEquipeRoute
   '/app/ferias': typeof AppFeriasRoute
@@ -154,6 +161,7 @@ export interface FileRoutesByTo {
   '/app/admin': typeof AppAdminRoute
   '/app/assistente': typeof AppAssistenteRoute
   '/app/clientes': typeof AppClientesRoute
+  '/app/comercial': typeof AppComercialRoute
   '/app/empresa': typeof AppEmpresaRoute
   '/app/equipe': typeof AppEquipeRoute
   '/app/ferias': typeof AppFeriasRoute
@@ -176,6 +184,7 @@ export interface FileRoutesById {
   '/app/admin': typeof AppAdminRoute
   '/app/assistente': typeof AppAssistenteRoute
   '/app/clientes': typeof AppClientesRoute
+  '/app/comercial': typeof AppComercialRoute
   '/app/empresa': typeof AppEmpresaRoute
   '/app/equipe': typeof AppEquipeRoute
   '/app/ferias': typeof AppFeriasRoute
@@ -199,6 +208,7 @@ export interface FileRouteTypes {
     | '/app/admin'
     | '/app/assistente'
     | '/app/clientes'
+    | '/app/comercial'
     | '/app/empresa'
     | '/app/equipe'
     | '/app/ferias'
@@ -219,6 +229,7 @@ export interface FileRouteTypes {
     | '/app/admin'
     | '/app/assistente'
     | '/app/clientes'
+    | '/app/comercial'
     | '/app/empresa'
     | '/app/equipe'
     | '/app/ferias'
@@ -240,6 +251,7 @@ export interface FileRouteTypes {
     | '/app/admin'
     | '/app/assistente'
     | '/app/clientes'
+    | '/app/comercial'
     | '/app/empresa'
     | '/app/equipe'
     | '/app/ferias'
@@ -368,6 +380,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppEmpresaRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/comercial': {
+      id: '/app/comercial'
+      path: '/comercial'
+      fullPath: '/app/comercial'
+      preLoaderRoute: typeof AppComercialRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/clientes': {
       id: '/app/clientes'
       path: '/clientes'
@@ -415,6 +434,7 @@ interface AppRouteChildren {
   AppAdminRoute: typeof AppAdminRoute
   AppAssistenteRoute: typeof AppAssistenteRoute
   AppClientesRoute: typeof AppClientesRoute
+  AppComercialRoute: typeof AppComercialRoute
   AppEmpresaRoute: typeof AppEmpresaRoute
   AppEquipeRoute: typeof AppEquipeRoute
   AppFeriasRoute: typeof AppFeriasRoute
@@ -431,6 +451,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAdminRoute: AppAdminRoute,
   AppAssistenteRoute: AppAssistenteRoute,
   AppClientesRoute: AppClientesRoute,
+  AppComercialRoute: AppComercialRoute,
   AppEmpresaRoute: AppEmpresaRoute,
   AppEquipeRoute: AppEquipeRoute,
   AppFeriasRoute: AppFeriasRoute,
@@ -455,3 +476,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
