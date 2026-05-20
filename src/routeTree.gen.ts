@@ -33,6 +33,7 @@ import { Route as AppFrotaCartoesRouteImport } from './routes/app.frota.cartoes'
 import { Route as AppComercialTemplatesRouteImport } from './routes/app.comercial.templates'
 import { Route as AppComercialContratosRouteImport } from './routes/app.comercial.contratos'
 import { Route as AppComercialClientesRouteImport } from './routes/app.comercial.clientes'
+import { Route as AppComercialContratosNovoRouteImport } from './routes/app.comercial.contratos.novo'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
@@ -154,6 +155,12 @@ const AppComercialClientesRoute = AppComercialClientesRouteImport.update({
   path: '/clientes',
   getParentRoute: () => AppComercialRoute,
 } as any)
+const AppComercialContratosNovoRoute =
+  AppComercialContratosNovoRouteImport.update({
+    id: '/novo',
+    path: '/novo',
+    getParentRoute: () => AppComercialContratosRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -176,10 +183,11 @@ export interface FileRoutesByFullPath {
   '/app/tarefas': typeof AppTarefasRoute
   '/app/': typeof AppIndexRoute
   '/app/comercial/clientes': typeof AppComercialClientesRoute
-  '/app/comercial/contratos': typeof AppComercialContratosRoute
+  '/app/comercial/contratos': typeof AppComercialContratosRouteWithChildren
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
   '/app/comercial/': typeof AppComercialIndexRoute
+  '/app/comercial/contratos/novo': typeof AppComercialContratosNovoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -200,10 +208,11 @@ export interface FileRoutesByTo {
   '/app/tarefas': typeof AppTarefasRoute
   '/app': typeof AppIndexRoute
   '/app/comercial/clientes': typeof AppComercialClientesRoute
-  '/app/comercial/contratos': typeof AppComercialContratosRoute
+  '/app/comercial/contratos': typeof AppComercialContratosRouteWithChildren
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
   '/app/comercial': typeof AppComercialIndexRoute
+  '/app/comercial/contratos/novo': typeof AppComercialContratosNovoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -227,10 +236,11 @@ export interface FileRoutesById {
   '/app/tarefas': typeof AppTarefasRoute
   '/app/': typeof AppIndexRoute
   '/app/comercial/clientes': typeof AppComercialClientesRoute
-  '/app/comercial/contratos': typeof AppComercialContratosRoute
+  '/app/comercial/contratos': typeof AppComercialContratosRouteWithChildren
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
   '/app/comercial/': typeof AppComercialIndexRoute
+  '/app/comercial/contratos/novo': typeof AppComercialContratosNovoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -259,6 +269,7 @@ export interface FileRouteTypes {
     | '/app/comercial/templates'
     | '/app/frota/cartoes'
     | '/app/comercial/'
+    | '/app/comercial/contratos/novo'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -283,6 +294,7 @@ export interface FileRouteTypes {
     | '/app/comercial/templates'
     | '/app/frota/cartoes'
     | '/app/comercial'
+    | '/app/comercial/contratos/novo'
   id:
     | '__root__'
     | '/'
@@ -309,6 +321,7 @@ export interface FileRouteTypes {
     | '/app/comercial/templates'
     | '/app/frota/cartoes'
     | '/app/comercial/'
+    | '/app/comercial/contratos/novo'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -489,19 +502,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppComercialClientesRouteImport
       parentRoute: typeof AppComercialRoute
     }
+    '/app/comercial/contratos/novo': {
+      id: '/app/comercial/contratos/novo'
+      path: '/novo'
+      fullPath: '/app/comercial/contratos/novo'
+      preLoaderRoute: typeof AppComercialContratosNovoRouteImport
+      parentRoute: typeof AppComercialContratosRoute
+    }
   }
 }
 
+interface AppComercialContratosRouteChildren {
+  AppComercialContratosNovoRoute: typeof AppComercialContratosNovoRoute
+}
+
+const AppComercialContratosRouteChildren: AppComercialContratosRouteChildren = {
+  AppComercialContratosNovoRoute: AppComercialContratosNovoRoute,
+}
+
+const AppComercialContratosRouteWithChildren =
+  AppComercialContratosRoute._addFileChildren(
+    AppComercialContratosRouteChildren,
+  )
+
 interface AppComercialRouteChildren {
   AppComercialClientesRoute: typeof AppComercialClientesRoute
-  AppComercialContratosRoute: typeof AppComercialContratosRoute
+  AppComercialContratosRoute: typeof AppComercialContratosRouteWithChildren
   AppComercialTemplatesRoute: typeof AppComercialTemplatesRoute
   AppComercialIndexRoute: typeof AppComercialIndexRoute
 }
 
 const AppComercialRouteChildren: AppComercialRouteChildren = {
   AppComercialClientesRoute: AppComercialClientesRoute,
-  AppComercialContratosRoute: AppComercialContratosRoute,
+  AppComercialContratosRoute: AppComercialContratosRouteWithChildren,
   AppComercialTemplatesRoute: AppComercialTemplatesRoute,
   AppComercialIndexRoute: AppComercialIndexRoute,
 }
