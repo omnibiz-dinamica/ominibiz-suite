@@ -53,16 +53,23 @@ function SignedImg({ path, className }: { path: string | null; className?: strin
 }
 
 function FrotaPage() {
+  // IMPORTANT: keep this component hook-free above the conditional return.
+  // Putting hooks after `if (...) return <Outlet />` violates the Rules of
+  // Hooks and crashes when navigating between /app/frota and child routes.
+  const childMatches = useChildMatches();
+  if (childMatches.length > 0) return <Outlet />;
+  return <FrotaIndex />;
+}
+
+function FrotaIndex() {
   const { user, currentCompanyId, isManager, effectiveRole } = useAuth();
   const qc = useQueryClient();
   const isEmployee = effectiveRole === "employee";
-
-  const childMatches = useChildMatches();
-  if (childMatches.length > 0) return <Outlet />;
+  const ready = !!currentCompanyId && !!user;
 
   const { data: vehicles = [] } = useQuery({
     queryKey: ["fleet-vehicles", currentCompanyId, effectiveRole],
-    enabled: !!currentCompanyId,
+    enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase.from("vehicles").select("*")
         .eq("company_id", currentCompanyId!).order("plate");
@@ -73,7 +80,7 @@ function FrotaPage() {
 
   const { data: assignments = [] } = useQuery({
     queryKey: ["fleet-assignments", currentCompanyId],
-    enabled: !!currentCompanyId,
+    enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase.from("vehicle_assignments").select("*")
         .eq("company_id", currentCompanyId!);
@@ -84,7 +91,7 @@ function FrotaPage() {
 
   const { data: cards = [] } = useQuery({
     queryKey: ["fleet-cards", currentCompanyId],
-    enabled: !!currentCompanyId,
+    enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase.from("fuel_cards").select("*")
         .eq("company_id", currentCompanyId!).order("created_at", { ascending: false });
@@ -95,7 +102,7 @@ function FrotaPage() {
 
   const { data: cardVehicles = [] } = useQuery({
     queryKey: ["fleet-card-vehicles", currentCompanyId],
-    enabled: !!currentCompanyId,
+    enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase.from("fuel_card_vehicles").select("*")
         .eq("company_id", currentCompanyId!);
@@ -106,7 +113,7 @@ function FrotaPage() {
 
   const { data: cardUsers = [] } = useQuery({
     queryKey: ["fleet-card-users", currentCompanyId],
-    enabled: !!currentCompanyId,
+    enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase.from("fuel_card_users").select("*")
         .eq("company_id", currentCompanyId!);
@@ -117,7 +124,7 @@ function FrotaPage() {
 
   const { data: records = [] } = useQuery({
     queryKey: ["fleet-records", currentCompanyId, effectiveRole],
-    enabled: !!currentCompanyId,
+    enabled: ready,
     queryFn: async () => {
       let q = supabase.from("fuel_records").select("*")
         .eq("company_id", currentCompanyId!).order("recorded_at", { ascending: false }).limit(100);
@@ -144,7 +151,7 @@ function FrotaPage() {
 
   const { data: companyMembers = [] } = useQuery({
     queryKey: ["fleet-members", currentCompanyId],
-    enabled: !!currentCompanyId && isManager,
+    enabled: ready && isManager,
     queryFn: async () => {
       const { data, error } = await supabase.from("user_roles").select("user_id")
         .eq("company_id", currentCompanyId!);
@@ -161,6 +168,10 @@ function FrotaPage() {
     [vehicles, assignments, user?.id],
   );
   const driverVehicles = isManager ? vehicles : myVehicles;
+
+  if (!ready) {
+    return <p className="text-sm text-muted-foreground">Carregando…</p>;
+  }
 
   return (
     <div className="space-y-6">
