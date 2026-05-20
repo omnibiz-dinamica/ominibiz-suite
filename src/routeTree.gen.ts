@@ -30,6 +30,7 @@ import { Route as AppAssistenteRouteImport } from './routes/app.assistente'
 import { Route as AppAdminRouteImport } from './routes/app.admin'
 import { Route as AppComercialIndexRouteImport } from './routes/app.comercial.index'
 import { Route as AppFrotaCartoesRouteImport } from './routes/app.frota.cartoes'
+import { Route as AppComercialTemplatesRouteImport } from './routes/app.comercial.templates'
 import { Route as AppComercialClientesRouteImport } from './routes/app.comercial.clientes'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -137,6 +138,11 @@ const AppFrotaCartoesRoute = AppFrotaCartoesRouteImport.update({
   path: '/cartoes',
   getParentRoute: () => AppFrotaRoute,
 } as any)
+const AppComercialTemplatesRoute = AppComercialTemplatesRouteImport.update({
+  id: '/templates',
+  path: '/templates',
+  getParentRoute: () => AppComercialRoute,
+} as any)
 const AppComercialClientesRoute = AppComercialClientesRouteImport.update({
   id: '/clientes',
   path: '/clientes',
@@ -164,6 +170,7 @@ export interface FileRoutesByFullPath {
   '/app/tarefas': typeof AppTarefasRoute
   '/app/': typeof AppIndexRoute
   '/app/comercial/clientes': typeof AppComercialClientesRoute
+  '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
   '/app/comercial/': typeof AppComercialIndexRoute
 }
@@ -186,6 +193,7 @@ export interface FileRoutesByTo {
   '/app/tarefas': typeof AppTarefasRoute
   '/app': typeof AppIndexRoute
   '/app/comercial/clientes': typeof AppComercialClientesRoute
+  '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
   '/app/comercial': typeof AppComercialIndexRoute
 }
@@ -211,6 +219,7 @@ export interface FileRoutesById {
   '/app/tarefas': typeof AppTarefasRoute
   '/app/': typeof AppIndexRoute
   '/app/comercial/clientes': typeof AppComercialClientesRoute
+  '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
   '/app/comercial/': typeof AppComercialIndexRoute
 }
@@ -237,6 +246,7 @@ export interface FileRouteTypes {
     | '/app/tarefas'
     | '/app/'
     | '/app/comercial/clientes'
+    | '/app/comercial/templates'
     | '/app/frota/cartoes'
     | '/app/comercial/'
   fileRoutesByTo: FileRoutesByTo
@@ -259,6 +269,7 @@ export interface FileRouteTypes {
     | '/app/tarefas'
     | '/app'
     | '/app/comercial/clientes'
+    | '/app/comercial/templates'
     | '/app/frota/cartoes'
     | '/app/comercial'
   id:
@@ -283,6 +294,7 @@ export interface FileRouteTypes {
     | '/app/tarefas'
     | '/app/'
     | '/app/comercial/clientes'
+    | '/app/comercial/templates'
     | '/app/frota/cartoes'
     | '/app/comercial/'
   fileRoutesById: FileRoutesById
@@ -444,6 +456,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppFrotaCartoesRouteImport
       parentRoute: typeof AppFrotaRoute
     }
+    '/app/comercial/templates': {
+      id: '/app/comercial/templates'
+      path: '/templates'
+      fullPath: '/app/comercial/templates'
+      preLoaderRoute: typeof AppComercialTemplatesRouteImport
+      parentRoute: typeof AppComercialRoute
+    }
     '/app/comercial/clientes': {
       id: '/app/comercial/clientes'
       path: '/clientes'
@@ -456,11 +475,13 @@ declare module '@tanstack/react-router' {
 
 interface AppComercialRouteChildren {
   AppComercialClientesRoute: typeof AppComercialClientesRoute
+  AppComercialTemplatesRoute: typeof AppComercialTemplatesRoute
   AppComercialIndexRoute: typeof AppComercialIndexRoute
 }
 
 const AppComercialRouteChildren: AppComercialRouteChildren = {
   AppComercialClientesRoute: AppComercialClientesRoute,
+  AppComercialTemplatesRoute: AppComercialTemplatesRoute,
   AppComercialIndexRoute: AppComercialIndexRoute,
 }
 
