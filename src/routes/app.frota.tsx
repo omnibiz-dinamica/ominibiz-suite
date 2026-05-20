@@ -8,7 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Car, Fuel, CreditCard, Plus, History, X, Pencil, Power, Trash2 } from "lucide-react";
-import { VEHICLE_BRANDS, VEHICLE_KIND_LABELS, VEHICLE_KINDS } from "@/lib/vehicle-brands";
+import {
+  VEHICLE_BRANDS,
+  VEHICLE_KIND_LABELS,
+  VEHICLE_KINDS,
+  mergeCatalog,
+  OTHER_SENTINEL,
+  type CatalogRow,
+} from "@/lib/vehicle-brands";
 
 export const Route = createFileRoute("/app/frota")({ component: FrotaPage });
 
@@ -135,6 +142,21 @@ function FrotaIndex() {
     },
   });
 
+  const { data: catalog = [] } = useQuery({
+    queryKey: ["fleet-catalog", currentCompanyId],
+    enabled: ready,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("vehicle_catalog")
+        .select("id, company_id, kind, brand, model")
+        .or(`company_id.is.null,company_id.eq.${currentCompanyId}`);
+      if (error) throw error;
+      return (data ?? []) as CatalogRow[];
+    },
+  });
+
+  const brandsByKind = useMemo(() => mergeCatalog(catalog), [catalog]);
+
   const memberIds = useMemo(
     () => Array.from(new Set(assignments.map((a) => a.user_id).concat(records.map((r) => r.driver_id)))),
     [assignments, records],
@@ -200,9 +222,11 @@ function FrotaIndex() {
           assignments={assignments}
           members={companyMembers}
           companyId={currentCompanyId!}
+          brandsByKind={brandsByKind}
           onChange={() => {
             qc.invalidateQueries({ queryKey: ["fleet-vehicles"] });
             qc.invalidateQueries({ queryKey: ["fleet-assignments"] });
+            qc.invalidateQueries({ queryKey: ["fleet-catalog"] });
           }}
         />
       )}
@@ -301,10 +325,12 @@ function VehicleCard({ v }: { v: Vehicle }) {
 }
 
 function VehicleManager({
-  vehicles, assignments, members, companyId, onChange,
+  vehicles, assignments, members, companyId, brandsByKind, onChange,
 }: {
   vehicles: Vehicle[]; assignments: Assignment[];
-  members: { id: string; name: string }[]; companyId: string; onChange: () => void;
+  members: { id: string; name: string }[]; companyId: string;
+  brandsByKind: Record<string, Record<string, string[]>>;
+  onChange: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [plate, setPlate] = useState("");
@@ -315,8 +341,7 @@ function VehicleManager({
   const [km, setKm] = useState<string>("0");
   const [fuelTypeV, setFuelTypeV] = useState("flex");
 
-  const brandsForKind = VEHICLE_BRANDS[kind] ?? {};
-  const modelsForBrand = brand ? brandsForKind[brand] ?? [] : [];
+  const brandsForKind = brandsByKind[kind] ?? {};
 
   useEffect(() => { setBrand(""); setModel(""); }, [kind]);
   useEffect(() => { setModel(""); }, [brand]);
@@ -393,22 +418,16 @@ function VehicleManager({
                 <option key={x} value={x}>{x}</option>)}
             </select>
           </div>
-          <div>
-            <Label>Marca</Label>
-            <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-              value={brand} onChange={(e) => setBrand(e.target.value)}>
-              <option value="">Selecionar…</option>
-              {Object.keys(brandsForKind).map((b) => <option key={b} value={b}>{b}</option>)}
-            </select>
-          </div>
-          <div>
-            <Label>Modelo</Label>
-            <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-              value={model} onChange={(e) => setModel(e.target.value)} disabled={!brand}>
-              <option value="">{brand ? "Selecionar…" : "Escolha marca antes"}</option>
-              {modelsForBrand.map((m) => <option key={m} value={m}>{m}</option>)}
-            </select>
-          </div>
+          <BrandModelPicker
+            companyId={companyId}
+            kind={kind}
+            brandsForKind={brandsForKind}
+            brand={brand}
+            model={model}
+            onBrandChange={setBrand}
+            onModelChange={setModel}
+            onCatalogChanged={onChange}
+          />
           <div><Label>Ano</Label><Input type="number" value={year} onChange={(e) => setYear(e.target.value)} /></div>
           <div><Label>KM atual</Label><Input type="number" value={km} onChange={(e) => setKm(e.target.value)} /></div>
           <div className="md:col-span-3 flex justify-end">
@@ -431,6 +450,8 @@ function VehicleManager({
                 linked={linked}
                 available={available}
                 members={members}
+                companyId={companyId}
+                brandsByKind={brandsByKind}
                 onAssign={(uid) => assign.mutate({ vehicleId: v.id, userId: uid })}
                 onUnassign={(id) => unassign.mutate(id)}
                 onChanged={onChange}
@@ -444,12 +465,14 @@ function VehicleManager({
 }
 
 function VehicleRow({
-  v, linked, available, members, onAssign, onUnassign, onChanged,
+  v, linked, available, members, companyId, brandsByKind, onAssign, onUnassign, onChanged,
 }: {
   v: Vehicle;
   linked: Assignment[];
   available: { id: string; name: string }[];
   members: { id: string; name: string }[];
+  companyId: string;
+  brandsByKind: Record<string, Record<string, string[]>>;
   onAssign: (userId: string) => void;
   onUnassign: (assignmentId: string) => void;
   onChanged: () => void;
@@ -464,8 +487,7 @@ function VehicleRow({
   const [fuelTypeV, setFuelTypeV] = useState(v.fuel_type);
   const [status, setStatus] = useState(v.status);
 
-  const brandsForKind = VEHICLE_BRANDS[kind] ?? {};
-  const modelsForBrand = brand ? brandsForKind[brand] ?? [] : [];
+  const brandsForKind = brandsByKind[kind] ?? {};
 
   const resetForm = () => {
     setPlate(v.plate); setKind(v.kind); setBrand(v.brand ?? "");
@@ -584,24 +606,16 @@ function VehicleRow({
                 <option key={x} value={x}>{x}</option>)}
             </select>
           </div>
-          <div>
-            <Label>Marca</Label>
-            <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-              value={brand} onChange={(e) => { setBrand(e.target.value); setModel(""); }}>
-              <option value="">Selecionar…</option>
-              {Object.keys(brandsForKind).map((b) => <option key={b} value={b}>{b}</option>)}
-              {brand && !brandsForKind[brand] && <option value={brand}>{brand}</option>}
-            </select>
-          </div>
-          <div>
-            <Label>Modelo</Label>
-            <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-              value={model} onChange={(e) => setModel(e.target.value)} disabled={!brand}>
-              <option value="">{brand ? "Selecionar…" : "Escolha marca antes"}</option>
-              {modelsForBrand.map((m) => <option key={m} value={m}>{m}</option>)}
-              {model && !modelsForBrand.includes(model) && <option value={model}>{model}</option>}
-            </select>
-          </div>
+          <BrandModelPicker
+            companyId={companyId}
+            kind={kind}
+            brandsForKind={brandsForKind}
+            brand={brand}
+            model={model}
+            onBrandChange={(b) => { setBrand(b); setModel(""); }}
+            onModelChange={setModel}
+            onCatalogChanged={onChanged}
+          />
           <div><Label>Ano</Label><Input type="number" value={year} onChange={(e) => setYear(e.target.value)} /></div>
           <div><Label>KM atual</Label><Input type="number" value={km} onChange={(e) => setKm(e.target.value)} /></div>
           <div>
@@ -794,5 +808,117 @@ function FuelForm({
         </div>
       )}
     </section>
+  );
+}
+
+function BrandModelPicker({
+  companyId, kind, brandsForKind, brand, model,
+  onBrandChange, onModelChange, onCatalogChanged,
+}: {
+  companyId: string;
+  kind: string;
+  brandsForKind: Record<string, string[]>;
+  brand: string;
+  model: string;
+  onBrandChange: (b: string) => void;
+  onModelChange: (m: string) => void;
+  onCatalogChanged: () => void;
+}) {
+  const [newBrand, setNewBrand] = useState("");
+  const [newModel, setNewModel] = useState("");
+  const [addingBrand, setAddingBrand] = useState(false);
+  const [addingModel, setAddingModel] = useState(false);
+
+  const modelsForBrand = brand ? brandsForKind[brand] ?? [] : [];
+
+  const addBrand = useMutation({
+    mutationFn: async () => {
+      const b = newBrand.trim();
+      if (!b) throw new Error("Informe a marca");
+      const { error } = await supabase.from("vehicle_catalog").insert({
+        company_id: companyId, kind: kind as any, brand: b, model: null,
+      });
+      if (error && !String(error.message).includes("duplicate")) throw error;
+    },
+    onSuccess: () => {
+      const b = newBrand.trim();
+      toast.success("Marca adicionada");
+      onBrandChange(b);
+      setNewBrand(""); setAddingBrand(false);
+      onCatalogChanged();
+    },
+    onError: (e: any) => toast.error(e.message ?? "Falha"),
+  });
+
+  const addModel = useMutation({
+    mutationFn: async () => {
+      const m = newModel.trim();
+      if (!brand) throw new Error("Selecione a marca antes");
+      if (!m) throw new Error("Informe o modelo");
+      const { error } = await supabase.from("vehicle_catalog").insert({
+        company_id: companyId, kind: kind as any, brand, model: m,
+      });
+      if (error && !String(error.message).includes("duplicate")) throw error;
+    },
+    onSuccess: () => {
+      const m = newModel.trim();
+      toast.success("Modelo adicionado");
+      onModelChange(m);
+      setNewModel(""); setAddingModel(false);
+      onCatalogChanged();
+    },
+    onError: (e: any) => toast.error(e.message ?? "Falha"),
+  });
+
+  const brandOptions = Object.keys(brandsForKind).sort((a, b) => a.localeCompare(b));
+
+  return (
+    <>
+      <div>
+        <Label>Marca</Label>
+        {addingBrand ? (
+          <div className="flex gap-2">
+            <Input value={newBrand} onChange={(e) => setNewBrand(e.target.value)} placeholder="Nova marca" autoFocus />
+            <Button size="sm" onClick={() => addBrand.mutate()} disabled={addBrand.isPending}>Salvar</Button>
+            <Button size="sm" variant="ghost" onClick={() => { setAddingBrand(false); setNewBrand(""); }}>×</Button>
+          </div>
+        ) : (
+          <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+            value={brand}
+            onChange={(e) => {
+              if (e.target.value === OTHER_SENTINEL) { setAddingBrand(true); return; }
+              onBrandChange(e.target.value);
+            }}>
+            <option value="">Selecionar…</option>
+            {brandOptions.map((b) => <option key={b} value={b}>{b}</option>)}
+            {brand && !brandsForKind[brand] && <option value={brand}>{brand}</option>}
+            <option value={OTHER_SENTINEL}>+ Outra marca…</option>
+          </select>
+        )}
+      </div>
+      <div>
+        <Label>Modelo</Label>
+        {addingModel ? (
+          <div className="flex gap-2">
+            <Input value={newModel} onChange={(e) => setNewModel(e.target.value)} placeholder="Novo modelo" autoFocus />
+            <Button size="sm" onClick={() => addModel.mutate()} disabled={addModel.isPending}>Salvar</Button>
+            <Button size="sm" variant="ghost" onClick={() => { setAddingModel(false); setNewModel(""); }}>×</Button>
+          </div>
+        ) : (
+          <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+            value={model}
+            disabled={!brand}
+            onChange={(e) => {
+              if (e.target.value === OTHER_SENTINEL) { setAddingModel(true); return; }
+              onModelChange(e.target.value);
+            }}>
+            <option value="">{brand ? "Selecionar…" : "Escolha marca antes"}</option>
+            {modelsForBrand.map((m) => <option key={m} value={m}>{m}</option>)}
+            {model && !modelsForBrand.includes(model) && <option value={model}>{model}</option>}
+            {brand && <option value={OTHER_SENTINEL}>+ Outro modelo…</option>}
+          </select>
+        )}
+      </div>
+    </>
   );
 }
