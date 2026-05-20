@@ -50,7 +50,7 @@ function FeriasPage() {
 
   const { data: myProfile } = useQuery({
     queryKey: ["my-op-profile", user?.id],
-    enabled: !!user?.id && isEmployee,
+    enabled: !!user?.id,
     queryFn: async () => {
       const { data } = await supabase
         .from("profiles")
