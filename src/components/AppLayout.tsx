@@ -21,7 +21,6 @@ import {
   ListChecks,
   Plane,
   Car,
-  Briefcase as BriefcaseIcon,
   FileSignature,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
