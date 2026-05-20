@@ -36,6 +36,11 @@ function ContractsPage() {
   const childMatches = useChildMatches();
   if (childMatches.length > 0) return <Outlet />;
 
+  return <ContractsListPage />;
+}
+
+function ContractsListPage() {
+
   const qc = useQueryClient();
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["contracts-list"],
