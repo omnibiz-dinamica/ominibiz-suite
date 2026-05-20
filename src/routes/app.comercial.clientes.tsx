@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { COMMERCIAL_STATUS_LABEL } from "@/lib/contract-vars";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/app/comercial/clientes")({
@@ -17,22 +19,36 @@ export const Route = createFileRoute("/app/comercial/clientes")({
 type ClientRow = {
   id: string;
   company_name: string;
+  legal_name: string | null;
   nif: string | null;
+  tax_id_kind: string | null;
   email: string | null;
   phone: string | null;
   contact_name: string | null;
   address: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  website: string | null;
+  status: string;
   notes: string | null;
 };
 
 const empty = {
   id: "" as string,
   company_name: "",
+  legal_name: "",
   nif: "",
+  tax_id_kind: "nif",
   email: "",
   phone: "",
   contact_name: "",
   address: "",
+  city: "",
+  state: "",
+  country: "PT",
+  website: "",
+  status: "lead",
   notes: "",
 };
 
@@ -58,11 +74,18 @@ function ClientsPage() {
       if (!form.company_name.trim()) throw new Error("Nome obrigatório");
       const payload = {
         company_name: form.company_name.trim(),
+        legal_name: form.legal_name || null,
         nif: form.nif || null,
+        tax_id_kind: form.tax_id_kind || null,
         email: form.email || null,
         phone: form.phone || null,
         contact_name: form.contact_name || null,
         address: form.address || null,
+        city: form.city || null,
+        state: form.state || null,
+        country: form.country || null,
+        website: form.website || null,
+        status: form.status as never,
         notes: form.notes || null,
       };
       if (form.id) {
@@ -99,11 +122,18 @@ function ClientsPage() {
     setForm({
       id: c.id,
       company_name: c.company_name,
+      legal_name: c.legal_name ?? "",
       nif: c.nif ?? "",
+      tax_id_kind: c.tax_id_kind ?? "nif",
       email: c.email ?? "",
       phone: c.phone ?? "",
       contact_name: c.contact_name ?? "",
       address: c.address ?? "",
+      city: c.city ?? "",
+      state: c.state ?? "",
+      country: c.country ?? "PT",
+      website: c.website ?? "",
+      status: c.status ?? "lead",
       notes: c.notes ?? "",
     });
     setOpen(true);
@@ -117,7 +147,7 @@ function ClientsPage() {
           <DialogTrigger asChild>
             <Button onClick={openNew}><Plus className="mr-2 h-4 w-4" /> Novo cliente</Button>
           </DialogTrigger>
-          <DialogContent className="max-w-xl">
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{form.id ? "Editar cliente" : "Novo cliente"}</DialogTitle>
               <DialogDescription>
@@ -125,12 +155,38 @@ function ClientsPage() {
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="md:col-span-2"><Label>Razão social *</Label><Input value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} /></div>
-              <div><Label>NIF</Label><Input value={form.nif} onChange={(e) => setForm({ ...form, nif: e.target.value })} /></div>
+              <div><Label>Nome comercial *</Label><Input value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} /></div>
+              <div><Label>Razão social</Label><Input value={form.legal_name} onChange={(e) => setForm({ ...form, legal_name: e.target.value })} /></div>
+              <div><Label>Tipo de documento</Label>
+                <Select value={form.tax_id_kind} onValueChange={(v) => setForm({ ...form, tax_id_kind: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="nif">NIF</SelectItem>
+                    <SelectItem value="cnpj">CNPJ</SelectItem>
+                    <SelectItem value="cpf">CPF</SelectItem>
+                    <SelectItem value="other">Outro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div><Label>Número do documento</Label><Input value={form.nif} onChange={(e) => setForm({ ...form, nif: e.target.value })} /></div>
+              <div><Label>Status</Label>
+                <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(COMMERCIAL_STATUS_LABEL).map(([k, v]) => (
+                      <SelectItem key={k} value={k}>{v}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div><Label>Contacto</Label><Input value={form.contact_name} onChange={(e) => setForm({ ...form, contact_name: e.target.value })} /></div>
               <div><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
               <div><Label>Telefone</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
+              <div><Label>Website</Label><Input value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} placeholder="https://..." /></div>
               <div className="md:col-span-2"><Label>Endereço</Label><Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>
+              <div><Label>Cidade</Label><Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} /></div>
+              <div><Label>Estado / Distrito</Label><Input value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} /></div>
+              <div><Label>País</Label><Input value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} /></div>
               <div className="md:col-span-2"><Label>Notas</Label><Textarea rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
             </div>
             <DialogFooter>
@@ -151,7 +207,12 @@ function ClientsPage() {
             {clients.map((c) => (
               <li key={c.id} className="flex items-center justify-between gap-3 p-4">
                 <div>
-                  <div className="font-medium">{c.company_name}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{c.company_name}</span>
+                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                      {COMMERCIAL_STATUS_LABEL[c.status] ?? c.status}
+                    </span>
+                  </div>
                   <div className="text-xs text-muted-foreground">
                     {c.nif ? `NIF ${c.nif} · ` : ""}{c.email ?? "—"} · {c.phone ?? "—"}
                   </div>
