@@ -4,13 +4,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { ClipboardList, CheckCircle2, Clock, AlertTriangle, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { EmployeeDashboard } from "@/components/dashboards/EmployeeDashboard";
+import { SuperAdminDashboard } from "@/components/dashboards/SuperAdminDashboard";
 
 export const Route = createFileRoute("/app/")({
   component: Dashboard,
 });
 
 function Dashboard() {
-  const { user, isManager, isSuperAdmin, currentCompanyId, initialized } = useAuth();
+  const { user, isManager, isSuperAdmin, currentCompanyId, initialized, effectiveRole } =
+    useAuth();
+
+  if (effectiveRole === "super_admin") return <SuperAdminDashboard />;
+  if (effectiveRole === "employee") return <EmployeeDashboard />;
 
   const { data: tasks } = useQuery({
     queryKey: ["dashboard-tasks", currentCompanyId, user?.id, isManager],
