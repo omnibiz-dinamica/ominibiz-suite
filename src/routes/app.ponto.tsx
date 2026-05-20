@@ -298,7 +298,7 @@ function ActiveTaskCard({
   entry,
   task,
   clientName,
-  liveMin,
+  liveSec,
   state,
   onPause,
   onResume,
@@ -310,7 +310,7 @@ function ActiveTaskCard({
   entry: TimeEntryRow;
   task: TaskRow;
   clientName?: string;
-  liveMin: number;
+  liveSec: number;
   state: "aberto" | "pausado" | "encerrado";
   onPause: () => void;
   onResume: () => void;
@@ -352,7 +352,7 @@ function ActiveTaskCard({
         <div className="flex flex-col items-center justify-center rounded-xl bg-background/60 py-6">
           <div className="text-[11px] uppercase tracking-widest text-muted-foreground">Tempo efetivo</div>
           <div className="font-display text-5xl font-semibold tabular-nums sm:text-6xl">
-            {formatDuration(liveMin)}
+            {formatHMS(liveSec)}
           </div>
           {state === "pausado" && (
             <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-warning/15 px-2.5 py-1 text-xs font-medium text-warning-foreground">
