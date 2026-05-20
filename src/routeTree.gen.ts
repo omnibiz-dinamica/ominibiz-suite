@@ -27,6 +27,7 @@ import { Route as AppEmpresaRouteImport } from './routes/app.empresa'
 import { Route as AppClientesRouteImport } from './routes/app.clientes'
 import { Route as AppAssistenteRouteImport } from './routes/app.assistente'
 import { Route as AppAdminRouteImport } from './routes/app.admin'
+import { Route as AppFrotaCartoesRouteImport } from './routes/app.frota.cartoes'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
@@ -118,6 +119,11 @@ const AppAdminRoute = AppAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AppRoute,
 } as any)
+const AppFrotaCartoesRoute = AppFrotaCartoesRouteImport.update({
+  id: '/cartoes',
+  path: '/cartoes',
+  getParentRoute: () => AppFrotaRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -131,13 +137,14 @@ export interface FileRoutesByFullPath {
   '/app/empresa': typeof AppEmpresaRoute
   '/app/equipe': typeof AppEquipeRoute
   '/app/ferias': typeof AppFeriasRoute
-  '/app/frota': typeof AppFrotaRoute
+  '/app/frota': typeof AppFrotaRouteWithChildren
   '/app/notas': typeof AppNotasRoute
   '/app/notificacoes': typeof AppNotificacoesRoute
   '/app/perfil': typeof AppPerfilRoute
   '/app/ponto': typeof AppPontoRoute
   '/app/tarefas': typeof AppTarefasRoute
   '/app/': typeof AppIndexRoute
+  '/app/frota/cartoes': typeof AppFrotaCartoesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -150,13 +157,14 @@ export interface FileRoutesByTo {
   '/app/empresa': typeof AppEmpresaRoute
   '/app/equipe': typeof AppEquipeRoute
   '/app/ferias': typeof AppFeriasRoute
-  '/app/frota': typeof AppFrotaRoute
+  '/app/frota': typeof AppFrotaRouteWithChildren
   '/app/notas': typeof AppNotasRoute
   '/app/notificacoes': typeof AppNotificacoesRoute
   '/app/perfil': typeof AppPerfilRoute
   '/app/ponto': typeof AppPontoRoute
   '/app/tarefas': typeof AppTarefasRoute
   '/app': typeof AppIndexRoute
+  '/app/frota/cartoes': typeof AppFrotaCartoesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -171,13 +179,14 @@ export interface FileRoutesById {
   '/app/empresa': typeof AppEmpresaRoute
   '/app/equipe': typeof AppEquipeRoute
   '/app/ferias': typeof AppFeriasRoute
-  '/app/frota': typeof AppFrotaRoute
+  '/app/frota': typeof AppFrotaRouteWithChildren
   '/app/notas': typeof AppNotasRoute
   '/app/notificacoes': typeof AppNotificacoesRoute
   '/app/perfil': typeof AppPerfilRoute
   '/app/ponto': typeof AppPontoRoute
   '/app/tarefas': typeof AppTarefasRoute
   '/app/': typeof AppIndexRoute
+  '/app/frota/cartoes': typeof AppFrotaCartoesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -200,6 +209,7 @@ export interface FileRouteTypes {
     | '/app/ponto'
     | '/app/tarefas'
     | '/app/'
+    | '/app/frota/cartoes'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -219,6 +229,7 @@ export interface FileRouteTypes {
     | '/app/ponto'
     | '/app/tarefas'
     | '/app'
+    | '/app/frota/cartoes'
   id:
     | '__root__'
     | '/'
@@ -239,6 +250,7 @@ export interface FileRouteTypes {
     | '/app/ponto'
     | '/app/tarefas'
     | '/app/'
+    | '/app/frota/cartoes'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -377,8 +389,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/frota/cartoes': {
+      id: '/app/frota/cartoes'
+      path: '/cartoes'
+      fullPath: '/app/frota/cartoes'
+      preLoaderRoute: typeof AppFrotaCartoesRouteImport
+      parentRoute: typeof AppFrotaRoute
+    }
   }
 }
+
+interface AppFrotaRouteChildren {
+  AppFrotaCartoesRoute: typeof AppFrotaCartoesRoute
+}
+
+const AppFrotaRouteChildren: AppFrotaRouteChildren = {
+  AppFrotaCartoesRoute: AppFrotaCartoesRoute,
+}
+
+const AppFrotaRouteWithChildren = AppFrotaRoute._addFileChildren(
+  AppFrotaRouteChildren,
+)
 
 interface AppRouteChildren {
   AppAdminRoute: typeof AppAdminRoute
@@ -387,7 +418,7 @@ interface AppRouteChildren {
   AppEmpresaRoute: typeof AppEmpresaRoute
   AppEquipeRoute: typeof AppEquipeRoute
   AppFeriasRoute: typeof AppFeriasRoute
-  AppFrotaRoute: typeof AppFrotaRoute
+  AppFrotaRoute: typeof AppFrotaRouteWithChildren
   AppNotasRoute: typeof AppNotasRoute
   AppNotificacoesRoute: typeof AppNotificacoesRoute
   AppPerfilRoute: typeof AppPerfilRoute
@@ -403,7 +434,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppEmpresaRoute: AppEmpresaRoute,
   AppEquipeRoute: AppEquipeRoute,
   AppFeriasRoute: AppFeriasRoute,
-  AppFrotaRoute: AppFrotaRoute,
+  AppFrotaRoute: AppFrotaRouteWithChildren,
   AppNotasRoute: AppNotasRoute,
   AppNotificacoesRoute: AppNotificacoesRoute,
   AppPerfilRoute: AppPerfilRoute,
@@ -424,3 +455,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
