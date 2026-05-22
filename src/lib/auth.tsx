@@ -133,6 +133,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       log("auth event", { event, user: s?.user?.email ?? null });
       if (event === "INITIAL_SESSION") return;
+      // Token refresh / user metadata update: just refresh the session
+      // reference silently. Do NOT reload the auth context (avoids flashing
+      // loading=true every hour and prevents transient RPC failures from
+      // appearing as a logout to the user).
+      if (event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
+        setSession(s);
+        return;
+      }
       void applySession(s, `event:${event}`);
     });
     log("listener registered");
@@ -144,9 +152,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (active) void applySession(data.session, "getSession");
     });
 
+    // 3) Revalidate session when the tab becomes visible again (mobile/PWA).
+    // getSession() triggers an automatic refresh if the access token is near
+    // expiry, keeping daily operational use (Folha de Ponto) seamless.
+    const onVisibility = () => {
+      if (typeof document === "undefined") return;
+      if (document.visibilityState !== "visible") return;
+      supabase.auth.getSession().then(({ data }) => {
+        if (!active) return;
+        // If we somehow lost the session, reflect it; otherwise just keep ref fresh.
+        if (!data.session) {
+          void applySession(null, "visibility:no-session");
+        } else {
+          setSession(data.session);
+        }
+      });
+    };
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onVisibility);
+      window.addEventListener("focus", onVisibility);
+    }
+
     return () => {
       active = false;
       sub.subscription.unsubscribe();
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", onVisibility);
+        window.removeEventListener("focus", onVisibility);
+      }
     };
   }, []);
 
