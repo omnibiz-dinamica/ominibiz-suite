@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Pause, Play, Square, Coffee, Clock as ClockIcon, AlertCircle, Flame, Plus, Building2, ShieldAlert, Send, LogIn, LogOut, Hand, Zap } from "lucide-react";
+import { TaskDocuments } from "@/components/tasks/TaskDocuments";
 import {
   Dialog,
   DialogContent,
