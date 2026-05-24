@@ -82,6 +82,20 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "client_assignees_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_assignees_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       clients: {
@@ -142,7 +156,15 @@ export type Database = {
           status?: Database["public"]["Enums"]["client_status"]
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "clients_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       commercial_client_contacts: {
         Row: {
@@ -668,7 +690,15 @@ export type Database = {
           scope?: string
           scope_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "financial_audit_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       fuel_card_users: {
         Row: {
@@ -995,6 +1025,13 @@ export type Database = {
             referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       profiles: {
@@ -1108,7 +1145,22 @@ export type Database = {
           title?: string
           uploaded_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "task_documents_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_documents_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       task_recurrences: {
         Row: {
@@ -1284,10 +1336,31 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "tasks_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1365,6 +1438,13 @@ export type Database = {
             referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "time_entries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       time_entries_audit: {
@@ -1398,7 +1478,29 @@ export type Database = {
           reason?: string
           time_entry_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "time_entries_audit_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_audit_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_audit_time_entry_id_fkey"
+            columns: ["time_entry_id"]
+            isOneToOne: false
+            referencedRelation: "time_entries"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       time_entry_valuations: {
         Row: {
@@ -1461,7 +1563,36 @@ export type Database = {
           time_entry_id?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "time_entry_valuations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entry_valuations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entry_valuations_time_entry_id_fkey"
+            columns: ["time_entry_id"]
+            isOneToOne: true
+            referencedRelation: "time_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entry_valuations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -1491,6 +1622,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
