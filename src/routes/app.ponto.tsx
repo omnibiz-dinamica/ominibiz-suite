@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Pause, Play, Square, Coffee, Clock as ClockIcon, AlertCircle, Flame, Plus, Building2, ShieldAlert, Send, LogIn, LogOut, Hand, Zap } from "lucide-react";
+import { TaskDocuments } from "@/components/tasks/TaskDocuments";
 import {
   Dialog,
   DialogContent,
@@ -514,6 +515,10 @@ function ActiveTaskCard({
           >
             <Square className="mr-2 h-5 w-5" /> Concluir tarefa
           </Button>
+        </div>
+
+        <div className="rounded-xl border border-border/60 bg-background/40 p-4">
+          <TaskDocuments taskId={task.id} companyId={task.company_id} canManage={false} />
         </div>
       </div>
     </section>
