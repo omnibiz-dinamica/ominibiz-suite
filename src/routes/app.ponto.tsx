@@ -573,10 +573,12 @@ function UpcomingTasks({
   // para dar contexto operacional imediato.
   // Prioriza tarefa pronta para iniciar; senão a primeira da fila.
   const nextStartable =
-    tasks.find((t) => t.status === "autorizado" || t.status === "pendente") ?? tasks[0];
+    tasks.find((t) => t.status === "autorizado" || t.status === "pendente" || t.status === "em_andamento") ?? tasks[0];
   const rest = tasks.filter((t) => t.id !== nextStartable.id);
   const nextIsStartable =
-    nextStartable.status === "autorizado" || nextStartable.status === "pendente";
+    nextStartable.status === "autorizado" ||
+    nextStartable.status === "pendente" ||
+    nextStartable.status === "em_andamento";
   const nextIsAbsent = nextStartable.status === "ausente";
   const nextStarting = starting && startingId === nextStartable.id;
   const nextRequesting = requestingAuth && requestingAuthId === nextStartable.id;
