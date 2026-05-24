@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,18 +10,23 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Play, Check, X, ShieldCheck, UserX, Clock, Pencil } from "lucide-react";
+import { Plus, Play, Check, X, ShieldCheck, UserX, Clock, Pencil, Repeat, UserCog } from "lucide-react";
 import {
   STATUS_LABELS,
   STATUS_TONE,
+  PUNCH_MODE_LABELS,
   type TaskAction,
   type TaskRow,
+  type PunchMode,
   ACTION_LABELS,
   availableActions,
   isVisuallyLate,
   sweepAbsent,
   transitionTask,
 } from "@/lib/tasks";
+import { RecurrenceForm, emptyRecurrence, type RecurrenceFormValue } from "@/components/tasks/RecurrenceForm";
+import { TaskDocuments } from "@/components/tasks/TaskDocuments";
+import { ReassignDialog } from "@/components/tasks/ReassignDialog";
 
 export const Route = createFileRoute("/app/tarefas")({
   component: TasksPage,
@@ -32,6 +37,7 @@ function TasksPage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<TaskRow | null>(null);
+  const [reassigning, setReassigning] = useState<TaskRow | null>(null);
 
   const { data: tasks, isLoading } = useQuery({
     queryKey: ["tasks", currentCompanyId, user?.id, isManager],
@@ -125,6 +131,10 @@ function TasksPage() {
           </p>
         </div>
         {isManager && currentCompanyId && (
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+              <Link to="/app/tarefas/recorrentes"><Repeat className="mr-2 h-4 w-4" /> Recorrências</Link>
+            </Button>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button><Plus className="mr-2 h-4 w-4" /> Nova tarefa</Button>
@@ -134,13 +144,15 @@ function TasksPage() {
               <TaskForm members={members ?? []} clients={clientsList ?? []} companyId={currentCompanyId} userId={user!.id} onDone={() => { setOpen(false); qc.invalidateQueries({ queryKey: ["tasks"] }); }} />
             </DialogContent>
           </Dialog>
+          </div>
         )}
       </div>
 
       <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Editar tarefa</DialogTitle></DialogHeader>
           {editing && (
+            <>
             <TaskForm
               initial={editing}
               members={members ?? []}
@@ -149,9 +161,21 @@ function TasksPage() {
               userId={user!.id}
               onDone={() => { setEditing(null); qc.invalidateQueries({ queryKey: ["tasks"] }); }}
             />
+              <div className="mt-6 border-t border-border pt-4">
+                <TaskDocuments taskId={editing.id} companyId={editing.company_id} canManage={isManager} />
+              </div>
+            </>
           )}
         </DialogContent>
       </Dialog>
+
+      <ReassignDialog
+        task={reassigning}
+        members={members ?? []}
+        open={!!reassigning}
+        onOpenChange={(v) => !v && setReassigning(null)}
+        onDone={() => qc.invalidateQueries({ queryKey: ["tasks"] })}
+      />
 
       {!currentCompanyId && isManager && (
         <div className="rounded-2xl border border-warning/40 bg-warning/10 p-4 text-sm text-warning-foreground">
@@ -195,9 +219,14 @@ function TasksPage() {
                 <div className="col-span-2 text-sm capitalize text-muted-foreground">{t.priority}</div>
                 <div className="col-span-3 flex justify-end gap-2">
                   {isManager && (
+                    <>
                     <Button size="sm" variant="ghost" title="Editar" onClick={() => setEditing(t)}>
                       <Pencil className="h-3 w-3" />
                     </Button>
+                      <Button size="sm" variant="ghost" title="Reatribuir" onClick={() => setReassigning(t)}>
+                        <UserCog className="h-3 w-3" />
+                      </Button>
+                    </>
                   )}
                   {actions.map((a) => (
                     <ActionButton
