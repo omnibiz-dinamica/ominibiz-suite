@@ -5,10 +5,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Pause, Play, Square, Coffee, Clock as ClockIcon, AlertCircle, Flame, Plus, Building2, ShieldAlert, Send } from "lucide-react";
+import { Pause, Play, Square, Coffee, Clock as ClockIcon, AlertCircle, Flame, Plus, Building2, ShieldAlert, Send, LogIn, LogOut, Hand, Zap } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   type TimeEntryRow,
   type TaskRow,
+  type PunchMode,
   punchPause,
   punchResume,
   punchState,
@@ -17,6 +25,9 @@ import {
   formatHMS,
   transitionTask,
   requestTaskAuthorization,
+  punchManualStart,
+  punchManualEnd,
+  PUNCH_MODE_LABELS,
   STATUS_LABELS,
   STATUS_TONE,
   isVisuallyLate,
