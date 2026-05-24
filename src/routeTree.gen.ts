@@ -31,7 +31,7 @@ import { Route as AppAssistenteRouteImport } from './routes/app.assistente'
 import { Route as AppAdminRouteImport } from './routes/app.admin'
 import { Route as AppComercialIndexRouteImport } from './routes/app.comercial.index'
 import { Route as AppTarefasRecorrentesRouteImport } from './routes/app.tarefas.recorrentes'
-import { Route as AppPontoGestaoRouteImport } from './routes/app.ponto.gestao'
+import { Route as AppPontoGestaoRouteImport } from './routes/app.ponto_.gestao'
 import { Route as AppFrotaCartoesRouteImport } from './routes/app.frota.cartoes'
 import { Route as AppComercialTemplatesRouteImport } from './routes/app.comercial.templates'
 import { Route as AppComercialContratosRouteImport } from './routes/app.comercial.contratos'
@@ -150,9 +150,9 @@ const AppTarefasRecorrentesRoute = AppTarefasRecorrentesRouteImport.update({
   getParentRoute: () => AppTarefasRoute,
 } as any)
 const AppPontoGestaoRoute = AppPontoGestaoRouteImport.update({
-  id: '/gestao',
-  path: '/gestao',
-  getParentRoute: () => AppPontoRoute,
+  id: '/ponto_/gestao',
+  path: '/ponto/gestao',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppFrotaCartoesRoute = AppFrotaCartoesRouteImport.update({
   id: '/cartoes',
@@ -203,7 +203,7 @@ export interface FileRoutesByFullPath {
   '/app/notas': typeof AppNotasRoute
   '/app/notificacoes': typeof AppNotificacoesRoute
   '/app/perfil': typeof AppPerfilRoute
-  '/app/ponto': typeof AppPontoRouteWithChildren
+  '/app/ponto': typeof AppPontoRoute
   '/app/tarefas': typeof AppTarefasRouteWithChildren
   '/sign/$token': typeof SignTokenRoute
   '/app/': typeof AppIndexRoute
@@ -232,7 +232,7 @@ export interface FileRoutesByTo {
   '/app/notas': typeof AppNotasRoute
   '/app/notificacoes': typeof AppNotificacoesRoute
   '/app/perfil': typeof AppPerfilRoute
-  '/app/ponto': typeof AppPontoRouteWithChildren
+  '/app/ponto': typeof AppPontoRoute
   '/app/tarefas': typeof AppTarefasRouteWithChildren
   '/sign/$token': typeof SignTokenRoute
   '/app': typeof AppIndexRoute
@@ -264,7 +264,7 @@ export interface FileRoutesById {
   '/app/notas': typeof AppNotasRoute
   '/app/notificacoes': typeof AppNotificacoesRoute
   '/app/perfil': typeof AppPerfilRoute
-  '/app/ponto': typeof AppPontoRouteWithChildren
+  '/app/ponto': typeof AppPontoRoute
   '/app/tarefas': typeof AppTarefasRouteWithChildren
   '/sign/$token': typeof SignTokenRoute
   '/app/': typeof AppIndexRoute
@@ -272,7 +272,7 @@ export interface FileRoutesById {
   '/app/comercial/contratos': typeof AppComercialContratosRouteWithChildren
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
-  '/app/ponto/gestao': typeof AppPontoGestaoRoute
+  '/app/ponto_/gestao': typeof AppPontoGestaoRoute
   '/app/tarefas/recorrentes': typeof AppTarefasRecorrentesRoute
   '/app/comercial/': typeof AppComercialIndexRoute
   '/app/comercial/contratos/$id': typeof AppComercialContratosIdRoute
@@ -365,7 +365,7 @@ export interface FileRouteTypes {
     | '/app/comercial/contratos'
     | '/app/comercial/templates'
     | '/app/frota/cartoes'
-    | '/app/ponto/gestao'
+    | '/app/ponto_/gestao'
     | '/app/tarefas/recorrentes'
     | '/app/comercial/'
     | '/app/comercial/contratos/$id'
@@ -537,12 +537,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTarefasRecorrentesRouteImport
       parentRoute: typeof AppTarefasRoute
     }
-    '/app/ponto/gestao': {
-      id: '/app/ponto/gestao'
-      path: '/gestao'
+    '/app/ponto_/gestao': {
+      id: '/app/ponto_/gestao'
+      path: '/ponto/gestao'
       fullPath: '/app/ponto/gestao'
       preLoaderRoute: typeof AppPontoGestaoRouteImport
-      parentRoute: typeof AppPontoRoute
+      parentRoute: typeof AppRoute
     }
     '/app/frota/cartoes': {
       id: '/app/frota/cartoes'
@@ -634,18 +634,6 @@ const AppFrotaRouteWithChildren = AppFrotaRoute._addFileChildren(
   AppFrotaRouteChildren,
 )
 
-interface AppPontoRouteChildren {
-  AppPontoGestaoRoute: typeof AppPontoGestaoRoute
-}
-
-const AppPontoRouteChildren: AppPontoRouteChildren = {
-  AppPontoGestaoRoute: AppPontoGestaoRoute,
-}
-
-const AppPontoRouteWithChildren = AppPontoRoute._addFileChildren(
-  AppPontoRouteChildren,
-)
-
 interface AppTarefasRouteChildren {
   AppTarefasRecorrentesRoute: typeof AppTarefasRecorrentesRoute
 }
@@ -670,9 +658,10 @@ interface AppRouteChildren {
   AppNotasRoute: typeof AppNotasRoute
   AppNotificacoesRoute: typeof AppNotificacoesRoute
   AppPerfilRoute: typeof AppPerfilRoute
-  AppPontoRoute: typeof AppPontoRouteWithChildren
+  AppPontoRoute: typeof AppPontoRoute
   AppTarefasRoute: typeof AppTarefasRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
+  AppPontoGestaoRoute: typeof AppPontoGestaoRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -687,9 +676,10 @@ const AppRouteChildren: AppRouteChildren = {
   AppNotasRoute: AppNotasRoute,
   AppNotificacoesRoute: AppNotificacoesRoute,
   AppPerfilRoute: AppPerfilRoute,
-  AppPontoRoute: AppPontoRouteWithChildren,
+  AppPontoRoute: AppPontoRoute,
   AppTarefasRoute: AppTarefasRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
+  AppPontoGestaoRoute: AppPontoGestaoRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
@@ -705,3 +695,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
