@@ -1544,6 +1544,10 @@ export type Database = {
         Args: { _country?: string; _name: string; _slug: string }
         Returns: string
       }
+      effective_minutes_round: {
+        Args: { _pause_seconds: number; _total_seconds: number }
+        Returns: number
+      }
       get_auth_context: {
         Args: never
         Returns: {
