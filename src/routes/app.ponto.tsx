@@ -524,6 +524,8 @@ function UpcomingTasks({
   tasks,
   clientsMap,
   isManager,
+  currentUserId,
+  effectiveMode,
   onStart,
   starting,
   startingId,
@@ -534,7 +536,9 @@ function UpcomingTasks({
   tasks: TaskRow[];
   clientsMap: Record<string, string>;
   isManager: boolean;
-  onStart: (id: string) => void;
+  currentUserId: string | null;
+  effectiveMode: (t: Pick<TaskRow, "punch_mode_override">) => PunchMode;
+  onStart: (t: TaskRow) => void;
   starting: boolean;
   startingId: string | null;
   onRequestAuth: (id: string) => void;
