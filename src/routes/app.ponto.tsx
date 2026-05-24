@@ -46,12 +46,32 @@ function PontoPage() {
   const { user, isManager, currentCompanyId } = useAuth();
   const qc = useQueryClient();
   const [, setNow] = useState(() => Date.now());
+  const [modeChoice, setModeChoice] = useState<TaskRow | null>(null);
 
   // Tick visual (1s) — apenas para renderização.
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
+
+  // Modo padrão da empresa (config de RH).
+  const { data: companyMode } = useQuery({
+    queryKey: ["hr-punch-mode", currentCompanyId],
+    queryFn: async () => {
+      if (!currentCompanyId) return "automatico" as PunchMode;
+      const { data, error } = await supabase
+        .from("company_hr_settings")
+        .select("default_punch_mode")
+        .eq("company_id", currentCompanyId)
+        .maybeSingle();
+      if (error) throw error;
+      return ((data?.default_punch_mode as PunchMode) ?? "automatico");
+    },
+    enabled: !!currentCompanyId,
+  });
+
+  const effectiveMode = (t: Pick<TaskRow, "punch_mode_override">): PunchMode =>
+    (t.punch_mode_override as PunchMode | null | undefined) ?? companyMode ?? "automatico";
 
   // Ponto aberto do próprio usuário
   const { data: openEntry } = useQuery({
@@ -93,7 +113,7 @@ function PontoPage() {
       let q = supabase
         .from("tasks")
         .select("*")
-        .in("status", ["pendente", "autorizado", "ausente"])
+        .in("status", ["pendente", "autorizado", "ausente", "em_andamento"])
         .order("scheduled_for", { ascending: true, nullsFirst: false })
         .limit(12);
       // Gestor/super admin: vê tarefas da empresa (toda a operação).
