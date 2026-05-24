@@ -1,88 +1,101 @@
-## Módulo Avançado de Contratos SaaS — OmniBiz Comercial
+# Motor Operacional: Recorrência + Documentos + Modos de Ponto
 
-Vou expandir o módulo Comercial existente de forma **incremental e isolada**, preservando 100% das funcionalidades atuais (clientes, contratos, templates, wizard, assinatura, PDF dinâmico que já implementamos). Adicionarei o que ainda falta para chegar ao escopo Reportei-like, sem refatorar nada fora de `/app/comercial/*`.
+Escopo grande e estrutural. Implementação incremental, sem refatorar fora da área Tarefas/Ponto.
 
-### O que já existe e será mantido
-- Tabelas: `commercial_clients`, `contract_templates`, `contracts`, `contract_services`, `contract_workflow`, `invoices`, `ai_usage` — com RLS `is_super_admin` ✅
-- Rotas: dashboard, clientes, contratos, novo (wizard 5 etapas), detalhe, templates ✅
-- Página pública `/sign/$token` com `contract_sign_submit` ✅
-- Geração de PDF dinâmico com pdf-lib + master template ✅
-- Guard `RoleGuard allow={["super_admin"]}` no layout ✅
+## 1. Modos de Folha de Ponto
 
-### Lacunas a fechar (foco desta entrega)
+Hoje: ao `task_transition('iniciar')` o sistema abre `time_entry` automaticamente. Não há modo manual.
 
-**1. Banco — extensões mínimas (migração isolada, sem quebrar nada)**
-- `commercial_clients`: + `legal_name`, `tax_id_kind` (cnpj/cpf/nif), `city`, `state`, `country`, `website`, `status` (lead/negotiation/active/inactive)
-- Nova tabela `commercial_client_contacts` (id, client_id, name, role, email, phone, is_primary_signer)
-- `contract_templates`: + `category`, `description`, `status` (active/draft/archived)
-- `contracts`: + `title`, `billing_cycle` (monthly/quarterly/annual), `end_date`, `auto_renew`, `notice_days`, `jurisdiction`, `contract_data` jsonb (escopo/cláusulas)
-- Nova tabela `contract_audit_events` (id, contract_id, actor_id, event_type, metadata, created_at) + trigger que registra criação/edição/envio/visualização/assinatura/cancelamento
-- RLS `is_super_admin` em todas as novas tabelas + leitura pública limitada de audit por token
+**Mudanças:**
+- Novo enum `punch_mode`: `automatico | manual | ambos` (padrão: `automatico`).
+- Coluna `companies.default_punch_mode` (config global da empresa, em `company_hr_settings` para ficar junto das prefs de RH).
+- Coluna opcional `tasks.punch_mode_override` (gestor pode forçar modo em uma tarefa específica).
+- **Importante:** modo MANUAL **não** desvincula da tarefa — apenas troca quem dispara o `time_entry`.
+- Novas RPCs:
+  - `punch_manual_start(_task_id)` — abre `time_entry` sem mudar status da tarefa (ou move pra `em_andamento`).
+  - `punch_manual_end(_task_id)` — fecha `time_entry`.
+- `task_transition('iniciar')`:
+  - se modo `automatico` → comportamento atual (abre ponto).
+  - se modo `manual` → move tarefa pra `em_andamento` sem abrir `time_entry`; UI mostra botão "Bater ponto".
+  - se modo `ambos` → UI no check-in pergunta ao funcionário; ambas as RPCs disponíveis.
+- UI em `/app/ponto` e `/app/tarefas`: badge do modo + botões condicionais.
 
-**2. Sistema de variáveis dinâmicas (expandir `contract-vars.ts`)**
-- Novo dialect com namespaces: `{{organization.*}}`, `{{client.*}}`, `{{contract.*}}`, `{{today}}`
-- Filtros: `| uppercase`, `| lowercase`, `| currency`, `| date`
-- Helper `extractMissingVars(template, vars)` para checklist
-- Preview destaca pendentes com `<mark class="bg-amber-200">{{var}}</mark>`
+## 2. Documentação Operacional
 
-**3. Dashboard Comercial (substituir página atual)**
-- Cards: total clientes, rascunhos, enviados, assinados, vencendo em 30d, MRR contratado, aguardando assinatura
-- Lista de atividades recentes (últimos 10 audit events)
+**Banco:**
+- Nova tabela `task_documents`:
+  - `id, task_id, company_id, uploaded_by, kind (pdf|image|checklist|video), title, storage_path, mime_type, size_bytes, created_at`.
+  - `kind` como enum preparado pra futuro (`checklist`, `video` aceitos no schema mas UI só implementa `pdf|image` agora).
+- RLS: gestores da empresa CRUD; funcionário assignee só SELECT.
+- Bucket `task-docs` (privado), policies por `company_id/task_id/` no path.
 
-**4. Clientes — formulário completo**
-- Adicionar campos novos no form
-- Sub-aba "Contatos" com CRUD de `commercial_client_contacts`
-- Sub-aba "Contratos vinculados" mostrando lista filtrada
+**UI:**
+- Aba "Documentos" no detalhe da tarefa: upload (PDF/JPG/PNG até ~10MB), lista, preview inline (img) ou link assinado (PDF), delete (gestor).
+- Funcionário vê os docs na sua tela de tarefa/ponto.
 
-**5. Templates — biblioteca com categorias + seed**
-- Filtros por categoria/status
-- Seed 6 templates iniciais (Assinatura SaaS, Proposta, Prestação Serviços, NDA, DPA, Renovação) com corpo Markdown e variáveis novas
-- Status badge
+## 3. Tarefas Recorrentes
 
-**6. Wizard "Novo contrato" — 5 etapas (refinado)**
-- Etapa 1 Cliente (existente + botão "criar rápido" inline)
-- Etapa 2 Template (com descrição/categoria)
-- Etapa 3 Dados comerciais: plano, valor, ciclo, início/fim, auto_renew, notice_days, jurisdição
-- Etapa 4 Escopo & cláusulas: checkboxes de módulos + SLA + suporte + cláusulas opcionais (gravadas em `contract_data`)
-- Etapa 5 Revisão: preview A4 + checklist de variáveis pendentes + 3 botões (salvar rascunho / gerar / enviar assinatura)
+**Banco:**
+- Nova tabela `task_recurrences`:
+  - `id, company_id, template_task_id (nullable, vincula à "tarefa-mãe"), title, description, assigned_to, client_id, priority, location, scheduled_time (hora do dia), duration_minutes, absence_grace_minutes`.
+  - `frequency` enum: `daily|weekly|monthly|custom`.
+  - `weekdays int[]` (0–6) para semanal.
+  - `monthly_rule jsonb` (`{day_of_month}` ou `{week_of_month, weekday}`).
+  - `custom_cron text` (opcional, futuro).
+  - `start_date date NOT NULL, end_date date NULL`.
+  - `status enum active|paused|ended`, `ended_reason text, ended_at`.
+- Cada `tasks` materializada ganha `recurrence_id uuid NULL` e `recurrence_date date NULL` (data da ocorrência).
+- RPCs:
+  - `recurrence_create(...)`, `recurrence_update(...)`, `recurrence_end(_id, _reason)`.
+  - `recurrence_materialize(_company_id, _days_ahead int default 14)` — gera próximas N ocorrências em `tasks` sem duplicar (unique `recurrence_id, recurrence_date`).
+- pg_cron diário às 03:00 chamando `recurrence_materialize` em todas empresas.
+- Eventos de encerramento automático (triggers):
+  - `user_roles` DELETE → recorrências do funcionário viram `ended` (motivo: `employee_offboarded`).
+  - `commercial_clients`/`clients` status `inativo` → ended (`client_closed`).
+  - `services` change → manual por enquanto.
 
-**7. Detalhe do contrato**
-- Cabeçalho com badges de status (draft, in_review, approved, sent, viewed, signed, expired, cancelled)
-- Preview A4 com Markdown renderizado
-- Timeline de audit events
-- Painel de signatários
-- Ações conforme status (copiar link, reenviar, cancelar, baixar PDF)
-- Registro automático de evento `viewed` quando público acessa /sign/$token
+**UI:**
+- Em "Nova tarefa", novo bloco "Recorrência" com seletor das frequências.
+- Nova rota `/app/tarefas/recorrentes`: listar, pausar, encerrar.
+- Calendário em `/app/tarefas` mostra ocorrências geradas.
 
-**8. Preview documento A4**
-- Componente `<ContractPreviewA4>` reutilizável (formulário ↔ preview toggle)
-- Renderiza Markdown via `react-markdown` (já leve), aplica `renderTemplate`, destaca pendentes
-- CSS `@page A4` com margens, fonte serif
+## 4. Reatribuição com Escopo
 
-**9. Assinatura MVP — já funciona**
-- Garantir registro de evento `signed` na timeline (trigger)
-- Mostrar evento `viewed` quando link é aberto (RPC pública incrementa)
+Ao trocar `assigned_to` numa tarefa que tem `recurrence_id`, dialog pergunta:
+- Somente esta ocorrência
+- A partir desta (atualiza recurrence + futuras)
+- Recorrência completa (todas, inclusive passadas pendentes)
 
-### Arquivos a criar/editar
-- `supabase/migrations/...` — colunas + tabelas + RLS + trigger audit
-- `src/lib/contract-vars.ts` — expandir com filtros e namespaces (manter retro-compat)
-- `src/lib/contract-audit.ts` — helper para registrar eventos
-- `src/components/contracts/ContractPreviewA4.tsx`
-- `src/components/contracts/ContractTimeline.tsx`
-- `src/components/contracts/StatusBadge.tsx`
-- `src/routes/app.comercial.index.tsx` — dashboard com KPIs reais
-- `src/routes/app.comercial.clientes.tsx` — campos novos + contatos
-- `src/routes/app.comercial.contratos.tsx` — colunas/status atualizados
-- `src/routes/app.comercial.contratos.$id.tsx` — preview A4 + timeline
-- `src/routes/app.comercial.contratos.novo.tsx` — etapas refinadas
-- `src/routes/app.comercial.templates.tsx` — categorias + status
-- `src/routes/sign.$token.tsx` — registra evento viewed
+RPC `recurrence_reassign(_task_id, _new_user, _scope)`.
 
-### Garantias
-- Nenhuma tabela existente fora do módulo é tocada
-- Nenhuma rota fora de `/app/comercial/*` e `/sign/$token` é alterada
-- RoleGuard + RLS `is_super_admin` em todas as superfícies (defesa em profundidade)
-- Migração só adiciona colunas com defaults — zero impacto em dados existentes
-- Funcionalidades atuais continuam funcionando (PDF master template, assinatura, workflow pós-assinatura)
+## Arquivos
 
-Posso prosseguir?
+**Migração SQL:**
+- `task_documents` + storage bucket `task-docs` + policies.
+- `task_recurrences` + colunas em `tasks` + RPCs + triggers de encerramento.
+- `punch_mode` enum + colunas + RPCs `punch_manual_*`.
+- pg_cron job de materialização.
+
+**Frontend:**
+- `src/components/tasks/TaskDocuments.tsx` (upload/lista/preview).
+- `src/components/tasks/RecurrenceForm.tsx` (configurador).
+- `src/components/tasks/ReassignDialog.tsx` (escopo).
+- `src/components/tasks/PunchModeBadge.tsx`.
+- Editar `src/routes/app.tarefas.tsx`, `app.ponto.tsx`, criar `app.tarefas.recorrentes.tsx`.
+- Editar `src/lib/tasks.ts` para tipos + helpers de modo/recorrência.
+
+## Garantias
+
+- Nenhuma tabela existente é dropada; só ALTERs aditivos com defaults.
+- `task_transition` mantém retrocompat: empresas sem config = `automatico` (igual a hoje).
+- `time_entries` continua sendo fonte única do tempo trabalhado.
+- Tudo escopado a `company_id` e RLS preservada.
+
+## Implementação em ordem
+
+1. Migração SQL completa (uma só).
+2. Tipos regenerados → helpers em `src/lib/tasks.ts`.
+3. UI de Documentos (independente).
+4. UI de Modos de Ponto.
+5. UI de Recorrência + página dedicada.
+6. Dialog de reatribuição.
