@@ -658,10 +658,15 @@ function UpcomingTasks({
               size="lg"
               className="h-16 w-full text-base"
               disabled={!nextIsStartable || nextStarting}
-              onClick={() => onStart(nextStartable.id)}
+              onClick={() => onStart(nextStartable)}
             >
-              <Play className="mr-2 h-6 w-6" />
-              Iniciar tarefa
+              {effectiveMode(nextStartable) === "manual" ? (
+                <><LogIn className="mr-2 h-6 w-6" /> Bater entrada</>
+              ) : nextStartable.status === "em_andamento" ? (
+                <><LogIn className="mr-2 h-6 w-6" /> Bater entrada</>
+              ) : (
+                <><Play className="mr-2 h-6 w-6" /> Iniciar tarefa</>
+              )}
             </Button>
           )}
         </div>
@@ -678,6 +683,10 @@ function UpcomingTasks({
           const late = isVisuallyLate(t);
           const isStarting = starting && startingId === t.id;
           const clientName = t.client_id ? clientsMap[t.client_id] : undefined;
+          const tMode = effectiveMode(t);
+          const isOwn = !!currentUserId && t.assigned_to === currentUserId;
+          const canStart =
+            (t.status === "pendente" || t.status === "autorizado" || t.status === "em_andamento") && isOwn;
           return (
             <li key={t.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
               <div className="min-w-0 flex-1">
@@ -692,6 +701,10 @@ function UpcomingTasks({
                   )}
                   <span className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${STATUS_TONE[t.status]}`}>
                     {STATUS_LABELS[t.status]}
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                    {tMode === "automatico" ? <Zap className="h-3 w-3" /> : <Hand className="h-3 w-3" />}
+                    {PUNCH_MODE_LABELS[tMode]}
                   </span>
                 </div>
                 <div className="mt-1 truncate font-medium">{t.title}</div>
@@ -717,16 +730,22 @@ function UpcomingTasks({
                 variant={t.status === "ausente" ? "outline" : "default"}
                 disabled={
                   isStarting ||
+                  (t.status !== "ausente" && !canStart) ||
                   (t.status === "ausente" && requestingAuth && requestingAuthId === t.id)
                 }
                 onClick={() =>
-                  t.status === "ausente" ? onRequestAuth(t.id) : onStart(t.id)
+                  t.status === "ausente" ? onRequestAuth(t.id) : onStart(t)
                 }
               >
                 {t.status === "ausente" ? (
                   <>
                     <Send className="mr-2 h-5 w-5" />
                     Solicitar autorização
+                  </>
+                ) : tMode === "manual" || t.status === "em_andamento" ? (
+                  <>
+                    <LogIn className="mr-2 h-5 w-5" />
+                    Bater entrada
                   </>
                 ) : (
                   <>
