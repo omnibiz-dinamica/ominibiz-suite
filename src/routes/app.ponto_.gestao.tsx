@@ -34,7 +34,7 @@ import { PunchAuditDrawer } from "@/components/ponto/PunchAuditDrawer";
 import { ORIGIN_LABEL, ORIGIN_TONE, type AdminTimeEntry } from "@/lib/punch-admin";
 import { formatDuration } from "@/lib/tasks";
 
-export const Route = createFileRoute("/app/ponto/gestao")({ component: Page });
+export const Route = createFileRoute("/app/ponto_/gestao")({ component: Page });
 
 function Page() {
   return (
