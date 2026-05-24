@@ -48,6 +48,7 @@ const MANAGER_MENU: Item[] = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard },
   { to: "/app/tarefas", label: "Tarefas", icon: ClipboardList },
   { to: "/app/ponto", label: "Folha de Ponto", icon: Clock },
+  { to: "/app/ponto/gestao", label: "Ponto · Gestão", icon: ListChecks },
   { to: "/app/notificacoes", label: "Notificações", icon: Bell },
   { to: "/app/clientes", label: "Clientes", icon: Briefcase },
   { to: "/app/equipe", label: "Usuários", icon: Users },

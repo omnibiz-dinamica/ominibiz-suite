@@ -31,6 +31,7 @@ import { Route as AppAssistenteRouteImport } from './routes/app.assistente'
 import { Route as AppAdminRouteImport } from './routes/app.admin'
 import { Route as AppComercialIndexRouteImport } from './routes/app.comercial.index'
 import { Route as AppTarefasRecorrentesRouteImport } from './routes/app.tarefas.recorrentes'
+import { Route as AppPontoGestaoRouteImport } from './routes/app.ponto.gestao'
 import { Route as AppFrotaCartoesRouteImport } from './routes/app.frota.cartoes'
 import { Route as AppComercialTemplatesRouteImport } from './routes/app.comercial.templates'
 import { Route as AppComercialContratosRouteImport } from './routes/app.comercial.contratos'
@@ -148,6 +149,11 @@ const AppTarefasRecorrentesRoute = AppTarefasRecorrentesRouteImport.update({
   path: '/recorrentes',
   getParentRoute: () => AppTarefasRoute,
 } as any)
+const AppPontoGestaoRoute = AppPontoGestaoRouteImport.update({
+  id: '/gestao',
+  path: '/gestao',
+  getParentRoute: () => AppPontoRoute,
+} as any)
 const AppFrotaCartoesRoute = AppFrotaCartoesRouteImport.update({
   id: '/cartoes',
   path: '/cartoes',
@@ -197,7 +203,7 @@ export interface FileRoutesByFullPath {
   '/app/notas': typeof AppNotasRoute
   '/app/notificacoes': typeof AppNotificacoesRoute
   '/app/perfil': typeof AppPerfilRoute
-  '/app/ponto': typeof AppPontoRoute
+  '/app/ponto': typeof AppPontoRouteWithChildren
   '/app/tarefas': typeof AppTarefasRouteWithChildren
   '/sign/$token': typeof SignTokenRoute
   '/app/': typeof AppIndexRoute
@@ -205,6 +211,7 @@ export interface FileRoutesByFullPath {
   '/app/comercial/contratos': typeof AppComercialContratosRouteWithChildren
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
+  '/app/ponto/gestao': typeof AppPontoGestaoRoute
   '/app/tarefas/recorrentes': typeof AppTarefasRecorrentesRoute
   '/app/comercial/': typeof AppComercialIndexRoute
   '/app/comercial/contratos/$id': typeof AppComercialContratosIdRoute
@@ -225,7 +232,7 @@ export interface FileRoutesByTo {
   '/app/notas': typeof AppNotasRoute
   '/app/notificacoes': typeof AppNotificacoesRoute
   '/app/perfil': typeof AppPerfilRoute
-  '/app/ponto': typeof AppPontoRoute
+  '/app/ponto': typeof AppPontoRouteWithChildren
   '/app/tarefas': typeof AppTarefasRouteWithChildren
   '/sign/$token': typeof SignTokenRoute
   '/app': typeof AppIndexRoute
@@ -233,6 +240,7 @@ export interface FileRoutesByTo {
   '/app/comercial/contratos': typeof AppComercialContratosRouteWithChildren
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
+  '/app/ponto/gestao': typeof AppPontoGestaoRoute
   '/app/tarefas/recorrentes': typeof AppTarefasRecorrentesRoute
   '/app/comercial': typeof AppComercialIndexRoute
   '/app/comercial/contratos/$id': typeof AppComercialContratosIdRoute
@@ -256,7 +264,7 @@ export interface FileRoutesById {
   '/app/notas': typeof AppNotasRoute
   '/app/notificacoes': typeof AppNotificacoesRoute
   '/app/perfil': typeof AppPerfilRoute
-  '/app/ponto': typeof AppPontoRoute
+  '/app/ponto': typeof AppPontoRouteWithChildren
   '/app/tarefas': typeof AppTarefasRouteWithChildren
   '/sign/$token': typeof SignTokenRoute
   '/app/': typeof AppIndexRoute
@@ -264,6 +272,7 @@ export interface FileRoutesById {
   '/app/comercial/contratos': typeof AppComercialContratosRouteWithChildren
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
+  '/app/ponto/gestao': typeof AppPontoGestaoRoute
   '/app/tarefas/recorrentes': typeof AppTarefasRecorrentesRoute
   '/app/comercial/': typeof AppComercialIndexRoute
   '/app/comercial/contratos/$id': typeof AppComercialContratosIdRoute
@@ -296,6 +305,7 @@ export interface FileRouteTypes {
     | '/app/comercial/contratos'
     | '/app/comercial/templates'
     | '/app/frota/cartoes'
+    | '/app/ponto/gestao'
     | '/app/tarefas/recorrentes'
     | '/app/comercial/'
     | '/app/comercial/contratos/$id'
@@ -324,6 +334,7 @@ export interface FileRouteTypes {
     | '/app/comercial/contratos'
     | '/app/comercial/templates'
     | '/app/frota/cartoes'
+    | '/app/ponto/gestao'
     | '/app/tarefas/recorrentes'
     | '/app/comercial'
     | '/app/comercial/contratos/$id'
@@ -354,6 +365,7 @@ export interface FileRouteTypes {
     | '/app/comercial/contratos'
     | '/app/comercial/templates'
     | '/app/frota/cartoes'
+    | '/app/ponto/gestao'
     | '/app/tarefas/recorrentes'
     | '/app/comercial/'
     | '/app/comercial/contratos/$id'
@@ -525,6 +537,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTarefasRecorrentesRouteImport
       parentRoute: typeof AppTarefasRoute
     }
+    '/app/ponto/gestao': {
+      id: '/app/ponto/gestao'
+      path: '/gestao'
+      fullPath: '/app/ponto/gestao'
+      preLoaderRoute: typeof AppPontoGestaoRouteImport
+      parentRoute: typeof AppPontoRoute
+    }
     '/app/frota/cartoes': {
       id: '/app/frota/cartoes'
       path: '/cartoes'
@@ -615,6 +634,18 @@ const AppFrotaRouteWithChildren = AppFrotaRoute._addFileChildren(
   AppFrotaRouteChildren,
 )
 
+interface AppPontoRouteChildren {
+  AppPontoGestaoRoute: typeof AppPontoGestaoRoute
+}
+
+const AppPontoRouteChildren: AppPontoRouteChildren = {
+  AppPontoGestaoRoute: AppPontoGestaoRoute,
+}
+
+const AppPontoRouteWithChildren = AppPontoRoute._addFileChildren(
+  AppPontoRouteChildren,
+)
+
 interface AppTarefasRouteChildren {
   AppTarefasRecorrentesRoute: typeof AppTarefasRecorrentesRoute
 }
@@ -639,7 +670,7 @@ interface AppRouteChildren {
   AppNotasRoute: typeof AppNotasRoute
   AppNotificacoesRoute: typeof AppNotificacoesRoute
   AppPerfilRoute: typeof AppPerfilRoute
-  AppPontoRoute: typeof AppPontoRoute
+  AppPontoRoute: typeof AppPontoRouteWithChildren
   AppTarefasRoute: typeof AppTarefasRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
 }
@@ -656,7 +687,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppNotasRoute: AppNotasRoute,
   AppNotificacoesRoute: AppNotificacoesRoute,
   AppPerfilRoute: AppPerfilRoute,
-  AppPontoRoute: AppPontoRoute,
+  AppPontoRoute: AppPontoRouteWithChildren,
   AppTarefasRoute: AppTarefasRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
 }

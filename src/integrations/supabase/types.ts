@@ -1194,10 +1194,15 @@ export type Database = {
         Row: {
           company_id: string
           created_at: string
+          created_by: string | null
           effective_minutes: number | null
           ended_at: string | null
           id: string
+          last_edit_reason: string | null
+          last_edited_at: string | null
+          last_edited_by: string | null
           notes: string | null
+          origin: string
           paused_at: string | null
           resumed_at: string | null
           started_at: string
@@ -1208,10 +1213,15 @@ export type Database = {
         Insert: {
           company_id: string
           created_at?: string
+          created_by?: string | null
           effective_minutes?: number | null
           ended_at?: string | null
           id?: string
+          last_edit_reason?: string | null
+          last_edited_at?: string | null
+          last_edited_by?: string | null
           notes?: string | null
+          origin?: string
           paused_at?: string | null
           resumed_at?: string | null
           started_at?: string
@@ -1222,10 +1232,15 @@ export type Database = {
         Update: {
           company_id?: string
           created_at?: string
+          created_by?: string | null
           effective_minutes?: number | null
           ended_at?: string | null
           id?: string
+          last_edit_reason?: string | null
+          last_edited_at?: string | null
+          last_edited_by?: string | null
           notes?: string | null
+          origin?: string
           paused_at?: string | null
           resumed_at?: string | null
           started_at?: string
@@ -1249,6 +1264,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      time_entries_audit: {
+        Row: {
+          action: string
+          changed_at: string
+          changed_by: string
+          changes: Json
+          company_id: string
+          id: string
+          reason: string
+          time_entry_id: string
+        }
+        Insert: {
+          action: string
+          changed_at?: string
+          changed_by: string
+          changes?: Json
+          company_id: string
+          id?: string
+          reason: string
+          time_entry_id: string
+        }
+        Update: {
+          action?: string
+          changed_at?: string
+          changed_by?: string
+          changes?: Json
+          company_id?: string
+          id?: string
+          reason?: string
+          time_entry_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
@@ -1593,15 +1641,95 @@ export type Database = {
         Args: { _company_id?: string }
         Returns: number
       }
+      punch_admin_create: {
+        Args: { _payload: Json; _reason: string }
+        Returns: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          effective_minutes: number | null
+          ended_at: string | null
+          id: string
+          last_edit_reason: string | null
+          last_edited_at: string | null
+          last_edited_by: string | null
+          notes: string | null
+          origin: string
+          paused_at: string | null
+          resumed_at: string | null
+          started_at: string
+          task_id: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "time_entries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      punch_admin_update: {
+        Args: { _id: string; _payload: Json; _reason: string }
+        Returns: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          effective_minutes: number | null
+          ended_at: string | null
+          id: string
+          last_edit_reason: string | null
+          last_edited_at: string | null
+          last_edited_by: string | null
+          notes: string | null
+          origin: string
+          paused_at: string | null
+          resumed_at: string | null
+          started_at: string
+          task_id: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "time_entries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      punch_audit_list: {
+        Args: { _time_entry_id: string }
+        Returns: {
+          action: string
+          changed_at: string
+          changed_by: string
+          changes: Json
+          company_id: string
+          id: string
+          reason: string
+          time_entry_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "time_entries_audit"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       punch_manual_end: {
         Args: { _task_id: string }
         Returns: {
           company_id: string
           created_at: string
+          created_by: string | null
           effective_minutes: number | null
           ended_at: string | null
           id: string
+          last_edit_reason: string | null
+          last_edited_at: string | null
+          last_edited_by: string | null
           notes: string | null
+          origin: string
           paused_at: string | null
           resumed_at: string | null
           started_at: string
@@ -1621,10 +1749,15 @@ export type Database = {
         Returns: {
           company_id: string
           created_at: string
+          created_by: string | null
           effective_minutes: number | null
           ended_at: string | null
           id: string
+          last_edit_reason: string | null
+          last_edited_at: string | null
+          last_edited_by: string | null
           notes: string | null
+          origin: string
           paused_at: string | null
           resumed_at: string | null
           started_at: string
@@ -1644,10 +1777,15 @@ export type Database = {
         Returns: {
           company_id: string
           created_at: string
+          created_by: string | null
           effective_minutes: number | null
           ended_at: string | null
           id: string
+          last_edit_reason: string | null
+          last_edited_at: string | null
+          last_edited_by: string | null
           notes: string | null
+          origin: string
           paused_at: string | null
           resumed_at: string | null
           started_at: string
@@ -1667,10 +1805,15 @@ export type Database = {
         Returns: {
           company_id: string
           created_at: string
+          created_by: string | null
           effective_minutes: number | null
           ended_at: string | null
           id: string
+          last_edit_reason: string | null
+          last_edited_at: string | null
+          last_edited_by: string | null
           notes: string | null
+          origin: string
           paused_at: string | null
           resumed_at: string | null
           started_at: string
