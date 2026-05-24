@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,18 +10,23 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Play, Check, X, ShieldCheck, UserX, Clock, Pencil } from "lucide-react";
+import { Plus, Play, Check, X, ShieldCheck, UserX, Clock, Pencil, Repeat, UserCog } from "lucide-react";
 import {
   STATUS_LABELS,
   STATUS_TONE,
+  PUNCH_MODE_LABELS,
   type TaskAction,
   type TaskRow,
+  type PunchMode,
   ACTION_LABELS,
   availableActions,
   isVisuallyLate,
   sweepAbsent,
   transitionTask,
 } from "@/lib/tasks";
+import { RecurrenceForm, emptyRecurrence, type RecurrenceFormValue } from "@/components/tasks/RecurrenceForm";
+import { TaskDocuments } from "@/components/tasks/TaskDocuments";
+import { ReassignDialog } from "@/components/tasks/ReassignDialog";
 
 export const Route = createFileRoute("/app/tarefas")({
   component: TasksPage,
@@ -32,6 +37,7 @@ function TasksPage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<TaskRow | null>(null);
+  const [reassigning, setReassigning] = useState<TaskRow | null>(null);
 
   const { data: tasks, isLoading } = useQuery({
     queryKey: ["tasks", currentCompanyId, user?.id, isManager],
@@ -125,6 +131,10 @@ function TasksPage() {
           </p>
         </div>
         {isManager && currentCompanyId && (
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+              <Link to="/app/tarefas/recorrentes"><Repeat className="mr-2 h-4 w-4" /> Recorrências</Link>
+            </Button>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button><Plus className="mr-2 h-4 w-4" /> Nova tarefa</Button>
@@ -134,13 +144,15 @@ function TasksPage() {
               <TaskForm members={members ?? []} clients={clientsList ?? []} companyId={currentCompanyId} userId={user!.id} onDone={() => { setOpen(false); qc.invalidateQueries({ queryKey: ["tasks"] }); }} />
             </DialogContent>
           </Dialog>
+          </div>
         )}
       </div>
 
       <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Editar tarefa</DialogTitle></DialogHeader>
           {editing && (
+            <>
             <TaskForm
               initial={editing}
               members={members ?? []}
@@ -149,9 +161,21 @@ function TasksPage() {
               userId={user!.id}
               onDone={() => { setEditing(null); qc.invalidateQueries({ queryKey: ["tasks"] }); }}
             />
+              <div className="mt-6 border-t border-border pt-4">
+                <TaskDocuments taskId={editing.id} companyId={editing.company_id} canManage={isManager} />
+              </div>
+            </>
           )}
         </DialogContent>
       </Dialog>
+
+      <ReassignDialog
+        task={reassigning}
+        members={members ?? []}
+        open={!!reassigning}
+        onOpenChange={(v) => !v && setReassigning(null)}
+        onDone={() => qc.invalidateQueries({ queryKey: ["tasks"] })}
+      />
 
       {!currentCompanyId && isManager && (
         <div className="rounded-2xl border border-warning/40 bg-warning/10 p-4 text-sm text-warning-foreground">
@@ -195,9 +219,14 @@ function TasksPage() {
                 <div className="col-span-2 text-sm capitalize text-muted-foreground">{t.priority}</div>
                 <div className="col-span-3 flex justify-end gap-2">
                   {isManager && (
+                    <>
                     <Button size="sm" variant="ghost" title="Editar" onClick={() => setEditing(t)}>
                       <Pencil className="h-3 w-3" />
                     </Button>
+                      <Button size="sm" variant="ghost" title="Reatribuir" onClick={() => setReassigning(t)}>
+                        <UserCog className="h-3 w-3" />
+                      </Button>
+                    </>
                   )}
                   {actions.map((a) => (
                     <ActionButton
@@ -271,6 +300,10 @@ function TaskForm({
   const [scheduledFor, setScheduledFor] = useState<string>(toLocalInput(initial?.scheduled_for ?? null));
   const [scheduledEnd, setScheduledEnd] = useState<string>(toLocalInput(initial?.scheduled_end ?? null));
   const [graceMinutes, setGraceMinutes] = useState<number>(initial?.absence_grace_minutes ?? 15);
+  const [punchMode, setPunchMode] = useState<PunchMode | "">(
+    (initial?.punch_mode_override as PunchMode) ?? "",
+  );
+  const [recurrence, setRecurrence] = useState<RecurrenceFormValue>(emptyRecurrence());
   const [loading, setLoading] = useState(false);
 
   return (
@@ -288,10 +321,46 @@ function TaskForm({
           scheduled_for: scheduledFor ? new Date(scheduledFor).toISOString() : null,
           scheduled_end: scheduledEnd ? new Date(scheduledEnd).toISOString() : null,
           absence_grace_minutes: graceMinutes,
+          punch_mode_override: punchMode || null,
         };
-        const { error } = initial
-          ? await supabase.from("tasks").update(payload).eq("id", initial.id)
-          : await supabase.from("tasks").insert({ ...payload, company_id: companyId, created_by: userId });
+        let error: { message: string } | null = null;
+        if (initial) {
+          ({ error } = await supabase.from("tasks").update(payload).eq("id", initial.id));
+        } else if (recurrence.enabled) {
+          // Cria recorrência e materializa as próximas 14 dias.
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const ins = await (supabase.from("task_recurrences" as any) as any).insert({
+            company_id: companyId,
+            created_by: userId,
+            title: payload.title,
+            description: payload.description,
+            assigned_to: payload.assigned_to,
+            client_id: payload.client_id,
+            priority: payload.priority,
+            absence_grace_minutes: payload.absence_grace_minutes,
+            punch_mode_override: payload.punch_mode_override,
+            frequency: recurrence.frequency,
+            weekdays: recurrence.frequency === "weekly" ? recurrence.weekdays : [],
+            monthly_rule:
+              recurrence.frequency === "monthly" ? { day_of_month: recurrence.dayOfMonth } : {},
+            start_date: recurrence.startDate,
+            end_date: recurrence.endDate || null,
+            scheduled_time: recurrence.scheduledTime,
+            duration_minutes: recurrence.durationMinutes,
+          });
+          error = ins.error;
+          if (!error) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await (supabase.rpc as any)("recurrence_materialize", {
+              _days_ahead: 14,
+              _company_id: companyId,
+            });
+          }
+        } else {
+          ({ error } = await supabase
+            .from("tasks")
+            .insert({ ...payload, company_id: companyId, created_by: userId }));
+        }
         setLoading(false);
         if (error) {
           toast.error(error.message);
@@ -362,7 +431,22 @@ function TaskForm({
             onChange={(e) => setGraceMinutes(Number(e.target.value) || 0)}
           />
         </div>
+        <div className="space-y-1.5 col-span-2">
+          <Label>Modo de folha de ponto</Label>
+          <Select value={punchMode || "default"} onValueChange={(v) => setPunchMode(v === "default" ? "" : (v as PunchMode))}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="default">Padrão da empresa</SelectItem>
+              <SelectItem value="automatico">{PUNCH_MODE_LABELS.automatico}</SelectItem>
+              <SelectItem value="manual">{PUNCH_MODE_LABELS.manual}</SelectItem>
+              <SelectItem value="ambos">{PUNCH_MODE_LABELS.ambos}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
+      {!initial && (
+        <RecurrenceForm value={recurrence} onChange={setRecurrence} />
+      )}
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? "Salvando..." : initial ? "Salvar alterações" : "Criar tarefa"}
       </Button>

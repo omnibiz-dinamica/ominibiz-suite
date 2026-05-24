@@ -61,6 +61,116 @@ export interface TaskRow {
   absence_grace_minutes: number;
   created_at: string;
   updated_at: string;
+  punch_mode_override?: PunchMode | null;
+  recurrence_id?: string | null;
+  recurrence_date?: string | null;
+}
+
+// =========================================================
+// Modos de Folha de Ponto
+// =========================================================
+export type PunchMode = "automatico" | "manual" | "ambos";
+
+export const PUNCH_MODE_LABELS: Record<PunchMode, string> = {
+  automatico: "Automático",
+  manual: "Manual",
+  ambos: "Ambos",
+};
+
+export async function punchManualStart(taskId: string): Promise<TimeEntryRow> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("punch_manual_start", { _task_id: taskId });
+  if (error) throw error;
+  return data as TimeEntryRow;
+}
+
+export async function punchManualEnd(taskId: string): Promise<TimeEntryRow> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("punch_manual_end", { _task_id: taskId });
+  if (error) throw error;
+  return data as TimeEntryRow;
+}
+
+export async function taskEffectivePunchMode(taskId: string): Promise<PunchMode> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("task_effective_punch_mode", { _task_id: taskId });
+  if (error) throw error;
+  return (data as PunchMode) ?? "automatico";
+}
+
+// =========================================================
+// Recorrência
+// =========================================================
+export type RecurrenceFrequency = "daily" | "weekly" | "monthly" | "custom";
+export type RecurrenceStatus = "active" | "paused" | "ended";
+
+export interface RecurrenceRow {
+  id: string;
+  company_id: string;
+  title: string;
+  description: string | null;
+  assigned_to: string | null;
+  client_id: string | null;
+  priority: "baixa" | "media" | "alta" | "urgente";
+  location: string | null;
+  scheduled_time: string;
+  duration_minutes: number;
+  absence_grace_minutes: number;
+  punch_mode_override: PunchMode | null;
+  frequency: RecurrenceFrequency;
+  weekdays: number[];
+  monthly_rule: { day_of_month?: number };
+  start_date: string;
+  end_date: string | null;
+  status: RecurrenceStatus;
+  ended_reason: string | null;
+  ended_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export const FREQUENCY_LABELS: Record<RecurrenceFrequency, string> = {
+  daily: "Diária",
+  weekly: "Semanal",
+  monthly: "Mensal",
+  custom: "Personalizada",
+};
+
+export const WEEKDAY_LABELS = ["D", "S", "T", "Q", "Q", "S", "S"];
+export const WEEKDAY_FULL = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+
+export async function recurrenceMaterialize(daysAhead = 14, companyId?: string | null): Promise<number> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("recurrence_materialize", {
+    _days_ahead: daysAhead,
+    _company_id: companyId ?? null,
+  });
+  if (error) throw error;
+  return (data as number) ?? 0;
+}
+
+export async function recurrenceEnd(id: string, reason: string, cancelFuture = true): Promise<RecurrenceRow> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("recurrence_end", {
+    _id: id,
+    _reason: reason,
+    _cancel_future: cancelFuture,
+  });
+  if (error) throw error;
+  return data as RecurrenceRow;
+}
+
+export type ReassignScope = "this" | "future" | "all";
+
+export async function recurrenceReassign(taskId: string, newUser: string, scope: ReassignScope): Promise<number> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("recurrence_reassign", {
+    _task_id: taskId,
+    _new_user: newUser,
+    _scope: scope,
+  });
+  if (error) throw error;
+  return (data as number) ?? 0;
 }
 
 /**

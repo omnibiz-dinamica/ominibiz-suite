@@ -30,6 +30,7 @@ import { Route as AppClientesRouteImport } from './routes/app.clientes'
 import { Route as AppAssistenteRouteImport } from './routes/app.assistente'
 import { Route as AppAdminRouteImport } from './routes/app.admin'
 import { Route as AppComercialIndexRouteImport } from './routes/app.comercial.index'
+import { Route as AppTarefasRecorrentesRouteImport } from './routes/app.tarefas.recorrentes'
 import { Route as AppFrotaCartoesRouteImport } from './routes/app.frota.cartoes'
 import { Route as AppComercialTemplatesRouteImport } from './routes/app.comercial.templates'
 import { Route as AppComercialContratosRouteImport } from './routes/app.comercial.contratos'
@@ -142,6 +143,11 @@ const AppComercialIndexRoute = AppComercialIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppComercialRoute,
 } as any)
+const AppTarefasRecorrentesRoute = AppTarefasRecorrentesRouteImport.update({
+  id: '/recorrentes',
+  path: '/recorrentes',
+  getParentRoute: () => AppTarefasRoute,
+} as any)
 const AppFrotaCartoesRoute = AppFrotaCartoesRouteImport.update({
   id: '/cartoes',
   path: '/cartoes',
@@ -192,13 +198,14 @@ export interface FileRoutesByFullPath {
   '/app/notificacoes': typeof AppNotificacoesRoute
   '/app/perfil': typeof AppPerfilRoute
   '/app/ponto': typeof AppPontoRoute
-  '/app/tarefas': typeof AppTarefasRoute
+  '/app/tarefas': typeof AppTarefasRouteWithChildren
   '/sign/$token': typeof SignTokenRoute
   '/app/': typeof AppIndexRoute
   '/app/comercial/clientes': typeof AppComercialClientesRoute
   '/app/comercial/contratos': typeof AppComercialContratosRouteWithChildren
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
+  '/app/tarefas/recorrentes': typeof AppTarefasRecorrentesRoute
   '/app/comercial/': typeof AppComercialIndexRoute
   '/app/comercial/contratos/$id': typeof AppComercialContratosIdRoute
   '/app/comercial/contratos/novo': typeof AppComercialContratosNovoRoute
@@ -219,13 +226,14 @@ export interface FileRoutesByTo {
   '/app/notificacoes': typeof AppNotificacoesRoute
   '/app/perfil': typeof AppPerfilRoute
   '/app/ponto': typeof AppPontoRoute
-  '/app/tarefas': typeof AppTarefasRoute
+  '/app/tarefas': typeof AppTarefasRouteWithChildren
   '/sign/$token': typeof SignTokenRoute
   '/app': typeof AppIndexRoute
   '/app/comercial/clientes': typeof AppComercialClientesRoute
   '/app/comercial/contratos': typeof AppComercialContratosRouteWithChildren
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
+  '/app/tarefas/recorrentes': typeof AppTarefasRecorrentesRoute
   '/app/comercial': typeof AppComercialIndexRoute
   '/app/comercial/contratos/$id': typeof AppComercialContratosIdRoute
   '/app/comercial/contratos/novo': typeof AppComercialContratosNovoRoute
@@ -249,13 +257,14 @@ export interface FileRoutesById {
   '/app/notificacoes': typeof AppNotificacoesRoute
   '/app/perfil': typeof AppPerfilRoute
   '/app/ponto': typeof AppPontoRoute
-  '/app/tarefas': typeof AppTarefasRoute
+  '/app/tarefas': typeof AppTarefasRouteWithChildren
   '/sign/$token': typeof SignTokenRoute
   '/app/': typeof AppIndexRoute
   '/app/comercial/clientes': typeof AppComercialClientesRoute
   '/app/comercial/contratos': typeof AppComercialContratosRouteWithChildren
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
+  '/app/tarefas/recorrentes': typeof AppTarefasRecorrentesRoute
   '/app/comercial/': typeof AppComercialIndexRoute
   '/app/comercial/contratos/$id': typeof AppComercialContratosIdRoute
   '/app/comercial/contratos/novo': typeof AppComercialContratosNovoRoute
@@ -287,6 +296,7 @@ export interface FileRouteTypes {
     | '/app/comercial/contratos'
     | '/app/comercial/templates'
     | '/app/frota/cartoes'
+    | '/app/tarefas/recorrentes'
     | '/app/comercial/'
     | '/app/comercial/contratos/$id'
     | '/app/comercial/contratos/novo'
@@ -314,6 +324,7 @@ export interface FileRouteTypes {
     | '/app/comercial/contratos'
     | '/app/comercial/templates'
     | '/app/frota/cartoes'
+    | '/app/tarefas/recorrentes'
     | '/app/comercial'
     | '/app/comercial/contratos/$id'
     | '/app/comercial/contratos/novo'
@@ -343,6 +354,7 @@ export interface FileRouteTypes {
     | '/app/comercial/contratos'
     | '/app/comercial/templates'
     | '/app/frota/cartoes'
+    | '/app/tarefas/recorrentes'
     | '/app/comercial/'
     | '/app/comercial/contratos/$id'
     | '/app/comercial/contratos/novo'
@@ -506,6 +518,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppComercialIndexRouteImport
       parentRoute: typeof AppComercialRoute
     }
+    '/app/tarefas/recorrentes': {
+      id: '/app/tarefas/recorrentes'
+      path: '/recorrentes'
+      fullPath: '/app/tarefas/recorrentes'
+      preLoaderRoute: typeof AppTarefasRecorrentesRouteImport
+      parentRoute: typeof AppTarefasRoute
+    }
     '/app/frota/cartoes': {
       id: '/app/frota/cartoes'
       path: '/cartoes'
@@ -596,6 +615,18 @@ const AppFrotaRouteWithChildren = AppFrotaRoute._addFileChildren(
   AppFrotaRouteChildren,
 )
 
+interface AppTarefasRouteChildren {
+  AppTarefasRecorrentesRoute: typeof AppTarefasRecorrentesRoute
+}
+
+const AppTarefasRouteChildren: AppTarefasRouteChildren = {
+  AppTarefasRecorrentesRoute: AppTarefasRecorrentesRoute,
+}
+
+const AppTarefasRouteWithChildren = AppTarefasRoute._addFileChildren(
+  AppTarefasRouteChildren,
+)
+
 interface AppRouteChildren {
   AppAdminRoute: typeof AppAdminRoute
   AppAssistenteRoute: typeof AppAssistenteRoute
@@ -609,7 +640,7 @@ interface AppRouteChildren {
   AppNotificacoesRoute: typeof AppNotificacoesRoute
   AppPerfilRoute: typeof AppPerfilRoute
   AppPontoRoute: typeof AppPontoRoute
-  AppTarefasRoute: typeof AppTarefasRoute
+  AppTarefasRoute: typeof AppTarefasRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
 }
 
@@ -626,7 +657,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppNotificacoesRoute: AppNotificacoesRoute,
   AppPerfilRoute: AppPerfilRoute,
   AppPontoRoute: AppPontoRoute,
-  AppTarefasRoute: AppTarefasRoute,
+  AppTarefasRoute: AppTarefasRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
 }
 
@@ -643,12 +674,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
