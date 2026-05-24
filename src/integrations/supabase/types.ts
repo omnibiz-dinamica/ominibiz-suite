@@ -87,11 +87,17 @@ export type Database = {
       clients: {
         Row: {
           address: string | null
+          billing_mode: string
           company_id: string
           created_at: string
           created_by: string | null
           email: string | null
+          fixed_rate: number | null
+          hourly_rate: number | null
           id: string
+          mixed_base_fixed: number | null
+          mixed_extra_hour_rate: number | null
+          mixed_included_minutes: number | null
           name: string
           notes: string | null
           phone: string | null
@@ -100,11 +106,17 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          billing_mode?: string
           company_id: string
           created_at?: string
           created_by?: string | null
           email?: string | null
+          fixed_rate?: number | null
+          hourly_rate?: number | null
           id?: string
+          mixed_base_fixed?: number | null
+          mixed_extra_hour_rate?: number | null
+          mixed_included_minutes?: number | null
           name: string
           notes?: string | null
           phone?: string | null
@@ -113,11 +125,17 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          billing_mode?: string
           company_id?: string
           created_at?: string
           created_by?: string | null
           email?: string | null
+          fixed_rate?: number | null
+          hourly_rate?: number | null
           id?: string
+          mixed_base_fixed?: number | null
+          mixed_extra_hour_rate?: number | null
+          mixed_included_minutes?: number | null
           name?: string
           notes?: string | null
           phone?: string | null
@@ -277,30 +295,54 @@ export type Database = {
       }
       company_hr_settings: {
         Row: {
+          billing_active: boolean
           company_id: string
+          default_fixed_rate: number
+          default_hour_rate: number
+          default_mixed_base_fixed: number
+          default_mixed_extra_hour_rate: number
+          default_mixed_included_minutes: number
           default_punch_mode: Database["public"]["Enums"]["punch_mode"]
           employee_approver_kind: Database["public"]["Enums"]["employee_approver_kind"]
           employee_approver_user_id: string | null
           manager_approver_kind: Database["public"]["Enums"]["manager_approver_kind"]
           manager_approver_user_id: string | null
+          overtime_multiplier: number
+          overtime_threshold_minutes: number
           updated_at: string
         }
         Insert: {
+          billing_active?: boolean
           company_id: string
+          default_fixed_rate?: number
+          default_hour_rate?: number
+          default_mixed_base_fixed?: number
+          default_mixed_extra_hour_rate?: number
+          default_mixed_included_minutes?: number
           default_punch_mode?: Database["public"]["Enums"]["punch_mode"]
           employee_approver_kind?: Database["public"]["Enums"]["employee_approver_kind"]
           employee_approver_user_id?: string | null
           manager_approver_kind?: Database["public"]["Enums"]["manager_approver_kind"]
           manager_approver_user_id?: string | null
+          overtime_multiplier?: number
+          overtime_threshold_minutes?: number
           updated_at?: string
         }
         Update: {
+          billing_active?: boolean
           company_id?: string
+          default_fixed_rate?: number
+          default_hour_rate?: number
+          default_mixed_base_fixed?: number
+          default_mixed_extra_hour_rate?: number
+          default_mixed_included_minutes?: number
           default_punch_mode?: Database["public"]["Enums"]["punch_mode"]
           employee_approver_kind?: Database["public"]["Enums"]["employee_approver_kind"]
           employee_approver_user_id?: string | null
           manager_approver_kind?: Database["public"]["Enums"]["manager_approver_kind"]
           manager_approver_user_id?: string | null
+          overtime_multiplier?: number
+          overtime_threshold_minutes?: number
           updated_at?: string
         }
         Relationships: [
@@ -588,6 +630,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      financial_audit: {
+        Row: {
+          actor_id: string | null
+          company_id: string
+          created_at: string
+          field: string
+          id: string
+          new_value: Json | null
+          old_value: Json | null
+          reason: string
+          scope: string
+          scope_id: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          company_id: string
+          created_at?: string
+          field: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          reason: string
+          scope: string
+          scope_id?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          company_id?: string
+          created_at?: string
+          field?: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          reason?: string
+          scope?: string
+          scope_id?: string | null
+        }
+        Relationships: []
       }
       fuel_card_users: {
         Row: {
@@ -925,6 +1006,13 @@ export type Database = {
           id: string
           is_active: boolean
           job_title: string | null
+          manual_fixed_rate: number | null
+          manual_hour_rate: number | null
+          manual_mixed_base_fixed: number | null
+          manual_mixed_extra_hour_rate: number | null
+          manual_mixed_included_minutes: number | null
+          pay_model: string
+          pay_rate_source: string
           phone: string | null
           supervisor_id: string | null
           team: string | null
@@ -939,6 +1027,13 @@ export type Database = {
           id: string
           is_active?: boolean
           job_title?: string | null
+          manual_fixed_rate?: number | null
+          manual_hour_rate?: number | null
+          manual_mixed_base_fixed?: number | null
+          manual_mixed_extra_hour_rate?: number | null
+          manual_mixed_included_minutes?: number | null
+          pay_model?: string
+          pay_rate_source?: string
           phone?: string | null
           supervisor_id?: string | null
           team?: string | null
@@ -953,6 +1048,13 @@ export type Database = {
           id?: string
           is_active?: boolean
           job_title?: string | null
+          manual_fixed_rate?: number | null
+          manual_hour_rate?: number | null
+          manual_mixed_base_fixed?: number | null
+          manual_mixed_extra_hour_rate?: number | null
+          manual_mixed_included_minutes?: number | null
+          pay_model?: string
+          pay_rate_source?: string
           phone?: string | null
           supervisor_id?: string | null
           team?: string | null
@@ -1298,6 +1400,69 @@ export type Database = {
         }
         Relationships: []
       }
+      time_entry_valuations: {
+        Row: {
+          amount: number
+          breakdown: Json
+          client_id: string | null
+          company_id: string
+          computed_at: string
+          computed_by: string | null
+          currency: string
+          effective_minutes: number
+          fixed_applied: number
+          id: string
+          mixed_base_applied: number
+          mixed_extra_rate_applied: number
+          mixed_included_minutes_applied: number
+          pay_model_used: string
+          rate_applied: number
+          rate_source: string
+          time_entry_id: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          breakdown?: Json
+          client_id?: string | null
+          company_id: string
+          computed_at?: string
+          computed_by?: string | null
+          currency?: string
+          effective_minutes?: number
+          fixed_applied?: number
+          id?: string
+          mixed_base_applied?: number
+          mixed_extra_rate_applied?: number
+          mixed_included_minutes_applied?: number
+          pay_model_used: string
+          rate_applied?: number
+          rate_source: string
+          time_entry_id: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          breakdown?: Json
+          client_id?: string | null
+          company_id?: string
+          computed_at?: string
+          computed_by?: string | null
+          currency?: string
+          effective_minutes?: number
+          fixed_applied?: number
+          id?: string
+          mixed_base_applied?: number
+          mixed_extra_rate_applied?: number
+          mixed_included_minutes_applied?: number
+          pay_model_used?: string
+          rate_applied?: number
+          rate_source?: string
+          time_entry_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           company_id: string | null
@@ -1557,6 +1722,35 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      calculate_time_entry_value: {
+        Args: { _time_entry_id: string }
+        Returns: {
+          amount: number
+          breakdown: Json
+          client_id: string | null
+          company_id: string
+          computed_at: string
+          computed_by: string | null
+          currency: string
+          effective_minutes: number
+          fixed_applied: number
+          id: string
+          mixed_base_applied: number
+          mixed_extra_rate_applied: number
+          mixed_included_minutes_applied: number
+          pay_model_used: string
+          rate_applied: number
+          rate_source: string
+          time_entry_id: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "time_entry_valuations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       contract_sign_get: {
         Args: { _token: string }
         Returns: {
@@ -1595,6 +1789,16 @@ export type Database = {
       effective_minutes_round: {
         Args: { _pause_seconds: number; _total_seconds: number }
         Returns: number
+      }
+      finance_summary: {
+        Args: {
+          _client_id?: string
+          _company_id: string
+          _from: string
+          _to: string
+          _user_id?: string
+        }
+        Returns: Json
       }
       get_auth_context: {
         Args: never
@@ -1828,6 +2032,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      recalculate_period: {
+        Args: {
+          _company_id: string
+          _from: string
+          _reason: string
+          _to: string
+        }
+        Returns: number
+      }
       recurrence_end: {
         Args: { _cancel_future?: boolean; _id: string; _reason: string }
         Returns: {
@@ -1923,6 +2136,7 @@ export type Database = {
         Args: { _company_id: string; _user_id: string }
         Returns: undefined
       }
+      resolve_billing_rule: { Args: { _time_entry_id: string }; Returns: Json }
       resolve_vacation_approver: {
         Args: { _company_id: string; _user_id: string }
         Returns: string
@@ -2019,6 +2233,95 @@ export type Database = {
         }
       }
       tasks_sweep_absent: { Args: { _company_id?: string }; Returns: number }
+      update_client_billing: {
+        Args: { _client_id: string; _patch: Json; _reason: string }
+        Returns: {
+          address: string | null
+          billing_mode: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          email: string | null
+          fixed_rate: number | null
+          hourly_rate: number | null
+          id: string
+          mixed_base_fixed: number | null
+          mixed_extra_hour_rate: number | null
+          mixed_included_minutes: number | null
+          name: string
+          notes: string | null
+          phone: string | null
+          status: Database["public"]["Enums"]["client_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "clients"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_company_finance_settings: {
+        Args: { _company_id: string; _patch: Json; _reason: string }
+        Returns: {
+          billing_active: boolean
+          company_id: string
+          default_fixed_rate: number
+          default_hour_rate: number
+          default_mixed_base_fixed: number
+          default_mixed_extra_hour_rate: number
+          default_mixed_included_minutes: number
+          default_punch_mode: Database["public"]["Enums"]["punch_mode"]
+          employee_approver_kind: Database["public"]["Enums"]["employee_approver_kind"]
+          employee_approver_user_id: string | null
+          manager_approver_kind: Database["public"]["Enums"]["manager_approver_kind"]
+          manager_approver_user_id: string | null
+          overtime_multiplier: number
+          overtime_threshold_minutes: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "company_hr_settings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_employee_pay: {
+        Args: {
+          _company_id: string
+          _patch: Json
+          _reason: string
+          _user_id: string
+        }
+        Returns: {
+          avatar_url: string | null
+          created_at: string
+          current_company_id: string | null
+          full_name: string | null
+          id: string
+          is_active: boolean
+          job_title: string | null
+          manual_fixed_rate: number | null
+          manual_hour_rate: number | null
+          manual_mixed_base_fixed: number | null
+          manual_mixed_extra_hour_rate: number | null
+          manual_mixed_included_minutes: number | null
+          pay_model: string
+          pay_rate_source: string
+          phone: string | null
+          supervisor_id: string | null
+          team: string | null
+          updated_at: string
+          work_location: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       vacation_decide: {
         Args: { _action: string; _id: string; _reason?: string }
         Returns: {
