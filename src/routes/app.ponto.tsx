@@ -516,6 +516,10 @@ function ActiveTaskCard({
             <Square className="mr-2 h-5 w-5" /> Concluir tarefa
           </Button>
         </div>
+
+        <div className="rounded-xl border border-border/60 bg-background/40 p-4">
+          <TaskDocuments taskId={task.id} companyId={task.company_id} canManage={false} />
+        </div>
       </div>
     </section>
   );
