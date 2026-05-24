@@ -615,6 +615,10 @@ function UpcomingTasks({
               <span className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${STATUS_TONE[nextStartable.status]}`}>
                 {STATUS_LABELS[nextStartable.status]}
               </span>
+              <span className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                {effectiveMode(nextStartable) === "automatico" ? <Zap className="h-3 w-3" /> : <Hand className="h-3 w-3" />}
+                {PUNCH_MODE_LABELS[effectiveMode(nextStartable)]}
+              </span>
               {nextLate && (
                 <span className="inline-flex items-center gap-1 rounded bg-destructive/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-destructive">
                   <AlertCircle className="h-3 w-3" /> atrasada
