@@ -27,6 +27,8 @@ import {
 import { RecurrenceForm, emptyRecurrence, type RecurrenceFormValue } from "@/components/tasks/RecurrenceForm";
 import { TaskDocuments } from "@/components/tasks/TaskDocuments";
 import { ReassignDialog } from "@/components/tasks/ReassignDialog";
+import { EditRecurrenceDialog } from "@/components/tasks/EditRecurrenceDialog";
+import type { RecurrenceRow } from "@/lib/tasks";
 
 export const Route = createFileRoute("/app/tarefas")({
   component: TasksPage,
@@ -38,6 +40,25 @@ function TasksPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<TaskRow | null>(null);
   const [reassigning, setReassigning] = useState<TaskRow | null>(null);
+  const [editingSeries, setEditingSeries] = useState<TaskRow | null>(null);
+  const [seriesRow, setSeriesRow] = useState<RecurrenceRow | null>(null);
+
+  useEffect(() => {
+    if (!editingSeries?.recurrence_id) {
+      setSeriesRow(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (supabase.from("task_recurrences" as any) as any)
+        .select("*")
+        .eq("id", editingSeries.recurrence_id)
+        .maybeSingle();
+      if (!cancelled) setSeriesRow((data ?? null) as RecurrenceRow | null);
+    })();
+    return () => { cancelled = true; };
+  }, [editingSeries?.recurrence_id]);
 
   const { data: tasks, isLoading } = useQuery({
     queryKey: ["tasks", currentCompanyId, user?.id, isManager],
@@ -177,6 +198,18 @@ function TasksPage() {
         onDone={() => qc.invalidateQueries({ queryKey: ["tasks"] })}
       />
 
+      <EditRecurrenceDialog
+        recurrence={seriesRow}
+        task={editingSeries}
+        members={members ?? []}
+        open={!!editingSeries && !!seriesRow}
+        onOpenChange={(v) => !v && setEditingSeries(null)}
+        onDone={() => {
+          qc.invalidateQueries({ queryKey: ["tasks"] });
+          qc.invalidateQueries({ queryKey: ["recurrences"] });
+        }}
+      />
+
       {!currentCompanyId && isManager && (
         <div className="rounded-2xl border border-warning/40 bg-warning/10 p-4 text-sm text-warning-foreground">
           Sua empresa ainda está aguardando aprovação. Você poderá criar tarefas assim que for liberada.
@@ -223,6 +256,11 @@ function TasksPage() {
                     <Button size="sm" variant="ghost" title="Editar" onClick={() => setEditing(t)}>
                       <Pencil className="h-3 w-3" />
                     </Button>
+                    {t.recurrence_id && (
+                      <Button size="sm" variant="ghost" title="Editar série" onClick={() => setEditingSeries(t)}>
+                        <Repeat className="h-3 w-3" />
+                      </Button>
+                    )}
                       <Button size="sm" variant="ghost" title="Reatribuir" onClick={() => setReassigning(t)}>
                         <UserCog className="h-3 w-3" />
                       </Button>
