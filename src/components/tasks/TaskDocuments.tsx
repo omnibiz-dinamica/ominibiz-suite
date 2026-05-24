@@ -20,6 +20,7 @@ interface TaskDocRow {
 
 const ACCEPT = "application/pdf,image/png,image/jpeg,image/jpg";
 const MAX_SIZE = 10 * 1024 * 1024;
+const ALLOWED_MIME = new Set(["application/pdf", "image/png", "image/jpeg", "image/jpg"]);
 
 export function TaskDocuments({
   taskId,
@@ -50,6 +51,10 @@ export function TaskDocuments({
   const upload = async (file: File) => {
     if (file.size > MAX_SIZE) {
       toast.error("Arquivo maior que 10 MB");
+      return;
+    }
+    if (!ALLOWED_MIME.has(file.type)) {
+      toast.error("Tipo de arquivo não permitido. Use PDF, PNG ou JPG.");
       return;
     }
     const kind: TaskDocRow["kind"] = file.type === "application/pdf" ? "pdf" : "image";
