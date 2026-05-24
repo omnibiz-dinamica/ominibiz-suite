@@ -231,6 +231,27 @@ function PontoPage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+  const manualStartMut = useMutation({
+    mutationFn: (taskId: string) => punchManualStart(taskId),
+    onSuccess: () => {
+      toast.success("Entrada registrada — contador iniciado");
+      qc.invalidateQueries({ queryKey: ["punch-open"] });
+      qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const manualEndMut = useMutation({
+    mutationFn: (taskId: string) => punchManualEnd(taskId),
+    onSuccess: () => {
+      toast.success("Saída registrada — tarefa segue em andamento");
+      qc.invalidateQueries({ queryKey: ["punch-open"] });
+      qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
+      qc.invalidateQueries({ queryKey: ["punch-history"] });
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
   const requestAuthMut = useMutation({
     mutationFn: (taskId: string) => requestTaskAuthorization(taskId),
     onSuccess: () => {
@@ -243,6 +264,22 @@ function PontoPage() {
 
   const state = openEntry ? punchState(openEntry) : "encerrado";
   const liveSec = openEntry ? effectiveSecondsNow(openEntry) : 0;
+
+  // Decide qual ação executar ao clicar em "Iniciar/Bater entrada".
+  const handleStart = (t: TaskRow) => {
+    const mode = effectiveMode(t);
+    if (mode === "ambos") {
+      setModeChoice(t);
+      return;
+    }
+    if (mode === "manual") {
+      manualStartMut.mutate(t.id);
+      return;
+    }
+    startMut.mutate(t.id);
+  };
+
+  const openTaskMode = openTask ? effectiveMode(openTask) : "automatico";
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
@@ -270,21 +307,26 @@ function PontoPage() {
           clientName={openTask.client_id ? clientsMap?.[openTask.client_id] : undefined}
           liveSec={liveSec}
           state={state}
+          mode={openTaskMode}
           onPause={() => pauseMut.mutate()}
           onResume={() => resumeMut.mutate()}
           onComplete={() => endMut.mutate()}
+          onManualEnd={() => manualEndMut.mutate(openTask.id)}
           pausing={pauseMut.isPending}
           resuming={resumeMut.isPending}
           ending={endMut.isPending}
+          manualEnding={manualEndMut.isPending}
         />
       ) : (
         <UpcomingTasks
           tasks={upcoming ?? []}
           clientsMap={clientsMap ?? {}}
           isManager={isManager}
-          onStart={(id) => startMut.mutate(id)}
-          starting={startMut.isPending}
-          startingId={startMut.variables ?? null}
+          currentUserId={user?.id ?? null}
+          effectiveMode={effectiveMode}
+          onStart={handleStart}
+          starting={startMut.isPending || manualStartMut.isPending}
+          startingId={startMut.variables ?? manualStartMut.variables ?? null}
           onRequestAuth={(id) => requestAuthMut.mutate(id)}
           requestingAuth={requestAuthMut.isPending}
           requestingAuthId={requestAuthMut.variables ?? null}
@@ -321,6 +363,51 @@ function PontoPage() {
           </ul>
         )}
       </section>
+
+      {/* Dialog de escolha de método (modo "ambos") */}
+      <Dialog open={!!modeChoice} onOpenChange={(o) => !o && setModeChoice(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Como deseja registrar?</DialogTitle>
+            <DialogDescription>
+              Esta empresa permite ambos os modos. Escolha como abrir o ponto para esta tarefa.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2 pt-2">
+            <Button
+              size="lg"
+              className="h-14 justify-start"
+              onClick={() => {
+                if (!modeChoice) return;
+                startMut.mutate(modeChoice.id);
+                setModeChoice(null);
+              }}
+            >
+              <Zap className="mr-2 h-5 w-5" />
+              <div className="text-left">
+                <div className="text-sm font-semibold">Automático</div>
+                <div className="text-xs opacity-80">Inicia tarefa e abre o ponto em um clique.</div>
+              </div>
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="h-14 justify-start"
+              onClick={() => {
+                if (!modeChoice) return;
+                manualStartMut.mutate(modeChoice.id);
+                setModeChoice(null);
+              }}
+            >
+              <Hand className="mr-2 h-5 w-5" />
+              <div className="text-left">
+                <div className="text-sm font-semibold">Manual</div>
+                <div className="text-xs opacity-80">Bater entrada/saída manualmente durante a tarefa.</div>
+              </div>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
