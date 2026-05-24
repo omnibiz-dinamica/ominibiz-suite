@@ -5,10 +5,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Pause, Play, Square, Coffee, Clock as ClockIcon, AlertCircle, Flame, Plus, Building2, ShieldAlert, Send } from "lucide-react";
+import { Pause, Play, Square, Coffee, Clock as ClockIcon, AlertCircle, Flame, Plus, Building2, ShieldAlert, Send, LogIn, LogOut, Hand, Zap } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   type TimeEntryRow,
   type TaskRow,
+  type PunchMode,
   punchPause,
   punchResume,
   punchState,
@@ -17,6 +25,9 @@ import {
   formatHMS,
   transitionTask,
   requestTaskAuthorization,
+  punchManualStart,
+  punchManualEnd,
+  PUNCH_MODE_LABELS,
   STATUS_LABELS,
   STATUS_TONE,
   isVisuallyLate,
@@ -35,12 +46,32 @@ function PontoPage() {
   const { user, isManager, currentCompanyId } = useAuth();
   const qc = useQueryClient();
   const [, setNow] = useState(() => Date.now());
+  const [modeChoice, setModeChoice] = useState<TaskRow | null>(null);
 
   // Tick visual (1s) — apenas para renderização.
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
+
+  // Modo padrão da empresa (config de RH).
+  const { data: companyMode } = useQuery({
+    queryKey: ["hr-punch-mode", currentCompanyId],
+    queryFn: async () => {
+      if (!currentCompanyId) return "automatico" as PunchMode;
+      const { data, error } = await supabase
+        .from("company_hr_settings")
+        .select("default_punch_mode")
+        .eq("company_id", currentCompanyId)
+        .maybeSingle();
+      if (error) throw error;
+      return ((data?.default_punch_mode as PunchMode) ?? "automatico");
+    },
+    enabled: !!currentCompanyId,
+  });
+
+  const effectiveMode = (t: Pick<TaskRow, "punch_mode_override">): PunchMode =>
+    (t.punch_mode_override as PunchMode | null | undefined) ?? companyMode ?? "automatico";
 
   // Ponto aberto do próprio usuário
   const { data: openEntry } = useQuery({
@@ -82,7 +113,7 @@ function PontoPage() {
       let q = supabase
         .from("tasks")
         .select("*")
-        .in("status", ["pendente", "autorizado", "ausente"])
+        .in("status", ["pendente", "autorizado", "ausente", "em_andamento"])
         .order("scheduled_for", { ascending: true, nullsFirst: false })
         .limit(12);
       // Gestor/super admin: vê tarefas da empresa (toda a operação).
@@ -200,6 +231,27 @@ function PontoPage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+  const manualStartMut = useMutation({
+    mutationFn: (taskId: string) => punchManualStart(taskId),
+    onSuccess: () => {
+      toast.success("Entrada registrada — contador iniciado");
+      qc.invalidateQueries({ queryKey: ["punch-open"] });
+      qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const manualEndMut = useMutation({
+    mutationFn: (taskId: string) => punchManualEnd(taskId),
+    onSuccess: () => {
+      toast.success("Saída registrada — tarefa segue em andamento");
+      qc.invalidateQueries({ queryKey: ["punch-open"] });
+      qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
+      qc.invalidateQueries({ queryKey: ["punch-history"] });
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
   const requestAuthMut = useMutation({
     mutationFn: (taskId: string) => requestTaskAuthorization(taskId),
     onSuccess: () => {
@@ -212,6 +264,22 @@ function PontoPage() {
 
   const state = openEntry ? punchState(openEntry) : "encerrado";
   const liveSec = openEntry ? effectiveSecondsNow(openEntry) : 0;
+
+  // Decide qual ação executar ao clicar em "Iniciar/Bater entrada".
+  const handleStart = (t: TaskRow) => {
+    const mode = effectiveMode(t);
+    if (mode === "ambos") {
+      setModeChoice(t);
+      return;
+    }
+    if (mode === "manual") {
+      manualStartMut.mutate(t.id);
+      return;
+    }
+    startMut.mutate(t.id);
+  };
+
+  const openTaskMode = openTask ? effectiveMode(openTask) : "automatico";
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
@@ -239,21 +307,26 @@ function PontoPage() {
           clientName={openTask.client_id ? clientsMap?.[openTask.client_id] : undefined}
           liveSec={liveSec}
           state={state}
+          mode={openTaskMode}
           onPause={() => pauseMut.mutate()}
           onResume={() => resumeMut.mutate()}
           onComplete={() => endMut.mutate()}
+          onManualEnd={() => manualEndMut.mutate(openTask.id)}
           pausing={pauseMut.isPending}
           resuming={resumeMut.isPending}
           ending={endMut.isPending}
+          manualEnding={manualEndMut.isPending}
         />
       ) : (
         <UpcomingTasks
           tasks={upcoming ?? []}
           clientsMap={clientsMap ?? {}}
           isManager={isManager}
-          onStart={(id) => startMut.mutate(id)}
-          starting={startMut.isPending}
-          startingId={startMut.variables ?? null}
+          currentUserId={user?.id ?? null}
+          effectiveMode={effectiveMode}
+          onStart={handleStart}
+          starting={startMut.isPending || manualStartMut.isPending}
+          startingId={startMut.variables ?? manualStartMut.variables ?? null}
           onRequestAuth={(id) => requestAuthMut.mutate(id)}
           requestingAuth={requestAuthMut.isPending}
           requestingAuthId={requestAuthMut.variables ?? null}
@@ -290,6 +363,51 @@ function PontoPage() {
           </ul>
         )}
       </section>
+
+      {/* Dialog de escolha de método (modo "ambos") */}
+      <Dialog open={!!modeChoice} onOpenChange={(o) => !o && setModeChoice(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Como deseja registrar?</DialogTitle>
+            <DialogDescription>
+              Esta empresa permite ambos os modos. Escolha como abrir o ponto para esta tarefa.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2 pt-2">
+            <Button
+              size="lg"
+              className="h-14 justify-start"
+              onClick={() => {
+                if (!modeChoice) return;
+                startMut.mutate(modeChoice.id);
+                setModeChoice(null);
+              }}
+            >
+              <Zap className="mr-2 h-5 w-5" />
+              <div className="text-left">
+                <div className="text-sm font-semibold">Automático</div>
+                <div className="text-xs opacity-80">Inicia tarefa e abre o ponto em um clique.</div>
+              </div>
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="h-14 justify-start"
+              onClick={() => {
+                if (!modeChoice) return;
+                manualStartMut.mutate(modeChoice.id);
+                setModeChoice(null);
+              }}
+            >
+              <Hand className="mr-2 h-5 w-5" />
+              <div className="text-left">
+                <div className="text-sm font-semibold">Manual</div>
+                <div className="text-xs opacity-80">Bater entrada/saída manualmente durante a tarefa.</div>
+              </div>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -300,29 +418,39 @@ function ActiveTaskCard({
   clientName,
   liveSec,
   state,
+  mode,
   onPause,
   onResume,
   onComplete,
+  onManualEnd,
   pausing,
   resuming,
   ending,
+  manualEnding,
 }: {
   entry: TimeEntryRow;
   task: TaskRow;
   clientName?: string;
   liveSec: number;
   state: "aberto" | "pausado" | "encerrado";
+  mode: PunchMode;
   onPause: () => void;
   onResume: () => void;
   onComplete: () => void;
+  onManualEnd: () => void;
   pausing: boolean;
   resuming: boolean;
   ending: boolean;
+  manualEnding: boolean;
 }) {
   return (
     <section className="overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card shadow-lg">
-      <div className="border-b border-border/60 px-5 py-3 text-xs font-medium uppercase tracking-wide text-primary">
-        Tarefa em andamento
+      <div className="flex items-center justify-between border-b border-border/60 px-5 py-3 text-xs font-medium uppercase tracking-wide text-primary">
+        <span>Tarefa em andamento</span>
+        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] tracking-normal">
+          {mode === "manual" ? <Hand className="h-3 w-3" /> : mode === "ambos" ? <Hand className="h-3 w-3" /> : <Zap className="h-3 w-3" />}
+          {PUNCH_MODE_LABELS[mode]}
+        </span>
       </div>
       <div className="space-y-5 p-5 sm:p-6">
         <div>
@@ -373,9 +501,14 @@ function ActiveTaskCard({
               <Play className="mr-2 h-5 w-5" /> Retorno almoço
             </Button>
           )}
+          {(mode === "manual" || mode === "ambos") && state !== "encerrado" && (
+            <Button size="lg" variant="outline" className="h-14 text-base" disabled={manualEnding} onClick={onManualEnd}>
+              <LogOut className="mr-2 h-5 w-5" /> Bater saída
+            </Button>
+          )}
           <Button
             size="lg"
-            className="h-14 text-base sm:col-span-1"
+            className="h-14 text-base sm:col-span-2"
             disabled={ending}
             onClick={onComplete}
           >
@@ -391,6 +524,8 @@ function UpcomingTasks({
   tasks,
   clientsMap,
   isManager,
+  currentUserId,
+  effectiveMode,
   onStart,
   starting,
   startingId,
@@ -401,7 +536,9 @@ function UpcomingTasks({
   tasks: TaskRow[];
   clientsMap: Record<string, string>;
   isManager: boolean;
-  onStart: (id: string) => void;
+  currentUserId: string | null;
+  effectiveMode: (t: Pick<TaskRow, "punch_mode_override">) => PunchMode;
+  onStart: (t: TaskRow) => void;
   starting: boolean;
   startingId: string | null;
   onRequestAuth: (id: string) => void;
@@ -436,10 +573,12 @@ function UpcomingTasks({
   // para dar contexto operacional imediato.
   // Prioriza tarefa pronta para iniciar; senão a primeira da fila.
   const nextStartable =
-    tasks.find((t) => t.status === "autorizado" || t.status === "pendente") ?? tasks[0];
+    tasks.find((t) => t.status === "autorizado" || t.status === "pendente" || t.status === "em_andamento") ?? tasks[0];
   const rest = tasks.filter((t) => t.id !== nextStartable.id);
   const nextIsStartable =
-    nextStartable.status === "autorizado" || nextStartable.status === "pendente";
+    nextStartable.status === "autorizado" ||
+    nextStartable.status === "pendente" ||
+    nextStartable.status === "em_andamento";
   const nextIsAbsent = nextStartable.status === "ausente";
   const nextStarting = starting && startingId === nextStartable.id;
   const nextRequesting = requestingAuth && requestingAuthId === nextStartable.id;
@@ -521,10 +660,15 @@ function UpcomingTasks({
               size="lg"
               className="h-16 w-full text-base"
               disabled={!nextIsStartable || nextStarting}
-              onClick={() => onStart(nextStartable.id)}
+              onClick={() => onStart(nextStartable)}
             >
-              <Play className="mr-2 h-6 w-6" />
-              Iniciar tarefa
+              {effectiveMode(nextStartable) === "manual" ? (
+                <><LogIn className="mr-2 h-6 w-6" /> Bater entrada</>
+              ) : nextStartable.status === "em_andamento" ? (
+                <><LogIn className="mr-2 h-6 w-6" /> Bater entrada</>
+              ) : (
+                <><Play className="mr-2 h-6 w-6" /> Iniciar tarefa</>
+              )}
             </Button>
           )}
         </div>
@@ -541,6 +685,10 @@ function UpcomingTasks({
           const late = isVisuallyLate(t);
           const isStarting = starting && startingId === t.id;
           const clientName = t.client_id ? clientsMap[t.client_id] : undefined;
+          const tMode = effectiveMode(t);
+          const isOwn = !!currentUserId && t.assigned_to === currentUserId;
+          const canStart =
+            (t.status === "pendente" || t.status === "autorizado" || t.status === "em_andamento") && isOwn;
           return (
             <li key={t.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
               <div className="min-w-0 flex-1">
@@ -555,6 +703,10 @@ function UpcomingTasks({
                   )}
                   <span className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${STATUS_TONE[t.status]}`}>
                     {STATUS_LABELS[t.status]}
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                    {tMode === "automatico" ? <Zap className="h-3 w-3" /> : <Hand className="h-3 w-3" />}
+                    {PUNCH_MODE_LABELS[tMode]}
                   </span>
                 </div>
                 <div className="mt-1 truncate font-medium">{t.title}</div>
@@ -580,16 +732,22 @@ function UpcomingTasks({
                 variant={t.status === "ausente" ? "outline" : "default"}
                 disabled={
                   isStarting ||
+                  (t.status !== "ausente" && !canStart) ||
                   (t.status === "ausente" && requestingAuth && requestingAuthId === t.id)
                 }
                 onClick={() =>
-                  t.status === "ausente" ? onRequestAuth(t.id) : onStart(t.id)
+                  t.status === "ausente" ? onRequestAuth(t.id) : onStart(t)
                 }
               >
                 {t.status === "ausente" ? (
                   <>
                     <Send className="mr-2 h-5 w-5" />
                     Solicitar autorização
+                  </>
+                ) : tMode === "manual" || t.status === "em_andamento" ? (
+                  <>
+                    <LogIn className="mr-2 h-5 w-5" />
+                    Bater entrada
                   </>
                 ) : (
                   <>
