@@ -1728,6 +1728,54 @@ export type Database = {
         Args: { _new_user: string; _scope?: string; _task_id: string }
         Returns: number
       }
+      recurrence_update: {
+        Args: {
+          _from_task?: string
+          _id: string
+          _payload: Json
+          _scope?: string
+        }
+        Returns: number
+      }
+      recurrence_update_occurrence: {
+        Args: { _payload: Json; _task_id: string }
+        Returns: {
+          absence_grace_minutes: number
+          assigned_to: string | null
+          authorized_at: string | null
+          authorized_by: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          client_id: string | null
+          company_id: string
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          due_at: string | null
+          id: string
+          late_notified_at: string | null
+          location: string | null
+          marked_absent_at: string | null
+          notes: string | null
+          priority: Database["public"]["Enums"]["task_priority"]
+          punch_mode_override: Database["public"]["Enums"]["punch_mode"] | null
+          recurrence_date: string | null
+          recurrence_id: string | null
+          scheduled_end: string | null
+          scheduled_for: string | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tasks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       remove_member: {
         Args: { _company_id: string; _user_id: string }
         Returns: undefined
