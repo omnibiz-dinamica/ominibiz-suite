@@ -292,7 +292,10 @@ export async function requestTaskAuthorization(taskId: string, note?: string): P
   return data as TaskRow;
 }
 
-/** Duração efetiva (minutos) considerando pausa em curso para exibição. */
+/**
+ * Duração efetiva (minutos) — arredondamento half-up consistente com o banco
+ * (effective_minutes_round). Use sempre para exibir minutos persistidos/preview.
+ */
 export function effectiveMinutesNow(e: TimeEntryRow): number {
   const start = new Date(e.started_at).getTime();
   const end = e.ended_at ? new Date(e.ended_at).getTime() : Date.now();
@@ -302,7 +305,9 @@ export function effectiveMinutesNow(e: TimeEntryRow): number {
     const r = e.resumed_at ? new Date(e.resumed_at).getTime() : (e.ended_at ? new Date(e.ended_at).getTime() : Date.now());
     pauseMs = Math.max(0, r - p);
   }
-  return Math.max(0, Math.floor((end - start - pauseMs) / 60000));
+  const seconds = Math.max(0, (end - start - pauseMs) / 1000);
+  // Half-up: Math.floor(x + 0.5) trata exatamente como round() do Postgres em positivos.
+  return Math.max(0, Math.floor(seconds / 60 + 0.5));
 }
 
 export function formatDuration(min: number): string {
