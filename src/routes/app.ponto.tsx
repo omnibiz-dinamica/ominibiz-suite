@@ -418,29 +418,39 @@ function ActiveTaskCard({
   clientName,
   liveSec,
   state,
+  mode,
   onPause,
   onResume,
   onComplete,
+  onManualEnd,
   pausing,
   resuming,
   ending,
+  manualEnding,
 }: {
   entry: TimeEntryRow;
   task: TaskRow;
   clientName?: string;
   liveSec: number;
   state: "aberto" | "pausado" | "encerrado";
+  mode: PunchMode;
   onPause: () => void;
   onResume: () => void;
   onComplete: () => void;
+  onManualEnd: () => void;
   pausing: boolean;
   resuming: boolean;
   ending: boolean;
+  manualEnding: boolean;
 }) {
   return (
     <section className="overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card shadow-lg">
-      <div className="border-b border-border/60 px-5 py-3 text-xs font-medium uppercase tracking-wide text-primary">
-        Tarefa em andamento
+      <div className="flex items-center justify-between border-b border-border/60 px-5 py-3 text-xs font-medium uppercase tracking-wide text-primary">
+        <span>Tarefa em andamento</span>
+        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] tracking-normal">
+          {mode === "manual" ? <Hand className="h-3 w-3" /> : mode === "ambos" ? <Hand className="h-3 w-3" /> : <Zap className="h-3 w-3" />}
+          {PUNCH_MODE_LABELS[mode]}
+        </span>
       </div>
       <div className="space-y-5 p-5 sm:p-6">
         <div>
@@ -491,9 +501,14 @@ function ActiveTaskCard({
               <Play className="mr-2 h-5 w-5" /> Retorno almoço
             </Button>
           )}
+          {(mode === "manual" || mode === "ambos") && state !== "encerrado" && (
+            <Button size="lg" variant="outline" className="h-14 text-base" disabled={manualEnding} onClick={onManualEnd}>
+              <LogOut className="mr-2 h-5 w-5" /> Bater saída
+            </Button>
+          )}
           <Button
             size="lg"
-            className="h-14 text-base sm:col-span-1"
+            className="h-14 text-base sm:col-span-2"
             disabled={ending}
             onClick={onComplete}
           >
