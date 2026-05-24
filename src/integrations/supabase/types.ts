@@ -278,6 +278,7 @@ export type Database = {
       company_hr_settings: {
         Row: {
           company_id: string
+          default_punch_mode: Database["public"]["Enums"]["punch_mode"]
           employee_approver_kind: Database["public"]["Enums"]["employee_approver_kind"]
           employee_approver_user_id: string | null
           manager_approver_kind: Database["public"]["Enums"]["manager_approver_kind"]
@@ -286,6 +287,7 @@ export type Database = {
         }
         Insert: {
           company_id: string
+          default_punch_mode?: Database["public"]["Enums"]["punch_mode"]
           employee_approver_kind?: Database["public"]["Enums"]["employee_approver_kind"]
           employee_approver_user_id?: string | null
           manager_approver_kind?: Database["public"]["Enums"]["manager_approver_kind"]
@@ -294,6 +296,7 @@ export type Database = {
         }
         Update: {
           company_id?: string
+          default_punch_mode?: Database["public"]["Enums"]["punch_mode"]
           employee_approver_kind?: Database["public"]["Enums"]["employee_approver_kind"]
           employee_approver_user_id?: string | null
           manager_approver_kind?: Database["public"]["Enums"]["manager_approver_kind"]
@@ -966,6 +969,126 @@ export type Database = {
           },
         ]
       }
+      task_documents: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["task_document_kind"]
+          mime_type: string | null
+          size_bytes: number | null
+          storage_path: string
+          task_id: string
+          title: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["task_document_kind"]
+          mime_type?: string | null
+          size_bytes?: number | null
+          storage_path: string
+          task_id: string
+          title: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["task_document_kind"]
+          mime_type?: string | null
+          size_bytes?: number | null
+          storage_path?: string
+          task_id?: string
+          title?: string
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
+      task_recurrences: {
+        Row: {
+          absence_grace_minutes: number
+          assigned_to: string | null
+          client_id: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          custom_cron: string | null
+          description: string | null
+          duration_minutes: number
+          end_date: string | null
+          ended_at: string | null
+          ended_reason: string | null
+          frequency: Database["public"]["Enums"]["recurrence_frequency"]
+          id: string
+          location: string | null
+          monthly_rule: Json
+          priority: string
+          punch_mode_override: Database["public"]["Enums"]["punch_mode"] | null
+          scheduled_time: string
+          start_date: string
+          status: Database["public"]["Enums"]["recurrence_status"]
+          title: string
+          updated_at: string
+          weekdays: number[]
+        }
+        Insert: {
+          absence_grace_minutes?: number
+          assigned_to?: string | null
+          client_id?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          custom_cron?: string | null
+          description?: string | null
+          duration_minutes?: number
+          end_date?: string | null
+          ended_at?: string | null
+          ended_reason?: string | null
+          frequency: Database["public"]["Enums"]["recurrence_frequency"]
+          id?: string
+          location?: string | null
+          monthly_rule?: Json
+          priority?: string
+          punch_mode_override?: Database["public"]["Enums"]["punch_mode"] | null
+          scheduled_time?: string
+          start_date: string
+          status?: Database["public"]["Enums"]["recurrence_status"]
+          title: string
+          updated_at?: string
+          weekdays?: number[]
+        }
+        Update: {
+          absence_grace_minutes?: number
+          assigned_to?: string | null
+          client_id?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          custom_cron?: string | null
+          description?: string | null
+          duration_minutes?: number
+          end_date?: string | null
+          ended_at?: string | null
+          ended_reason?: string | null
+          frequency?: Database["public"]["Enums"]["recurrence_frequency"]
+          id?: string
+          location?: string | null
+          monthly_rule?: Json
+          priority?: string
+          punch_mode_override?: Database["public"]["Enums"]["punch_mode"] | null
+          scheduled_time?: string
+          start_date?: string
+          status?: Database["public"]["Enums"]["recurrence_status"]
+          title?: string
+          updated_at?: string
+          weekdays?: number[]
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           absence_grace_minutes: number
@@ -987,6 +1110,9 @@ export type Database = {
           marked_absent_at: string | null
           notes: string | null
           priority: Database["public"]["Enums"]["task_priority"]
+          punch_mode_override: Database["public"]["Enums"]["punch_mode"] | null
+          recurrence_date: string | null
+          recurrence_id: string | null
           scheduled_end: string | null
           scheduled_for: string | null
           started_at: string | null
@@ -1014,6 +1140,9 @@ export type Database = {
           marked_absent_at?: string | null
           notes?: string | null
           priority?: Database["public"]["Enums"]["task_priority"]
+          punch_mode_override?: Database["public"]["Enums"]["punch_mode"] | null
+          recurrence_date?: string | null
+          recurrence_id?: string | null
           scheduled_end?: string | null
           scheduled_for?: string | null
           started_at?: string | null
@@ -1041,6 +1170,9 @@ export type Database = {
           marked_absent_at?: string | null
           notes?: string | null
           priority?: Database["public"]["Enums"]["task_priority"]
+          punch_mode_override?: Database["public"]["Enums"]["punch_mode"] | null
+          recurrence_date?: string | null
+          recurrence_id?: string | null
           scheduled_end?: string | null
           scheduled_for?: string | null
           started_at?: string | null
@@ -1457,6 +1589,52 @@ export type Database = {
         Args: { _company_id?: string }
         Returns: number
       }
+      punch_manual_end: {
+        Args: { _task_id: string }
+        Returns: {
+          company_id: string
+          created_at: string
+          effective_minutes: number | null
+          ended_at: string | null
+          id: string
+          notes: string | null
+          paused_at: string | null
+          resumed_at: string | null
+          started_at: string
+          task_id: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "time_entries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      punch_manual_start: {
+        Args: { _task_id: string }
+        Returns: {
+          company_id: string
+          created_at: string
+          effective_minutes: number | null
+          ended_at: string | null
+          id: string
+          notes: string | null
+          paused_at: string | null
+          resumed_at: string | null
+          started_at: string
+          task_id: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "time_entries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       punch_pause: {
         Args: { _note?: string }
         Returns: {
@@ -1503,6 +1681,49 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      recurrence_end: {
+        Args: { _cancel_future?: boolean; _id: string; _reason: string }
+        Returns: {
+          absence_grace_minutes: number
+          assigned_to: string | null
+          client_id: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          custom_cron: string | null
+          description: string | null
+          duration_minutes: number
+          end_date: string | null
+          ended_at: string | null
+          ended_reason: string | null
+          frequency: Database["public"]["Enums"]["recurrence_frequency"]
+          id: string
+          location: string | null
+          monthly_rule: Json
+          priority: string
+          punch_mode_override: Database["public"]["Enums"]["punch_mode"] | null
+          scheduled_time: string
+          start_date: string
+          status: Database["public"]["Enums"]["recurrence_status"]
+          title: string
+          updated_at: string
+          weekdays: number[]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "task_recurrences"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      recurrence_materialize: {
+        Args: { _company_id?: string; _days_ahead?: number }
+        Returns: number
+      }
+      recurrence_reassign: {
+        Args: { _new_user: string; _scope?: string; _task_id: string }
+        Returns: number
+      }
       remove_member: {
         Args: { _company_id: string; _user_id: string }
         Returns: undefined
@@ -1519,6 +1740,10 @@ export type Database = {
           _user_id: string
         }
         Returns: undefined
+      }
+      task_effective_punch_mode: {
+        Args: { _task_id: string }
+        Returns: Database["public"]["Enums"]["punch_mode"]
       }
       task_request_authorization: {
         Args: { _note?: string; _task_id: string }
@@ -1542,6 +1767,9 @@ export type Database = {
           marked_absent_at: string | null
           notes: string | null
           priority: Database["public"]["Enums"]["task_priority"]
+          punch_mode_override: Database["public"]["Enums"]["punch_mode"] | null
+          recurrence_date: string | null
+          recurrence_id: string | null
           scheduled_end: string | null
           scheduled_for: string | null
           started_at: string | null
@@ -1578,6 +1806,9 @@ export type Database = {
           marked_absent_at: string | null
           notes: string | null
           priority: Database["public"]["Enums"]["task_priority"]
+          punch_mode_override: Database["public"]["Enums"]["punch_mode"] | null
+          recurrence_date: string | null
+          recurrence_id: string | null
           scheduled_end: string | null
           scheduled_for: string | null
           started_at: string | null
@@ -1682,6 +1913,10 @@ export type Database = {
         | "vacation_rejected"
         | "vacation_cancelled"
       notification_priority: "baixa" | "media" | "alta" | "urgente"
+      punch_mode: "automatico" | "manual" | "ambos"
+      recurrence_frequency: "daily" | "weekly" | "monthly" | "custom"
+      recurrence_status: "active" | "paused" | "ended"
+      task_document_kind: "pdf" | "image" | "checklist" | "video"
       task_priority: "baixa" | "media" | "alta" | "urgente"
       task_status:
         | "pendente"
@@ -1902,6 +2137,10 @@ export const Constants = {
         "vacation_cancelled",
       ],
       notification_priority: ["baixa", "media", "alta", "urgente"],
+      punch_mode: ["automatico", "manual", "ambos"],
+      recurrence_frequency: ["daily", "weekly", "monthly", "custom"],
+      recurrence_status: ["active", "paused", "ended"],
+      task_document_kind: ["pdf", "image", "checklist", "video"],
       task_priority: ["baixa", "media", "alta", "urgente"],
       task_status: [
         "pendente",
