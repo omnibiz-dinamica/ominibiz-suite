@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ArrowLeft, Pause, Play, Square, RefreshCcw } from "lucide-react";
+import { ArrowLeft, Pause, Play, Square, RefreshCcw, Pencil } from "lucide-react";
 import {
   FREQUENCY_LABELS,
   WEEKDAY_LABELS,
@@ -13,6 +13,7 @@ import {
   recurrenceMaterialize,
   type RecurrenceRow,
 } from "@/lib/tasks";
+import { EditRecurrenceDialog } from "@/components/tasks/EditRecurrenceDialog";
 
 export const Route = createFileRoute("/app/tarefas/recorrentes")({ component: RecurrencesPage });
 
@@ -20,6 +21,7 @@ function RecurrencesPage() {
   const { isManager, currentCompanyId } = useAuth();
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState<RecurrenceRow | null>(null);
 
   const { data: list, isLoading } = useQuery({
     queryKey: ["recurrences", currentCompanyId],
@@ -32,6 +34,22 @@ function RecurrencesPage() {
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as RecurrenceRow[];
+    },
+    enabled: isManager && !!currentCompanyId,
+  });
+
+  const { data: members } = useQuery({
+    queryKey: ["members", currentCompanyId],
+    queryFn: async () => {
+      if (!currentCompanyId) return [];
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("company_id", currentCompanyId);
+      const ids = (roles ?? []).map((r) => r.user_id);
+      if (ids.length === 0) return [];
+      const { data: profs } = await supabase.from("profiles").select("id, full_name").in("id", ids);
+      return profs ?? [];
     },
     enabled: isManager && !!currentCompanyId,
   });
@@ -132,6 +150,11 @@ function RecurrencesPage() {
               </div>
               <div className="flex gap-2">
                 {r.status !== "ended" && (
+                  <Button size="sm" variant="outline" title="Editar" onClick={() => setEditing(r)}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+                {r.status !== "ended" && (
                   <Button size="sm" variant="outline" onClick={() => pauseToggle.mutate(r)}>
                     {r.status === "paused" ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
                   </Button>
@@ -153,6 +176,17 @@ function RecurrencesPage() {
           ))}
         </ul>
       </div>
+
+      <EditRecurrenceDialog
+        recurrence={editing}
+        members={members ?? []}
+        open={!!editing}
+        onOpenChange={(v) => !v && setEditing(null)}
+        onDone={() => {
+          qc.invalidateQueries({ queryKey: ["recurrences"] });
+          qc.invalidateQueries({ queryKey: ["tasks"] });
+        }}
+      />
     </div>
   );
 }

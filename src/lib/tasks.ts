@@ -173,6 +173,60 @@ export async function recurrenceReassign(taskId: string, newUser: string, scope:
   return (data as number) ?? 0;
 }
 
+export type EditableSeriesPayload = Partial<{
+  title: string;
+  description: string | null;
+  assigned_to: string | null;
+  priority: "baixa" | "media" | "alta" | "urgente";
+  location: string | null;
+  absence_grace_minutes: number;
+  punch_mode_override: PunchMode | null;
+  scheduled_time: string; // HH:MM[:SS]
+  duration_minutes: number;
+}>;
+
+export type EditableOccurrencePayload = Partial<{
+  title: string;
+  description: string | null;
+  assigned_to: string | null;
+  priority: "baixa" | "media" | "alta" | "urgente";
+  location: string | null;
+  absence_grace_minutes: number;
+  punch_mode_override: PunchMode | null;
+  scheduled_for: string; // ISO
+  scheduled_end: string | null; // ISO or null
+}>;
+
+export async function recurrenceUpdate(
+  recurrenceId: string,
+  payload: EditableSeriesPayload,
+  scope: "future" | "all",
+  fromTaskId?: string | null,
+): Promise<number> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("recurrence_update", {
+    _id: recurrenceId,
+    _payload: payload,
+    _scope: scope,
+    _from_task: fromTaskId ?? null,
+  });
+  if (error) throw error;
+  return (data as number) ?? 0;
+}
+
+export async function recurrenceUpdateOccurrence(
+  taskId: string,
+  payload: EditableOccurrencePayload,
+): Promise<TaskRow> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("recurrence_update_occurrence", {
+    _task_id: taskId,
+    _payload: payload,
+  });
+  if (error) throw error;
+  return data as TaskRow;
+}
+
 /**
  * Indicador puramente visual — "atrasado" NÃO é persistido.
  * Calculado apenas para renderização.
