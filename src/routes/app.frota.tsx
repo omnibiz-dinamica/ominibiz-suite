@@ -38,9 +38,19 @@ type FuelRecord = {
   pump_photo_path: string | null; plate_photo_path: string | null; recorded_at: string;
 };
 
-async function uploadFleetPhoto(companyId: string, kind: string, file: File): Promise<string> {
+async function uploadFleetPhoto(
+  companyId: string,
+  kind: string,
+  file: File,
+  userId?: string,
+): Promise<string> {
   const ext = file.name.split(".").pop() || "jpg";
-  const path = `${companyId}/${kind}/${crypto.randomUUID()}.${ext}`;
+  // Storage RLS exige: foldername[1]=companyId, foldername[2]=auth.uid()
+  // para uploads de membros (não-gestores). Gestores podem subir em qualquer
+  // subpasta. Quando temos userId disponível, sempre usamos o layout
+  // compatível com a policy de membros.
+  const uid = userId ?? (await supabase.auth.getUser()).data.user?.id ?? "_";
+  const path = `${companyId}/${uid}/${kind}/${crypto.randomUUID()}.${ext}`;
   const { error } = await supabase.storage.from("fleet").upload(path, file, { upsert: false });
   if (error) throw error;
   return path;
@@ -688,10 +698,10 @@ function FuelForm({
 
       let plate_photo_path: string | null = selectedVehicle?.plate_photo_path ?? null;
       if (needPlatePhoto && platePhoto) {
-        plate_photo_path = await uploadFleetPhoto(companyId, "plate", platePhoto);
+        plate_photo_path = await uploadFleetPhoto(companyId, "plate", platePhoto, driverId);
         await supabase.from("vehicles").update({ plate_photo_path }).eq("id", vehicleId);
       }
-      const pump_photo_path = await uploadFleetPhoto(companyId, "pump", pumpPhoto);
+      const pump_photo_path = await uploadFleetPhoto(companyId, "pump", pumpPhoto, driverId);
       const amount = Number(liters) * Number(pricePerLiter);
 
       const { error: insErr } = await supabase.from("fuel_records").insert({
