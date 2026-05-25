@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Car, Fuel, CreditCard, Plus, History, X, Pencil, Power, Trash2 } from "lucide-react";
+import { PhotoPicker } from "@/components/PhotoPicker";
 import {
   VEHICLE_BRANDS,
   VEHICLE_KIND_LABELS,
@@ -750,14 +751,12 @@ function FuelForm({
           </div>
           <div>
             <Label>Foto da bomba</Label>
-            <Input type="file" accept="image/*" capture="environment"
-              onChange={(e) => setPumpPhoto(e.target.files?.[0] ?? null)} />
+            <PhotoPicker value={pumpPhoto} onChange={setPumpPhoto} />
           </div>
           {needPlatePhoto && (
             <div>
               <Label>Foto da matrícula (1ª vez)</Label>
-              <Input type="file" accept="image/*" capture="environment"
-                onChange={(e) => setPlatePhoto(e.target.files?.[0] ?? null)} />
+              <PhotoPicker value={platePhoto} onChange={setPlatePhoto} />
             </div>
           )}
           {!needPlatePhoto && selectedVehicle?.plate_photo_path && (
