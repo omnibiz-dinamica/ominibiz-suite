@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, useChildMatches } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -743,9 +743,7 @@ function FuelForm({
   }, [draftKey, vehicleId, km, liters, pricePerLiter, purpose, cardId]);
 
   // Persistência assíncrona dos arquivos (encode dataURL).
-  const pumpRef = useRef<File | null>(pumpPhoto);
   useEffect(() => {
-    pumpRef.current = pumpPhoto;
     (async () => {
       try {
         const prev: Partial<FuelDraft> = JSON.parse(
