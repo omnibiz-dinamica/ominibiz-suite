@@ -56,6 +56,41 @@ async function uploadFleetPhoto(
   return path;
 }
 
+// --- Draft persistence (sessionStorage) ----------------------------------
+// O Android pode descartar a WebView enquanto o app de câmera está em foreground.
+// Ao voltar, a página recarrega e todo useState reinicia. Persistimos o
+// rascunho do FuelForm (incluindo arquivos como dataURL) para rehidratar.
+type FuelDraft = {
+  vehicleId: string;
+  km: string;
+  liters: string;
+  pricePerLiter: string;
+  purpose: "profissional" | "pessoal";
+  cardId: string;
+  pumpPhoto: { name: string; type: string; dataUrl: string } | null;
+  platePhoto: { name: string; type: string; dataUrl: string } | null;
+};
+
+function fileToSerializable(file: File): Promise<FuelDraft["pumpPhoto"]> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onerror = () => reject(r.error);
+    r.onload = () =>
+      resolve({ name: file.name, type: file.type, dataUrl: String(r.result) });
+    r.readAsDataURL(file);
+  });
+}
+
+function serializableToFile(s: FuelDraft["pumpPhoto"]): File | null {
+  if (!s) return null;
+  const [meta, b64] = s.dataUrl.split(",");
+  const mime = /data:(.*?);base64/.exec(meta)?.[1] || s.type || "image/jpeg";
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new File([bytes], s.name, { type: mime });
+}
+
 function SignedImg({ path, className }: { path: string | null; className?: string }) {
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
@@ -656,14 +691,85 @@ function FuelForm({
   cardVehicles: CardVehicle[]; cardUsers: CardUser[];
   onSaved: () => void;
 }) {
-  const [vehicleId, setVehicleId] = useState<string>("");
-  const [km, setKm] = useState<string>("");
-  const [liters, setLiters] = useState<string>("");
-  const [pricePerLiter, setPricePerLiter] = useState<string>("");
-  const [purpose, setPurpose] = useState<"profissional" | "pessoal">("profissional");
-  const [pumpPhoto, setPumpPhoto] = useState<File | null>(null);
-  const [platePhoto, setPlatePhoto] = useState<File | null>(null);
-  const [cardId, setCardId] = useState<string>("");
+  const draftKey = `fuel-draft:${companyId}:${driverId}`;
+  // Hidratação síncrona no mount (antes do primeiro render) para evitar
+  // flicker e para que campos já apareçam preenchidos quando a WebView
+  // for recriada após retorno da câmera.
+  const initial = useMemo<Partial<FuelDraft>>(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      const raw = sessionStorage.getItem(draftKey);
+      return raw ? (JSON.parse(raw) as FuelDraft) : {};
+    } catch {
+      return {};
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const [vehicleId, setVehicleId] = useState<string>(initial.vehicleId ?? "");
+  const [km, setKm] = useState<string>(initial.km ?? "");
+  const [liters, setLiters] = useState<string>(initial.liters ?? "");
+  const [pricePerLiter, setPricePerLiter] = useState<string>(initial.pricePerLiter ?? "");
+  const [purpose, setPurpose] = useState<"profissional" | "pessoal">(
+    initial.purpose ?? "profissional",
+  );
+  const [pumpPhoto, setPumpPhoto] = useState<File | null>(
+    serializableToFile(initial.pumpPhoto ?? null),
+  );
+  const [platePhoto, setPlatePhoto] = useState<File | null>(
+    serializableToFile(initial.platePhoto ?? null),
+  );
+  const [cardId, setCardId] = useState<string>(initial.cardId ?? "");
+
+  // Persistência dos campos texto/seleção (debounced via microtask).
+  useEffect(() => {
+    try {
+      const prev: Partial<FuelDraft> = JSON.parse(
+        sessionStorage.getItem(draftKey) ?? "{}",
+      );
+      const next: Partial<FuelDraft> = {
+        ...prev,
+        vehicleId,
+        km,
+        liters,
+        pricePerLiter,
+        purpose,
+        cardId,
+      };
+      sessionStorage.setItem(draftKey, JSON.stringify(next));
+    } catch {
+      /* quota / private mode */
+    }
+  }, [draftKey, vehicleId, km, liters, pricePerLiter, purpose, cardId]);
+
+  // Persistência assíncrona dos arquivos (encode dataURL).
+  useEffect(() => {
+    (async () => {
+      try {
+        const prev: Partial<FuelDraft> = JSON.parse(
+          sessionStorage.getItem(draftKey) ?? "{}",
+        );
+        prev.pumpPhoto = pumpPhoto ? await fileToSerializable(pumpPhoto) : null;
+        sessionStorage.setItem(draftKey, JSON.stringify(prev));
+      } catch {
+        /* ignore */
+      }
+    })();
+  }, [draftKey, pumpPhoto]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const prev: Partial<FuelDraft> = JSON.parse(
+          sessionStorage.getItem(draftKey) ?? "{}",
+        );
+        prev.platePhoto = platePhoto ? await fileToSerializable(platePhoto) : null;
+        sessionStorage.setItem(draftKey, JSON.stringify(prev));
+      } catch {
+        /* ignore */
+      }
+    })();
+  }, [draftKey, platePhoto]);
 
   const selectedVehicle = vehicles.find((v) => v.id === vehicleId) || null;
   const total = useMemo(() => {
@@ -724,6 +830,7 @@ function FuelForm({
     onSuccess: () => {
       toast.success("Abastecimento registrado");
       setKm(""); setLiters(""); setPricePerLiter(""); setPumpPhoto(null); setPlatePhoto(null);
+      try { sessionStorage.removeItem(draftKey); } catch { /* ignore */ }
       onSaved();
     },
     onError: (e: any) => toast.error(e.message ?? "Falha"),
