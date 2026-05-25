@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { CreditCard, Plus, ArrowLeft, X } from "lucide-react";
+import { PhotoPicker } from "@/components/PhotoPicker";
 
 export const Route = createFileRoute("/app/frota/cartoes")({ component: CardsPage });
 
@@ -190,8 +191,7 @@ function NewCardForm({ companyId, onSaved }: { companyId: string; onSaved: () =>
           <div><Label>Número</Label><Input value={number} onChange={(e) => setNumber(e.target.value)} /></div>
           <div>
             <Label>Foto do cartão</Label>
-            <Input type="file" accept="image/*" capture="environment"
-              onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} />
+            <PhotoPicker value={photo} onChange={setPhoto} />
           </div>
           <div className="md:col-span-3 flex justify-end">
             <Button onClick={() => create.mutate()} disabled={create.isPending}>Cadastrar</Button>
