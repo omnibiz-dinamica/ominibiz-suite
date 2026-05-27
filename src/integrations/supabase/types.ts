@@ -1811,7 +1811,29 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      company_hr_punch_settings: {
+        Row: {
+          company_id: string | null
+          default_punch_mode: Database["public"]["Enums"]["punch_mode"] | null
+        }
+        Insert: {
+          company_id?: string | null
+          default_punch_mode?: Database["public"]["Enums"]["punch_mode"] | null
+        }
+        Update: {
+          company_id?: string | null
+          default_punch_mode?: Database["public"]["Enums"]["punch_mode"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_hr_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       _notify: {
