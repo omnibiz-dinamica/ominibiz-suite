@@ -1811,29 +1811,7 @@ export type Database = {
       }
     }
     Views: {
-      company_hr_punch_settings: {
-        Row: {
-          company_id: string | null
-          default_punch_mode: Database["public"]["Enums"]["punch_mode"] | null
-        }
-        Insert: {
-          company_id?: string | null
-          default_punch_mode?: Database["public"]["Enums"]["punch_mode"] | null
-        }
-        Update: {
-          company_id?: string | null
-          default_punch_mode?: Database["public"]["Enums"]["punch_mode"] | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "company_hr_settings_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: true
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+      [_ in never]: never
     }
     Functions: {
       _notify: {
@@ -1966,6 +1944,32 @@ export type Database = {
           current_company_id: string
           roles: Json
         }[]
+      }
+      get_company_hr_settings: {
+        Args: { _company_id: string }
+        Returns: {
+          billing_active: boolean
+          company_id: string
+          default_fixed_rate: number
+          default_hour_rate: number
+          default_mixed_base_fixed: number
+          default_mixed_extra_hour_rate: number
+          default_mixed_included_minutes: number
+          default_punch_mode: Database["public"]["Enums"]["punch_mode"]
+          employee_approver_kind: Database["public"]["Enums"]["employee_approver_kind"]
+          employee_approver_user_id: string | null
+          manager_approver_kind: Database["public"]["Enums"]["manager_approver_kind"]
+          manager_approver_user_id: string | null
+          overtime_multiplier: number
+          overtime_threshold_minutes: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "company_hr_settings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       get_invite_preview: {
         Args: { _token: string }
