@@ -136,7 +136,7 @@ function PontoPage() {
     queryKey: ["clients-map", currentCompanyId],
     queryFn: async () => {
       if (!currentCompanyId) return {} as Record<string, string>;
-      const { data, error } = await (supabase.from("clients" as never) as never as ReturnType<typeof supabase.from>)
+      const { data, error } = await (supabase.from("clients" as never) as any)
         .select("id,name")
         .eq("company_id", currentCompanyId);
       if (error) throw error;

@@ -1945,6 +1945,32 @@ export type Database = {
           roles: Json
         }[]
       }
+      get_company_hr_settings: {
+        Args: { _company_id: string }
+        Returns: {
+          billing_active: boolean
+          company_id: string
+          default_fixed_rate: number
+          default_hour_rate: number
+          default_mixed_base_fixed: number
+          default_mixed_extra_hour_rate: number
+          default_mixed_included_minutes: number
+          default_punch_mode: Database["public"]["Enums"]["punch_mode"]
+          employee_approver_kind: Database["public"]["Enums"]["employee_approver_kind"]
+          employee_approver_user_id: string | null
+          manager_approver_kind: Database["public"]["Enums"]["manager_approver_kind"]
+          manager_approver_user_id: string | null
+          overtime_multiplier: number
+          overtime_threshold_minutes: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "company_hr_settings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_invite_preview: {
         Args: { _token: string }
         Returns: {

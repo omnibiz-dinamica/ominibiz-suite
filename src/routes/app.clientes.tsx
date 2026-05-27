@@ -66,7 +66,7 @@ function ClientsPage() {
   const { data: clients, isLoading } = useQuery({
     queryKey: ["clients", currentCompanyId, isManager, user?.id],
     queryFn: async () => {
-      let q = (supabase.from("clients" as never) as never as ReturnType<typeof supabase.from>)
+      let q = (supabase.from("clients" as never) as any)
         .select("*")
         .order("name", { ascending: true });
       if (currentCompanyId) q = q.eq("company_id", currentCompanyId);
@@ -80,7 +80,7 @@ function ClientsPage() {
   const { data: assignees } = useQuery({
     queryKey: ["client-assignees", currentCompanyId],
     queryFn: async () => {
-      const { data, error } = await (supabase.from("client_assignees" as never) as never as ReturnType<typeof supabase.from>)
+      const { data, error } = await (supabase.from("client_assignees" as never) as any)
         .select("*");
       if (error) throw error;
       return (data ?? []) as unknown as AssigneeRow[];
@@ -129,7 +129,7 @@ function ClientsPage() {
 
   const toggleStatus = useMutation({
     mutationFn: async (c: ClientRow) => {
-      const { error } = await (supabase.from("clients" as never) as never as ReturnType<typeof supabase.from>)
+      const { error } = await (supabase.from("clients" as never) as any)
         .update({ status: c.status === "ativo" ? "inativo" : "ativo" })
         .eq("id", c.id);
       if (error) throw error;
@@ -143,7 +143,7 @@ function ClientsPage() {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase.from("clients" as never) as never as ReturnType<typeof supabase.from>)
+      const { error } = await (supabase.from("clients" as never) as any)
         .delete()
         .eq("id", id);
       if (error) throw error;
@@ -388,7 +388,7 @@ function ClientForm({
           let clientId = initial?.id;
           if (initial) {
             const { error } = await (
-              supabase.from("clients" as never) as never as ReturnType<typeof supabase.from>
+              supabase.from("clients" as never) as any
             )
               .update({
                 name: name.trim(),
@@ -402,7 +402,7 @@ function ClientForm({
             if (error) throw error;
           } else {
             const { data, error } = await (
-              supabase.from("clients" as never) as never as ReturnType<typeof supabase.from>
+              supabase.from("clients" as never) as any
             )
               .insert({
                 company_id: companyId,
@@ -426,9 +426,7 @@ function ClientForm({
             const toRemove = assignees.filter((a) => !selected.has(a.user_id));
             if (toRemove.length > 0) {
               await (
-                supabase.from("client_assignees" as never) as never as ReturnType<
-                  typeof supabase.from
-                >
+                supabase.from("client_assignees" as never) as any
               )
                 .delete()
                 .in(
@@ -441,9 +439,7 @@ function ClientForm({
             const toAdd = [...selected].filter((u) => !existing.has(u));
             if (toAdd.length > 0) {
               await (
-                supabase.from("client_assignees" as never) as never as ReturnType<
-                  typeof supabase.from
-                >
+                supabase.from("client_assignees" as never) as any
               ).insert(
                 toAdd.map((u) => ({
                   company_id: companyId,
@@ -455,17 +451,13 @@ function ClientForm({
             }
             // Atualiza primário
             await (
-              supabase.from("client_assignees" as never) as never as ReturnType<
-                typeof supabase.from
-              >
+              supabase.from("client_assignees" as never) as any
             )
               .update({ is_primary: false })
               .eq("client_id", clientId);
             if (primary && selected.has(primary)) {
               await (
-                supabase.from("client_assignees" as never) as never as ReturnType<
-                  typeof supabase.from
-                >
+                supabase.from("client_assignees" as never) as any
               )
                 .update({ is_primary: true })
                 .eq("client_id", clientId)

@@ -97,7 +97,7 @@ function TasksPage() {
     queryKey: ["clients-min", currentCompanyId],
     queryFn: async () => {
       if (!currentCompanyId) return [] as { id: string; name: string }[];
-      const { data, error } = await (supabase.from("clients" as never) as never as ReturnType<typeof supabase.from>)
+      const { data, error } = await (supabase.from("clients" as never) as any)
         .select("id,name")
         .eq("company_id", currentCompanyId)
         .eq("status", "ativo")
