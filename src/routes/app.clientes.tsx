@@ -426,9 +426,7 @@ function ClientForm({
             const toRemove = assignees.filter((a) => !selected.has(a.user_id));
             if (toRemove.length > 0) {
               await (
-                supabase.from("client_assignees" as never) as never as ReturnType<
-                  typeof supabase.from
-                >
+                supabase.from("client_assignees" as never) as any
               )
                 .delete()
                 .in(
@@ -441,9 +439,7 @@ function ClientForm({
             const toAdd = [...selected].filter((u) => !existing.has(u));
             if (toAdd.length > 0) {
               await (
-                supabase.from("client_assignees" as never) as never as ReturnType<
-                  typeof supabase.from
-                >
+                supabase.from("client_assignees" as never) as any
               ).insert(
                 toAdd.map((u) => ({
                   company_id: companyId,
@@ -455,17 +451,13 @@ function ClientForm({
             }
             // Atualiza primário
             await (
-              supabase.from("client_assignees" as never) as never as ReturnType<
-                typeof supabase.from
-              >
+              supabase.from("client_assignees" as never) as any
             )
               .update({ is_primary: false })
               .eq("client_id", clientId);
             if (primary && selected.has(primary)) {
               await (
-                supabase.from("client_assignees" as never) as never as ReturnType<
-                  typeof supabase.from
-                >
+                supabase.from("client_assignees" as never) as any
               )
                 .update({ is_primary: true })
                 .eq("client_id", clientId)
