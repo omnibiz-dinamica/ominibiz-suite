@@ -78,7 +78,9 @@ function HRSettingsCard({ companyId }: { companyId: string }) {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("company_hr_settings")
-        .select("*")
+        .select(
+          "company_id, default_punch_mode, employee_approver_kind, employee_approver_user_id, manager_approver_kind, manager_approver_user_id",
+        )
         .eq("company_id", companyId)
         .maybeSingle();
       if (error) throw error;
