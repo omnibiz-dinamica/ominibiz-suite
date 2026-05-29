@@ -1,200 +1,176 @@
 
-# RH → Recibos de Pagamento (MVP)
+# Envio real de recibos por email — arquitetura preparada para produção
 
-Foco: distribuição segura de recibos já existentes (PDF). Sem cálculo de folha.
+Objetivo: usar **Lovable Emails** como provider inicial, mas com camada de abstração que permita trocar para Resend / SMTP / outro provider sem refactor das chamadas no app.
 
 ---
 
-## 1. Schema (migration)
+## 1. Camada de abstração de provider
 
-### 1.1 Bucket de storage
-```sql
-insert into storage.buckets (id, name, public)
-values ('payslips', 'payslips', false);
-```
-Path convention: `payslips/{company_id}/{user_id}/{yyyy}-{mm}/{uuid}.pdf`
+Arquivo novo: `src/lib/email/provider.ts` (server-only)
 
-### 1.2 Tabela `payslips`
-```sql
-create type payslip_status as enum (
-  'unassigned',   -- upload sem funcionário associado
-  'assigned',     -- associado ao funcionário, não enviado
-  'sent',         -- email enviado
-  'failed',       -- envio falhou
-  'archived'
-);
+```ts
+export type EmailMessage = {
+  to: string;
+  subject: string;
+  html: string;
+  text?: string;
+  attachments?: { filename: string; content: string /*base64*/; contentType: string }[];
+  headers?: Record<string, string>;
+  tags?: Record<string, string>;   // ex.: { payslip_id, company_id }
+};
 
-create table public.payslips (
-  id uuid primary key default gen_random_uuid(),
-  company_id uuid not null,
-  user_id uuid,                       -- null = não associado
-  uploaded_by uuid not null,
-  storage_path text not null,
-  original_filename text not null,
-  mime_type text not null default 'application/pdf',
-  size_bytes bigint,
+export type EmailSendResult = {
+  provider: "lovable" | "resend" | "smtp";
+  provider_message_id: string | null;
+  status: "queued" | "sent" | "failed";
+  error?: string;
+};
 
-  -- metadados extraídos (parser)
-  period_year int,                    -- ex.: 2026
-  period_month int,                   -- 1..12
-  employee_name_detected text,
-  gross_amount numeric(12,2),
-  net_amount numeric(12,2),
-  parse_confidence numeric(3,2),      -- 0..1
-  parse_raw jsonb default '{}'::jsonb,
-
-  status payslip_status not null default 'unassigned',
-
-  -- entrega por email
-  email_to text,
-  email_sent_at timestamptz,
-  email_delivery_status text,         -- queued|sent|delivered|bounced|failed
-  email_opened_at timestamptz,        -- estrutura preparada (tracking futuro)
-  email_error text,
-
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-create index on public.payslips(company_id, period_year desc, period_month desc);
-create index on public.payslips(company_id, user_id);
-create index on public.payslips(company_id, status);
+export interface EmailProvider {
+  name: string;
+  send(msg: EmailMessage): Promise<EmailSendResult>;
+}
 ```
 
-### 1.3 Tabela `payslip_email_events` (auditoria)
+- `LovableEmailProvider` — implementação inicial (server route `/lovable/email/transactional/send` via fila pgmq).
+- `ResendEmailProvider` (stub, não habilitado) — esqueleto pronto para o dia que quiserem trocar.
+- Factory `getEmailProvider()` lê `process.env.EMAIL_PROVIDER` (default `"lovable"`) → retorna o provider.
+
+Todo o resto do código só conhece a interface `EmailProvider`.
+
+---
+
+## 2. Templates por empresa
+
+Arquivo novo: `src/lib/email/templates/payslip.tsx` (React Email)
+
+Inputs (props):
+- `companyName`, `companyLogoUrl`, `companyPrimaryColor`
+- `employeeName`
+- `periodLabel` (ex.: `"Maio / 2026"`)
+- `portalUrl` (signed URL para `/meus-recibos` com deep-link no recibo)
+- `confidentialNotice` (texto fixo PT)
+
+Estrutura visual:
+1. Header com logo da empresa (fallback iniciais se sem logo).
+2. Saudação `"Olá, {employeeName}"`.
+3. Bloco: "Seu recibo de **{periodLabel}** está disponível."
+4. CTA **Baixar recibo** → `portalUrl`.
+5. Nota: "Documento confidencial. Não compartilhe."
+6. Footer com nome da empresa + "enviado via {AppName}".
+
+Subject: `"Recibo de {periodLabel} — {companyName}"`.
+
+Registrado em `src/lib/email-templates/registry.ts` como `payslip-published`. Dados dinâmicos vêm em `templateData`.
+
+---
+
+## 3. Schema — novas colunas + tabela de eventos
+
+Migration nova (não edita existente):
+
 ```sql
-create table public.payslip_email_events (
-  id uuid primary key default gen_random_uuid(),
-  payslip_id uuid not null,
-  company_id uuid not null,
-  event text not null,                -- queued|sent|delivered|bounced|opened|failed
-  detail jsonb default '{}'::jsonb,
-  created_at timestamptz not null default now()
-);
+alter table public.payslips
+  add column if not exists provider text,
+  add column if not exists provider_message_id text,
+  add column if not exists email_downloaded_at timestamptz,
+  add column if not exists email_attempts int not null default 0,
+  add column if not exists last_attempt_at timestamptz;
+
+-- Indices para o dashboard
+create index if not exists payslips_company_email_status_idx
+  on public.payslips(company_id, email_delivery_status);
 ```
 
-### 1.4 GRANTs + RLS
+`payslip_email_events` já existe — vamos usar para `queued|sent|delivered|opened|bounced|failed|downloaded`.
 
-**payslips**
-- `GRANT SELECT, INSERT, UPDATE, DELETE ON public.payslips TO authenticated`
-- `GRANT ALL ON public.payslips TO service_role`
-
-Policies:
-- `employee view own payslips` SELECT — `user_id = auth.uid() AND status IN ('assigned','sent')`
-- `managers manage company payslips` ALL — `is_company_manager(auth.uid(), company_id)`
-- `super admin all payslips` ALL — `is_super_admin(auth.uid())`
-
-**payslip_email_events**
-- SELECT manager + super_admin; INSERT só via RPC (sem policy authenticated).
-
-**storage.objects (bucket `payslips`)**
-- `payslips manager write` INSERT/UPDATE/DELETE — `bucket_id='payslips' AND is_company_manager(auth.uid(), (foldername(name))[1]::uuid)`
-- `payslips employee read own` SELECT — `bucket_id='payslips' AND ((foldername(name))[2] = auth.uid()::text OR is_company_manager(auth.uid(), (foldername(name))[1]::uuid))`
-- `payslips super admin all` ALL — `is_super_admin(auth.uid())`
+Tracking de download: quando o funcionário gera signed URL, RPC `payslip_record_download(_id)` faz `update payslips set email_downloaded_at = now()` + insert em events. Estrutura para `opened_at` fica pronta (webhook de open ainda não plugado).
 
 ---
 
-## 2. RPCs (SECURITY DEFINER)
+## 4. Server functions
 
-### 2.1 `payslip_assign(_id uuid, _user_id uuid)`
-- Valida manager da company do payslip.
-- Move/renomeia o objeto no storage para o path do user_id.
-- UPDATE `user_id`, `status='assigned'`, `email_to = profiles.email`.
+`src/lib/payslips.functions.ts` ganha:
 
-### 2.2 `payslip_mark_sent(_id uuid, _status text, _detail jsonb)`
-- Chamada pelo server fn de envio.
-- UPDATE `email_sent_at`, `email_delivery_status`, `status='sent'|'failed'`.
-- INSERT em `payslip_email_events`.
+- `publishPayslip({ id })` — orquestra envio:
+  1. Carrega payslip + profile do funcionário + company (logo, cor, nome).
+  2. Gera signed URL (7 dias) para download.
+  3. Baixa o PDF do storage; se < 8 MB → anexa, senão só link.
+  4. Renderiza template via `render(<PayslipEmail .../>)`.
+  5. `provider.send(msg)` → atualiza `payslips` (`provider`, `provider_message_id`, `email_delivery_status`, `email_sent_at`, `email_attempts++`, `last_attempt_at`).
+  6. Insere `payslip_email_events` (sent/failed + error).
+  7. Cria `notification` (event `payslip_published`) → realtime já existente atualiza sino.
+  8. Marca `payslip.status='sent'` (ou `failed`).
 
-### 2.3 `payslip_dashboard_counts(_company_id uuid)`
-- Retorna `{ unassigned, assigned, sent, failed, total }` para o gestor.
+- `bulkPublishPayslips({ ids })` — loop sequencial com pequena pausa; agrega resultados.
 
----
+- `recordPayslipDownload({ id })` — chamado por `/meus-recibos` ao baixar; RLS garante que só o dono atualiza.
 
-## 3. Server functions (TanStack `createServerFn`)
-
-Todas em `src/lib/payslips.functions.ts` com `requireSupabaseAuth`.
-
-- `uploadPayslip({ file })` — upload temporário em `unassigned/` + parse + retorna draft.
-  - Multiplos PDFs: cliente chama em paralelo.
-- `parsePayslipText(text)` — heurística (regex):
-  - Período: meses PT (`janeiro|fev|...`) + ano `20\d{2}`.
-  - Nome: linhas após "Nome", "Funcionário", "Colaborador".
-  - Valores: `Líquido a receber`, `Total líquido`, `Vencimento bruto`.
-  - Retorna `parse_confidence` baseado em quantos campos foram encontrados.
-- `matchEmployee({ name, companyId })` — fuzzy match em `profiles.full_name` da company; retorna sugestões top-3.
-- `assignPayslip({ id, userId })` → RPC 2.1.
-- `sendPayslipEmail({ id })` — usa Lovable Emails (Resend conector OK quando configurado); registra eventos via RPC 2.2.
-- `bulkSendPayslips({ companyId, period })`.
-- `listMyPayslips()` — funcionário (RLS já filtra).
-- `listCompanyPayslips({ filters })` — gestor.
-- `dashboardCounts({ companyId })`.
-
-**Parser PDF**: usar `pdfjs-dist` (Worker-compatible) em server fn; extrair texto com `getTextContent()`. OCR/imagens ficam fora desta fase (estrutura `mime_type` permite, mas parser só atua em `application/pdf`).
+Erros: try/catch por payslip; nunca derruba a chamada inteira.
 
 ---
 
-## 4. UI
+## 5. Notificação in-app
 
-### 4.1 Gestor — `/app/rh/recibos`
-- Header: dashboard cards (processados, pendentes, não associados, enviados, falhados).
-- Tabs: `Não associados` · `Associados` · `Enviados` · `Falhas`.
-- Botão **Upload** (drop zone, multi-PDF).
-- Tabela:
-  - Período · Funcionário detectado · Sugestão (com confirmar/alterar) · Valor líquido · Status · Ações (`Atribuir`, `Enviar`, `Baixar`, `Excluir`).
-- Drawer "Atribuir": combobox de funcionários da empresa + preview do PDF.
-- Ação em lote: `Enviar selecionados`.
-
-### 4.2 Funcionário — `/app/meus-recibos`
-- Lista cards por ano agrupado, com filtro `Mês` / `Ano` / `Status`.
-- Botão **Baixar PDF** (signed URL 5 min).
-- Badge "Enviado por email em DD/MM".
-
-### 4.3 Menu (`AppLayout`)
-- Manager menu: novo item **Recibos** (ícone `Receipt`) → `/app/rh/recibos`.
-- Employee menu: novo item **Meus recibos** → `/app/meus-recibos`.
+- Novo `notification.event = 'payslip_published'` (extende enum existente).
+- Trigger no insert do `notification` já está em uso pelos outros eventos → sino atualiza automaticamente via realtime.
+- Em `/meus-recibos`, ao clicar a notificação → navega para `/meus-recibos?highlight={payslip_id}` (scroll + ring).
 
 ---
 
-## 5. Email
+## 6. Dashboard gestor (atualização de `/app/rh/recibos`)
 
-- Provedor padrão: **Lovable Emails** (built-in). Fallback: conector Resend se já configurado.
-- Template: assunto `Recibo de vencimento — {mês}/{ano}`, corpo com link signed URL (7 dias) + anexo PDF (se < 8MB).
-- Tracking: `email_opened_at` preparado; webhook de open/bounce fora do MVP (estrutura `payslip_email_events` já aceita).
+Cards adicionais:
+- **Processados** (parse_confidence >= 0.6)
+- **Enviados** (`email_delivery_status in (sent,delivered)`)
+- **Falhados** (`failed|bounced`)
+- **Abertos** (`email_opened_at not null`) — placeholder até webhook
+- **Baixados** (`email_downloaded_at not null`)
 
----
+Tabela ganha colunas: `Provider`, `Tentativas`, `Última tentativa`, `Status entrega` (badge colorido), botão **Reenviar** (chama `publishPayslip` de novo, incrementa attempts).
 
-## 6. Arquivos
-
-**Novos**
-- `supabase/migrations/<ts>_payslips.sql`
-- `src/lib/payslips.functions.ts`
-- `src/lib/payslip-parser.ts`
-- `src/routes/app.rh.recibos.tsx`
-- `src/routes/app.meus-recibos.tsx`
-- `src/components/payslips/UploadDropzone.tsx`
-- `src/components/payslips/PayslipTable.tsx`
-- `src/components/payslips/AssignDrawer.tsx`
-- `src/components/payslips/DashboardCards.tsx`
-
-**Editados**
-- `src/components/AppLayout.tsx` (menus)
-- `src/integrations/supabase/types.ts` (auto)
+Drawer de detalhes mostra timeline de `payslip_email_events`.
 
 ---
 
-## 7. Fora de escopo (próximas fases)
-- OCR de imagens (jpg/png) — estrutura pronta, parser não atua.
-- Cálculo de folha / impostos.
-- Assinatura digital do recibo pelo funcionário.
-- Webhook de open/bounce do provedor de email.
-- Notificação in-app quando recibo chega (pode entrar — confirmar).
+## 7. Multiempresa
+
+- `getEmailProvider()` no futuro pode receber `companyId` e ler config por empresa (`companies.email_config jsonb`). MVP: provider global, **template e remetente contextualizados por empresa via templateData** (logo + nome no corpo, "via {AppName}" no footer).
+- `from` continua sendo o domínio Lovable Emails verificado (uma única infraestrutura), `reply-to` = email da empresa quando existir (`companies.email`).
+- Estrutura pronta para por-empresa-domain quando quiserem ativar Resend white-label.
 
 ---
 
-## Decisões necessárias antes de implementar
+## 8. Logs obrigatórios (resumo)
 
-1. **Provedor de email**: usar Lovable Emails (default) ou Resend (se já há conector)?
-2. **Anexar PDF no email** ou enviar apenas link signed URL?
-3. **Notificação in-app** ao funcionário quando recibo é publicado (sim/não)?
-4. **Retenção**: manter recibos indefinidamente ou arquivar após N meses?
+Em cada envio gravamos em `payslips`:
+- `provider`, `provider_message_id`
+- `email_sent_at`, `email_delivery_status`, `email_error`
+- `email_attempts`, `last_attempt_at`
+- `email_opened_at` (preparado), `email_downloaded_at`
+
+E uma linha por transição em `payslip_email_events` (`event`, `detail`, `created_at`).
+
+Auditável e pronto para futuras métricas.
+
+---
+
+## 9. Pré-requisitos a executar
+
+1. Configurar domínio de email (dialog de setup Lovable Emails).
+2. `setup_email_infra` (fila + cron).
+3. `scaffold_transactional_email` (rotas + registry).
+4. Criar template `payslip-published`.
+5. Migration colunas + RPC download.
+6. Server fns + UI de reenvio + dashboard.
+
+---
+
+## 10. Fora desta fase
+
+- Webhook real de open/bounce do provider (estrutura já aceita; basta plugar handler).
+- Provider Resend ativo (esqueleto fica, ativação fica para quando quiserem).
+- Email por empresa em domínio próprio.
+
+Confirma que sigo com esta arquitetura?
