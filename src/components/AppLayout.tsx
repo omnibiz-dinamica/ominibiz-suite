@@ -1,5 +1,5 @@
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   LayoutDashboard,
@@ -28,6 +28,7 @@ import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 type Item = {
   to: string;
@@ -70,11 +71,27 @@ const EMPLOYEE_MENU: Item[] = [
 ];
 
 export function AppLayout({ children }: { children?: ReactNode }) {
-  const { user, isSuperAdmin, currentCompanyId, signOut, effectiveRole } = useAuth();
+  const { user, isSuperAdmin, currentCompanyId, signOut, effectiveRole, switchCompany } = useAuth();
   const { theme, toggle } = useTheme();
   const nav = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
+  const qc = useQueryClient();
+
+  const superAdminOperating = isSuperAdmin && !!currentCompanyId;
+
+  const { data: activeCompany } = useQuery({
+    queryKey: ["active-company-name", currentCompanyId],
+    enabled: !!currentCompanyId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("companies")
+        .select("id, name")
+        .eq("id", currentCompanyId!)
+        .maybeSingle();
+      return data;
+    },
+  });
 
   const { data: hasVehicle = false } = useQuery({
     queryKey: ["my-vehicle-count", user?.id],
@@ -92,9 +109,20 @@ export function AppLayout({ children }: { children?: ReactNode }) {
     ? [...EMPLOYEE_MENU.slice(0, 3), { to: "/app/frota", label: "Frota", icon: Car }, ...EMPLOYEE_MENU.slice(3)]
     : EMPLOYEE_MENU;
 
+  // When the Super Admin selects an operational company, expose the full
+  // manager menu of that company plus the admin entry points, so they can
+  // operate / test / train as if they were inside that tenant.
+  const superAdminInCompanyMenu: Item[] = [
+    ...MANAGER_MENU,
+    { to: "/app/admin", label: "Super Admin · Empresas", icon: Building2 },
+    { to: "/app/comercial", label: "Comercial", icon: FileSignature },
+  ];
+
   const visible =
     effectiveRole === "super_admin"
-      ? SUPER_ADMIN_MENU
+      ? superAdminOperating
+        ? superAdminInCompanyMenu
+        : SUPER_ADMIN_MENU
       : effectiveRole === "manager"
         ? MANAGER_MENU
         : effectiveRole === "employee"
@@ -201,7 +229,30 @@ export function AppLayout({ children }: { children?: ReactNode }) {
           <button className="md:hidden" onClick={() => setOpen(true)} aria-label="Abrir menu">
             <Menu className="h-5 w-5" />
           </button>
-          <div className="flex-1" />
+          <div className="flex-1">
+            {superAdminOperating && (
+              <div className="flex flex-wrap items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-1.5 text-xs font-medium text-destructive">
+                <Shield className="h-3.5 w-3.5" />
+                <span className="truncate">
+                  MODO SUPER ADMIN — Empresa ativa:{" "}
+                  <strong>{activeCompany?.name ?? "..."}</strong>
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="ml-auto h-7 border-destructive/40 px-2 text-[11px]"
+                  onClick={async () => {
+                    await switchCompany(null);
+                    qc.invalidateQueries();
+                    toast.success("Saiu do modo operacional");
+                    nav({ to: "/app/admin" });
+                  }}
+                >
+                  Sair da empresa
+                </Button>
+              </div>
+            )}
+          </div>
           <Button variant="ghost" size="icon" onClick={toggle} aria-label="Alternar tema">
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>

@@ -239,6 +239,7 @@ function AdminPage() {
                     await refresh();
                     qc.invalidateQueries();
                     toast.success(`Operando ${c.name}`);
+                    nav({ to: "/app" });
                   }}
                 >
                   {currentCompanyId === c.id ? "Selecionada" : "Operar empresa"}
