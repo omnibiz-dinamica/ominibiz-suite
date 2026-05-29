@@ -1,0 +1,49 @@
+/**
+ * Wall-clock datetime helpers.
+ *
+ * Horários operacionais (início/fim de tarefa) devem ser preservados
+ * EXATAMENTE como cadastrados pelo gestor — sem conversão de fuso.
+ *
+ * Estratégia: serializar o input local como se fosse UTC (`...Z`),
+ * e ler de volta usando os componentes UTC do ISO. Assim "06:00"
+ * permanece "06:00" em qualquer dispositivo.
+ */
+
+const pad = (n: number) => String(n).padStart(2, "0");
+
+/** "2026-05-20T06:00" -> "2026-05-20T06:00:00.000Z" (preserva wall clock). */
+export function wallInputToISO(local: string | null | undefined): string | null {
+  if (!local) return null;
+  // Aceita "YYYY-MM-DDTHH:MM" ou "YYYY-MM-DDTHH:MM:SS"
+  const s = local.length === 16 ? `${local}:00` : local;
+  return `${s}.000Z`;
+}
+
+/** ISO -> "YYYY-MM-DDTHH:MM" para <input type="datetime-local">, sem aplicar fuso. */
+export function wallISOToInput(iso: string | null | undefined): string {
+  if (!iso) return "";
+  // Lê componentes UTC do ISO armazenado.
+  const d = new Date(iso);
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+}
+
+/** "20/05/2026" (sem fuso). */
+export function formatWallDate(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return `${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`;
+}
+
+/** "06:00" (sem fuso). */
+export function formatWallTime(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+}
+
+/** Horário local do dispositivo (ex.: "Atualizado: 10:42") — esse SIM acompanha o fuso. */
+export function formatLocalTime(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
