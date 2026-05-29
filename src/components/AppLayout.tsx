@@ -22,6 +22,7 @@ import {
   Plane,
   Car,
   FileSignature,
+  Receipt,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
@@ -56,6 +57,7 @@ const MANAGER_MENU: Item[] = [
   { to: "/app/empresa", label: "Empresa", icon: Building2 },
   { to: "/app/ferias", label: "Férias", icon: Plane },
   { to: "/app/frota", label: "Frota", icon: Car },
+  { to: "/app/rh/recibos", label: "Recibos", icon: Receipt },
   { to: "/app/notas", label: "Notas", icon: FileText, soon: true },
   { to: "/app/assistente", label: "Assistente IA", icon: Sparkles, soon: true },
   { to: "/app/perfil", label: "Perfil", icon: UserCircle },
@@ -65,6 +67,7 @@ const EMPLOYEE_MENU: Item[] = [
   { to: "/app", label: "Minha Operação", icon: LayoutDashboard },
   { to: "/app/ponto", label: "Folha de Ponto", icon: Clock },
   { to: "/app/tarefas", label: "Minhas Tarefas", icon: ListChecks },
+  { to: "/app/meus-recibos", label: "Meus Recibos", icon: Receipt },
   { to: "/app/ferias", label: "Férias", icon: Plane },
   { to: "/app/notificacoes", label: "Notificações", icon: Bell },
   { to: "/app/perfil", label: "Perfil", icon: UserCircle },
