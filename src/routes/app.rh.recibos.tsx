@@ -347,13 +347,13 @@ function AssignDrawer({
     mutationFn: async () => {
       if (!payslip) return;
       // 1) atualiza metadados editáveis
-      const updates: Record<string, unknown> = {
+      const updates = {
         period_year: year ? parseInt(year, 10) : null,
         period_month: month ? parseInt(month, 10) : null,
         gross_amount: gross ? parseFloat(gross) : null,
         net_amount: net ? parseFloat(net) : null,
       };
-      const { error: upErr } = await supabase.from("payslips").update(updates).eq("id", payslip.id);
+      const { error: upErr } = await (supabase.from("payslips") as any).update(updates).eq("id", payslip.id);
       if (upErr) throw upErr;
 
       // 2) move arquivo para pasta do funcionário e associa

@@ -31,6 +31,7 @@ import { Route as AppAssistenteRouteImport } from './routes/app.assistente'
 import { Route as AppAdminRouteImport } from './routes/app.admin'
 import { Route as AppComercialIndexRouteImport } from './routes/app.comercial.index'
 import { Route as AppTarefasRecorrentesRouteImport } from './routes/app.tarefas.recorrentes'
+import { Route as AppRhRecibosRouteImport } from './routes/app.rh.recibos'
 import { Route as AppPontoGestaoRouteImport } from './routes/app.ponto_.gestao'
 import { Route as AppFrotaCartoesRouteImport } from './routes/app.frota.cartoes'
 import { Route as AppComercialTemplatesRouteImport } from './routes/app.comercial.templates'
@@ -149,6 +150,11 @@ const AppTarefasRecorrentesRoute = AppTarefasRecorrentesRouteImport.update({
   path: '/recorrentes',
   getParentRoute: () => AppTarefasRoute,
 } as any)
+const AppRhRecibosRoute = AppRhRecibosRouteImport.update({
+  id: '/rh/recibos',
+  path: '/rh/recibos',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppPontoGestaoRoute = AppPontoGestaoRouteImport.update({
   id: '/ponto_/gestao',
   path: '/ponto/gestao',
@@ -212,6 +218,7 @@ export interface FileRoutesByFullPath {
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
   '/app/ponto/gestao': typeof AppPontoGestaoRoute
+  '/app/rh/recibos': typeof AppRhRecibosRoute
   '/app/tarefas/recorrentes': typeof AppTarefasRecorrentesRoute
   '/app/comercial/': typeof AppComercialIndexRoute
   '/app/comercial/contratos/$id': typeof AppComercialContratosIdRoute
@@ -241,6 +248,7 @@ export interface FileRoutesByTo {
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
   '/app/ponto/gestao': typeof AppPontoGestaoRoute
+  '/app/rh/recibos': typeof AppRhRecibosRoute
   '/app/tarefas/recorrentes': typeof AppTarefasRecorrentesRoute
   '/app/comercial': typeof AppComercialIndexRoute
   '/app/comercial/contratos/$id': typeof AppComercialContratosIdRoute
@@ -273,6 +281,7 @@ export interface FileRoutesById {
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
   '/app/ponto_/gestao': typeof AppPontoGestaoRoute
+  '/app/rh/recibos': typeof AppRhRecibosRoute
   '/app/tarefas/recorrentes': typeof AppTarefasRecorrentesRoute
   '/app/comercial/': typeof AppComercialIndexRoute
   '/app/comercial/contratos/$id': typeof AppComercialContratosIdRoute
@@ -306,6 +315,7 @@ export interface FileRouteTypes {
     | '/app/comercial/templates'
     | '/app/frota/cartoes'
     | '/app/ponto/gestao'
+    | '/app/rh/recibos'
     | '/app/tarefas/recorrentes'
     | '/app/comercial/'
     | '/app/comercial/contratos/$id'
@@ -335,6 +345,7 @@ export interface FileRouteTypes {
     | '/app/comercial/templates'
     | '/app/frota/cartoes'
     | '/app/ponto/gestao'
+    | '/app/rh/recibos'
     | '/app/tarefas/recorrentes'
     | '/app/comercial'
     | '/app/comercial/contratos/$id'
@@ -366,6 +377,7 @@ export interface FileRouteTypes {
     | '/app/comercial/templates'
     | '/app/frota/cartoes'
     | '/app/ponto_/gestao'
+    | '/app/rh/recibos'
     | '/app/tarefas/recorrentes'
     | '/app/comercial/'
     | '/app/comercial/contratos/$id'
@@ -537,6 +549,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTarefasRecorrentesRouteImport
       parentRoute: typeof AppTarefasRoute
     }
+    '/app/rh/recibos': {
+      id: '/app/rh/recibos'
+      path: '/rh/recibos'
+      fullPath: '/app/rh/recibos'
+      preLoaderRoute: typeof AppRhRecibosRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/ponto_/gestao': {
       id: '/app/ponto_/gestao'
       path: '/ponto/gestao'
@@ -662,6 +681,7 @@ interface AppRouteChildren {
   AppTarefasRoute: typeof AppTarefasRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
   AppPontoGestaoRoute: typeof AppPontoGestaoRoute
+  AppRhRecibosRoute: typeof AppRhRecibosRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -680,6 +700,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppTarefasRoute: AppTarefasRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
   AppPontoGestaoRoute: AppPontoGestaoRoute,
+  AppRhRecibosRoute: AppRhRecibosRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
