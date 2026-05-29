@@ -12,8 +12,8 @@ export const Route = createFileRoute("/app/")({
 });
 
 function Dashboard() {
-  const { effectiveRole } = useAuth();
-  if (effectiveRole === "super_admin") return <SuperAdminDashboard />;
+  const { effectiveRole, currentCompanyId } = useAuth();
+  if (effectiveRole === "super_admin" && !currentCompanyId) return <SuperAdminDashboard />;
   if (effectiveRole === "employee") return <EmployeeDashboard />;
   return <ManagerDashboard />;
 }
