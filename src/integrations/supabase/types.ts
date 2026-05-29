@@ -1034,6 +1034,111 @@ export type Database = {
           },
         ]
       }
+      payslip_email_events: {
+        Row: {
+          company_id: string
+          created_at: string
+          detail: Json
+          event: string
+          id: string
+          payslip_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          detail?: Json
+          event: string
+          id?: string
+          payslip_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          detail?: Json
+          event?: string
+          id?: string
+          payslip_id?: string
+        }
+        Relationships: []
+      }
+      payslips: {
+        Row: {
+          company_id: string
+          created_at: string
+          email_delivery_status: string | null
+          email_error: string | null
+          email_opened_at: string | null
+          email_sent_at: string | null
+          email_to: string | null
+          employee_name_detected: string | null
+          gross_amount: number | null
+          id: string
+          mime_type: string
+          net_amount: number | null
+          original_filename: string
+          parse_confidence: number | null
+          parse_raw: Json
+          period_month: number | null
+          period_year: number | null
+          size_bytes: number | null
+          status: Database["public"]["Enums"]["payslip_status"]
+          storage_path: string
+          updated_at: string
+          uploaded_by: string
+          user_id: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          email_delivery_status?: string | null
+          email_error?: string | null
+          email_opened_at?: string | null
+          email_sent_at?: string | null
+          email_to?: string | null
+          employee_name_detected?: string | null
+          gross_amount?: number | null
+          id?: string
+          mime_type?: string
+          net_amount?: number | null
+          original_filename: string
+          parse_confidence?: number | null
+          parse_raw?: Json
+          period_month?: number | null
+          period_year?: number | null
+          size_bytes?: number | null
+          status?: Database["public"]["Enums"]["payslip_status"]
+          storage_path: string
+          updated_at?: string
+          uploaded_by: string
+          user_id?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          email_delivery_status?: string | null
+          email_error?: string | null
+          email_opened_at?: string | null
+          email_sent_at?: string | null
+          email_to?: string | null
+          employee_name_detected?: string | null
+          gross_amount?: number | null
+          id?: string
+          mime_type?: string
+          net_amount?: number | null
+          original_filename?: string
+          parse_confidence?: number | null
+          parse_raw?: Json
+          period_month?: number | null
+          period_year?: number | null
+          size_bytes?: number | null
+          status?: Database["public"]["Enums"]["payslip_status"]
+          storage_path?: string
+          updated_at?: string
+          uploaded_by?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -2009,6 +2114,54 @@ export type Database = {
         Args: { _company_id?: string }
         Returns: number
       }
+      payslip_assign: {
+        Args: { _id: string; _user_id: string }
+        Returns: {
+          company_id: string
+          created_at: string
+          email_delivery_status: string | null
+          email_error: string | null
+          email_opened_at: string | null
+          email_sent_at: string | null
+          email_to: string | null
+          employee_name_detected: string | null
+          gross_amount: number | null
+          id: string
+          mime_type: string
+          net_amount: number | null
+          original_filename: string
+          parse_confidence: number | null
+          parse_raw: Json
+          period_month: number | null
+          period_year: number | null
+          size_bytes: number | null
+          status: Database["public"]["Enums"]["payslip_status"]
+          storage_path: string
+          updated_at: string
+          uploaded_by: string
+          user_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "payslips"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      payslip_dashboard_counts: {
+        Args: { _company_id: string }
+        Returns: {
+          assigned: number
+          failed: number
+          sent: number
+          total: number
+          unassigned: number
+        }[]
+      }
+      payslip_mark_sent: {
+        Args: { _detail?: Json; _id: string; _status: string }
+        Returns: undefined
+      }
       punch_admin_create: {
         Args: { _payload: Json; _reason: string }
         Returns: {
@@ -2575,6 +2728,7 @@ export type Database = {
         | "vacation_rejected"
         | "vacation_cancelled"
       notification_priority: "baixa" | "media" | "alta" | "urgente"
+      payslip_status: "unassigned" | "assigned" | "sent" | "failed" | "archived"
       punch_mode: "automatico" | "manual" | "ambos"
       recurrence_frequency: "daily" | "weekly" | "monthly" | "custom"
       recurrence_status: "active" | "paused" | "ended"
@@ -2799,6 +2953,7 @@ export const Constants = {
         "vacation_cancelled",
       ],
       notification_priority: ["baixa", "media", "alta", "urgente"],
+      payslip_status: ["unassigned", "assigned", "sent", "failed", "archived"],
       punch_mode: ["automatico", "manual", "ambos"],
       recurrence_frequency: ["daily", "weekly", "monthly", "custom"],
       recurrence_status: ["active", "paused", "ended"],
