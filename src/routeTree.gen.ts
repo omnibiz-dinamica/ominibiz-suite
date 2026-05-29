@@ -21,6 +21,7 @@ import { Route as AppPontoRouteImport } from './routes/app.ponto'
 import { Route as AppPerfilRouteImport } from './routes/app.perfil'
 import { Route as AppNotificacoesRouteImport } from './routes/app.notificacoes'
 import { Route as AppNotasRouteImport } from './routes/app.notas'
+import { Route as AppMeusRecibosRouteImport } from './routes/app.meus-recibos'
 import { Route as AppFrotaRouteImport } from './routes/app.frota'
 import { Route as AppFeriasRouteImport } from './routes/app.ferias'
 import { Route as AppEquipeRouteImport } from './routes/app.equipe'
@@ -31,6 +32,7 @@ import { Route as AppAssistenteRouteImport } from './routes/app.assistente'
 import { Route as AppAdminRouteImport } from './routes/app.admin'
 import { Route as AppComercialIndexRouteImport } from './routes/app.comercial.index'
 import { Route as AppTarefasRecorrentesRouteImport } from './routes/app.tarefas.recorrentes'
+import { Route as AppRhRecibosRouteImport } from './routes/app.rh.recibos'
 import { Route as AppPontoGestaoRouteImport } from './routes/app.ponto_.gestao'
 import { Route as AppFrotaCartoesRouteImport } from './routes/app.frota.cartoes'
 import { Route as AppComercialTemplatesRouteImport } from './routes/app.comercial.templates'
@@ -99,6 +101,11 @@ const AppNotasRoute = AppNotasRouteImport.update({
   path: '/notas',
   getParentRoute: () => AppRoute,
 } as any)
+const AppMeusRecibosRoute = AppMeusRecibosRouteImport.update({
+  id: '/meus-recibos',
+  path: '/meus-recibos',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppFrotaRoute = AppFrotaRouteImport.update({
   id: '/frota',
   path: '/frota',
@@ -148,6 +155,11 @@ const AppTarefasRecorrentesRoute = AppTarefasRecorrentesRouteImport.update({
   id: '/recorrentes',
   path: '/recorrentes',
   getParentRoute: () => AppTarefasRoute,
+} as any)
+const AppRhRecibosRoute = AppRhRecibosRouteImport.update({
+  id: '/rh/recibos',
+  path: '/rh/recibos',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppPontoGestaoRoute = AppPontoGestaoRouteImport.update({
   id: '/ponto_/gestao',
@@ -200,6 +212,7 @@ export interface FileRoutesByFullPath {
   '/app/equipe': typeof AppEquipeRoute
   '/app/ferias': typeof AppFeriasRoute
   '/app/frota': typeof AppFrotaRouteWithChildren
+  '/app/meus-recibos': typeof AppMeusRecibosRoute
   '/app/notas': typeof AppNotasRoute
   '/app/notificacoes': typeof AppNotificacoesRoute
   '/app/perfil': typeof AppPerfilRoute
@@ -212,6 +225,7 @@ export interface FileRoutesByFullPath {
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
   '/app/ponto/gestao': typeof AppPontoGestaoRoute
+  '/app/rh/recibos': typeof AppRhRecibosRoute
   '/app/tarefas/recorrentes': typeof AppTarefasRecorrentesRoute
   '/app/comercial/': typeof AppComercialIndexRoute
   '/app/comercial/contratos/$id': typeof AppComercialContratosIdRoute
@@ -229,6 +243,7 @@ export interface FileRoutesByTo {
   '/app/equipe': typeof AppEquipeRoute
   '/app/ferias': typeof AppFeriasRoute
   '/app/frota': typeof AppFrotaRouteWithChildren
+  '/app/meus-recibos': typeof AppMeusRecibosRoute
   '/app/notas': typeof AppNotasRoute
   '/app/notificacoes': typeof AppNotificacoesRoute
   '/app/perfil': typeof AppPerfilRoute
@@ -241,6 +256,7 @@ export interface FileRoutesByTo {
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
   '/app/ponto/gestao': typeof AppPontoGestaoRoute
+  '/app/rh/recibos': typeof AppRhRecibosRoute
   '/app/tarefas/recorrentes': typeof AppTarefasRecorrentesRoute
   '/app/comercial': typeof AppComercialIndexRoute
   '/app/comercial/contratos/$id': typeof AppComercialContratosIdRoute
@@ -261,6 +277,7 @@ export interface FileRoutesById {
   '/app/equipe': typeof AppEquipeRoute
   '/app/ferias': typeof AppFeriasRoute
   '/app/frota': typeof AppFrotaRouteWithChildren
+  '/app/meus-recibos': typeof AppMeusRecibosRoute
   '/app/notas': typeof AppNotasRoute
   '/app/notificacoes': typeof AppNotificacoesRoute
   '/app/perfil': typeof AppPerfilRoute
@@ -273,6 +290,7 @@ export interface FileRoutesById {
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
   '/app/ponto_/gestao': typeof AppPontoGestaoRoute
+  '/app/rh/recibos': typeof AppRhRecibosRoute
   '/app/tarefas/recorrentes': typeof AppTarefasRecorrentesRoute
   '/app/comercial/': typeof AppComercialIndexRoute
   '/app/comercial/contratos/$id': typeof AppComercialContratosIdRoute
@@ -294,6 +312,7 @@ export interface FileRouteTypes {
     | '/app/equipe'
     | '/app/ferias'
     | '/app/frota'
+    | '/app/meus-recibos'
     | '/app/notas'
     | '/app/notificacoes'
     | '/app/perfil'
@@ -306,6 +325,7 @@ export interface FileRouteTypes {
     | '/app/comercial/templates'
     | '/app/frota/cartoes'
     | '/app/ponto/gestao'
+    | '/app/rh/recibos'
     | '/app/tarefas/recorrentes'
     | '/app/comercial/'
     | '/app/comercial/contratos/$id'
@@ -323,6 +343,7 @@ export interface FileRouteTypes {
     | '/app/equipe'
     | '/app/ferias'
     | '/app/frota'
+    | '/app/meus-recibos'
     | '/app/notas'
     | '/app/notificacoes'
     | '/app/perfil'
@@ -335,6 +356,7 @@ export interface FileRouteTypes {
     | '/app/comercial/templates'
     | '/app/frota/cartoes'
     | '/app/ponto/gestao'
+    | '/app/rh/recibos'
     | '/app/tarefas/recorrentes'
     | '/app/comercial'
     | '/app/comercial/contratos/$id'
@@ -354,6 +376,7 @@ export interface FileRouteTypes {
     | '/app/equipe'
     | '/app/ferias'
     | '/app/frota'
+    | '/app/meus-recibos'
     | '/app/notas'
     | '/app/notificacoes'
     | '/app/perfil'
@@ -366,6 +389,7 @@ export interface FileRouteTypes {
     | '/app/comercial/templates'
     | '/app/frota/cartoes'
     | '/app/ponto_/gestao'
+    | '/app/rh/recibos'
     | '/app/tarefas/recorrentes'
     | '/app/comercial/'
     | '/app/comercial/contratos/$id'
@@ -467,6 +491,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppNotasRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/meus-recibos': {
+      id: '/app/meus-recibos'
+      path: '/meus-recibos'
+      fullPath: '/app/meus-recibos'
+      preLoaderRoute: typeof AppMeusRecibosRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/frota': {
       id: '/app/frota'
       path: '/frota'
@@ -536,6 +567,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/tarefas/recorrentes'
       preLoaderRoute: typeof AppTarefasRecorrentesRouteImport
       parentRoute: typeof AppTarefasRoute
+    }
+    '/app/rh/recibos': {
+      id: '/app/rh/recibos'
+      path: '/rh/recibos'
+      fullPath: '/app/rh/recibos'
+      preLoaderRoute: typeof AppRhRecibosRouteImport
+      parentRoute: typeof AppRoute
     }
     '/app/ponto_/gestao': {
       id: '/app/ponto_/gestao'
@@ -655,6 +693,7 @@ interface AppRouteChildren {
   AppEquipeRoute: typeof AppEquipeRoute
   AppFeriasRoute: typeof AppFeriasRoute
   AppFrotaRoute: typeof AppFrotaRouteWithChildren
+  AppMeusRecibosRoute: typeof AppMeusRecibosRoute
   AppNotasRoute: typeof AppNotasRoute
   AppNotificacoesRoute: typeof AppNotificacoesRoute
   AppPerfilRoute: typeof AppPerfilRoute
@@ -662,6 +701,7 @@ interface AppRouteChildren {
   AppTarefasRoute: typeof AppTarefasRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
   AppPontoGestaoRoute: typeof AppPontoGestaoRoute
+  AppRhRecibosRoute: typeof AppRhRecibosRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -673,6 +713,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppEquipeRoute: AppEquipeRoute,
   AppFeriasRoute: AppFeriasRoute,
   AppFrotaRoute: AppFrotaRouteWithChildren,
+  AppMeusRecibosRoute: AppMeusRecibosRoute,
   AppNotasRoute: AppNotasRoute,
   AppNotificacoesRoute: AppNotificacoesRoute,
   AppPerfilRoute: AppPerfilRoute,
@@ -680,6 +721,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppTarefasRoute: AppTarefasRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
   AppPontoGestaoRoute: AppPontoGestaoRoute,
+  AppRhRecibosRoute: AppRhRecibosRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
