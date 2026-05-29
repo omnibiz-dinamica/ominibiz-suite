@@ -224,71 +224,196 @@ function TasksPage() {
         </div>
       )}
 
-      <div className="rounded-2xl border border-border bg-card">
-        <div className="grid grid-cols-12 border-b border-border px-5 py-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          <div className="col-span-5">Tarefa</div>
-          <div className="col-span-2">Status</div>
-          <div className="col-span-2">Prioridade</div>
-          <div className="col-span-3 text-right">Ações</div>
+      {isLoading && (
+        <div className="rounded-2xl border border-border bg-card px-5 py-8 text-center text-sm text-muted-foreground">
+          Carregando...
         </div>
-        {isLoading && <div className="px-5 py-8 text-center text-sm text-muted-foreground">Carregando...</div>}
-        {!isLoading && (tasks ?? []).length === 0 && (
-          <div className="px-5 py-12 text-center text-sm text-muted-foreground">Nenhuma tarefa ainda.</div>
-        )}
-        <ul className="divide-y divide-border">
-          {(tasks ?? []).map((t) => {
-            const late = isVisuallyLate(t);
-            const actions = availableActions(t, { userId: user!.id, isManager });
-            return (
-              <li key={t.id} className="grid grid-cols-12 items-center px-5 py-4">
-                <div className="col-span-5">
-                  <div className="flex items-center gap-2 font-medium">
-                    <span>{t.title}</span>
-                    {late && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-destructive">
-                        <Clock className="h-3 w-3" /> atrasado
-                      </span>
-                    )}
-                  </div>
-                  {t.description && <div className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{t.description}</div>}
-                </div>
-                <div className="col-span-2">
-                  <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_TONE[t.status]}`}>
-                    {STATUS_LABELS[t.status]}
+      )}
+      {!isLoading && (tasks ?? []).length === 0 && (
+        <div className="rounded-2xl border border-border bg-card px-5 py-12 text-center text-sm text-muted-foreground">
+          Nenhuma tarefa ainda.
+        </div>
+      )}
+
+      {!isLoading && (tasks ?? []).length > 0 && isManager && (
+        <GroupedByAssignee
+          tasks={tasks ?? []}
+          members={members ?? []}
+          userId={user!.id}
+          isManager={isManager}
+          onEdit={setEditing}
+          onEditSeries={setEditingSeries}
+          onReassign={setReassigning}
+          onTransition={(id, action) => transition.mutate({ id, action })}
+          transitionPending={transition.isPending}
+        />
+      )}
+
+      {!isLoading && (tasks ?? []).length > 0 && !isManager && (
+        <div className="rounded-2xl border border-border bg-card">
+          <ul className="divide-y divide-border">
+            {(tasks ?? []).map((t) => (
+              <TaskRowItem
+                key={t.id}
+                task={t}
+                userId={user!.id}
+                isManager={isManager}
+                onEdit={setEditing}
+                onEditSeries={setEditingSeries}
+                onReassign={setReassigning}
+                onTransition={(id, action) => transition.mutate({ id, action })}
+                transitionPending={transition.isPending}
+              />
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Agrupamento por funcionário (visão do gestor)
+// ---------------------------------------------------------------------------
+
+interface RowHandlers {
+  userId: string;
+  isManager: boolean;
+  onEdit: (t: TaskRow) => void;
+  onEditSeries: (t: TaskRow) => void;
+  onReassign: (t: TaskRow) => void;
+  onTransition: (id: string, action: TaskAction) => void;
+  transitionPending: boolean;
+}
+
+function GroupedByAssignee({
+  tasks,
+  members,
+  ...handlers
+}: RowHandlers & {
+  tasks: TaskRow[];
+  members: { id: string; full_name: string | null }[];
+}) {
+  const nameOf = (id: string | null) =>
+    members.find((m) => m.id === id)?.full_name ?? (id ? id.slice(0, 8) : "Sem responsável");
+
+  const groups = new Map<string, TaskRow[]>();
+  for (const t of tasks) {
+    const k = t.assigned_to ?? "__unassigned__";
+    const arr = groups.get(k) ?? [];
+    arr.push(t);
+    groups.set(k, arr);
+  }
+  const entries = Array.from(groups.entries()).sort(([a], [b]) =>
+    nameOf(a === "__unassigned__" ? null : a).localeCompare(
+      nameOf(b === "__unassigned__" ? null : b),
+    ),
+  );
+
+  return (
+    <div className="rounded-2xl border border-border bg-card">
+      <Accordion type="multiple" className="divide-y divide-border">
+        {entries.map(([key, list]) => {
+          const name = nameOf(key === "__unassigned__" ? null : key);
+          return (
+            <AccordionItem key={key} value={key} className="border-b-0">
+              <AccordionTrigger className="px-5 hover:no-underline">
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <Users className="h-4 w-4" />
+                  </span>
+                  <span className="font-display text-base font-semibold">{name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    ({list.length} {list.length === 1 ? "tarefa" : "tarefas"})
                   </span>
                 </div>
-                <div className="col-span-2 text-sm capitalize text-muted-foreground">{t.priority}</div>
-                <div className="col-span-3 flex justify-end gap-2">
-                  {isManager && (
-                    <>
-                    <Button size="sm" variant="ghost" title="Editar" onClick={() => setEditing(t)}>
-                      <Pencil className="h-3 w-3" />
-                    </Button>
-                    {t.recurrence_id && (
-                      <Button size="sm" variant="ghost" title="Editar série" onClick={() => setEditingSeries(t)}>
-                        <Repeat className="h-3 w-3" />
-                      </Button>
-                    )}
-                      <Button size="sm" variant="ghost" title="Reatribuir" onClick={() => setReassigning(t)}>
-                        <UserCog className="h-3 w-3" />
-                      </Button>
-                    </>
-                  )}
-                  {actions.map((a) => (
-                    <ActionButton
-                      key={a}
-                      action={a}
-                      disabled={transition.isPending}
-                      onClick={() => transition.mutate({ id: t.id, action: a })}
-                    />
+              </AccordionTrigger>
+              <AccordionContent className="pb-0">
+                <ul className="divide-y divide-border border-t border-border">
+                  {list.map((t) => (
+                    <TaskRowItem key={t.id} task={t} {...handlers} />
                   ))}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
+                </ul>
+              </AccordionContent>
+            </AccordionItem>
+          );
+        })}
+      </Accordion>
     </div>
+  );
+}
+
+function TaskRowItem({
+  task: t,
+  userId,
+  isManager,
+  onEdit,
+  onEditSeries,
+  onReassign,
+  onTransition,
+  transitionPending,
+}: RowHandlers & { task: TaskRow }) {
+  const late = isVisuallyLate(t);
+  const actions = availableActions(t, { userId, isManager });
+  const date = formatWallDate(t.scheduled_for);
+  const start = formatWallTime(t.scheduled_for);
+  const end = formatWallTime(t.scheduled_end);
+  const updated = formatLocalTime(t.updated_at);
+
+  return (
+    <li className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-medium">{t.title}</span>
+          <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_TONE[t.status]}`}>
+            {STATUS_LABELS[t.status]}
+          </span>
+          <span className="text-[11px] capitalize text-muted-foreground">· {t.priority}</span>
+          {late && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-destructive">
+              <Clock className="h-3 w-3" /> atrasado
+            </span>
+          )}
+        </div>
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+          {date && <span>{date}</span>}
+          {(start || end) && (
+            <span className="font-mono">
+              {start || "--:--"} → {end || "--:--"}
+            </span>
+          )}
+          {updated && <span>Atualizado: {updated}</span>}
+        </div>
+        {t.description && (
+          <div className="mt-1 line-clamp-1 text-xs text-muted-foreground">{t.description}</div>
+        )}
+      </div>
+      <div className="flex flex-wrap justify-end gap-2">
+        {isManager && (
+          <>
+            <Button size="sm" variant="ghost" title="Editar" onClick={() => onEdit(t)}>
+              <Pencil className="h-3 w-3" />
+            </Button>
+            {t.recurrence_id && (
+              <Button size="sm" variant="ghost" title="Editar série" onClick={() => onEditSeries(t)}>
+                <Repeat className="h-3 w-3" />
+              </Button>
+            )}
+            <Button size="sm" variant="ghost" title="Reatribuir" onClick={() => onReassign(t)}>
+              <UserCog className="h-3 w-3" />
+            </Button>
+          </>
+        )}
+        {actions.map((a) => (
+          <ActionButton
+            key={a}
+            action={a}
+            disabled={transitionPending}
+            onClick={() => onTransition(t.id, a)}
+          />
+        ))}
+      </div>
+    </li>
   );
 }
 
