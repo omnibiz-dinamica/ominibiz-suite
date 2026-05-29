@@ -1,10 +1,9 @@
 // Parser heurístico de recibos (PDF) — executado no navegador via pdfjs-dist.
 // Retorna metadados best-effort; gestor pode corrigir manualmente no drawer.
 import * as pdfjs from "pdfjs-dist";
-// @ts-expect-error - vite worker import
 import workerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
-pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+(pdfjs as { GlobalWorkerOptions: { workerSrc: string } }).GlobalWorkerOptions.workerSrc = workerSrc;
 
 export type ParsedPayslip = {
   text: string;
