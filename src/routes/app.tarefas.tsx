@@ -9,8 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { toast } from "sonner";
-import { Plus, Play, Check, X, ShieldCheck, UserX, Clock, Pencil, Repeat, UserCog } from "lucide-react";
+import { Plus, Play, Check, X, ShieldCheck, UserX, Clock, Pencil, Repeat, UserCog, Users } from "lucide-react";
 import {
   STATUS_LABELS,
   STATUS_TONE,
@@ -29,6 +30,13 @@ import { TaskDocuments } from "@/components/tasks/TaskDocuments";
 import { ReassignDialog } from "@/components/tasks/ReassignDialog";
 import { EditRecurrenceDialog } from "@/components/tasks/EditRecurrenceDialog";
 import type { RecurrenceRow } from "@/lib/tasks";
+import {
+  wallInputToISO,
+  wallISOToInput,
+  formatWallDate,
+  formatWallTime,
+  formatLocalTime,
+} from "@/lib/wall-clock";
 
 export const Route = createFileRoute("/app/tarefas")({
   component: TasksPage,
