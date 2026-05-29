@@ -457,19 +457,13 @@ function TaskForm({
   initial?: TaskRow;
   onDone: () => void;
 }) {
-  const toLocalInput = (iso: string | null) => {
-    if (!iso) return "";
-    const d = new Date(iso);
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  };
   const [title, setTitle] = useState(initial?.title ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [assignedTo, setAssignedTo] = useState<string>(initial?.assigned_to ?? "");
   const [clientId, setClientId] = useState<string>(initial?.client_id ?? "");
   const [priority, setPriority] = useState<"baixa" | "media" | "alta" | "urgente">(initial?.priority ?? "media");
-  const [scheduledFor, setScheduledFor] = useState<string>(toLocalInput(initial?.scheduled_for ?? null));
-  const [scheduledEnd, setScheduledEnd] = useState<string>(toLocalInput(initial?.scheduled_end ?? null));
+  const [scheduledFor, setScheduledFor] = useState<string>(wallISOToInput(initial?.scheduled_for));
+  const [scheduledEnd, setScheduledEnd] = useState<string>(wallISOToInput(initial?.scheduled_end));
   const [graceMinutes, setGraceMinutes] = useState<number>(initial?.absence_grace_minutes ?? 15);
   const [punchMode, setPunchMode] = useState<PunchMode | "">(
     (initial?.punch_mode_override as PunchMode) ?? "",
@@ -483,14 +477,19 @@ function TaskForm({
       onSubmit={async (e) => {
         e.preventDefault();
         setLoading(true);
+        // Título derivado do cliente quando não preenchido manualmente.
+        const clientName = clients.find((c) => c.id === clientId)?.name ?? "";
+        const finalTitle =
+          title.trim() || clientName.trim() || (description.trim().slice(0, 80) || "Tarefa");
         const payload = {
-          title: title.trim(),
+          title: finalTitle,
           description: description.trim() || null,
           assigned_to: assignedTo || null,
           client_id: clientId || null,
           priority,
-          scheduled_for: scheduledFor ? new Date(scheduledFor).toISOString() : null,
-          scheduled_end: scheduledEnd ? new Date(scheduledEnd).toISOString() : null,
+          // Wall-clock: preservar o horário exato cadastrado, sem fuso.
+          scheduled_for: wallInputToISO(scheduledFor),
+          scheduled_end: wallInputToISO(scheduledEnd),
           absence_grace_minutes: graceMinutes,
           punch_mode_override: punchMode || null,
         };
@@ -542,8 +541,15 @@ function TaskForm({
       }}
     >
       <div className="space-y-1.5">
-        <Label>Título</Label>
-        <Input required maxLength={200} value={title} onChange={(e) => setTitle(e.target.value)} />
+        <Label>Cliente</Label>
+        <Select value={clientId} onValueChange={setClientId}>
+          <SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
+          <SelectContent>
+            {clients.map((c) => (
+              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div className="space-y-1.5">
         <Label>Descrição</Label>
@@ -557,17 +563,6 @@ function TaskForm({
             <SelectContent>
               {members.map((m) => (
                 <SelectItem key={m.id} value={m.id}>{m.full_name ?? m.id.slice(0, 8)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label>Cliente</Label>
-          <Select value={clientId} onValueChange={setClientId}>
-            <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
-            <SelectContent>
-              {clients.map((c) => (
-                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
