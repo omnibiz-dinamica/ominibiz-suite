@@ -39,6 +39,8 @@ import { Route as AppComercialTemplatesRouteImport } from './routes/app.comercia
 import { Route as AppComercialContratosRouteImport } from './routes/app.comercial.contratos'
 import { Route as AppComercialClientesRouteImport } from './routes/app.comercial.clientes'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
+import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
+import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as AppComercialContratosNovoRouteImport } from './routes/app.comercial.contratos.novo'
 import { Route as AppComercialContratosIdRouteImport } from './routes/app.comercial.contratos.$id'
 
@@ -193,6 +195,16 @@ const LovableEmailQueueProcessRoute =
     path: '/lovable/email/queue/process',
     getParentRoute: () => rootRouteImport,
   } as any)
+const LovableEmailAuthWebhookRoute = LovableEmailAuthWebhookRouteImport.update({
+  id: '/lovable/email/auth/webhook',
+  path: '/lovable/email/auth/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
+  id: '/lovable/email/auth/preview',
+  path: '/lovable/email/auth/preview',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppComercialContratosNovoRoute =
   AppComercialContratosNovoRouteImport.update({
     id: '/novo',
@@ -237,6 +249,8 @@ export interface FileRoutesByFullPath {
   '/app/comercial/': typeof AppComercialIndexRoute
   '/app/comercial/contratos/$id': typeof AppComercialContratosIdRoute
   '/app/comercial/contratos/novo': typeof AppComercialContratosNovoRoute
+  '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
+  '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesByTo {
@@ -269,6 +283,8 @@ export interface FileRoutesByTo {
   '/app/comercial': typeof AppComercialIndexRoute
   '/app/comercial/contratos/$id': typeof AppComercialContratosIdRoute
   '/app/comercial/contratos/novo': typeof AppComercialContratosNovoRoute
+  '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
+  '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesById {
@@ -304,6 +320,8 @@ export interface FileRoutesById {
   '/app/comercial/': typeof AppComercialIndexRoute
   '/app/comercial/contratos/$id': typeof AppComercialContratosIdRoute
   '/app/comercial/contratos/novo': typeof AppComercialContratosNovoRoute
+  '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
+  '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRouteTypes {
@@ -340,6 +358,8 @@ export interface FileRouteTypes {
     | '/app/comercial/'
     | '/app/comercial/contratos/$id'
     | '/app/comercial/contratos/novo'
+    | '/lovable/email/auth/preview'
+    | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -372,6 +392,8 @@ export interface FileRouteTypes {
     | '/app/comercial'
     | '/app/comercial/contratos/$id'
     | '/app/comercial/contratos/novo'
+    | '/lovable/email/auth/preview'
+    | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
   id:
     | '__root__'
@@ -406,6 +428,8 @@ export interface FileRouteTypes {
     | '/app/comercial/'
     | '/app/comercial/contratos/$id'
     | '/app/comercial/contratos/novo'
+    | '/lovable/email/auth/preview'
+    | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
   fileRoutesById: FileRoutesById
 }
@@ -416,6 +440,8 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignTokenRoute: typeof SignTokenRoute
+  LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
+  LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
 }
 
@@ -631,6 +657,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lovable/email/auth/webhook': {
+      id: '/lovable/email/auth/webhook'
+      path: '/lovable/email/auth/webhook'
+      fullPath: '/lovable/email/auth/webhook'
+      preLoaderRoute: typeof LovableEmailAuthWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/auth/preview': {
+      id: '/lovable/email/auth/preview'
+      path: '/lovable/email/auth/preview'
+      fullPath: '/lovable/email/auth/preview'
+      preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/app/comercial/contratos/novo': {
       id: '/app/comercial/contratos/novo'
       path: '/novo'
@@ -754,6 +794,8 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SignTokenRoute: SignTokenRoute,
+  LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
+  LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
 }
 export const routeTree = rootRouteImport
