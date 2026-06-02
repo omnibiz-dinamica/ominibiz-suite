@@ -1,176 +1,64 @@
+## Diagnóstico
 
-# Envio real de recibos por email — arquitetura preparada para produção
+- A infra de email (fila, templates auth, server routes, cron) **já está pronta no código**.
+- O bloqueio é **apenas DNS**: `notify.dinamicasolucao.com` está em `awaiting_dns`.
+- Sem a verificação DNS, nenhum email sai — auth, recibos, nada.
+- O domínio está na **Hostnet**, que aceita registros NS em subdomínio (compatível com a delegação da Lovable).
 
-Objetivo: usar **Lovable Emails** como provider inicial, mas com camada de abstração que permita trocar para Resend / SMTP / outro provider sem refactor das chamadas no app.
+## Plano para destravar
 
----
+### 1. Reabrir o setup do domínio para obter os NS exatos
 
-## 1. Camada de abstração de provider
+Vou te mostrar o botão de setup de email. Ao abrir:
+- Confirme o subdomínio `notify`
+- O painel exibirá **2 registros NS** (algo como `ns3.lovable.cloud` e `ns4.lovable.cloud`)
+- **Copie os 2 valores** — você vai colar na Hostnet
 
-Arquivo novo: `src/lib/email/provider.ts` (server-only)
+### 2. Adicionar os NS na Hostnet
 
-```ts
-export type EmailMessage = {
-  to: string;
-  subject: string;
-  html: string;
-  text?: string;
-  attachments?: { filename: string; content: string /*base64*/; contentType: string }[];
-  headers?: Record<string, string>;
-  tags?: Record<string, string>;   // ex.: { payslip_id, company_id }
-};
+Passo a passo no painel da Hostnet:
 
-export type EmailSendResult = {
-  provider: "lovable" | "resend" | "smtp";
-  provider_message_id: string | null;
-  status: "queued" | "sent" | "failed";
-  error?: string;
-};
-
-export interface EmailProvider {
-  name: string;
-  send(msg: EmailMessage): Promise<EmailSendResult>;
-}
+```text
+1. Login em https://painel.hostnet.com.br
+2. Menu "Domínios" → selecione dinamicasolucao.com
+3. Clique em "DNS" (ou "Editor de Zona DNS")
+4. Adicionar Registro:
+   - Tipo: NS
+   - Nome/Host: notify
+   - Valor: ns3.lovable.cloud
+   - TTL: 3600 (ou padrão)
+5. Repetir para o segundo NS (ns4.lovable.cloud)
+6. Salvar
 ```
 
-- `LovableEmailProvider` — implementação inicial (server route `/lovable/email/transactional/send` via fila pgmq).
-- `ResendEmailProvider` (stub, não habilitado) — esqueleto pronto para o dia que quiserem trocar.
-- Factory `getEmailProvider()` lê `process.env.EMAIL_PROVIDER` (default `"lovable"`) → retorna o provider.
+⚠️ **Importante na Hostnet**:
+- Use **NS** (não A, não CNAME)
+- O nome é só `notify` (a Hostnet completa com `.dinamicasolucao.com`)
+- **Remova qualquer A/CNAME existente para `notify`** — eles conflitam com os NS
+- Não mexa nos NS do domínio raiz `dinamicasolucao.com`
 
-Todo o resto do código só conhece a interface `EmailProvider`.
+### 3. Verificar
 
----
+- Aguarde 10–30 min (propagação típica na Hostnet) — pode levar até 72h em casos extremos
+- Volte em **Cloud → Emails → Manage Domains** e clique em **Verify Domain**
+- Quando o status virar `active`, os emails começam a sair automaticamente (auth, recibos, fila)
 
-## 2. Templates por empresa
+### 4. Validação pós-ativação
 
-Arquivo novo: `src/lib/email/templates/payslip.tsx` (React Email)
+Depois que o domínio ficar `active`:
+- Testar reset de senha (dispara template auth)
+- Conferir tabela `email_send_log` para ver status `sent`
+- Se algo aparecer como `dlq` ou `failed`, investigamos o `error_message`
 
-Inputs (props):
-- `companyName`, `companyLogoUrl`, `companyPrimaryColor`
-- `employeeName`
-- `periodLabel` (ex.: `"Maio / 2026"`)
-- `portalUrl` (signed URL para `/meus-recibos` com deep-link no recibo)
-- `confidentialNotice` (texto fixo PT)
+## O que NÃO precisa ser refeito
 
-Estrutura visual:
-1. Header com logo da empresa (fallback iniciais se sem logo).
-2. Saudação `"Olá, {employeeName}"`.
-3. Bloco: "Seu recibo de **{periodLabel}** está disponível."
-4. CTA **Baixar recibo** → `portalUrl`.
-5. Nota: "Documento confidencial. Não compartilhe."
-6. Footer com nome da empresa + "enviado via {AppName}".
+- ✅ Templates de auth (signup, recovery, magic-link, etc.) — já scaffoldados
+- ✅ Fila pgmq + cron (`process-email-queue`) — já configurada
+- ✅ Server route `/lovable/email/auth/webhook` — já no ar
+- ✅ Tabelas `email_send_log`, `email_send_state`, `suppressed_emails` — já existem
 
-Subject: `"Recibo de {periodLabel} — {companyName}"`.
+**Não vou recriar nada disso** — recriar quebraria o que já funciona. O único trabalho é DNS.
 
-Registrado em `src/lib/email-templates/registry.ts` como `payslip-published`. Dados dinâmicos vêm em `templateData`.
+## Próximo passo
 
----
-
-## 3. Schema — novas colunas + tabela de eventos
-
-Migration nova (não edita existente):
-
-```sql
-alter table public.payslips
-  add column if not exists provider text,
-  add column if not exists provider_message_id text,
-  add column if not exists email_downloaded_at timestamptz,
-  add column if not exists email_attempts int not null default 0,
-  add column if not exists last_attempt_at timestamptz;
-
--- Indices para o dashboard
-create index if not exists payslips_company_email_status_idx
-  on public.payslips(company_id, email_delivery_status);
-```
-
-`payslip_email_events` já existe — vamos usar para `queued|sent|delivered|opened|bounced|failed|downloaded`.
-
-Tracking de download: quando o funcionário gera signed URL, RPC `payslip_record_download(_id)` faz `update payslips set email_downloaded_at = now()` + insert em events. Estrutura para `opened_at` fica pronta (webhook de open ainda não plugado).
-
----
-
-## 4. Server functions
-
-`src/lib/payslips.functions.ts` ganha:
-
-- `publishPayslip({ id })` — orquestra envio:
-  1. Carrega payslip + profile do funcionário + company (logo, cor, nome).
-  2. Gera signed URL (7 dias) para download.
-  3. Baixa o PDF do storage; se < 8 MB → anexa, senão só link.
-  4. Renderiza template via `render(<PayslipEmail .../>)`.
-  5. `provider.send(msg)` → atualiza `payslips` (`provider`, `provider_message_id`, `email_delivery_status`, `email_sent_at`, `email_attempts++`, `last_attempt_at`).
-  6. Insere `payslip_email_events` (sent/failed + error).
-  7. Cria `notification` (event `payslip_published`) → realtime já existente atualiza sino.
-  8. Marca `payslip.status='sent'` (ou `failed`).
-
-- `bulkPublishPayslips({ ids })` — loop sequencial com pequena pausa; agrega resultados.
-
-- `recordPayslipDownload({ id })` — chamado por `/meus-recibos` ao baixar; RLS garante que só o dono atualiza.
-
-Erros: try/catch por payslip; nunca derruba a chamada inteira.
-
----
-
-## 5. Notificação in-app
-
-- Novo `notification.event = 'payslip_published'` (extende enum existente).
-- Trigger no insert do `notification` já está em uso pelos outros eventos → sino atualiza automaticamente via realtime.
-- Em `/meus-recibos`, ao clicar a notificação → navega para `/meus-recibos?highlight={payslip_id}` (scroll + ring).
-
----
-
-## 6. Dashboard gestor (atualização de `/app/rh/recibos`)
-
-Cards adicionais:
-- **Processados** (parse_confidence >= 0.6)
-- **Enviados** (`email_delivery_status in (sent,delivered)`)
-- **Falhados** (`failed|bounced`)
-- **Abertos** (`email_opened_at not null`) — placeholder até webhook
-- **Baixados** (`email_downloaded_at not null`)
-
-Tabela ganha colunas: `Provider`, `Tentativas`, `Última tentativa`, `Status entrega` (badge colorido), botão **Reenviar** (chama `publishPayslip` de novo, incrementa attempts).
-
-Drawer de detalhes mostra timeline de `payslip_email_events`.
-
----
-
-## 7. Multiempresa
-
-- `getEmailProvider()` no futuro pode receber `companyId` e ler config por empresa (`companies.email_config jsonb`). MVP: provider global, **template e remetente contextualizados por empresa via templateData** (logo + nome no corpo, "via {AppName}" no footer).
-- `from` continua sendo o domínio Lovable Emails verificado (uma única infraestrutura), `reply-to` = email da empresa quando existir (`companies.email`).
-- Estrutura pronta para por-empresa-domain quando quiserem ativar Resend white-label.
-
----
-
-## 8. Logs obrigatórios (resumo)
-
-Em cada envio gravamos em `payslips`:
-- `provider`, `provider_message_id`
-- `email_sent_at`, `email_delivery_status`, `email_error`
-- `email_attempts`, `last_attempt_at`
-- `email_opened_at` (preparado), `email_downloaded_at`
-
-E uma linha por transição em `payslip_email_events` (`event`, `detail`, `created_at`).
-
-Auditável e pronto para futuras métricas.
-
----
-
-## 9. Pré-requisitos a executar
-
-1. Configurar domínio de email (dialog de setup Lovable Emails).
-2. `setup_email_infra` (fila + cron).
-3. `scaffold_transactional_email` (rotas + registry).
-4. Criar template `payslip-published`.
-5. Migration colunas + RPC download.
-6. Server fns + UI de reenvio + dashboard.
-
----
-
-## 10. Fora desta fase
-
-- Webhook real de open/bounce do provider (estrutura já aceita; basta plugar handler).
-- Provider Resend ativo (esqueleto fica, ativação fica para quando quiserem).
-- Email por empresa em domínio próprio.
-
-Confirma que sigo com esta arquitetura?
+Aprove o plano e eu te mostro o botão de setup para você obter os NS records exatos da Hostnet.
