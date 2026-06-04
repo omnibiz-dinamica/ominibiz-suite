@@ -1,64 +1,25 @@
-## Diagnóstico
+O domínio de e-mail ainda está pendente porque a verificação de DNS não foi concluída. O painel mostra `@dinamicasolucao.com`, mas a checagem específica do subdomínio `notify.dinamicasolucao.com` também aparece pendente.
 
-- A infra de email (fila, templates auth, server routes, cron) **já está pronta no código**.
-- O bloqueio é **apenas DNS**: `notify.dinamicasolucao.com` está em `awaiting_dns`.
-- Sem a verificação DNS, nenhum email sai — auth, recibos, nada.
-- O domínio está na **Hostnet**, que aceita registros NS em subdomínio (compatível com a delegação da Lovable).
+Plano para destravar:
 
-## Plano para destravar
+1. Abrir novamente o setup de e-mail no Lovable Cloud para confirmar exatamente qual domínio/subdomínio está configurado e quais registros DNS ele está pedindo agora.
 
-### 1. Reabrir o setup do domínio para obter os NS exatos
+2. Comparar com o que a Hostnet configurou:
+   - Se o setup estiver usando `dinamicasolucao.com`, confirmar os registros pedidos para o domínio raiz.
+   - Se a intenção for usar `notify.dinamicasolucao.com`, ajustar o setup para esse subdomínio e garantir que a Hostnet tenha criado registros NS para `notify`.
 
-Vou te mostrar o botão de setup de email. Ao abrir:
-- Confirme o subdomínio `notify`
-- O painel exibirá **2 registros NS** (algo como `ns3.lovable.cloud` e `ns4.lovable.cloud`)
-- **Copie os 2 valores** — você vai colar na Hostnet
+3. Orientar a correção na Hostnet:
+   - Tipo: `NS`
+   - Nome/Host: `notify` se o domínio de envio for `notify.dinamicasolucao.com`
+   - Valores: os 2 nameservers mostrados no setup de e-mail
+   - Remover registros conflitantes de `notify`, como `A`, `CNAME`, `MX` ou `TXT` antigos para o mesmo host, se existirem.
 
-### 2. Adicionar os NS na Hostnet
+4. Depois que a Hostnet confirmar, clicar em verificar domínio no painel de e-mails e aguardar propagação. Normalmente leva 10–30 minutos, mas pode levar até 72h.
 
-Passo a passo no painel da Hostnet:
+5. Quando o status ficar ativo, testar um envio de autenticação, como redefinição de senha, para confirmar que os e-mails saem pelo domínio configurado.
 
-```text
-1. Login em https://painel.hostnet.com.br
-2. Menu "Domínios" → selecione dinamicasolucao.com
-3. Clique em "DNS" (ou "Editor de Zona DNS")
-4. Adicionar Registro:
-   - Tipo: NS
-   - Nome/Host: notify
-   - Valor: ns3.lovable.cloud
-   - TTL: 3600 (ou padrão)
-5. Repetir para o segundo NS (ns4.lovable.cloud)
-6. Salvar
-```
+Ação imediata recomendada: abra o setup abaixo e me envie um print dos registros DNS que ele está pedindo, ou copie os 2 nameservers exibidos. Com isso eu te digo exatamente o que mandar para a Hostnet.
 
-⚠️ **Importante na Hostnet**:
-- Use **NS** (não A, não CNAME)
-- O nome é só `notify` (a Hostnet completa com `.dinamicasolucao.com`)
-- **Remova qualquer A/CNAME existente para `notify`** — eles conflitam com os NS
-- Não mexa nos NS do domínio raiz `dinamicasolucao.com`
-
-### 3. Verificar
-
-- Aguarde 10–30 min (propagação típica na Hostnet) — pode levar até 72h em casos extremos
-- Volte em **Cloud → Emails → Manage Domains** e clique em **Verify Domain**
-- Quando o status virar `active`, os emails começam a sair automaticamente (auth, recibos, fila)
-
-### 4. Validação pós-ativação
-
-Depois que o domínio ficar `active`:
-- Testar reset de senha (dispara template auth)
-- Conferir tabela `email_send_log` para ver status `sent`
-- Se algo aparecer como `dlq` ou `failed`, investigamos o `error_message`
-
-## O que NÃO precisa ser refeito
-
-- ✅ Templates de auth (signup, recovery, magic-link, etc.) — já scaffoldados
-- ✅ Fila pgmq + cron (`process-email-queue`) — já configurada
-- ✅ Server route `/lovable/email/auth/webhook` — já no ar
-- ✅ Tabelas `email_send_log`, `email_send_state`, `suppressed_emails` — já existem
-
-**Não vou recriar nada disso** — recriar quebraria o que já funciona. O único trabalho é DNS.
-
-## Próximo passo
-
-Aprove o plano e eu te mostro o botão de setup para você obter os NS records exatos da Hostnet.
+<presentation-actions>
+<presentation-open-email-setup>Ver configuração do domínio de e-mail</presentation-open-email-setup>
+</presentation-actions>
