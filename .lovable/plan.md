@@ -1,25 +1,18 @@
-O domínio de e-mail ainda está pendente porque a verificação de DNS não foi concluída. O painel mostra `@dinamicasolucao.com`, mas a checagem específica do subdomínio `notify.dinamicasolucao.com` também aparece pendente.
+O painel ainda está em `Setting up` porque a verificação interna ainda não concluiu. A boa notícia: os registros NS de `notify.dinamicasolucao.com` já aparecem publicamente apontando para `ns3.lovable.cloud` e `ns4.lovable.cloud`, então a Hostnet provavelmente fez a parte principal corretamente.
 
-Plano para destravar:
+O que fazer agora:
 
-1. Abrir novamente o setup de e-mail no Lovable Cloud para confirmar exatamente qual domínio/subdomínio está configurado e quais registros DNS ele está pedindo agora.
+1. No painel de e-mails, abra o menu de três pontos do domínio e use a opção de verificar/reexecutar setup, se aparecer.
 
-2. Comparar com o que a Hostnet configurou:
-   - Se o setup estiver usando `dinamicasolucao.com`, confirmar os registros pedidos para o domínio raiz.
-   - Se a intenção for usar `notify.dinamicasolucao.com`, ajustar o setup para esse subdomínio e garantir que a Hostnet tenha criado registros NS para `notify`.
+2. Aguarde mais um ciclo de propagação. O TTL público está em 21600 segundos, ou seja, até 6 horas para alguns resolvedores atualizarem totalmente. Em alguns casos pode levar até 72h.
 
-3. Orientar a correção na Hostnet:
-   - Tipo: `NS`
-   - Nome/Host: `notify` se o domínio de envio for `notify.dinamicasolucao.com`
-   - Valores: os 2 nameservers mostrados no setup de e-mail
-   - Remover registros conflitantes de `notify`, como `A`, `CNAME`, `MX` ou `TXT` antigos para o mesmo host, se existirem.
+3. Não clique em `Send test` enquanto estiver `Setting up`; esse erro é esperado porque o envio só é liberado depois que o status sair de configuração.
 
-4. Depois que a Hostnet confirmar, clicar em verificar domínio no painel de e-mails e aguardar propagação. Normalmente leva 10–30 minutos, mas pode levar até 72h.
+4. Se após algumas horas continuar igual, pedir para a Hostnet confirmar estes pontos exatamente:
+   - Existem dois registros NS no domínio `dinamicasolucao.com` com nome/host `notify`.
+   - Valores: `ns3.lovable.cloud` e `ns4.lovable.cloud`.
+   - Não existe registro `A`, `CNAME`, `MX` ou `TXT` com o mesmo nome `notify` no DNS da Hostnet.
 
-5. Quando o status ficar ativo, testar um envio de autenticação, como redefinição de senha, para confirmar que os e-mails saem pelo domínio configurado.
+5. Se continuar travado depois de 24h, remover e adicionar novamente o domínio de e-mail pelo painel, usando `notify.dinamicasolucao.com`, para forçar uma nova provisão.
 
-Ação imediata recomendada: abra o setup abaixo e me envie um print dos registros DNS que ele está pedindo, ou copie os 2 nameservers exibidos. Com isso eu te digo exatamente o que mandar para a Hostnet.
-
-<presentation-actions>
-<presentation-open-email-setup>Ver configuração do domínio de e-mail</presentation-open-email-setup>
-</presentation-actions>
+Observação importante: neste momento não parece ser problema no app. A infraestrutura interna foi reprocessada e o erro do preview no CSS também foi corrigido; o bloqueio que você vê é o status de verificação/provisionamento do domínio de e-mail.
