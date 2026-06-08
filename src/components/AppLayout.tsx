@@ -23,8 +23,10 @@ import {
   Car,
   FileSignature,
   Receipt,
+  ChevronDown,
+  Repeat,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import { Button } from "@/components/ui/button";
@@ -38,40 +40,140 @@ type Item = {
   soon?: boolean;
 };
 
-const SUPER_ADMIN_MENU: Item[] = [
-  { to: "/app", label: "Dashboard Global", icon: LayoutDashboard },
-  { to: "/app/admin", label: "Empresas", icon: Building2 },
-  { to: "/app/comercial", label: "Comercial", icon: FileSignature },
-  { to: "/app/notificacoes", label: "Notificações", icon: Bell },
-  { to: "/app/perfil", label: "Perfil", icon: UserCircle },
-];
+type Group = { id: string; label: string; items: Item[] };
 
-const MANAGER_MENU: Item[] = [
-  { to: "/app", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/app/tarefas", label: "Tarefas", icon: ClipboardList },
-  { to: "/app/ponto", label: "Folha de Ponto", icon: Clock },
-  { to: "/app/ponto/gestao", label: "Ponto · Gestão", icon: ListChecks },
-  { to: "/app/notificacoes", label: "Notificações", icon: Bell },
-  { to: "/app/clientes", label: "Clientes", icon: Briefcase },
-  { to: "/app/equipe", label: "Usuários", icon: Users },
-  { to: "/app/empresa", label: "Empresa", icon: Building2 },
-  { to: "/app/ferias", label: "Férias", icon: Plane },
-  { to: "/app/frota", label: "Frota", icon: Car },
-  { to: "/app/rh/recibos", label: "Recibos", icon: Receipt },
-  { to: "/app/notas", label: "Notas", icon: FileText, soon: true },
-  { to: "/app/assistente", label: "Assistente IA", icon: Sparkles, soon: true },
-  { to: "/app/perfil", label: "Perfil", icon: UserCircle },
-];
+const GROUPS_STORAGE_KEY = "omnibiz:sidebar:groups:v1";
 
-const EMPLOYEE_MENU: Item[] = [
-  { to: "/app", label: "Minha Operação", icon: LayoutDashboard },
-  { to: "/app/ponto", label: "Folha de Ponto", icon: Clock },
-  { to: "/app/tarefas", label: "Minhas Tarefas", icon: ListChecks },
-  { to: "/app/meus-recibos", label: "Meus Recibos", icon: Receipt },
-  { to: "/app/ferias", label: "Férias", icon: Plane },
-  { to: "/app/notificacoes", label: "Notificações", icon: Bell },
-  { to: "/app/perfil", label: "Perfil", icon: UserCircle },
-];
+function buildGroups(args: {
+  role: "super_admin" | "manager" | "employee";
+  superAdminOperating: boolean;
+  employeeHasVehicle: boolean;
+}): Group[] {
+  const { role, superAdminOperating, employeeHasVehicle } = args;
+
+  if (role === "super_admin" && !superAdminOperating) {
+    return [
+      {
+        id: "operacao",
+        label: "Operação",
+        items: [
+          { to: "/app", label: "Dashboard Global", icon: LayoutDashboard },
+          { to: "/app/notificacoes", label: "Notificações", icon: Bell },
+        ],
+      },
+      {
+        id: "administracao",
+        label: "Administração",
+        items: [{ to: "/app/admin", label: "Empresas", icon: Building2 }],
+      },
+      {
+        id: "comercial",
+        label: "Comercial",
+        items: [{ to: "/app/comercial", label: "Comercial", icon: FileSignature }],
+      },
+      {
+        id: "conta",
+        label: "Conta",
+        items: [{ to: "/app/perfil", label: "Perfil", icon: UserCircle }],
+      },
+    ];
+  }
+
+  if (role === "employee") {
+    const operacao: Item[] = [
+      { to: "/app", label: "Minha Operação", icon: LayoutDashboard },
+      { to: "/app/ponto", label: "Folha de Ponto", icon: Clock },
+      { to: "/app/tarefas", label: "Minhas Tarefas", icon: ListChecks },
+      { to: "/app/notificacoes", label: "Notificações", icon: Bell },
+    ];
+    const rh: Item[] = [
+      { to: "/app/meus-recibos", label: "Meus Recibos", icon: Receipt },
+      { to: "/app/ferias", label: "Férias", icon: Plane },
+    ];
+    const groups: Group[] = [
+      { id: "operacao", label: "Operação", items: operacao },
+      { id: "rh", label: "RH", items: rh },
+    ];
+    if (employeeHasVehicle) {
+      groups.push({
+        id: "frota",
+        label: "Frota",
+        items: [{ to: "/app/frota", label: "Frota", icon: Car }],
+      });
+    }
+    groups.push({
+      id: "conta",
+      label: "Conta",
+      items: [{ to: "/app/perfil", label: "Perfil", icon: UserCircle }],
+    });
+    return groups;
+  }
+
+  // manager OR super admin operating inside a company
+  const groups: Group[] = [
+    {
+      id: "operacao",
+      label: "Operação",
+      items: [
+        { to: "/app", label: "Dashboard", icon: LayoutDashboard },
+        { to: "/app/tarefas", label: "Tarefas", icon: ClipboardList },
+        { to: "/app/ponto", label: "Folha de Ponto", icon: Clock },
+        { to: "/app/ponto/gestao", label: "Ponto · Gestão", icon: ListChecks },
+        { to: "/app/notificacoes", label: "Notificações", icon: Bell },
+      ],
+    },
+    {
+      id: "rh",
+      label: "RH",
+      items: [
+        { to: "/app/equipe", label: "Usuários", icon: Users },
+        { to: "/app/ferias", label: "Férias", icon: Plane },
+        { to: "/app/rh/recibos", label: "Recibos", icon: Receipt },
+      ],
+    },
+    {
+      id: "comercial",
+      label: "Comercial",
+      items: [
+        { to: "/app/clientes", label: "Clientes", icon: Briefcase },
+        { to: "/app/comercial", label: "Contratos", icon: FileSignature },
+      ],
+    },
+    {
+      id: "administracao",
+      label: "Administração",
+      items: [{ to: "/app/empresa", label: "Empresa", icon: Building2 }],
+    },
+    {
+      id: "frota",
+      label: "Frota",
+      items: [{ to: "/app/frota", label: "Frota", icon: Car }],
+    },
+    {
+      id: "inteligencia",
+      label: "Inteligência",
+      items: [{ to: "/app/assistente", label: "Assistente IA", icon: Sparkles, soon: true }],
+    },
+    {
+      id: "outros",
+      label: "Outros",
+      items: [
+        { to: "/app/notas", label: "Notas", icon: FileText, soon: true },
+        { to: "/app/perfil", label: "Perfil", icon: UserCircle },
+      ],
+    },
+  ];
+
+  if (superAdminOperating) {
+    groups.splice(4, 0, {
+      id: "superadmin",
+      label: "Super Admin",
+      items: [{ to: "/app/admin", label: "Empresas (Super Admin)", icon: Shield }],
+    });
+  }
+
+  return groups;
+}
 
 export function AppLayout({ children }: { children?: ReactNode }) {
   const { user, isSuperAdmin, currentCompanyId, signOut, effectiveRole, switchCompany } = useAuth();
@@ -108,29 +210,68 @@ export function AppLayout({ children }: { children?: ReactNode }) {
     },
   });
 
-  const employeeMenu = hasVehicle
-    ? [...EMPLOYEE_MENU.slice(0, 3), { to: "/app/frota", label: "Frota", icon: Car }, ...EMPLOYEE_MENU.slice(3)]
-    : EMPLOYEE_MENU;
+  const groups = useMemo(() => {
+    if (!effectiveRole) return [] as Group[];
+    const role = effectiveRole === "owner" ? "manager" : effectiveRole;
+    return buildGroups({
+      role: role as "super_admin" | "manager" | "employee",
+      superAdminOperating,
+      employeeHasVehicle: hasVehicle,
+    });
+  }, [effectiveRole, superAdminOperating, hasVehicle]);
 
-  // When the Super Admin selects an operational company, expose the full
-  // manager menu of that company plus the admin entry points, so they can
-  // operate / test / train as if they were inside that tenant.
-  const superAdminInCompanyMenu: Item[] = [
-    ...MANAGER_MENU,
-    { to: "/app/admin", label: "Super Admin · Empresas", icon: Building2 },
-    { to: "/app/comercial", label: "Comercial", icon: FileSignature },
-  ];
+  // Collapsible group state, persisted in localStorage.
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      const raw = window.localStorage.getItem(GROUPS_STORAGE_KEY);
+      return raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
+    } catch {
+      return {};
+    }
+  });
 
-  const visible =
-    effectiveRole === "super_admin"
-      ? superAdminOperating
-        ? superAdminInCompanyMenu
-        : SUPER_ADMIN_MENU
-      : effectiveRole === "manager"
-        ? MANAGER_MENU
-        : effectiveRole === "employee"
-          ? employeeMenu
-          : [];
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(GROUPS_STORAGE_KEY, JSON.stringify(collapsed));
+    } catch {
+      /* ignore quota errors */
+    }
+  }, [collapsed]);
+
+  // Auto-expand the group that contains the active route.
+  useEffect(() => {
+    const activeGroup = groups.find((g) =>
+      g.items.some((it) => path === it.to || (it.to !== "/app" && path.startsWith(it.to))),
+    );
+    if (activeGroup && collapsed[activeGroup.id]) {
+      setCollapsed((prev) => ({ ...prev, [activeGroup.id]: false }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [path, groups.length]);
+
+  // Scroll-shadow indicator on the rolling nav area.
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const [showBottomShadow, setShowBottomShadow] = useState(false);
+  const [showTopShadow, setShowTopShadow] = useState(false);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const update = () => {
+      setShowTopShadow(el.scrollTop > 4);
+      setShowBottomShadow(el.scrollTop + el.clientHeight < el.scrollHeight - 4);
+    };
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", update);
+      ro.disconnect();
+    };
+  }, [groups]);
 
   const roleBadge =
     effectiveRole === "super_admin"
@@ -146,11 +287,12 @@ export function AppLayout({ children }: { children?: ReactNode }) {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 w-64 border-r border-sidebar-border bg-sidebar transition-transform md:static md:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 flex h-screen w-64 flex-col border-r border-sidebar-border bg-sidebar transition-transform md:sticky md:top-0 md:translate-x-0",
           open ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-5">
+        {/* Fixed header */}
+        <div className="flex h-16 shrink-0 items-center justify-between border-b border-sidebar-border px-5">
           <Link to="/app" className="flex items-center gap-2">
             <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-primary-foreground font-display font-bold">
               O
@@ -162,56 +304,142 @@ export function AppLayout({ children }: { children?: ReactNode }) {
           </button>
         </div>
 
-        {roleBadge && (
-          <div className="px-3 pt-3">
-            <span
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide",
-                roleBadge.tone,
-              )}
-            >
-              <Shield className="h-3 w-3" /> {roleBadge.label}
-            </span>
-          </div>
-        )}
-
-        <nav className="space-y-1 p-3">
-          {visible.map((it) => {
-            const active = path === it.to || (it.to !== "/app" && path.startsWith(it.to));
-            const Icon = it.icon;
-            return (
-              <Link
-                key={it.to}
-                to={it.to}
-                onClick={() => setOpen(false)}
+        {/* Fixed profile / context */}
+        {(roleBadge || superAdminOperating) && (
+          <div className="shrink-0 space-y-2 border-b border-sidebar-border/60 px-3 py-3">
+            {roleBadge && (
+              <span
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                  active
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide",
+                  roleBadge.tone,
                 )}
               >
-                <Icon className="h-4 w-4" />
-                <span className="flex-1">{it.label}</span>
-                {it.soon && (
-                  <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">
-                    em breve
-                  </span>
-                )}
-              </Link>
-            );
-          })}
-        </nav>
-
-        {isSuperAdmin && !currentCompanyId && (
-          <div className="mx-3 rounded-lg border border-sidebar-border bg-sidebar-accent/60 p-3 text-xs text-sidebar-foreground">
-            Abra <strong>Super Admin</strong>, crie ou selecione uma empresa para operar usuários,
-            clientes e tarefas.
+                <Shield className="h-3 w-3" /> {roleBadge.label}
+              </span>
+            )}
+            {superAdminOperating && activeCompany?.name && (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-1.5 text-[11px] font-medium text-destructive">
+                <div className="text-[9px] uppercase tracking-wide opacity-80">Empresa ativa</div>
+                <div className="truncate">{activeCompany.name}</div>
+              </div>
+            )}
           </div>
         )}
 
-        <div className="absolute inset-x-0 bottom-0 border-t border-sidebar-border p-3">
-          <div className="mb-2 px-2 text-xs text-muted-foreground truncate">{user?.email}</div>
+        {/* Scrollable navigation */}
+        <div className="relative min-h-0 flex-1">
+          <div
+            ref={scrollRef}
+            className="h-full overflow-y-auto overscroll-contain px-2 py-3"
+          >
+            <nav className="space-y-4">
+              {groups.map((group) => {
+                const isCollapsed = collapsed[group.id] ?? false;
+                const groupHasActive = group.items.some(
+                  (it) => path === it.to || (it.to !== "/app" && path.startsWith(it.to)),
+                );
+                return (
+                  <div key={group.id}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setCollapsed((prev) => ({ ...prev, [group.id]: !isCollapsed }))
+                      }
+                      className={cn(
+                        "group flex w-full items-center justify-between rounded px-2 py-1 text-[10px] font-semibold uppercase tracking-wider transition-colors",
+                        groupHasActive
+                          ? "text-sidebar-foreground"
+                          : "text-muted-foreground hover:text-sidebar-foreground",
+                      )}
+                      aria-expanded={!isCollapsed}
+                    >
+                      <span>{group.label}</span>
+                      <ChevronDown
+                        className={cn(
+                          "h-3 w-3 transition-transform",
+                          isCollapsed ? "-rotate-90" : "rotate-0",
+                        )}
+                      />
+                    </button>
+                    {!isCollapsed && (
+                      <ul className="mt-1 space-y-0.5">
+                        {group.items.map((it) => {
+                          const active =
+                            path === it.to || (it.to !== "/app" && path.startsWith(it.to));
+                          const Icon = it.icon;
+                          return (
+                            <li key={it.to}>
+                              <Link
+                                to={it.to}
+                                onClick={() => setOpen(false)}
+                                className={cn(
+                                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                                  active
+                                    ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
+                                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                                )}
+                              >
+                                <Icon className="h-4 w-4 shrink-0" />
+                                <span className="flex-1 truncate">{it.label}</span>
+                                {it.soon && (
+                                  <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">
+                                    em breve
+                                  </span>
+                                )}
+                              </Link>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </div>
+                );
+              })}
+
+              {isSuperAdmin && !currentCompanyId && (
+                <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/60 p-3 text-xs text-sidebar-foreground">
+                  Abra <strong>Empresas</strong>, crie ou selecione uma para operar usuários,
+                  clientes e tarefas.
+                </div>
+              )}
+            </nav>
+          </div>
+
+          {/* Scroll shadow indicators */}
+          <div
+            aria-hidden
+            className={cn(
+              "pointer-events-none absolute inset-x-0 top-0 h-4 bg-gradient-to-b from-sidebar to-transparent transition-opacity",
+              showTopShadow ? "opacity-100" : "opacity-0",
+            )}
+          />
+          <div
+            aria-hidden
+            className={cn(
+              "pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-sidebar to-transparent transition-opacity",
+              showBottomShadow ? "opacity-100" : "opacity-0",
+            )}
+          />
+        </div>
+
+        {/* Fixed footer */}
+        <div className="shrink-0 space-y-1 border-t border-sidebar-border p-3">
+          <div className="mb-1 px-2 text-xs text-muted-foreground truncate">{user?.email}</div>
+          {superAdminOperating && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-start border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={async () => {
+                await switchCompany(null);
+                qc.invalidateQueries();
+                toast.success("Saiu do modo operacional");
+                nav({ to: "/app/admin" });
+              }}
+            >
+              <Repeat className="mr-2 h-4 w-4" /> Trocar empresa
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
@@ -225,6 +453,16 @@ export function AppLayout({ children }: { children?: ReactNode }) {
           </Button>
         </div>
       </aside>
+
+      {/* Mobile overlay */}
+      {open && (
+        <button
+          type="button"
+          aria-label="Fechar menu"
+          className="fixed inset-0 z-30 bg-black/40 backdrop-blur-sm md:hidden"
+          onClick={() => setOpen(false)}
+        />
+      )}
 
       {/* Main */}
       <div className="flex min-h-screen flex-1 flex-col md:pl-0">
