@@ -60,13 +60,12 @@ function PontoPage() {
     queryKey: ["hr-punch-mode", currentCompanyId],
     queryFn: async () => {
       if (!currentCompanyId) return "automatico" as PunchMode;
-      const { data, error } = await supabase
-        .from("company_hr_settings")
-        .select("default_punch_mode")
-        .eq("company_id", currentCompanyId)
-        .maybeSingle();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any).rpc("get_company_punch_mode", {
+        _company_id: currentCompanyId,
+      });
       if (error) throw error;
-      return ((data?.default_punch_mode as PunchMode) ?? "automatico");
+      return ((data as PunchMode | null) ?? "automatico");
     },
     enabled: !!currentCompanyId,
   });

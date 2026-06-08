@@ -2195,6 +2195,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      get_company_punch_mode: {
+        Args: { _company_id: string }
+        Returns: Database["public"]["Enums"]["punch_mode"]
+      }
       get_invite_preview: {
         Args: { _token: string }
         Returns: {
