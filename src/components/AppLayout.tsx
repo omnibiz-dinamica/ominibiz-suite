@@ -221,18 +221,23 @@ export function AppLayout({ children }: { children?: ReactNode }) {
   }, [effectiveRole, superAdminOperating, hasVehicle]);
 
   // Collapsible group state, persisted in localStorage.
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
-    if (typeof window === "undefined") return {};
-    try {
-      const raw = window.localStorage.getItem(GROUPS_STORAGE_KEY);
-      return raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
-    } catch {
-      return {};
-    }
-  });
+  // Initialise empty to avoid SSR/client hydration mismatch, then hydrate from storage.
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const collapsedHydrated = useRef(false);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(GROUPS_STORAGE_KEY);
+      if (raw) setCollapsed(JSON.parse(raw) as Record<string, boolean>);
+    } catch {
+      /* ignore */
+    } finally {
+      collapsedHydrated.current = true;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!collapsedHydrated.current) return;
     try {
       window.localStorage.setItem(GROUPS_STORAGE_KEY, JSON.stringify(collapsed));
     } catch {
