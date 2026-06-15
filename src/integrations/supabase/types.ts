@@ -2805,6 +2805,34 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      vacation_confirm: {
+        Args: { _accept: boolean; _id: string; _reason?: string }
+        Returns: {
+          assigned_approver_id: string | null
+          cancelled_at: string | null
+          company_id: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_reason: string | null
+          end_date: string
+          id: string
+          note: string | null
+          prior_validation: boolean
+          start_date: string
+          status: Database["public"]["Enums"]["vacation_status"]
+          updated_at: string
+          user_id: string
+          validated_by: string | null
+          work_location: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "vacation_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       vacation_decide: {
         Args: { _action: string; _id: string; _reason?: string }
         Returns: {
@@ -2893,6 +2921,9 @@ export type Database = {
         | "vacation_approved"
         | "vacation_rejected"
         | "vacation_cancelled"
+        | "vacation_confirmation_required"
+        | "vacation_confirmed"
+        | "vacation_declined"
       notification_priority: "baixa" | "media" | "alta" | "urgente"
       payslip_status: "unassigned" | "assigned" | "sent" | "failed" | "archived"
       punch_mode: "automatico" | "manual" | "ambos"
@@ -2907,7 +2938,12 @@ export type Database = {
         | "cancelado"
         | "ausente"
         | "autorizado"
-      vacation_status: "pendente" | "aprovado" | "rejeitado" | "cancelado"
+      vacation_status:
+        | "pendente"
+        | "aprovado"
+        | "rejeitado"
+        | "cancelado"
+        | "pendente_confirmacao"
       vehicle_kind:
         | "carro"
         | "moto"
@@ -3117,6 +3153,9 @@ export const Constants = {
         "vacation_approved",
         "vacation_rejected",
         "vacation_cancelled",
+        "vacation_confirmation_required",
+        "vacation_confirmed",
+        "vacation_declined",
       ],
       notification_priority: ["baixa", "media", "alta", "urgente"],
       payslip_status: ["unassigned", "assigned", "sent", "failed", "archived"],
@@ -3133,7 +3172,13 @@ export const Constants = {
         "ausente",
         "autorizado",
       ],
-      vacation_status: ["pendente", "aprovado", "rejeitado", "cancelado"],
+      vacation_status: [
+        "pendente",
+        "aprovado",
+        "rejeitado",
+        "cancelado",
+        "pendente_confirmacao",
+      ],
       vehicle_kind: [
         "carro",
         "moto",

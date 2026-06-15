@@ -1,70 +1,79 @@
-# Sprint OmniBiz — Plano de Execução
+## Fase 2 — Plano de execução
 
-O escopo enviado é muito grande para uma única entrega segura (mexe em Clientes, Usuários, Auth, Tarefas, Férias, Ponto, Dashboards e prepara arquitetura). Proponho dividir em **4 fases entregáveis**, cada uma fechada e testável antes da próxima. Você aprova fase a fase.
-
----
-
-## FASE 1 — Correções críticas (bloqueios do dia a dia)
-
-Objetivo: destravar uso imediato.
-
-1. **Reset de senha** — auditar `src/routes/reset-password.tsx`, verificar token/PASSWORD_RECOVERY, remover `disabled` indevido nos inputs, garantir que o formulário funciona ao chegar pelo email.
-2. **Tarefas — "valor inválido"** — auditar parser de horário/timezone em criação e edição de tarefas (`app.tarefas.tsx`, dialogs de recorrência), normalizar para ISO local, corrigir validação.
-3. **Tarefas — remover Prioridade** da UI operacional (campos, filtros, badges). Coluna do banco fica, só é ocultada.
-4. **Correção de ponto — motivo opcional** — alterar `PunchEditorDrawer` e função de update para aceitar motivo vazio, manter gravação na auditoria quando informado.
-5. **Usuários — auditoria do convite/criação**: relatório objetivo (envio, template, provedor, link de acesso, link de senha, log). Corrigir o que estiver quebrado no fluxo de invite/recovery.
-
-Entrega: relatório IMPLEMENTADO/CORRIGIDO/PENDENTE para cada item.
+Vou entregar em 4 lotes, na ordem que você definiu. Cada lote termina com verificação rápida antes do próximo.
 
 ---
 
-## FASE 2 — Clientes, Ponto e Férias (notificações + UI)
+### Lote 1 — Correções críticas (estabilidade operacional)
 
-1. **Clientes — exportação Excel (.xlsx) e PDF** com os campos listados, respeitando filtros ativos.
-2. **Ponto — exportação Excel e PDF** na Gestão de Folha de Ponto, respeitando filtros.
-3. **Férias — notificações automáticas**:
-   - Funcionário solicita → gestor recebe notificação + pedido pendente.
-   - Gestor aprova/rejeita → funcionário recebe notificação.
-4. **Férias programadas pelo gestor** — novo status `pendente_confirmacao`, funcionário pode **Aceitar** ou **Solicitar alteração**; vira `confirmada` após resposta.
-5. **Tela de Férias** — mostrar Nome, Local de Trabalho, Função; filtros por Colaborador, Mês, Ano, Status; cálculo de **dias corridos** e **dias úteis** ao lado das datas.
+**1.1 Reset de senha (campo bloqueado)**
+- Hoje o formulário NÃO tem `disabled` nos inputs, mas o link de recuperação às vezes não dispara o evento `PASSWORD_RECOVERY` no fluxo PKCE do TanStack SSR (token chega como `?code=` em vez de `#access_token=`).
+- Correção: detectar `code` na URL e chamar `supabase.auth.exchangeCodeForSession`; mostrar erro claro se o link expirou; manter inputs sempre habilitados.
 
-Requer migration (novo status + colunas auxiliares) e ajustes em `app.ferias.tsx` + notifications.
+**1.2 Tarefas — "valor inválido"**
+- `wallInputToISO` já normaliza via regex. Resta blindar o submit: validar `scheduledFor`/`scheduledEnd` (formato + fim ≥ início) antes de tocar no Postgres, com mensagens em PT-PT.
 
----
+**1.3 Notificações de férias**
+- Backend já dispara `vacation_requested/approved/rejected/cancelled` via trigger + `vacation_decide`. O bug é só na UI: `EVENT_LABEL` em `app.notificacoes.tsx` não inclui esses eventos, então caem como "undefined".
+- Adicionar rótulos `vacation_*` + cor + roteamento de "Abrir" para `/app/ferias`.
 
-## FASE 3 — Dashboards (RH, Clientes, Frota)
-
-Indicadores agregados via views/RPC:
-
-- **RH**: ativos, em férias, férias pendentes, horas trabalhadas mês, horas extras, recibos enviados.
-- **Clientes**: valor mensal estimado, contagem por tipo de cobrança, horas consumidas por cliente.
-- **Frota**: consumo médio, KM percorridos, custo/KM, ranking de abastecimentos.
-
-Entregue como blocos no dashboard atual de Super Admin / Gestor.
+**1.4 Fluxo gestor ↔ funcionário (férias)**
+- Migration:
+  - Adicionar valor `pendente_confirmacao` ao enum `vacation_status`.
+  - Nova função `vacation_confirm(_id uuid, _accept boolean, _reason text)` (SECURITY DEFINER) — só o `user_id` pode chamar.
+  - Ajustar `vacation_decide.aprovar`: quando o aprovador for diferente do solicitante, gravar status `pendente_confirmacao` e notificar o funcionário (`vacation_confirmation_required`).
+  - Quando o próprio funcionário criou e o gestor aprovou, mantém `aprovado` direto.
+- UI `app.ferias.tsx`: nova seção "Aguardando minha confirmação" com botões Aceitar/Recusar (com motivo opcional).
 
 ---
 
-## FASE 4 — Preparação arquitetural (sem implementar features)
+### Lote 2 — Exportação Clientes (Excel + PDF)
 
-Apenas estrutura de pastas/rotas placeholder e notas no `plan.md` para:
-Financeiro, Relatórios, Contratos (já existe parcial), Inventário, Assinatura eletrónica, Aplicação móvel.
-
-Sem migrations nem UI funcional — só esqueleto para crescimento.
-
----
-
-## Detalhes técnicos
-
-- Exportações: `xlsx` (SheetJS) já não está no projeto — adicionarei `xlsx` e usarei `jspdf` + `jspdf-autotable` para PDF (client-side, sem custo de servidor).
-- Dias úteis: cálculo client-side considerando seg–sex (feriados PT podem entrar depois se desejar — confirmar).
-- Notificações de férias: usar tabela `notifications` já existente + trigger SQL no `vacation_requests`.
-- Dashboards: criar RPCs `dashboard_rh_metrics`, `dashboard_clientes_metrics`, `dashboard_frota_metrics` (security definer, escopadas por empresa).
+- Libs: `xlsx` (SheetJS) para `.xlsx`, `jspdf` + `jspdf-autotable` para PDF. Ambas client-side (sem server function), respeitam RLS pois usam os dados já carregados.
+- Campos: Nome, Contacto, Email, Telefone, Morada, Tipo de cobrança, Valor fixo, Valor por hora, Status.
+- Filtros ativos da tela são aplicados antes do export (mesma lista visível).
+- Branding: header do PDF com nome + cor primária da empresa (`companies.primary_color`), rodapé com data e total de registos. Excel com cabeçalho em negrito.
+- Botões: "Exportar Excel" e "Exportar PDF" na barra de ações da tela Clientes.
+- Este módulo vira o **padrão visual** reutilizável (`src/lib/exports/`): `exportToExcel(rows, columns, meta)` e `exportToPdf(rows, columns, meta)`.
 
 ---
 
-## Confirmações que preciso antes de começar a Fase 1
+### Lote 3 — Exportação Gestão de Ponto (Excel + PDF)
 
-1. **Posso começar pela Fase 1 agora** e seguir fase a fase com aprovação no fim de cada uma?
-2. **Dias úteis**: considerar apenas seg–sex, OU seg–sex + feriados nacionais de Portugal?
-3. **Exportação PDF de Clientes/Ponto**: paisagem A4 com logo da empresa no topo está OK?
-4. **Remoção de Prioridade**: apenas esconder na UI (mantendo dados antigos) — confirma?
+- Reusa `src/lib/exports/` do Lote 2.
+- Colunas: Funcionário, Data, Entrada, Saída, Pausas, Horas totais, Cliente/tarefa, Modo (auto/manual), Origem, Notas.
+- Filtros existentes da tela (período/colaborador) aplicados.
+- Mesmo cabeçalho branded do Lote 2.
+
+---
+
+### Lote 4 — Melhorias Férias
+
+- Já tratado parcialmente no Lote 1 (`pendente_confirmacao`).
+- Restante:
+  - Filtros: colaborador (select), mês (date picker), local de trabalho (input), apenas dias úteis (toggle que recalcula dias).
+  - Coluna "Dias úteis" no histórico/aprovadas (segunda a sexta, sem feriados — feriados ficam para fase futura).
+  - Badge "Pendente de confirmação" com cor própria.
+
+---
+
+### Auditoria final
+
+Ao concluir, entrego tabela item-por-item:
+
+| Requisito | Estado | Evidência |
+|---|---|---|
+| Reset senha | IMPLEMENTADO / CORRIGIDO | arquivo + linha alterada |
+| Tarefas valor inválido | CORRIGIDO | … |
+| ... | ... | ... |
+
+---
+
+### O que NÃO faço (você pediu para fechar bugs antes)
+
+- Nada de assinatura eletrónica, app móvel, financeiro, inventário, contratos PDF, etc. nesta fase.
+- Sem novos módulos.
+
+---
+
+**Confirma esta ordem e a escolha de libs (`xlsx` + `jspdf`/`jspdf-autotable`) para exportação? Posso começar pelo Lote 1 imediatamente.**

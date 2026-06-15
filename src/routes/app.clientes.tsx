@@ -22,8 +22,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Users, Phone, Mail, MapPin, Pencil, Power, Trash2 } from "lucide-react";
+import { Plus, Users, Phone, Mail, MapPin, Pencil, Power, Trash2, FileSpreadsheet, FileDown } from "lucide-react";
 import { RoleGuard } from "@/components/RoleGuard";
+import { exportToExcel, exportToPdf, type ExportColumn } from "@/lib/exports";
 
 export const Route = createFileRoute("/app/clientes")({
   component: () => (
@@ -43,6 +44,9 @@ interface ClientRow {
   notes: string | null;
   status: "ativo" | "inativo";
   created_at: string;
+  billing_mode: "hourly" | "fixed" | "mixed";
+  hourly_rate: number | null;
+  fixed_rate: number | null;
 }
 
 interface AssigneeRow {
@@ -107,6 +111,19 @@ function ClientsPage() {
     enabled: isManager && !!currentCompanyId,
   });
 
+  const { data: company } = useQuery({
+    queryKey: ["company-branding", currentCompanyId],
+    enabled: !!currentCompanyId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("companies")
+        .select("name, primary_color")
+        .eq("id", currentCompanyId!)
+        .maybeSingle();
+      return data;
+    },
+  });
+
   useEffect(() => {
     if (!user) return;
     const ch = supabase
@@ -164,6 +181,57 @@ function ClientsPage() {
   );
   const membersById = new Map((members ?? []).map((m) => [m.id, m.full_name]));
 
+  const BILLING_LABEL: Record<ClientRow["billing_mode"], string> = {
+    hourly: "Por hora",
+    fixed: "Valor fixo",
+    mixed: "Misto",
+  };
+
+  const buildExportColumns = (): ExportColumn<ClientRow>[] => [
+    { header: "Nome", accessor: (c) => c.name, width: 140 },
+    {
+      header: "Contacto",
+      accessor: (c) => {
+        const team = assigneesByClient[c.id] ?? [];
+        const primary = team.find((a) => a.is_primary) ?? team[0];
+        return primary ? (membersById.get(primary.user_id) ?? "") : "";
+      },
+      width: 120,
+    },
+    { header: "Email", accessor: (c) => c.email ?? "", width: 140 },
+    { header: "Telefone", accessor: (c) => c.phone ?? "", width: 100 },
+    { header: "Morada", accessor: (c) => c.address ?? "", width: 180 },
+    { header: "Tipo de cobrança", accessor: (c) => BILLING_LABEL[c.billing_mode] ?? c.billing_mode, width: 90 },
+    {
+      header: "Valor fixo",
+      accessor: (c) => (c.fixed_rate != null ? `€ ${Number(c.fixed_rate).toFixed(2)}` : ""),
+      width: 70,
+    },
+    {
+      header: "Valor / hora",
+      accessor: (c) => (c.hourly_rate != null ? `€ ${Number(c.hourly_rate).toFixed(2)}` : ""),
+      width: 70,
+    },
+    { header: "Status", accessor: (c) => c.status, width: 60 },
+  ];
+
+  const handleExport = (kind: "xlsx" | "pdf") => {
+    const list = clients ?? [];
+    if (list.length === 0) {
+      toast.info("Nenhum cliente para exportar.");
+      return;
+    }
+    const meta = {
+      fileName: `clientes-${new Date().toISOString().slice(0, 10)}`,
+      title: "Clientes",
+      companyName: company?.name ?? null,
+      primaryColor: (company as { primary_color?: string | null } | null | undefined)?.primary_color ?? null,
+      subtitle: `${list.length} cliente(s) — ativos e inativos`,
+    };
+    if (kind === "xlsx") exportToExcel(list, buildExportColumns(), meta);
+    else exportToPdf(list, buildExportColumns(), meta);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -176,7 +244,14 @@ function ClientsPage() {
           </p>
         </div>
         {isManager && currentCompanyId && (
-          <Dialog
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => handleExport("xlsx")}>
+              <FileSpreadsheet className="mr-2 h-4 w-4" /> Exportar Excel
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => handleExport("pdf")}>
+              <FileDown className="mr-2 h-4 w-4" /> Exportar PDF
+            </Button>
+            <Dialog
             open={open || !!editing}
             onOpenChange={(v) => {
               if (!v) {
@@ -211,6 +286,7 @@ function ClientsPage() {
               />
             </DialogContent>
           </Dialog>
+          </div>
         )}
       </div>
 

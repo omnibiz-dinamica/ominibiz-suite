@@ -28,11 +28,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Filter, MoreHorizontal, Pencil, History, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { Plus, Filter, MoreHorizontal, Pencil, History, ChevronLeft, ChevronRight, X, FileSpreadsheet, FileDown } from "lucide-react";
 import { PunchEditorDrawer } from "@/components/ponto/PunchEditorDrawer";
 import { PunchAuditDrawer } from "@/components/ponto/PunchAuditDrawer";
 import { ORIGIN_LABEL, ORIGIN_TONE, type AdminTimeEntry } from "@/lib/punch-admin";
 import { formatDuration } from "@/lib/tasks";
+import { exportToExcel, exportToPdf, type ExportColumn } from "@/lib/exports";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/ponto_/gestao")({ component: Page });
 
@@ -159,6 +161,81 @@ function GestaoPonto() {
   const openEdit = (r: Row) => { setEditorMode("edit"); setActiveEntry(r); setEditorOpen(true); };
   const openAudit = (r: Row) => { setAuditEntryId(r.id); setAuditOpen(true); };
 
+  const { data: company } = useQuery({
+    queryKey: ["company-branding", currentCompanyId],
+    enabled: !!currentCompanyId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("companies")
+        .select("name, primary_color")
+        .eq("id", currentCompanyId!)
+        .maybeSingle();
+      return data;
+    },
+  });
+
+  const fmtDT = (s: string | null) => (s ? new Date(s).toLocaleString("pt-PT") : "");
+
+  const exportColumns = (): ExportColumn<Row>[] => [
+    { header: "Funcionário", accessor: (r) => r.profiles?.full_name ?? "" },
+    { header: "Tarefa", accessor: (r) => r.tasks?.title ?? "" },
+    { header: "Cliente", accessor: (r) => (r.tasks?.client_id ? clientsMap[r.tasks.client_id] ?? "" : "") },
+    { header: "Início", accessor: (r) => fmtDT(r.started_at) },
+    { header: "Fim", accessor: (r) => fmtDT(r.ended_at) },
+    { header: "Efetivo", accessor: (r) => (r.effective_minutes != null ? formatDuration(r.effective_minutes) : "") },
+    { header: "Origem", accessor: (r) => ORIGIN_LABEL[r.origin] ?? r.origin },
+    { header: "Notas", accessor: (r) => r.notes ?? "" },
+  ];
+
+  const fetchAllForExport = async (): Promise<Row[]> => {
+    let q = supabase
+      .from("time_entries")
+      .select(
+        "id, company_id, task_id, user_id, started_at, ended_at, paused_at, resumed_at, effective_minutes, notes, created_at, updated_at, origin, created_by, last_edited_by, last_edited_at, last_edit_reason, tasks!inner(title, client_id), profiles!inner(full_name)",
+      )
+      .eq("company_id", currentCompanyId!)
+      .order("started_at", { ascending: false })
+      .limit(5000);
+    if (filters.userId !== "all") q = q.eq("user_id", filters.userId);
+    if (filters.status === "open") q = q.is("ended_at", null);
+    if (filters.status === "closed") q = q.not("ended_at", "is", null);
+    if (filters.from) q = q.gte("started_at", new Date(filters.from + "T00:00:00").toISOString());
+    if (filters.to) q = q.lte("started_at", new Date(filters.to + "T23:59:59").toISOString());
+    if (filters.clientId !== "all") q = q.eq("tasks.client_id", filters.clientId);
+    if (filters.taskSearch.trim()) q = q.ilike("tasks.title", `%${filters.taskSearch.trim()}%`);
+    const { data, error } = await q;
+    if (error) throw error;
+    return (data ?? []) as unknown as Row[];
+  };
+
+  const handleExport = async (kind: "xlsx" | "pdf") => {
+    try {
+      const rows = await fetchAllForExport();
+      if (rows.length === 0) {
+        toast.info("Nenhum registo para exportar.");
+        return;
+      }
+      const subtitleParts: string[] = [];
+      if (filters.from) subtitleParts.push(`De ${filters.from}`);
+      if (filters.to) subtitleParts.push(`Até ${filters.to}`);
+      if (filters.userId !== "all") {
+        const m = members?.find((mm) => mm.id === filters.userId);
+        if (m) subtitleParts.push(`Funcionário: ${m.name}`);
+      }
+      const meta = {
+        fileName: `folha-ponto-${new Date().toISOString().slice(0, 10)}`,
+        title: "Folha de Ponto",
+        companyName: company?.name ?? null,
+        primaryColor: (company as { primary_color?: string | null } | null | undefined)?.primary_color ?? null,
+        subtitle: subtitleParts.join(" · ") || `${rows.length} registo(s)`,
+      };
+      if (kind === "xlsx") exportToExcel(rows, exportColumns(), meta);
+      else exportToPdf(rows, exportColumns(), meta);
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  };
+
   if (!currentCompanyId) {
     return (
       <div className="rounded-2xl border border-border bg-card p-8 text-center">
@@ -176,9 +253,17 @@ function GestaoPonto() {
             Visão completa, correções auditadas e inclusão de pontos perdidos.
           </p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="mr-1 h-4 w-4" /> Adicionar ponto
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => handleExport("xlsx")}>
+            <FileSpreadsheet className="mr-2 h-4 w-4" /> Excel
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => handleExport("pdf")}>
+            <FileDown className="mr-2 h-4 w-4" /> PDF
+          </Button>
+          <Button onClick={openCreate}>
+            <Plus className="mr-1 h-4 w-4" /> Adicionar ponto
+          </Button>
+        </div>
       </div>
 
       {/* Filtros */}

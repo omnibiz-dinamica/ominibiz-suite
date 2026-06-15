@@ -18,7 +18,14 @@ type NotificationEvent =
   | "task_completed"
   | "task_cancelled"
   | "task_marked_absent"
-  | "task_late";
+  | "task_late"
+  | "vacation_requested"
+  | "vacation_approved"
+  | "vacation_rejected"
+  | "vacation_cancelled"
+  | "vacation_confirmation_required"
+  | "vacation_confirmed"
+  | "vacation_declined";
 
 type NotificationPriority = "baixa" | "media" | "alta" | "urgente";
 
@@ -47,6 +54,13 @@ const EVENT_LABEL: Record<NotificationEvent, string> = {
   task_cancelled: "Cancelada",
   task_marked_absent: "Ausente",
   task_late: "Atrasada",
+  vacation_requested: "Férias — solicitação",
+  vacation_approved: "Férias — aprovadas",
+  vacation_rejected: "Férias — rejeitadas",
+  vacation_cancelled: "Férias — canceladas",
+  vacation_confirmation_required: "Férias — confirmar",
+  vacation_confirmed: "Férias — confirmadas",
+  vacation_declined: "Férias — recusadas",
 };
 
 const PRIORITY_TONE: Record<NotificationPriority, string> = {
@@ -123,7 +137,11 @@ function NotificationsPage() {
 
   const openTask = async (n: NotificationRow) => {
     if (!n.read_at) markRead.mutate(n.id);
-    nav({ to: "/app/tarefas" });
+    if (n.event.startsWith("vacation_")) {
+      nav({ to: "/app/ferias" });
+    } else {
+      nav({ to: "/app/tarefas" });
+    }
   };
 
   return (
@@ -223,7 +241,7 @@ function NotificationsPage() {
                       </Button>
                     </>
                   )}
-                  {n.task_id && (
+                  {(n.task_id || n.event.startsWith("vacation_")) && (
                     <Button size="sm" variant="ghost" onClick={() => openTask(n)}>
                       <ExternalLink className="mr-1.5 h-4 w-4" /> Abrir
                     </Button>

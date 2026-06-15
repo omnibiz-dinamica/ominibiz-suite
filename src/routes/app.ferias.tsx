@@ -10,10 +10,17 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Calendar as CalendarIcon, Check, X as XIcon, Plus, Plane } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
 export const Route = createFileRoute("/app/ferias")({ component: FeriasPage });
 
-type VacationStatus = "pendente" | "aprovado" | "rejeitado" | "cancelado";
+type VacationStatus =
+  | "pendente"
+  | "pendente_confirmacao"
+  | "aprovado"
+  | "rejeitado"
+  | "cancelado";
 type VacationRow = {
   id: string;
   company_id: string;
@@ -33,14 +40,46 @@ type VacationRow = {
 
 const STATUS_TONE: Record<VacationStatus, string> = {
   pendente: "bg-warning/15 text-warning-foreground",
+  pendente_confirmacao: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
   aprovado: "bg-success/15 text-success",
   rejeitado: "bg-destructive/15 text-destructive",
   cancelado: "bg-muted text-muted-foreground",
 };
 
+const STATUS_LABEL: Record<VacationStatus, string> = {
+  pendente: "pendente",
+  pendente_confirmacao: "pendente de confirmação",
+  aprovado: "aprovado",
+  rejeitado: "rejeitado",
+  cancelado: "cancelado",
+};
+
 const fmt = (d: string) => {
   const [y, m, day] = d.split("-");
   return `${day}/${m}/${y}`;
+};
+
+/** Inclusive day count between two ISO dates (YYYY-MM-DD). */
+const daysBetween = (start: string, end: string): number => {
+  const s = new Date(start + "T00:00:00Z").getTime();
+  const e = new Date(end + "T00:00:00Z").getTime();
+  if (Number.isNaN(s) || Number.isNaN(e)) return 0;
+  return Math.max(0, Math.round((e - s) / 86400000)) + 1;
+};
+
+/** Business days (Mon-Fri) inclusive between two ISO dates. */
+const businessDaysBetween = (start: string, end: string): number => {
+  const s = new Date(start + "T00:00:00Z");
+  const e = new Date(end + "T00:00:00Z");
+  if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return 0;
+  let count = 0;
+  const cur = new Date(s);
+  while (cur.getTime() <= e.getTime()) {
+    const dow = cur.getUTCDay();
+    if (dow !== 0 && dow !== 6) count++;
+    cur.setUTCDate(cur.getUTCDate() + 1);
+  }
+  return count;
 };
 
 function FeriasPage() {
@@ -151,9 +190,64 @@ function FeriasPage() {
     onError: (e: any) => toast.error(e.message ?? "Falha na operação"),
   });
 
+  const confirmMutation = useMutation({
+    mutationFn: async (vars: { id: string; accept: boolean; reason?: string }) => {
+      const { error } = await (supabase as any).rpc("vacation_confirm", {
+        _id: vars.id,
+        _accept: vars.accept,
+        _reason: vars.reason ?? null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["vacations"] });
+      toast.success(vars.accept ? "Férias confirmadas" : "Recusadas");
+    },
+    onError: (e: any) => toast.error(e.message ?? "Falha na operação"),
+  });
+
   const pending = rows.filter((r) => r.status === "pendente");
-  const approved = rows.filter((r) => r.status === "aprovado");
-  const history = rows.filter((r) => r.status === "rejeitado" || r.status === "cancelado");
+  // Filtros de visão
+  const [filterUser, setFilterUser] = useState<string>("all");
+  const [filterMonth, setFilterMonth] = useState<string>(""); // YYYY-MM
+  const [filterLocation, setFilterLocation] = useState<string>("");
+  const [businessOnly, setBusinessOnly] = useState<boolean>(false);
+
+  const matchesFilters = (r: VacationRow): boolean => {
+    if (filterUser !== "all" && r.user_id !== filterUser) return false;
+    if (filterMonth) {
+      // Mês "intersecta" o intervalo?
+      const monthStart = filterMonth + "-01";
+      const [yy, mm] = filterMonth.split("-").map(Number);
+      const monthEnd = new Date(Date.UTC(yy, mm, 0)).toISOString().slice(0, 10);
+      if (r.end_date < monthStart || r.start_date > monthEnd) return false;
+    }
+    if (filterLocation.trim()) {
+      const q = filterLocation.trim().toLowerCase();
+      if (!(r.work_location ?? "").toLowerCase().includes(q)) return false;
+    }
+    return true;
+  };
+
+  const approved = rows.filter((r) => r.status === "aprovado" && matchesFilters(r));
+  const history = rows.filter(
+    (r) => (r.status === "rejeitado" || r.status === "cancelado") && matchesFilters(r),
+  );
+
+  const countDays = (r: VacationRow) =>
+    businessOnly ? businessDaysBetween(r.start_date, r.end_date) : daysBetween(r.start_date, r.end_date);
+
+  const uniqueUsers = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const r of rows) map.set(r.user_id, names[r.user_id] ?? "Usuário");
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [rows, names]);
+  const awaitingMyConfirm = rows.filter(
+    (r) => r.status === "pendente_confirmacao" && r.user_id === user?.id,
+  );
+  const awaitingTheirConfirm = rows.filter(
+    (r) => r.status === "pendente_confirmacao" && r.user_id !== user?.id,
+  );
 
   // Requests this user needs to decide on
   const toApprove = rows.filter(
@@ -256,11 +350,89 @@ function FeriasPage() {
         </section>
       )}
 
+      {/* Employee: vacations awaiting MY confirmation */}
+      {awaitingMyConfirm.length > 0 && (
+        <section className="rounded-2xl border border-amber-500/40 bg-amber-500/5 p-5">
+          <h2 className="mb-3 font-semibold">Aguardando sua confirmação ({awaitingMyConfirm.length})</h2>
+          <p className="mb-3 text-xs text-muted-foreground">
+            O gestor aprovou estas férias em seu nome. Confirme ou recuse.
+          </p>
+          <ul className="space-y-2">
+            {awaitingMyConfirm.map((r) => (
+              <ConfirmRow
+                key={r.id}
+                row={r}
+                onAccept={() => confirmMutation.mutate({ id: r.id, accept: true })}
+                onDecline={(reason) =>
+                  confirmMutation.mutate({ id: r.id, accept: false, reason })
+                }
+              />
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* Manager view: vacations awaiting employee confirmation */}
+      {isManager && awaitingTheirConfirm.length > 0 && (
+        <section className="rounded-2xl border border-border bg-card p-5">
+          <h2 className="mb-3 font-semibold">
+            Pendentes de confirmação do funcionário ({awaitingTheirConfirm.length})
+          </h2>
+          <ul className="divide-y divide-border">
+            {awaitingTheirConfirm.map((r) => (
+              <li key={r.id} className="flex items-center justify-between gap-3 py-2">
+                <div>
+                  <div className="font-medium">{names[r.user_id] ?? "Usuário"}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {fmt(r.start_date)} → {fmt(r.end_date)}
+                  </div>
+                </div>
+                <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_TONE.pendente_confirmacao}`}>
+                  {STATUS_LABEL.pendente_confirmacao}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {/* Approved calendar */}
       <section className="rounded-2xl border border-border bg-card p-5">
         <h2 className="mb-3 flex items-center gap-2 font-semibold">
           <CalendarIcon className="h-4 w-4" /> Aprovadas ({approved.length})
         </h2>
+        {isManager && (
+          <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <Label className="text-xs">Colaborador</Label>
+              <Select value={filterUser} onValueChange={setFilterUser}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {uniqueUsers.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Mês</Label>
+              <Input type="month" value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} />
+            </div>
+            <div>
+              <Label className="text-xs">Local de trabalho</Label>
+              <Input
+                value={filterLocation}
+                onChange={(e) => setFilterLocation(e.target.value)}
+                placeholder="Filtrar por local…"
+              />
+            </div>
+            <div className="flex items-end gap-2">
+              <Switch id="biz-only" checked={businessOnly} onCheckedChange={setBusinessOnly} />
+              <Label htmlFor="biz-only" className="text-xs">Contar apenas dias úteis</Label>
+            </div>
+          </div>
+        )}
         {approved.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nenhuma férias aprovada.</p>
         ) : (
@@ -273,6 +445,9 @@ function FeriasPage() {
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {fmt(r.start_date)} → {fmt(r.end_date)}
+                    {" · "}
+                    <span className="font-mono">{countDays(r)} {businessOnly ? "dias úteis" : "dias"}</span>
+                    {r.work_location && <span> · {r.work_location}</span>}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -336,13 +511,71 @@ function FeriasPage() {
                     <div className="text-xs text-muted-foreground">Motivo: {r.decision_reason}</div>
                   )}
                 </div>
-                <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_TONE[r.status]}`}>{r.status}</span>
+                <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_TONE[r.status]}`}>{STATUS_LABEL[r.status]}</span>
               </li>
             ))}
           </ul>
         )}
       </section>
     </div>
+  );
+}
+
+function ConfirmRow({
+  row, onAccept, onDecline,
+}: {
+  row: VacationRow;
+  onAccept: () => void;
+  onDecline: (reason: string) => void;
+}) {
+  const [declining, setDeclining] = useState(false);
+  const [reason, setReason] = useState("");
+  return (
+    <li className="rounded-lg border border-border bg-card p-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="font-medium">
+            {fmt(row.start_date)} → {fmt(row.end_date)}
+          </div>
+          {row.decision_reason && (
+            <div className="text-xs text-muted-foreground">Nota do gestor: {row.decision_reason}</div>
+          )}
+        </div>
+        {!declining ? (
+          <div className="flex gap-2">
+            <Button size="sm" onClick={onAccept}>
+              <Check className="h-4 w-4" /> Confirmar
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setDeclining(true)}>
+              <XIcon className="h-4 w-4" /> Recusar
+            </Button>
+          </div>
+        ) : null}
+      </div>
+      {declining && (
+        <div className="mt-3 space-y-2">
+          <Label htmlFor={`c-${row.id}`}>Motivo (opcional)</Label>
+          <Textarea
+            id={`c-${row.id}`}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="Explique se quiser..."
+          />
+          <div className="flex justify-end gap-2">
+            <Button size="sm" variant="ghost" onClick={() => { setDeclining(false); setReason(""); }}>
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => { onDecline(reason.trim()); setDeclining(false); setReason(""); }}
+            >
+              Confirmar recusa
+            </Button>
+          </div>
+        </div>
+      )}
+    </li>
   );
 }
 
