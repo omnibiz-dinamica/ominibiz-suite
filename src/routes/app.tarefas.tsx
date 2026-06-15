@@ -567,18 +567,6 @@ function TaskForm({
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label>Prioridade</Label>
-          <Select value={priority} onValueChange={(v) => setPriority(v as typeof priority)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="baixa">Baixa</SelectItem>
-              <SelectItem value="media">Média</SelectItem>
-              <SelectItem value="alta">Alta</SelectItem>
-              <SelectItem value="urgente">Urgente</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
           <Label>Início</Label>
           <Input type="datetime-local" value={scheduledFor} onChange={(e) => setScheduledFor(e.target.value)} />
         </div>
