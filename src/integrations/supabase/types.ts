@@ -279,9 +279,12 @@ export type Database = {
           created_at: string
           created_by: string | null
           currency: string
+          email_from_name: string | null
           id: string
           language: string
+          logo_url: string | null
           name: string
+          primary_color: string | null
           slug: string
           status: Database["public"]["Enums"]["company_status"]
           timezone: string
@@ -292,9 +295,12 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           currency?: string
+          email_from_name?: string | null
           id?: string
           language?: string
+          logo_url?: string | null
           name: string
+          primary_color?: string | null
           slug: string
           status?: Database["public"]["Enums"]["company_status"]
           timezone?: string
@@ -305,9 +311,12 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           currency?: string
+          email_from_name?: string | null
           id?: string
           language?: string
+          logo_url?: string | null
           name?: string
+          primary_color?: string | null
           slug?: string
           status?: Database["public"]["Enums"]["company_status"]
           timezone?: string
@@ -655,36 +664,53 @@ export type Database = {
       }
       email_send_log: {
         Row: {
+          company_id: string | null
           created_at: string
           error_message: string | null
           id: string
           message_id: string | null
           metadata: Json | null
+          provider: string | null
           recipient_email: string
           status: string
           template_name: string
+          trigger_source: string | null
         }
         Insert: {
+          company_id?: string | null
           created_at?: string
           error_message?: string | null
           id?: string
           message_id?: string | null
           metadata?: Json | null
+          provider?: string | null
           recipient_email: string
           status: string
           template_name: string
+          trigger_source?: string | null
         }
         Update: {
+          company_id?: string | null
           created_at?: string
           error_message?: string | null
           id?: string
           message_id?: string | null
           metadata?: Json | null
+          provider?: string | null
           recipient_email?: string
           status?: string
           template_name?: string
+          trigger_source?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "email_send_log_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_send_state: {
         Row: {
