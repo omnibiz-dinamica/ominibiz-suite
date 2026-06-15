@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Calendar as CalendarIcon, Check, X as XIcon, Plus, Plane } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
 export const Route = createFileRoute("/app/ferias")({ component: FeriasPage });
 
@@ -55,6 +57,29 @@ const STATUS_LABEL: Record<VacationStatus, string> = {
 const fmt = (d: string) => {
   const [y, m, day] = d.split("-");
   return `${day}/${m}/${y}`;
+};
+
+/** Inclusive day count between two ISO dates (YYYY-MM-DD). */
+const daysBetween = (start: string, end: string): number => {
+  const s = new Date(start + "T00:00:00Z").getTime();
+  const e = new Date(end + "T00:00:00Z").getTime();
+  if (Number.isNaN(s) || Number.isNaN(e)) return 0;
+  return Math.max(0, Math.round((e - s) / 86400000)) + 1;
+};
+
+/** Business days (Mon-Fri) inclusive between two ISO dates. */
+const businessDaysBetween = (start: string, end: string): number => {
+  const s = new Date(start + "T00:00:00Z");
+  const e = new Date(end + "T00:00:00Z");
+  if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return 0;
+  let count = 0;
+  const cur = new Date(s);
+  while (cur.getTime() <= e.getTime()) {
+    const dow = cur.getUTCDay();
+    if (dow !== 0 && dow !== 6) count++;
+    cur.setUTCDate(cur.getUTCDate() + 1);
+  }
+  return count;
 };
 
 function FeriasPage() {
@@ -182,8 +207,41 @@ function FeriasPage() {
   });
 
   const pending = rows.filter((r) => r.status === "pendente");
-  const approved = rows.filter((r) => r.status === "aprovado");
-  const history = rows.filter((r) => r.status === "rejeitado" || r.status === "cancelado");
+  // Filtros de visão
+  const [filterUser, setFilterUser] = useState<string>("all");
+  const [filterMonth, setFilterMonth] = useState<string>(""); // YYYY-MM
+  const [filterLocation, setFilterLocation] = useState<string>("");
+  const [businessOnly, setBusinessOnly] = useState<boolean>(false);
+
+  const matchesFilters = (r: VacationRow): boolean => {
+    if (filterUser !== "all" && r.user_id !== filterUser) return false;
+    if (filterMonth) {
+      // Mês "intersecta" o intervalo?
+      const monthStart = filterMonth + "-01";
+      const [yy, mm] = filterMonth.split("-").map(Number);
+      const monthEnd = new Date(Date.UTC(yy, mm, 0)).toISOString().slice(0, 10);
+      if (r.end_date < monthStart || r.start_date > monthEnd) return false;
+    }
+    if (filterLocation.trim()) {
+      const q = filterLocation.trim().toLowerCase();
+      if (!(r.work_location ?? "").toLowerCase().includes(q)) return false;
+    }
+    return true;
+  };
+
+  const approved = rows.filter((r) => r.status === "aprovado" && matchesFilters(r));
+  const history = rows.filter(
+    (r) => (r.status === "rejeitado" || r.status === "cancelado") && matchesFilters(r),
+  );
+
+  const countDays = (r: VacationRow) =>
+    businessOnly ? businessDaysBetween(r.start_date, r.end_date) : daysBetween(r.start_date, r.end_date);
+
+  const uniqueUsers = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const r of rows) map.set(r.user_id, names[r.user_id] ?? "Usuário");
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [rows, names]);
   const awaitingMyConfirm = rows.filter(
     (r) => r.status === "pendente_confirmacao" && r.user_id === user?.id,
   );
@@ -343,6 +401,38 @@ function FeriasPage() {
         <h2 className="mb-3 flex items-center gap-2 font-semibold">
           <CalendarIcon className="h-4 w-4" /> Aprovadas ({approved.length})
         </h2>
+        {isManager && (
+          <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <Label className="text-xs">Colaborador</Label>
+              <Select value={filterUser} onValueChange={setFilterUser}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {uniqueUsers.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Mês</Label>
+              <Input type="month" value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} />
+            </div>
+            <div>
+              <Label className="text-xs">Local de trabalho</Label>
+              <Input
+                value={filterLocation}
+                onChange={(e) => setFilterLocation(e.target.value)}
+                placeholder="Filtrar por local…"
+              />
+            </div>
+            <div className="flex items-end gap-2">
+              <Switch id="biz-only" checked={businessOnly} onCheckedChange={setBusinessOnly} />
+              <Label htmlFor="biz-only" className="text-xs">Contar apenas dias úteis</Label>
+            </div>
+          </div>
+        )}
         {approved.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nenhuma férias aprovada.</p>
         ) : (
@@ -355,6 +445,9 @@ function FeriasPage() {
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {fmt(r.start_date)} → {fmt(r.end_date)}
+                    {" · "}
+                    <span className="font-mono">{countDays(r)} {businessOnly ? "dias úteis" : "dias"}</span>
+                    {r.work_location && <span> · {r.work_location}</span>}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
