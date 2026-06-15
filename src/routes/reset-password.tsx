@@ -58,13 +58,13 @@ function ResetPasswordPage() {
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="password">Nova senha</Label>
-            <Input id="password" type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} disabled={!ready} />
+            <Input id="password" type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="confirm">Confirmar senha</Label>
-            <Input id="confirm" type="password" required minLength={8} value={confirm} onChange={(e) => setConfirm(e.target.value)} disabled={!ready} />
+            <Input id="confirm" type="password" required minLength={8} value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" />
           </div>
-          <Button type="submit" className="w-full" disabled={loading || !ready}>
+          <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "A guardar..." : "Redefinir senha"}
           </Button>
         </form>

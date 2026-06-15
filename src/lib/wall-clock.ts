@@ -14,9 +14,15 @@ const pad = (n: number) => String(n).padStart(2, "0");
 /** "2026-05-20T06:00" -> "2026-05-20T06:00:00.000Z" (preserva wall clock). */
 export function wallInputToISO(local: string | null | undefined): string | null {
   if (!local) return null;
-  // Aceita "YYYY-MM-DDTHH:MM" ou "YYYY-MM-DDTHH:MM:SS"
-  const s = local.length === 16 ? `${local}:00` : local;
-  return `${s}.000Z`;
+  // Normaliza para "YYYY-MM-DDTHH:MM:SS" descartando ms/tz que possam vir do input,
+  // depois acrescenta ".000Z" para preservar o horário-parede.
+  // Aceita: "YYYY-MM-DDTHH:MM", "YYYY-MM-DDTHH:MM:SS", "YYYY-MM-DDTHH:MM:SS.sss",
+  //         "...Z", "...±HH:MM".
+  const m = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})(?::(\d{2}))?/.exec(local);
+  if (!m) return null;
+  const base = m[1];
+  const sec = m[2] ?? "00";
+  return `${base}:${sec}.000Z`;
 }
 
 /** ISO -> "YYYY-MM-DDTHH:MM" para <input type="datetime-local">, sem aplicar fuso. */

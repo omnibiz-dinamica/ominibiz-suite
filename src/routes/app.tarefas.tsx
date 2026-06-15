@@ -368,7 +368,6 @@ function TaskRowItem({
           <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_TONE[t.status]}`}>
             {STATUS_LABELS[t.status]}
           </span>
-          <span className="text-[11px] capitalize text-muted-foreground">· {t.priority}</span>
           {late && (
             <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-destructive">
               <Clock className="h-3 w-3" /> atrasado
@@ -564,18 +563,6 @@ function TaskForm({
               {members.map((m) => (
                 <SelectItem key={m.id} value={m.id}>{m.full_name ?? m.id.slice(0, 8)}</SelectItem>
               ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label>Prioridade</Label>
-          <Select value={priority} onValueChange={(v) => setPriority(v as typeof priority)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="baixa">Baixa</SelectItem>
-              <SelectItem value="media">Média</SelectItem>
-              <SelectItem value="alta">Alta</SelectItem>
-              <SelectItem value="urgente">Urgente</SelectItem>
             </SelectContent>
           </Select>
         </div>
