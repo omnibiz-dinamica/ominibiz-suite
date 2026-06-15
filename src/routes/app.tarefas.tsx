@@ -368,7 +368,6 @@ function TaskRowItem({
           <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_TONE[t.status]}`}>
             {STATUS_LABELS[t.status]}
           </span>
-          <span className="text-[11px] capitalize text-muted-foreground">· {t.priority}</span>
           {late && (
             <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-destructive">
               <Clock className="h-3 w-3" /> atrasado

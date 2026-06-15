@@ -221,10 +221,6 @@ export function PunchEditorDrawer({
   });
 
   const submit = () => {
-    if (form.reason.trim().length < 5) {
-      toast.error("Motivo obrigatório (mínimo 5 caracteres)");
-      return;
-    }
     if (mode === "create") {
       if (!form.user_id || !form.task_id || !form.started_at) {
         toast.error("Funcionário, tarefa e início são obrigatórios");
@@ -329,7 +325,7 @@ export function PunchEditorDrawer({
           )}
 
           <div>
-            <Label>Motivo * <span className="text-xs text-muted-foreground">(mínimo 5 caracteres, será registrado no histórico)</span></Label>
+            <Label>Motivo <span className="text-xs text-muted-foreground">(opcional — quando informado, fica registrado no histórico)</span></Label>
             <Textarea
               rows={2}
               value={form.reason}
