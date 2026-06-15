@@ -2893,6 +2893,9 @@ export type Database = {
         | "vacation_approved"
         | "vacation_rejected"
         | "vacation_cancelled"
+        | "vacation_confirmation_required"
+        | "vacation_confirmed"
+        | "vacation_declined"
       notification_priority: "baixa" | "media" | "alta" | "urgente"
       payslip_status: "unassigned" | "assigned" | "sent" | "failed" | "archived"
       punch_mode: "automatico" | "manual" | "ambos"
@@ -2907,7 +2910,12 @@ export type Database = {
         | "cancelado"
         | "ausente"
         | "autorizado"
-      vacation_status: "pendente" | "aprovado" | "rejeitado" | "cancelado"
+      vacation_status:
+        | "pendente"
+        | "aprovado"
+        | "rejeitado"
+        | "cancelado"
+        | "pendente_confirmacao"
       vehicle_kind:
         | "carro"
         | "moto"
@@ -3117,6 +3125,9 @@ export const Constants = {
         "vacation_approved",
         "vacation_rejected",
         "vacation_cancelled",
+        "vacation_confirmation_required",
+        "vacation_confirmed",
+        "vacation_declined",
       ],
       notification_priority: ["baixa", "media", "alta", "urgente"],
       payslip_status: ["unassigned", "assigned", "sent", "failed", "archived"],
@@ -3133,7 +3144,13 @@ export const Constants = {
         "ausente",
         "autorizado",
       ],
-      vacation_status: ["pendente", "aprovado", "rejeitado", "cancelado"],
+      vacation_status: [
+        "pendente",
+        "aprovado",
+        "rejeitado",
+        "cancelado",
+        "pendente_confirmacao",
+      ],
       vehicle_kind: [
         "carro",
         "moto",
