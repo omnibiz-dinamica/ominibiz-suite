@@ -13,7 +13,12 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 export const Route = createFileRoute("/app/ferias")({ component: FeriasPage });
 
-type VacationStatus = "pendente" | "aprovado" | "rejeitado" | "cancelado";
+type VacationStatus =
+  | "pendente"
+  | "pendente_confirmacao"
+  | "aprovado"
+  | "rejeitado"
+  | "cancelado";
 type VacationRow = {
   id: string;
   company_id: string;
@@ -33,9 +38,18 @@ type VacationRow = {
 
 const STATUS_TONE: Record<VacationStatus, string> = {
   pendente: "bg-warning/15 text-warning-foreground",
+  pendente_confirmacao: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
   aprovado: "bg-success/15 text-success",
   rejeitado: "bg-destructive/15 text-destructive",
   cancelado: "bg-muted text-muted-foreground",
+};
+
+const STATUS_LABEL: Record<VacationStatus, string> = {
+  pendente: "pendente",
+  pendente_confirmacao: "pendente de confirmação",
+  aprovado: "aprovado",
+  rejeitado: "rejeitado",
+  cancelado: "cancelado",
 };
 
 const fmt = (d: string) => {
@@ -151,9 +165,31 @@ function FeriasPage() {
     onError: (e: any) => toast.error(e.message ?? "Falha na operação"),
   });
 
+  const confirmMutation = useMutation({
+    mutationFn: async (vars: { id: string; accept: boolean; reason?: string }) => {
+      const { error } = await (supabase as any).rpc("vacation_confirm", {
+        _id: vars.id,
+        _accept: vars.accept,
+        _reason: vars.reason ?? null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["vacations"] });
+      toast.success(vars.accept ? "Férias confirmadas" : "Recusadas");
+    },
+    onError: (e: any) => toast.error(e.message ?? "Falha na operação"),
+  });
+
   const pending = rows.filter((r) => r.status === "pendente");
   const approved = rows.filter((r) => r.status === "aprovado");
   const history = rows.filter((r) => r.status === "rejeitado" || r.status === "cancelado");
+  const awaitingMyConfirm = rows.filter(
+    (r) => r.status === "pendente_confirmacao" && r.user_id === user?.id,
+  );
+  const awaitingTheirConfirm = rows.filter(
+    (r) => r.status === "pendente_confirmacao" && r.user_id !== user?.id,
+  );
 
   // Requests this user needs to decide on
   const toApprove = rows.filter(
@@ -256,6 +292,52 @@ function FeriasPage() {
         </section>
       )}
 
+      {/* Employee: vacations awaiting MY confirmation */}
+      {awaitingMyConfirm.length > 0 && (
+        <section className="rounded-2xl border border-amber-500/40 bg-amber-500/5 p-5">
+          <h2 className="mb-3 font-semibold">Aguardando sua confirmação ({awaitingMyConfirm.length})</h2>
+          <p className="mb-3 text-xs text-muted-foreground">
+            O gestor aprovou estas férias em seu nome. Confirme ou recuse.
+          </p>
+          <ul className="space-y-2">
+            {awaitingMyConfirm.map((r) => (
+              <ConfirmRow
+                key={r.id}
+                row={r}
+                onAccept={() => confirmMutation.mutate({ id: r.id, accept: true })}
+                onDecline={(reason) =>
+                  confirmMutation.mutate({ id: r.id, accept: false, reason })
+                }
+              />
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* Manager view: vacations awaiting employee confirmation */}
+      {isManager && awaitingTheirConfirm.length > 0 && (
+        <section className="rounded-2xl border border-border bg-card p-5">
+          <h2 className="mb-3 font-semibold">
+            Pendentes de confirmação do funcionário ({awaitingTheirConfirm.length})
+          </h2>
+          <ul className="divide-y divide-border">
+            {awaitingTheirConfirm.map((r) => (
+              <li key={r.id} className="flex items-center justify-between gap-3 py-2">
+                <div>
+                  <div className="font-medium">{names[r.user_id] ?? "Usuário"}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {fmt(r.start_date)} → {fmt(r.end_date)}
+                  </div>
+                </div>
+                <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_TONE.pendente_confirmacao}`}>
+                  {STATUS_LABEL.pendente_confirmacao}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {/* Approved calendar */}
       <section className="rounded-2xl border border-border bg-card p-5">
         <h2 className="mb-3 flex items-center gap-2 font-semibold">
@@ -336,13 +418,71 @@ function FeriasPage() {
                     <div className="text-xs text-muted-foreground">Motivo: {r.decision_reason}</div>
                   )}
                 </div>
-                <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_TONE[r.status]}`}>{r.status}</span>
+                <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_TONE[r.status]}`}>{STATUS_LABEL[r.status]}</span>
               </li>
             ))}
           </ul>
         )}
       </section>
     </div>
+  );
+}
+
+function ConfirmRow({
+  row, onAccept, onDecline,
+}: {
+  row: VacationRow;
+  onAccept: () => void;
+  onDecline: (reason: string) => void;
+}) {
+  const [declining, setDeclining] = useState(false);
+  const [reason, setReason] = useState("");
+  return (
+    <li className="rounded-lg border border-border bg-card p-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="font-medium">
+            {fmt(row.start_date)} → {fmt(row.end_date)}
+          </div>
+          {row.decision_reason && (
+            <div className="text-xs text-muted-foreground">Nota do gestor: {row.decision_reason}</div>
+          )}
+        </div>
+        {!declining ? (
+          <div className="flex gap-2">
+            <Button size="sm" onClick={onAccept}>
+              <Check className="h-4 w-4" /> Confirmar
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setDeclining(true)}>
+              <XIcon className="h-4 w-4" /> Recusar
+            </Button>
+          </div>
+        ) : null}
+      </div>
+      {declining && (
+        <div className="mt-3 space-y-2">
+          <Label htmlFor={`c-${row.id}`}>Motivo (opcional)</Label>
+          <Textarea
+            id={`c-${row.id}`}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="Explique se quiser..."
+          />
+          <div className="flex justify-end gap-2">
+            <Button size="sm" variant="ghost" onClick={() => { setDeclining(false); setReason(""); }}>
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => { onDecline(reason.trim()); setDeclining(false); setReason(""); }}
+            >
+              Confirmar recusa
+            </Button>
+          </div>
+        </div>
+      )}
+    </li>
   );
 }
 
