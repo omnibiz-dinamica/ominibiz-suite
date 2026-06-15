@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { toast } from "sonner";
 import { Copy, Trash2, Pencil, Power } from "lucide-react";
 import { RoleGuard } from "@/components/RoleGuard";
+import { sendTransactionalEmail } from "@/lib/email/send";
 
 interface MemberRow {
   user_id: string;
@@ -111,16 +112,41 @@ function TeamPage() {
 
   const createInvite = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("invites").insert({
-        company_id: currentCompanyId!,
-        email: email.trim().toLowerCase(),
-        role,
-        invited_by: user!.id,
-      });
+      const recipient = email.trim().toLowerCase();
+      const { data: inv, error } = await supabase
+        .from("invites")
+        .insert({
+          company_id: currentCompanyId!,
+          email: recipient,
+          role,
+          invited_by: user!.id,
+        })
+        .select("id, token, expires_at")
+        .single();
       if (error) throw error;
+
+      // Dispatch invite email (single source of truth; logged in email_send_log)
+      try {
+        const inviteUrl = `${window.location.origin}/aceitar-convite?token=${inv.token}`;
+        await sendTransactionalEmail({
+          templateName: "invite",
+          recipientEmail: recipient,
+          idempotencyKey: `invite-${inv.id}`,
+          triggerSource: "invite",
+          companyId: currentCompanyId,
+          templateData: {
+            inviteUrl,
+            role: role === "manager" ? "Gestor" : "Funcionário",
+            expiresAt: inv.expires_at ? new Date(inv.expires_at).toLocaleDateString("pt-PT") : undefined,
+          },
+        });
+      } catch (e) {
+        // Don't roll back the invite — email failures are visible in audit log
+        console.warn("Invite email dispatch failed", e);
+      }
     },
     onSuccess: () => {
-      toast.success("Convite criado");
+      toast.success("Convite criado e email enviado");
       setEmail("");
       qc.invalidateQueries({ queryKey: ["invites"] });
     },
