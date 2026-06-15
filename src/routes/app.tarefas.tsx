@@ -475,6 +475,21 @@ function TaskForm({
       className="space-y-4"
       onSubmit={async (e) => {
         e.preventDefault();
+        // Validação defensiva de horários — evita erro "valor inválido" do Postgres.
+        const startISO = wallInputToISO(scheduledFor);
+        const endISO = wallInputToISO(scheduledEnd);
+        if (scheduledFor && !startISO) {
+          toast.error("Horário de início inválido.");
+          return;
+        }
+        if (scheduledEnd && !endISO) {
+          toast.error("Horário de fim inválido.");
+          return;
+        }
+        if (startISO && endISO && endISO < startISO) {
+          toast.error("O horário de fim deve ser posterior ao de início.");
+          return;
+        }
         setLoading(true);
         // Título derivado do cliente quando não preenchido manualmente.
         const clientName = clients.find((c) => c.id === clientId)?.name ?? "";
@@ -487,8 +502,8 @@ function TaskForm({
           client_id: clientId || null,
           priority,
           // Wall-clock: preservar o horário exato cadastrado, sem fuso.
-          scheduled_for: wallInputToISO(scheduledFor),
-          scheduled_end: wallInputToISO(scheduledEnd),
+          scheduled_for: startISO,
+          scheduled_end: endISO,
           absence_grace_minutes: graceMinutes,
           punch_mode_override: punchMode || null,
         };
