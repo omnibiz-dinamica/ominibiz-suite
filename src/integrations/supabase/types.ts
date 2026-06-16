@@ -998,7 +998,9 @@ export type Database = {
           expires_at: string
           id: string
           invited_by: string | null
+          last_sent_at: string | null
           role: Database["public"]["Enums"]["app_role"]
+          send_count: number
           status: Database["public"]["Enums"]["invite_status"]
           token: string
         }
@@ -1010,7 +1012,9 @@ export type Database = {
           expires_at?: string
           id?: string
           invited_by?: string | null
+          last_sent_at?: string | null
           role?: Database["public"]["Enums"]["app_role"]
+          send_count?: number
           status?: Database["public"]["Enums"]["invite_status"]
           token?: string
         }
@@ -1022,7 +1026,9 @@ export type Database = {
           expires_at?: string
           id?: string
           invited_by?: string | null
+          last_sent_at?: string | null
           role?: Database["public"]["Enums"]["app_role"]
+          send_count?: number
           status?: Database["public"]["Enums"]["invite_status"]
           token?: string
         }
@@ -2618,6 +2624,20 @@ export type Database = {
       remove_member: {
         Args: { _company_id: string; _user_id: string }
         Returns: undefined
+      }
+      resend_invite: {
+        Args: { _invite_id: string }
+        Returns: {
+          company_id: string
+          email: string
+          expires_at: string
+          id: string
+          last_sent_at: string
+          role: Database["public"]["Enums"]["app_role"]
+          send_count: number
+          token: string
+          was_expired: boolean
+        }[]
       }
       resolve_billing_rule: { Args: { _time_entry_id: string }; Returns: Json }
       resolve_vacation_approver: {
