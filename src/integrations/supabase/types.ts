@@ -2986,6 +2986,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      vacation_notify_payload: { Args: { _vacation_id: string }; Returns: Json }
     }
     Enums: {
       app_role: "super_admin" | "manager" | "employee" | "owner"
