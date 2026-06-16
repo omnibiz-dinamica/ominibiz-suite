@@ -338,7 +338,7 @@ function FeriasPage() {
 
   const uniqueUsers = useMemo(() => {
     const map = new Map<string, string>();
-    for (const r of rows) map.set(r.user_id, names[r.user_id] ?? "Usuário");
+    for (const r of rows) map.set(r.user_id, nameOf(r.user_id));
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
   }, [rows, names]);
   const awaitingMyConfirm = rows.filter(
@@ -439,7 +439,7 @@ function FeriasPage() {
                 <PendingRow
                   key={r.id}
                   row={r}
-                  name={names[r.user_id] ?? "Usuário"}
+                  name={nameOf(r.user_id)}
                   onApprove={() => decide.mutate({ id: r.id, action: "aprovar" })}
                   onReject={(reason) => decide.mutate({ id: r.id, action: "rejeitar", reason })}
                 />
@@ -481,7 +481,7 @@ function FeriasPage() {
             {awaitingTheirConfirm.map((r) => (
               <li key={r.id} className="flex items-center justify-between gap-3 py-2">
                 <div>
-                  <div className="font-medium">{names[r.user_id] ?? "Usuário"}</div>
+                  <div className="font-medium">{nameOf(r.user_id)}</div>
                   <div className="text-sm text-muted-foreground">
                     {fmt(r.start_date)} → {fmt(r.end_date)}
                   </div>
@@ -540,7 +540,7 @@ function FeriasPage() {
               <li key={r.id} className="flex items-center justify-between gap-3 py-2">
                 <div>
                   <div className="font-medium">
-                    {isManager ? names[r.user_id] ?? "Usuário" : "Você"}
+                    {isManager ? nameOf(r.user_id) : "Você"}
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {fmt(r.start_date)} → {fmt(r.end_date)}
@@ -577,7 +577,7 @@ function FeriasPage() {
                     <div className="text-xs text-muted-foreground">
                       Aprovador:{" "}
                       {r.assigned_approver_id
-                        ? names[r.assigned_approver_id] ?? "—"
+                        ? nameOf(r.assigned_approver_id)
                         : "Não definido"}
                     </div>
                     {r.note && <div className="text-xs text-muted-foreground">{r.note}</div>}
@@ -604,7 +604,7 @@ function FeriasPage() {
               <li key={r.id} className="flex items-center justify-between gap-3 py-2">
                 <div>
                   <div className="font-medium">
-                    {isManager ? names[r.user_id] ?? "Usuário" : "Você"} — {fmt(r.start_date)} → {fmt(r.end_date)}
+                    {isManager ? nameOf(r.user_id) : "Você"} — {fmt(r.start_date)} → {fmt(r.end_date)}
                   </div>
                   {r.decision_reason && (
                     <div className="text-xs text-muted-foreground">Motivo: {r.decision_reason}</div>
