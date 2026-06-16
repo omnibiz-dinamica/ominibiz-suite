@@ -115,17 +115,15 @@ function TeamPage() {
   const createInvite = useMutation({
     mutationFn: async () => {
       const recipient = email.trim().toLowerCase();
-      const { data: inv, error } = await supabase
-        .from("invites")
-        .insert({
-          company_id: currentCompanyId!,
-          email: recipient,
-          role,
-          invited_by: user!.id,
-        })
-        .select("id, token, expires_at")
-        .single();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.rpc as any)("create_or_resend_invite", {
+        _company_id: currentCompanyId!,
+        _email: recipient,
+        _role: role,
+      });
       if (error) throw error;
+      const inv = Array.isArray(data) ? data[0] : data;
+      if (!inv) throw new Error("Resposta inválida do servidor");
 
       // Dispatch invite email (single source of truth; logged in email_send_log)
       try {
@@ -133,7 +131,7 @@ function TeamPage() {
         await sendTransactionalEmail({
           templateName: "invite",
           recipientEmail: recipient,
-          idempotencyKey: `invite-${inv.id}`,
+          idempotencyKey: `invite-${inv.id}-${inv.send_count ?? 1}`,
           triggerSource: "invite",
           companyId: currentCompanyId,
           templateData: {
@@ -146,9 +144,17 @@ function TeamPage() {
         // Don't roll back the invite — email failures are visible in audit log
         console.warn("Invite email dispatch failed", e);
       }
+      return inv as { action?: string };
     },
-    onSuccess: () => {
-      toast.success("Convite criado e email enviado");
+    onSuccess: (inv) => {
+      const action = inv?.action;
+      const msg =
+        action === "resent"
+          ? "Convite reenviado (já existia um pendente)."
+          : action === "reactivated"
+            ? "Convite reativado com novo token e email enviado."
+            : "Convite criado e email enviado.";
+      toast.success(msg);
       setEmail("");
       qc.invalidateQueries({ queryKey: ["invites"] });
     },
