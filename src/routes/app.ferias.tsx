@@ -685,13 +685,13 @@ function FeriasPage() {
 }
 
 function ConfirmRow({
-  row, onAccept, onDecline,
+  row, onAccept, onRequestChange,
 }: {
   row: VacationRow;
   onAccept: () => void;
-  onDecline: (reason: string) => void;
+  onRequestChange: (reason: string) => void;
 }) {
-  const [declining, setDeclining] = useState(false);
+  const [requesting, setRequesting] = useState(false);
   const [reason, setReason] = useState("");
   return (
     <li className="rounded-lg border border-border bg-card p-3">
@@ -704,36 +704,36 @@ function ConfirmRow({
             <div className="text-xs text-muted-foreground">Nota do gestor: {row.decision_reason}</div>
           )}
         </div>
-        {!declining ? (
+        {!requesting ? (
           <div className="flex gap-2">
             <Button size="sm" onClick={onAccept}>
               <Check className="h-4 w-4" /> Confirmar
             </Button>
-            <Button size="sm" variant="outline" onClick={() => setDeclining(true)}>
-              <XIcon className="h-4 w-4" /> Recusar
+            <Button size="sm" variant="outline" onClick={() => setRequesting(true)}>
+              <Pencil className="h-4 w-4" /> Solicitar alteração
             </Button>
           </div>
         ) : null}
       </div>
-      {declining && (
+      {requesting && (
         <div className="mt-3 space-y-2">
-          <Label htmlFor={`c-${row.id}`}>Motivo (opcional)</Label>
+          <Label htmlFor={`c-${row.id}`}>Descreva a alteração pretendida</Label>
           <Textarea
             id={`c-${row.id}`}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="Explique se quiser..."
+            placeholder="Ex.: preferia adiar uma semana, conflito com..."
           />
           <div className="flex justify-end gap-2">
-            <Button size="sm" variant="ghost" onClick={() => { setDeclining(false); setReason(""); }}>
+            <Button size="sm" variant="ghost" onClick={() => { setRequesting(false); setReason(""); }}>
               Cancelar
             </Button>
             <Button
               size="sm"
-              variant="destructive"
-              onClick={() => { onDecline(reason.trim()); setDeclining(false); setReason(""); }}
+              disabled={!reason.trim()}
+              onClick={() => { onRequestChange(reason.trim()); setRequesting(false); setReason(""); }}
             >
-              Confirmar recusa
+              Enviar pedido de alteração
             </Button>
           </div>
         </div>
