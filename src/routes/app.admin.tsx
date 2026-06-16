@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { buildAppUrl } from "@/lib/app-url";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -81,7 +82,7 @@ function AdminPage() {
       return row as { company_id: string; invite_token: string };
     },
     onSuccess: async (row) => {
-      const link = `${window.location.origin}/aceitar-convite?token=${row.invite_token}`;
+      const link = buildAppUrl(`/aceitar-convite?token=${row.invite_token}`);
       setCreatedLink(link);
       setName("");
       setAdminName("");
