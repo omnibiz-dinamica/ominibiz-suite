@@ -518,16 +518,16 @@ function FeriasPage() {
         <section className="rounded-2xl border border-amber-500/40 bg-amber-500/5 p-5">
           <h2 className="mb-3 font-semibold">Aguardando sua confirmação ({awaitingMyConfirm.length})</h2>
           <p className="mb-3 text-xs text-muted-foreground">
-            O gestor aprovou estas férias em seu nome. Confirme ou recuse.
+            O gestor agendou estas férias em seu nome. Confirme ou solicite alteração.
           </p>
           <ul className="space-y-2">
             {awaitingMyConfirm.map((r) => (
               <ConfirmRow
                 key={r.id}
                 row={r}
-                onAccept={() => confirmMutation.mutate({ id: r.id, accept: true })}
-                onDecline={(reason) =>
-                  confirmMutation.mutate({ id: r.id, accept: false, reason })
+                onAccept={() => confirmMutation.mutate({ id: r.id, action: "confirmar" })}
+                onRequestChange={(reason) =>
+                  confirmMutation.mutate({ id: r.id, action: "solicitar_alteracao", reason })
                 }
               />
             ))}
