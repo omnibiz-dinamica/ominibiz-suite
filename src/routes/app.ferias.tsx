@@ -8,10 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Calendar as CalendarIcon, Check, X as XIcon, Plus, Plane } from "lucide-react";
+import { Calendar as CalendarIcon, Check, X as XIcon, Plus, Plane, FileSpreadsheet, FileText, Pencil } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { sendTransactionalEmail } from "@/lib/email/send";
+import { exportToExcel, exportToPdf } from "@/lib/exports";
+import { buildAppUrl } from "@/lib/app-url";
 
 export const Route = createFileRoute("/app/ferias")({ component: FeriasPage });
 
@@ -93,7 +96,7 @@ function FeriasPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("work_location")
+        .select("work_location, job_title")
         .eq("id", user!.id)
         .maybeSingle();
       return data ?? null;
@@ -134,12 +137,108 @@ function FeriasPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, full_name")
+        .select("id, full_name, job_title")
         .in("id", userIds);
       if (error) throw error;
-      return Object.fromEntries((data ?? []).map((p: any) => [p.id, p.full_name ?? "Usuário"]));
+      return Object.fromEntries(
+        (data ?? []).map((p: any) => [p.id, { name: p.full_name ?? "Usuário", jobTitle: p.job_title ?? null }]),
+      ) as Record<string, { name: string; jobTitle: string | null }>;
     },
   });
+
+  // Company members (for manager-create selector)
+  const { data: members = [] } = useQuery({
+    queryKey: ["vac-company-members", currentCompanyId],
+    enabled: !!currentCompanyId && isManager,
+    queryFn: async () => {
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("company_id", currentCompanyId!);
+      const ids = Array.from(new Set((roles ?? []).map((r) => r.user_id)));
+      if (ids.length === 0) return [] as { id: string; name: string; jobTitle: string | null }[];
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, full_name, job_title")
+        .in("id", ids);
+      return (profs ?? []).map((p: any) => ({
+        id: p.id,
+        name: p.full_name ?? "Usuário",
+        jobTitle: p.job_title ?? null,
+      }));
+    },
+  });
+
+  const nameOf = (id: string | null | undefined): string =>
+    id ? names[id]?.name ?? "Usuário" : "—";
+  const jobOf = (id: string | null | undefined): string =>
+    (id ? names[id]?.jobTitle : null) ?? "—";
+
+  // ---- Send email helper (best-effort, never block UI) ----
+  async function sendVacationEmail(
+    vacationId: string,
+    template:
+      | "vacation_request"
+      | "vacation_approved"
+      | "vacation_rejected"
+      | "vacation_created_by_manager"
+      | "vacation_change_requested",
+    triggerSource:
+      | "vacation_request"
+      | "vacation_approved"
+      | "vacation_rejected"
+      | "vacation_created_by_manager"
+      | "vacation_change_requested",
+    suffix: string,
+  ) {
+    try {
+      const { data, error } = await (supabase as any).rpc("vacation_notify_payload", {
+        _vacation_id: vacationId,
+      });
+      if (error) throw error;
+      const p = data as any;
+      const startDate = fmt(p.start_date);
+      const endDate = fmt(p.end_date);
+      const totalDays = daysBetween(p.start_date, p.end_date);
+      const reviewUrl = buildAppUrl("/app/ferias");
+      let to: string | undefined;
+      let templateData: Record<string, any> = {
+        startDate,
+        endDate,
+        totalDays,
+        reviewUrl,
+        appUrl: reviewUrl,
+      };
+      if (template === "vacation_request") {
+        to = p.approver?.email;
+        templateData.employeeName = p.employee?.name;
+        templateData.note = p.decision_reason ?? undefined;
+      } else if (template === "vacation_approved" || template === "vacation_rejected") {
+        to = p.employee?.email;
+        templateData.decidedBy = p.decided_by?.name;
+        templateData.reason = p.decision_reason ?? undefined;
+      } else if (template === "vacation_created_by_manager") {
+        to = p.employee?.email;
+        templateData.employeeName = p.employee?.name;
+        templateData.managerName = p.decided_by?.name;
+      } else if (template === "vacation_change_requested") {
+        to = p.approver?.email ?? p.decided_by?.email;
+        templateData.employeeName = p.employee?.name;
+        templateData.reason = p.decision_reason ?? undefined;
+      }
+      if (!to) return;
+      await sendTransactionalEmail({
+        templateName: template,
+        recipientEmail: to,
+        idempotencyKey: `${template}-${vacationId}-${suffix}`,
+        triggerSource,
+        companyId: p.company_id,
+        templateData,
+      });
+    } catch (e) {
+      console.error("[vacation email]", template, e);
+    }
+  }
 
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
