@@ -4,6 +4,8 @@ import { template as passwordResetTemplate } from './password-reset'
 import { template as vacationRequestTemplate } from './vacation-request'
 import { template as vacationApprovedTemplate } from './vacation-approved'
 import { template as vacationRejectedTemplate } from './vacation-rejected'
+import { template as vacationCreatedByManagerTemplate } from './vacation-created-by-manager'
+import { template as vacationChangeRequestedTemplate } from './vacation-change-requested'
 import { template as payslipPublishedTemplate } from './payslip-published'
 
 export interface TemplateEntry {
@@ -29,5 +31,7 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   vacation_request: vacationRequestTemplate,
   vacation_approved: vacationApprovedTemplate,
   vacation_rejected: vacationRejectedTemplate,
+  vacation_created_by_manager: vacationCreatedByManagerTemplate,
+  vacation_change_requested: vacationChangeRequestedTemplate,
   payslip_published: payslipPublishedTemplate,
 }
