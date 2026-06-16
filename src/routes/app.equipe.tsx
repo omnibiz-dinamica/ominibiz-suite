@@ -242,7 +242,7 @@ function TeamPage() {
 
       <div className="rounded-2xl border border-border bg-card p-6">
         <InvitesSection
-          invites={invites ?? []}
+          invites={(invites ?? []) as unknown as InviteRow[]}
           filter={inviteFilter}
           setFilter={setInviteFilter}
           onCopy={(token) => { navigator.clipboard.writeText(buildAppUrl(`/aceitar-convite?token=${token}`)); toast.success("Link copiado"); }}
