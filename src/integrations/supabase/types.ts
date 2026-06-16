@@ -2902,7 +2902,7 @@ export type Database = {
         }
       }
       vacation_confirm: {
-        Args: { _accept: boolean; _id: string; _reason?: string }
+        Args: { _action: string; _id: string; _reason?: string }
         Returns: {
           assigned_approver_id: string | null
           cancelled_at: string | null
@@ -2957,6 +2957,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      vacation_notify_payload: { Args: { _vacation_id: string }; Returns: Json }
     }
     Enums: {
       app_role: "super_admin" | "manager" | "employee" | "owner"
@@ -3020,6 +3021,8 @@ export type Database = {
         | "vacation_confirmation_required"
         | "vacation_confirmed"
         | "vacation_declined"
+        | "vacation_created_by_manager"
+        | "vacation_change_requested"
       notification_priority: "baixa" | "media" | "alta" | "urgente"
       payslip_status: "unassigned" | "assigned" | "sent" | "failed" | "archived"
       punch_mode: "automatico" | "manual" | "ambos"
@@ -3252,6 +3255,8 @@ export const Constants = {
         "vacation_confirmation_required",
         "vacation_confirmed",
         "vacation_declined",
+        "vacation_created_by_manager",
+        "vacation_change_requested",
       ],
       notification_priority: ["baixa", "media", "alta", "urgente"],
       payslip_status: ["unassigned", "assigned", "sent", "failed", "archived"],

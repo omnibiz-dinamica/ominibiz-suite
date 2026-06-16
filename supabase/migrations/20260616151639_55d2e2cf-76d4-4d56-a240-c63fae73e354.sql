@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.vacation_confirm(uuid, boolean, text);

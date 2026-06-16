@@ -15,6 +15,9 @@ export type TriggerSource =
   | 'vacation_request'
   | 'vacation_approved'
   | 'vacation_rejected'
+  | 'vacation_created_by_manager'
+  | 'vacation_change_requested'
+  | 'vacation_confirmed'
   | 'payslip_published'
   | 'manual'
 
