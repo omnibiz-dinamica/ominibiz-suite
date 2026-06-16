@@ -9,9 +9,19 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { toast } from "sonner";
-import { Plus, Play, Check, X, ShieldCheck, UserX, Clock, Pencil, Repeat, UserCog, Users } from "lucide-react";
+import { Plus, Play, Check, X, ShieldCheck, UserX, Clock, Pencil, Repeat, UserCog, Users, Trash2 } from "lucide-react";
 import {
   STATUS_LABELS,
   STATUS_TONE,
@@ -50,6 +60,7 @@ function TasksPage() {
   const [reassigning, setReassigning] = useState<TaskRow | null>(null);
   const [editingSeries, setEditingSeries] = useState<TaskRow | null>(null);
   const [seriesRow, setSeriesRow] = useState<RecurrenceRow | null>(null);
+  const [deleting, setDeleting] = useState<TaskRow | null>(null);
 
   useEffect(() => {
     if (!editingSeries?.recurrence_id) {
@@ -150,6 +161,33 @@ function TasksPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const deleteTask = useMutation({
+    mutationFn: async (id: string) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.rpc as any)("task_soft_delete", { _task_id: id });
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+      toast.success("Tarefa excluída");
+      setDeleting(null);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const canDelete = (t: TaskRow) =>
+    isManager && (t.status === "pendente" || t.status === "autorizado");
+
+  const handleDeleteRequest = (t: TaskRow) => {
+    if (!isManager) return;
+    if (!canDelete(t)) {
+      toast.error("Esta tarefa possui histórico operacional e não pode ser excluída.");
+      return;
+    }
+    setDeleting(t);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -218,6 +256,31 @@ function TasksPage() {
         }}
       />
 
+      <AlertDialog open={!!deleting} onOpenChange={(v) => !v && !deleteTask.isPending && setDeleting(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir tarefa?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleting?.title
+                ? `A tarefa "${deleting.title}" será removida das listas, calendário, folha de ponto e notificações. O histórico permanece registado para auditoria.`
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteTask.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleteTask.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                if (deleting) deleteTask.mutate(deleting.id);
+              }}
+            >
+              {deleteTask.isPending ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {!currentCompanyId && isManager && (
         <div className="rounded-2xl border border-warning/40 bg-warning/10 p-4 text-sm text-warning-foreground">
           Sua empresa ainda está aguardando aprovação. Você poderá criar tarefas assim que for liberada.
@@ -244,6 +307,7 @@ function TasksPage() {
           onEdit={setEditing}
           onEditSeries={setEditingSeries}
           onReassign={setReassigning}
+          onDelete={handleDeleteRequest}
           onTransition={(id, action) => transition.mutate({ id, action })}
           transitionPending={transition.isPending}
         />
@@ -261,6 +325,7 @@ function TasksPage() {
                 onEdit={setEditing}
                 onEditSeries={setEditingSeries}
                 onReassign={setReassigning}
+                onDelete={handleDeleteRequest}
                 onTransition={(id, action) => transition.mutate({ id, action })}
                 transitionPending={transition.isPending}
               />
@@ -282,6 +347,7 @@ interface RowHandlers {
   onEdit: (t: TaskRow) => void;
   onEditSeries: (t: TaskRow) => void;
   onReassign: (t: TaskRow) => void;
+  onDelete: (t: TaskRow) => void;
   onTransition: (id: string, action: TaskAction) => void;
   transitionPending: boolean;
 }
@@ -350,6 +416,7 @@ function TaskRowItem({
   onEdit,
   onEditSeries,
   onReassign,
+  onDelete,
   onTransition,
   transitionPending,
 }: RowHandlers & { task: TaskRow }) {
@@ -400,6 +467,19 @@ function TaskRowItem({
             )}
             <Button size="sm" variant="ghost" title="Reatribuir" onClick={() => onReassign(t)}>
               <UserCog className="h-3 w-3" />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              title={
+                t.status === "pendente" || t.status === "autorizado"
+                  ? "Excluir tarefa"
+                  : "Tarefa com histórico operacional — não pode ser excluída"
+              }
+              className="text-destructive hover:text-destructive"
+              onClick={() => onDelete(t)}
+            >
+              <Trash2 className="h-3 w-3" />
             </Button>
           </>
         )}
