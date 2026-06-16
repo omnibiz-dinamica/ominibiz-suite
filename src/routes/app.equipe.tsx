@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Copy, Trash2, Pencil, Power } from "lucide-react";
+import { Copy, Trash2, Pencil, Power, Send } from "lucide-react";
 import { RoleGuard } from "@/components/RoleGuard";
 import { sendTransactionalEmail } from "@/lib/email/send";
 import { buildAppUrl } from "@/lib/app-url";
@@ -42,6 +42,7 @@ function TeamPage() {
   const qc = useQueryClient();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"manager" | "employee">("employee");
+  const [inviteFilter, setInviteFilter] = useState<"open" | "all" | "pending" | "expired" | "accepted" | "revoked">("open");
 
   const { data: invites } = useQuery({
     queryKey: ["invites", currentCompanyId],
@@ -162,6 +163,37 @@ function TeamPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["invites"] }),
   });
 
+  const resendInvite = useMutation({
+    mutationFn: async (inviteId: string) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.rpc as any)("resend_invite", { _invite_id: inviteId });
+      if (error) throw error;
+      const row = Array.isArray(data) ? data[0] : data;
+      if (!row) throw new Error("Resposta inválida do servidor");
+      const inviteUrl = buildAppUrl(`/aceitar-convite?token=${row.token}`);
+      await sendTransactionalEmail({
+        templateName: "invite",
+        recipientEmail: row.email,
+        idempotencyKey: `invite-resend-${row.id}-${row.send_count}`,
+        triggerSource: "invite",
+        companyId: row.company_id ?? currentCompanyId,
+        templateData: {
+          inviteUrl,
+          role: row.role === "manager" ? "Gestor" : "Funcionário",
+          expiresAt: row.expires_at ? new Date(row.expires_at).toLocaleDateString("pt-PT") : undefined,
+        },
+      });
+      return row;
+    },
+    onSuccess: (row) => {
+      toast.success("Convite reenviado com sucesso.", {
+        description: row?.was_expired ? "Novo token gerado (o anterior expirou)." : undefined,
+      });
+      qc.invalidateQueries({ queryKey: ["invites"] });
+    },
+    onError: (e: Error) => toast.error(e.message || "Falha ao reenviar convite"),
+  });
+
   if (!isManager) {
     return <div className="text-muted-foreground">Acesso restrito a gestores.</div>;
   }
@@ -209,33 +241,15 @@ function TeamPage() {
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-6">
-        <h2 className="font-display text-lg font-semibold">Convites pendentes</h2>
-        <ul className="mt-4 divide-y divide-border">
-          {(invites ?? []).map((i) => {
-            const link = buildAppUrl(`/aceitar-convite?token=${i.token}`);
-            return (
-              <li key={i.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-                <div>
-                  <div className="font-medium">{i.email}</div>
-                  <div className="text-xs text-muted-foreground">{i.role} · {i.status}</div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(link); toast.success("Link copiado"); }}>
-                    <Copy className="mr-1 h-3 w-3" /> Copiar link
-                  </Button>
-                  {i.status === "pending" && (
-                    <Button size="sm" variant="ghost" onClick={() => revoke.mutate(i.id)}>
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  )}
-                </div>
-              </li>
-            );
-          })}
-          {(invites ?? []).length === 0 && (
-            <li className="py-6 text-center text-sm text-muted-foreground">Nenhum convite ainda.</li>
-          )}
-        </ul>
+        <InvitesSection
+          invites={(invites ?? []) as unknown as InviteRow[]}
+          filter={inviteFilter}
+          setFilter={setInviteFilter}
+          onCopy={(token) => { navigator.clipboard.writeText(buildAppUrl(`/aceitar-convite?token=${token}`)); toast.success("Link copiado"); }}
+          onResend={(id) => resendInvite.mutate(id)}
+          onRevoke={(id) => revoke.mutate(id)}
+          resendingId={resendInvite.isPending ? resendInvite.variables ?? null : null}
+        />
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-6">
@@ -321,6 +335,177 @@ function TeamPage() {
           )}
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+type InviteRow = {
+  id: string;
+  email: string;
+  role: "manager" | "employee" | "owner" | "super_admin";
+  status: "pending" | "accepted" | "revoked" | "expired";
+  token: string;
+  created_at: string;
+  expires_at: string;
+  last_sent_at: string | null;
+  send_count: number | null;
+};
+
+function isInviteExpired(i: InviteRow): boolean {
+  return i.status === "expired" || (i.status === "pending" && new Date(i.expires_at) < new Date());
+}
+
+function effectiveStatus(i: InviteRow): "pending" | "accepted" | "revoked" | "expired" {
+  if (i.status === "pending" && new Date(i.expires_at) < new Date()) return "expired";
+  return i.status;
+}
+
+function StatusBadge({ status }: { status: "pending" | "accepted" | "revoked" | "expired" }) {
+  const map: Record<string, { label: string; cls: string }> = {
+    pending: { label: "Pendente", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-300" },
+    accepted: { label: "Aceito", cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" },
+    expired: { label: "Expirado", cls: "bg-rose-500/15 text-rose-700 dark:text-rose-300" },
+    revoked: { label: "Cancelado", cls: "bg-muted text-muted-foreground" },
+  };
+  const m = map[status];
+  return <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase ${m.cls}`}>{m.label}</span>;
+}
+
+function fmtDate(d: string | null): string {
+  if (!d) return "—";
+  try { return new Date(d).toLocaleDateString("pt-PT"); } catch { return "—"; }
+}
+
+function InvitesSection({
+  invites,
+  filter,
+  setFilter,
+  onCopy,
+  onResend,
+  onRevoke,
+  resendingId,
+}: {
+  invites: InviteRow[];
+  filter: "open" | "all" | "pending" | "expired" | "accepted" | "revoked";
+  setFilter: (v: "open" | "all" | "pending" | "expired" | "accepted" | "revoked") => void;
+  onCopy: (token: string) => void;
+  onResend: (id: string) => void;
+  onRevoke: (id: string) => void;
+  resendingId: string | null;
+}) {
+  const stats = {
+    pending: invites.filter((i) => effectiveStatus(i) === "pending").length,
+    accepted: invites.filter((i) => effectiveStatus(i) === "accepted").length,
+    expired: invites.filter((i) => effectiveStatus(i) === "expired").length,
+    revoked: invites.filter((i) => effectiveStatus(i) === "revoked").length,
+  };
+  const filtered = invites.filter((i) => {
+    const s = effectiveStatus(i);
+    if (filter === "all") return true;
+    if (filter === "open") return s === "pending" || s === "expired";
+    return s === filter;
+  });
+  const FILTERS: { v: typeof filter; label: string }[] = [
+    { v: "open", label: "Em aberto" },
+    { v: "pending", label: "Pendentes" },
+    { v: "expired", label: "Expirados" },
+    { v: "accepted", label: "Aceitos" },
+    { v: "revoked", label: "Cancelados" },
+    { v: "all", label: "Todos" },
+  ];
+  return (
+    <div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="font-display text-lg font-semibold">Convites</h2>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="rounded-xl border border-border bg-background p-4">
+          <div className="text-xs uppercase text-muted-foreground">Pendentes</div>
+          <div className="mt-1 font-display text-2xl font-semibold">{stats.pending}</div>
+        </div>
+        <div className="rounded-xl border border-border bg-background p-4">
+          <div className="text-xs uppercase text-muted-foreground">Aceitos</div>
+          <div className="mt-1 font-display text-2xl font-semibold">{stats.accepted}</div>
+        </div>
+        <div className="rounded-xl border border-border bg-background p-4">
+          <div className="text-xs uppercase text-muted-foreground">Expirados</div>
+          <div className="mt-1 font-display text-2xl font-semibold">{stats.expired}</div>
+        </div>
+      </div>
+      <div className="mt-4 flex flex-wrap gap-2">
+        {FILTERS.map((f) => (
+          <button
+            key={f.v}
+            type="button"
+            onClick={() => setFilter(f.v)}
+            className={`rounded-full px-3 py-1 text-xs ${filter === f.v ? "bg-primary text-primary-foreground" : "border border-border text-muted-foreground hover:bg-muted"}`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border text-left text-xs uppercase text-muted-foreground">
+              <th className="py-2 pr-3">Email</th>
+              <th className="py-2 pr-3">Cargo</th>
+              <th className="py-2 pr-3">Status</th>
+              <th className="py-2 pr-3">Criado</th>
+              <th className="py-2 pr-3">Último envio</th>
+              <th className="py-2 pr-3 text-right">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((i) => {
+              const s = effectiveStatus(i);
+              const canResend = s === "pending" || s === "expired";
+              const sendCount = i.send_count ?? 1;
+              const rateLimited =
+                sendCount >= 5 &&
+                i.last_sent_at !== null &&
+                Date.now() - new Date(i.last_sent_at).getTime() < 24 * 60 * 60 * 1000;
+              return (
+                <tr key={i.id} className="border-b border-border/60">
+                  <td className="py-2 pr-3 font-medium">{i.email}</td>
+                  <td className="py-2 pr-3 text-muted-foreground">{i.role === "manager" ? "Gestor" : i.role === "employee" ? "Funcionário" : i.role}</td>
+                  <td className="py-2 pr-3"><StatusBadge status={s} /></td>
+                  <td className="py-2 pr-3 text-xs text-muted-foreground">{fmtDate(i.created_at)}</td>
+                  <td className="py-2 pr-3 text-xs text-muted-foreground">
+                    {fmtDate(i.last_sent_at)} <span className="ml-1 opacity-70">({sendCount}x)</span>
+                  </td>
+                  <td className="py-2 pr-3">
+                    <div className="flex justify-end gap-1">
+                      <Button size="sm" variant="outline" onClick={() => onCopy(i.token)} title="Copiar link">
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                      {canResend && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onResend(i.id)}
+                          disabled={rateLimited || resendingId === i.id}
+                          title={rateLimited ? "Limite de 5 reenvios por 24h atingido" : "Reenviar convite"}
+                        >
+                          <Send className="mr-1 h-3 w-3" /> Reenviar
+                        </Button>
+                      )}
+                      {(s === "pending" || s === "expired") && (
+                        <Button size="sm" variant="ghost" onClick={() => onRevoke(i.id)} title="Cancelar convite">
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+            {filtered.length === 0 && (
+              <tr><td colSpan={6} className="py-6 text-center text-sm text-muted-foreground">Nenhum convite neste filtro.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
