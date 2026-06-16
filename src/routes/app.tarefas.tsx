@@ -176,8 +176,17 @@ function TasksPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // Status que podem ser excluídos (tarefas que ainda não foram iniciadas).
+  // A presença de histórico operacional (folha de ponto, documentos)
+  // é validada no servidor e devolve a mensagem padrão.
+  const DELETABLE_STATUSES: TaskRow["status"][] = [
+    "pendente",
+    "autorizado",
+    "cancelado",
+    "ausente",
+  ];
   const canDelete = (t: TaskRow) =>
-    isManager && (t.status === "pendente" || t.status === "autorizado");
+    isManager && DELETABLE_STATUSES.includes(t.status);
 
   const handleDeleteRequest = (t: TaskRow) => {
     if (!isManager) return;
@@ -472,9 +481,9 @@ function TaskRowItem({
               size="sm"
               variant="ghost"
               title={
-                t.status === "pendente" || t.status === "autorizado"
-                  ? "Excluir tarefa"
-                  : "Tarefa com histórico operacional — não pode ser excluída"
+                t.status === "em_andamento" || t.status === "concluido"
+                  ? "Tarefa com histórico operacional — não pode ser excluída"
+                  : "Excluir tarefa"
               }
               className="text-destructive hover:text-destructive"
               onClick={() => onDelete(t)}
