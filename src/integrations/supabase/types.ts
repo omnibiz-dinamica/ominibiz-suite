@@ -2178,6 +2178,24 @@ export type Database = {
         Args: { _country?: string; _name: string; _slug: string }
         Returns: string
       }
+      create_or_resend_invite: {
+        Args: {
+          _company_id: string
+          _email: string
+          _role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: {
+          action: string
+          company_id: string
+          email: string
+          expires_at: string
+          id: string
+          last_sent_at: string
+          role: Database["public"]["Enums"]["app_role"]
+          send_count: number
+          token: string
+        }[]
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -2253,6 +2271,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      invite_email_audit: {
+        Args: { _company_id: string; _email: string }
+        Returns: Json
       }
       is_company_manager: {
         Args: { _company_id: string; _user_id: string }
@@ -2645,6 +2667,7 @@ export type Database = {
           send_count: number
           token: string
           was_expired: boolean
+          was_revoked: boolean
         }[]
       }
       resolve_billing_rule: { Args: { _time_entry_id: string }; Returns: Json }
