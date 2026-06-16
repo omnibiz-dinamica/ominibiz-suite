@@ -10,6 +10,7 @@ import { ContractTimeline } from "@/components/contracts/ContractTimeline";
 import { ContractPreviewA4 } from "@/components/contracts/ContractPreviewA4";
 import { StatusBadge } from "@/components/contracts/StatusBadge";
 import { ArrowLeft, Download, Link as LinkIcon, XCircle } from "lucide-react";
+import { buildAppUrl } from "@/lib/app-url";
 
 export const Route = createFileRoute("/app/comercial/contratos/$id")({
   component: ContractDetail,
@@ -133,7 +134,7 @@ function ContractDetail() {
 
   const copyLink = () => {
     if (!c.sign_token) return;
-    navigator.clipboard.writeText(`${window.location.origin}/sign/${c.sign_token}`);
+    navigator.clipboard.writeText(buildAppUrl(`/sign/${c.sign_token}`));
     toast.success("Link copiado");
   };
 

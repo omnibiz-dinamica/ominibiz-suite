@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { formatEUR } from "@/lib/contract-vars";
 import { StatusBadge } from "@/components/contracts/StatusBadge";
 import { FilePlus2, Link as LinkIcon, Eye } from "lucide-react";
+import { buildAppUrl } from "@/lib/app-url";
 
 export const Route = createFileRoute("/app/comercial/contratos")({
   component: ContractsPage,
@@ -54,7 +55,7 @@ function ContractsListPage() {
       toast.error("Contrato sem link de assinatura");
       return;
     }
-    const url = `${window.location.origin}/sign/${token}`;
+    const url = buildAppUrl(`/sign/${token}`);
     navigator.clipboard.writeText(url);
     toast.success("Link copiado", { description: url });
   };

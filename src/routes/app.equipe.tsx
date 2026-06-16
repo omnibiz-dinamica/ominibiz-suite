@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Copy, Trash2, Pencil, Power } from "lucide-react";
 import { RoleGuard } from "@/components/RoleGuard";
 import { sendTransactionalEmail } from "@/lib/email/send";
+import { buildAppUrl } from "@/lib/app-url";
 
 interface MemberRow {
   user_id: string;
@@ -127,7 +128,7 @@ function TeamPage() {
 
       // Dispatch invite email (single source of truth; logged in email_send_log)
       try {
-        const inviteUrl = `${window.location.origin}/aceitar-convite?token=${inv.token}`;
+        const inviteUrl = buildAppUrl(`/aceitar-convite?token=${inv.token}`);
         await sendTransactionalEmail({
           templateName: "invite",
           recipientEmail: recipient,
@@ -211,7 +212,7 @@ function TeamPage() {
         <h2 className="font-display text-lg font-semibold">Convites pendentes</h2>
         <ul className="mt-4 divide-y divide-border">
           {(invites ?? []).map((i) => {
-            const link = `${window.location.origin}/aceitar-convite?token=${i.token}`;
+            const link = buildAppUrl(`/aceitar-convite?token=${i.token}`);
             return (
               <li key={i.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
                 <div>

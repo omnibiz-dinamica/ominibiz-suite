@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { buildAppUrl } from "@/lib/app-url";
 
 export const Route = createFileRoute("/aceitar-convite")({
   validateSearch: (s: Record<string, unknown>) => ({ token: (s.token as string) ?? "" }),
@@ -61,7 +62,7 @@ function AcceptInvite() {
       email: invite.email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/aceitar-convite?token=${token}`,
+        emailRedirectTo: buildAppUrl(`/aceitar-convite?token=${token}`),
         data: { full_name: name },
       },
     });

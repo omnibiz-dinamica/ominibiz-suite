@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { buildAppUrl } from "@/lib/app-url";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -37,7 +38,7 @@ function LoginPage() {
     }
     setResetting(true);
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: buildAppUrl("/reset-password"),
     });
     setResetting(false);
     if (error) {
