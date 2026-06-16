@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Copy, Trash2, Pencil, Power } from "lucide-react";
+import { Copy, Trash2, Pencil, Power, Send } from "lucide-react";
 import { RoleGuard } from "@/components/RoleGuard";
 import { sendTransactionalEmail } from "@/lib/email/send";
 import { buildAppUrl } from "@/lib/app-url";
@@ -42,6 +42,7 @@ function TeamPage() {
   const qc = useQueryClient();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"manager" | "employee">("employee");
+  const [inviteFilter, setInviteFilter] = useState<"open" | "all" | "pending" | "expired" | "accepted" | "revoked">("open");
 
   const { data: invites } = useQuery({
     queryKey: ["invites", currentCompanyId],
@@ -162,6 +163,37 @@ function TeamPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["invites"] }),
   });
 
+  const resendInvite = useMutation({
+    mutationFn: async (inviteId: string) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.rpc as any)("resend_invite", { _invite_id: inviteId });
+      if (error) throw error;
+      const row = Array.isArray(data) ? data[0] : data;
+      if (!row) throw new Error("Resposta inválida do servidor");
+      const inviteUrl = buildAppUrl(`/aceitar-convite?token=${row.token}`);
+      await sendTransactionalEmail({
+        templateName: "invite",
+        recipientEmail: row.email,
+        idempotencyKey: `invite-resend-${row.id}-${row.send_count}`,
+        triggerSource: "invite",
+        companyId: row.company_id ?? currentCompanyId,
+        templateData: {
+          inviteUrl,
+          role: row.role === "manager" ? "Gestor" : "Funcionário",
+          expiresAt: row.expires_at ? new Date(row.expires_at).toLocaleDateString("pt-PT") : undefined,
+        },
+      });
+      return row;
+    },
+    onSuccess: (row) => {
+      toast.success("Convite reenviado com sucesso.", {
+        description: row?.was_expired ? "Novo token gerado (o anterior expirou)." : undefined,
+      });
+      qc.invalidateQueries({ queryKey: ["invites"] });
+    },
+    onError: (e: Error) => toast.error(e.message || "Falha ao reenviar convite"),
+  });
+
   if (!isManager) {
     return <div className="text-muted-foreground">Acesso restrito a gestores.</div>;
   }
@@ -209,33 +241,15 @@ function TeamPage() {
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-6">
-        <h2 className="font-display text-lg font-semibold">Convites pendentes</h2>
-        <ul className="mt-4 divide-y divide-border">
-          {(invites ?? []).map((i) => {
-            const link = buildAppUrl(`/aceitar-convite?token=${i.token}`);
-            return (
-              <li key={i.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-                <div>
-                  <div className="font-medium">{i.email}</div>
-                  <div className="text-xs text-muted-foreground">{i.role} · {i.status}</div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(link); toast.success("Link copiado"); }}>
-                    <Copy className="mr-1 h-3 w-3" /> Copiar link
-                  </Button>
-                  {i.status === "pending" && (
-                    <Button size="sm" variant="ghost" onClick={() => revoke.mutate(i.id)}>
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  )}
-                </div>
-              </li>
-            );
-          })}
-          {(invites ?? []).length === 0 && (
-            <li className="py-6 text-center text-sm text-muted-foreground">Nenhum convite ainda.</li>
-          )}
-        </ul>
+        <InvitesSection
+          invites={invites ?? []}
+          filter={inviteFilter}
+          setFilter={setInviteFilter}
+          onCopy={(token) => { navigator.clipboard.writeText(buildAppUrl(`/aceitar-convite?token=${token}`)); toast.success("Link copiado"); }}
+          onResend={(id) => resendInvite.mutate(id)}
+          onRevoke={(id) => revoke.mutate(id)}
+          resendingId={resendInvite.isPending ? resendInvite.variables ?? null : null}
+        />
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-6">
