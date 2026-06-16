@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { renderTemplate, formatEUR, SERVICE_LABELS, DEFAULT_TEMPLATE_BODY } from "@/lib/contract-vars";
 import { randomToken } from "@/lib/contract-pdf";
 import { ChevronLeft, ChevronRight, Check } from "lucide-react";
+import { buildAppUrl } from "@/lib/app-url";
 
 export const Route = createFileRoute("/app/comercial/contratos/novo")({
   component: WizardPage,
@@ -93,7 +94,7 @@ function WizardPage() {
       return { id: contractId, token };
     },
     onSuccess: ({ id, token }) => {
-      const url = `${window.location.origin}/sign/${token}`;
+      const url = buildAppUrl(`/sign/${token}`);
       navigator.clipboard?.writeText(url).catch(() => {});
       toast.success("Contrato criado", { description: "Link de assinatura copiado." });
       nav({ to: "/app/comercial/contratos/$id", params: { id } });
