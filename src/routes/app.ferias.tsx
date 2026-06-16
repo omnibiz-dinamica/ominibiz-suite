@@ -397,6 +397,47 @@ function FeriasPage() {
     return Array.from(ys).sort().reverse();
   }, [rows]);
 
+  // ----- Export (Excel/PDF) using shared exporter -----
+  const { data: companyMeta } = useQuery({
+    queryKey: ["company-meta-ferias", currentCompanyId],
+    enabled: !!currentCompanyId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("companies")
+        .select("name, primary_color")
+        .eq("id", currentCompanyId!)
+        .maybeSingle();
+      return data ?? null;
+    },
+  });
+
+  function exportVacations(kind: "xlsx" | "pdf", subset: VacationRow[]) {
+    const columns = [
+      { header: "Colaborador", accessor: (r: VacationRow) => nameOf(r.user_id) },
+      { header: "Função", accessor: (r: VacationRow) => jobOf(r.user_id) },
+      { header: "Local", accessor: (r: VacationRow) => r.work_location ?? "—" },
+      { header: "Início", accessor: (r: VacationRow) => fmt(r.start_date) },
+      { header: "Fim", accessor: (r: VacationRow) => fmt(r.end_date) },
+      { header: businessOnly ? "Dias úteis" : "Dias", accessor: (r: VacationRow) => countDays(r) },
+      { header: "Estado", accessor: (r: VacationRow) => STATUS_LABEL[r.status] },
+    ];
+    const subtitleParts: string[] = [];
+    if (filterUser !== "all") subtitleParts.push(`Colaborador: ${nameOf(filterUser)}`);
+    if (filterMonth) subtitleParts.push(`Mês: ${filterMonth}`);
+    if (filterYear !== "all") subtitleParts.push(`Ano: ${filterYear}`);
+    if (filterStatus !== "all") subtitleParts.push(`Estado: ${STATUS_LABEL[filterStatus as VacationStatus] ?? filterStatus}`);
+    if (filterLocation.trim()) subtitleParts.push(`Local: ${filterLocation.trim()}`);
+    const meta = {
+      fileName: `ferias-${new Date().toISOString().slice(0, 10)}`,
+      title: "Férias",
+      companyName: companyMeta?.name ?? null,
+      primaryColor: companyMeta?.primary_color ?? null,
+      subtitle: subtitleParts.join(" · ") || null,
+    };
+    if (kind === "xlsx") exportToExcel(subset, columns, meta);
+    else exportToPdf(subset, columns, meta);
+  }
+
   const countDays = (r: VacationRow) =>
     businessOnly ? businessDaysBetween(r.start_date, r.end_date) : daysBetween(r.start_date, r.end_date);
 
