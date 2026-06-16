@@ -1,83 +1,44 @@
-## Objetivo
+## Auditoria — Módulo Férias (estado real)
 
-Permitir a Gestores, Owners e Super Admins reenviarem convites pendentes/expirados a partir da página **Equipe**, sem criar novo utilizador nem novo registo de convite. Adicionar rate limit, dashboard e auditoria do reenvio.
+| # | Requisito | Estado |
+|---|---|---|
+| 1 | Funcionário cria férias | IMPLEMENTADO |
+| 2 | Gestor recebe notificação ao ser criada | PARCIAL — existe função `vacation_notify_insert` no banco, mas não há trigger ativo em `vacation_requests` (sem registo em `information_schema.triggers`). Nada é gravado em `notifications` no fluxo frontend. |
+| 3 | Status pendente inicial | IMPLEMENTADO |
+| 4 | Gestor aprova/rejeita | IMPLEMENTADO via RPC `vacation_decide` |
+| 5 | Funcionário recebe notificação da decisão | NÃO IMPLEMENTADO — sem trigger/insert em `notifications` e sem chamada a `sendTransactionalEmail` no fluxo |
+| 6 | Gestor cria férias para funcionário | NÃO IMPLEMENTADO — o formulário insere sempre com `user_id = auth.uid()`; não há seletor de colaborador |
+| 7 | Funcionário recebe solicitação para aceitar/alterar | PARCIAL — a UI tem secção "Aguardando sua confirmação" e botões Confirmar/Recusar, mas o RPC `vacation_confirm` **não existe no banco** (rotinas presentes: `vacation_decide`, `vacation_notify_insert`, `vacation_fill_context`, `resolve_vacation_approver`). Clicar quebra em runtime. |
+| 8 | Gestor vê "Pendente de Confirmação" | PARCIAL — UI renderiza o status, mas como o fluxo de criação pelo gestor (#6) não existe, esse estado nunca é gerado |
+| 9 | Funcionário pode Confirmar / Solicitar alteração | PARCIAL — UI tem "Confirmar" e "Recusar" (não "Solicitar alteração"); ambos chamam RPC inexistente |
+| 10 | Tela mostra Local de trabalho | IMPLEMENTADO (form + lista de pendentes) |
+| 11 | Tela mostra Função (cargo) | NÃO IMPLEMENTADO |
+| 12 | Tela mostra Colaborador | IMPLEMENTADO (apenas vista de gestor) |
+| 13 | Filtro Colaborador | IMPLEMENTADO |
+| 14 | Filtro Mês | IMPLEMENTADO |
+| 15 | Filtro Ano | NÃO IMPLEMENTADO (apenas mês YYYY-MM) |
+| 16 | Filtro Status | NÃO IMPLEMENTADO (listas separadas por status, sem seletor) |
+| 17 | Dias úteis calculados automaticamente | IMPLEMENTADO (toggle "apenas dias úteis", `businessDaysBetween`) |
+| 18 | Exportação Excel | NÃO IMPLEMENTADO |
+| 19 | Exportação PDF | NÃO IMPLEMENTADO |
+| 20 | Emails integrados | NÃO IMPLEMENTADO — templates `vacation-request/approved/rejected` existem em `src/lib/email-templates/` e estão no registry, mas nenhum ponto do fluxo chama `sendTransactionalEmail` para férias |
+| 21 | Notificações integradas | NÃO IMPLEMENTADO — função `vacation_notify_insert` definida mas sem trigger; nenhum insert manual em `notifications` |
 
-## 1. Migração de base de dados
+### Arquivos relevantes inspecionados
+- `src/routes/app.ferias.tsx` (650 linhas) — UI completa do módulo
+- `src/lib/email/send.ts` — declara triggers `vacation_request|approved|rejected` mas sem call site
+- `src/lib/email-templates/vacation-{request,approved,rejected}.tsx` — templates prontos, não acionados
+- `src/lib/email-templates/registry.ts` — templates registados
 
-Alterar `public.invites`:
-- Adicionar coluna `last_sent_at TIMESTAMPTZ` (default `created_at` para registos existentes).
-- Adicionar coluna `send_count INT NOT NULL DEFAULT 1` (existentes começam em 1 — o envio original).
+### Migrations existentes (vacation)
+- `20260520092549`, `20260520112516`, `20260520113619`, `20260524105813`, `20260524140014`, `20260524141056`, `20260615181116`, `20260615181153`
 
-Criar função RPC `resend_invite(_invite_id UUID)` (SECURITY DEFINER) que:
-1. Lê o convite + valida permissões (`is_company_manager(auth.uid(), company_id)` OU `is_super_admin(auth.uid())`). Caso contrário, `RAISE EXCEPTION 'forbidden'`.
-2. Bloqueia se `status IN ('accepted','revoked')` → erro "Convite não pode ser reenviado".
-3. Rate limit: se `send_count >= 5` E `last_sent_at > now() - interval '24 hours'` → erro "Limite de 5 reenvios por 24h atingido".
-4. Se `status = 'expired'` OU `expires_at < now()`:
-   - Gera novo token (`encode(gen_random_bytes(24),'hex')`).
-   - Renova `expires_at = now() + 14 days`.
-   - Reabre `status = 'pending'`.
-5. Caso contrário, mantém token atual.
-6. Incrementa `send_count`, atualiza `last_sent_at = now()`.
-7. Devolve `(id, email, token, role, expires_at, send_count)`.
+Funções no banco: `vacation_decide`, `vacation_notify_insert`, `vacation_fill_context`, `resolve_vacation_approver`. **Sem** `vacation_confirm`. **Sem** triggers ativos em `vacation_requests`.
 
-Job leve (opcional): trigger ou cron já existente para marcar `status='expired'` quando `expires_at < now()`. Para esta entrega, fazemos a marcação lazy dentro do próprio RPC (passo 4 cobre o caso).
+### Testes realizados
+- Inspeção estática do código (`app.ferias.tsx`, `email/send.ts`, registry).
+- Consulta a `information_schema.routines` e `information_schema.triggers` no banco para confirmar funções/triggers ativos.
+- Nenhum teste E2E executado (não solicitado e fora do escopo de uma auditoria de estado).
 
-GRANTs: `GRANT EXECUTE ON FUNCTION public.resend_invite(uuid) TO authenticated;`
-
-## 2. Frontend — `src/routes/app.equipe.tsx`
-
-Substituir a secção **"Convites pendentes"** por uma tabela completa **"Convites"** com:
-
-Colunas:
-- Email
-- Cargo (Gestor / Funcionário)
-- Status (badge colorido: Pendente=amarelo, Aceito=verde, Expirado=vermelho, Cancelado=cinza)
-- Data de criação (`created_at`)
-- Último envio (`last_sent_at`) + `send_count` ("3x")
-- Ações: Copiar link · **Reenviar** · Cancelar
-
-Filtros/Toggle simples: mostrar Todos / Pendentes / Expirados / Aceitos / Cancelados (default: Pendentes+Expirados).
-
-Botão **Reenviar Convite**:
-- Visível apenas para status `pending` ou `expired`.
-- Desabilitado e com tooltip "Limite atingido" quando `send_count >= 5` E `last_sent_at` < 24h.
-- Ao clicar:
-  1. Chama `supabase.rpc('resend_invite', { _invite_id })`.
-  2. Com o retorno (`email`, `token`, `role`, `expires_at`), chama `sendTransactionalEmail({ templateName: 'invite', recipientEmail, idempotencyKey: 'invite-resend-{id}-{send_count}', triggerSource: 'invite', companyId, templateData: { inviteUrl: buildAppUrl('/aceitar-convite?token=...'), role, expiresAt } })`.
-  3. Toast: "Convite reenviado com sucesso." OU erro detalhado vindo do RPC/email.
-  4. Invalida query `["invites"]`.
-
-Dashboard (cards no topo da secção):
-- **Pendentes** (count)
-- **Aceitos** (count)
-- **Expirados** (count)
-
-(Cancelados ficam acessíveis pelo filtro, mas não no card principal.)
-
-Card de **Nome** do convidado: o sistema atual não guarda nome no convite; usar o email como identificador principal e mostrar "—" para nome (consistente com o resto da app, que só recolhe nome após aceitação).
-
-## 3. Auditoria e logs
-
-- Cada reenvio gera novo `message_id` no `email_send_log` automaticamente via `sendTransactionalEmail` (já implementado).
-- `idempotencyKey` inclui `send_count` para garantir que retries do mesmo botão não duplicam, mas reenvios reais sim aparecem.
-- `send_count` e `last_sent_at` no próprio `invites` servem de auditoria operacional rápida.
-
-## 4. Garantias
-
-- Nunca cria novo `auth.users`.
-- Nunca cria nova linha em `invites`.
-- Reutiliza token quando ainda válido; só gera novo se expirado.
-- Rate limit aplicado server-side (RPC), não apenas no UI.
-- Permissão validada server-side (não confia em RoleGuard).
-
-## 5. Entregáveis
-
-1. Migração SQL (colunas + RPC + grants).
-2. Edição de `src/routes/app.equipe.tsx` (tabela, dashboard, ação reenviar).
-3. Relatório no chat: o que foi alterado, ficheiros, regras de negócio e como testar (criar convite → forçar expiração via SQL → reenviar → verificar `email_send_log`).
-
-## Fora de escopo (confirmar se desejado depois)
-
-- Job cron dedicado para marcar `expired` automaticamente (lazy é suficiente para esta release).
-- Exportação Excel/PDF da lista de convites.
-- Edição de email/role do convite existente (continua sendo cancelar + criar novo).
+### Resumo executivo
+Bloqueadores críticos: (a) `vacation_confirm` invocado pela UI não existe no banco — botão "Confirmar/Recusar" falha; (b) sem trigger ligando `vacation_notify_insert` a inserts/updates — nenhuma notificação chega; (c) emails de férias nunca disparados apesar dos templates existirem; (d) fluxo "Gestor cria férias para funcionário" inexistente; (e) sem exportação Excel/PDF; (f) faltam filtros Ano e Status e coluna Função.
