@@ -513,6 +513,55 @@ function FeriasPage() {
         </section>
       )}
 
+      {/* Manager: agendar férias para um colaborador */}
+      {isManager && (
+        <section className="rounded-2xl border border-border bg-card p-5">
+          <h2 className="mb-3 flex items-center gap-2 font-semibold">
+            <Plus className="h-4 w-4" /> Agendar férias para um colaborador
+          </h2>
+          <p className="mb-3 text-xs text-muted-foreground">
+            O colaborador receberá uma notificação para confirmar ou solicitar alteração.
+          </p>
+          <div className="grid gap-3 md:grid-cols-4">
+            <div className="md:col-span-2">
+              <Label>Colaborador</Label>
+              <Select value={mgrTargetUser} onValueChange={setMgrTargetUser}>
+                <SelectTrigger><SelectValue placeholder="Selecionar…" /></SelectTrigger>
+                <SelectContent>
+                  {members
+                    .filter((m) => m.id !== user?.id)
+                    .map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.name}{m.jobTitle ? ` — ${m.jobTitle}` : ""}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Início</Label>
+              <Input type="date" value={mgrStart} onChange={(e) => setMgrStart(e.target.value)} />
+            </div>
+            <div>
+              <Label>Fim</Label>
+              <Input type="date" value={mgrEnd} onChange={(e) => setMgrEnd(e.target.value)} />
+            </div>
+            <div className="md:col-span-4">
+              <Label>Nota (opcional)</Label>
+              <Textarea value={mgrNote} onChange={(e) => setMgrNote(e.target.value)} placeholder="Contexto, motivo, instruções..." />
+            </div>
+          </div>
+          <div className="mt-3 flex justify-end">
+            <Button
+              onClick={() => mgrCreate.mutate()}
+              disabled={mgrCreate.isPending || !mgrTargetUser || !mgrStart || !mgrEnd}
+            >
+              Agendar — pendente de confirmação
+            </Button>
+          </div>
+        </section>
+      )}
+
       {/* Employee: vacations awaiting MY confirmation */}
       {awaitingMyConfirm.length > 0 && (
         <section className="rounded-2xl border border-amber-500/40 bg-amber-500/5 p-5">
@@ -561,11 +610,31 @@ function FeriasPage() {
 
       {/* Approved calendar */}
       <section className="rounded-2xl border border-border bg-card p-5">
-        <h2 className="mb-3 flex items-center gap-2 font-semibold">
-          <CalendarIcon className="h-4 w-4" /> Aprovadas ({approved.length})
-        </h2>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="flex items-center gap-2 font-semibold">
+            <CalendarIcon className="h-4 w-4" /> Aprovadas ({approved.length})
+          </h2>
+          {isManager && approved.length > 0 && (
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => exportVacations("xlsx", approved)}
+              >
+                <FileSpreadsheet className="h-4 w-4" /> Excel
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => exportVacations("pdf", approved)}
+              >
+                <FileText className="h-4 w-4" /> PDF
+              </Button>
+            </div>
+          )}
+        </div>
         {isManager && (
-          <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
             <div>
               <Label className="text-xs">Colaborador</Label>
               <Select value={filterUser} onValueChange={setFilterUser}>
@@ -581,6 +650,32 @@ function FeriasPage() {
             <div>
               <Label className="text-xs">Mês</Label>
               <Input type="month" value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} />
+            </div>
+            <div>
+              <Label className="text-xs">Ano</Label>
+              <Select value={filterYear} onValueChange={setFilterYear}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {yearOptions.map((y) => (
+                    <SelectItem key={y} value={y}>{y}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Estado</Label>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="pendente">Pendente</SelectItem>
+                  <SelectItem value="pendente_confirmacao">Pendente de confirmação</SelectItem>
+                  <SelectItem value="aprovado">Aprovado</SelectItem>
+                  <SelectItem value="rejeitado">Rejeitado</SelectItem>
+                  <SelectItem value="cancelado">Cancelado</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label className="text-xs">Local de trabalho</Label>
@@ -605,6 +700,11 @@ function FeriasPage() {
                 <div>
                   <div className="font-medium">
                     {isManager ? nameOf(r.user_id) : "Você"}
+                    {isManager && (
+                      <span className="ml-2 text-xs font-normal text-muted-foreground">
+                        · {jobOf(r.user_id)}
+                      </span>
+                    )}
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {fmt(r.start_date)} → {fmt(r.end_date)}
