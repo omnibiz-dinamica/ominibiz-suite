@@ -2901,34 +2901,63 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      vacation_confirm: {
-        Args: { _accept: boolean; _id: string; _reason?: string }
-        Returns: {
-          assigned_approver_id: string | null
-          cancelled_at: string | null
-          company_id: string
-          created_at: string
-          decided_at: string | null
-          decided_by: string | null
-          decision_reason: string | null
-          end_date: string
-          id: string
-          note: string | null
-          prior_validation: boolean
-          start_date: string
-          status: Database["public"]["Enums"]["vacation_status"]
-          updated_at: string
-          user_id: string
-          validated_by: string | null
-          work_location: string | null
-        }
-        SetofOptions: {
-          from: "*"
-          to: "vacation_requests"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+      vacation_confirm:
+        | {
+            Args: { _accept: boolean; _id: string; _reason?: string }
+            Returns: {
+              assigned_approver_id: string | null
+              cancelled_at: string | null
+              company_id: string
+              created_at: string
+              decided_at: string | null
+              decided_by: string | null
+              decision_reason: string | null
+              end_date: string
+              id: string
+              note: string | null
+              prior_validation: boolean
+              start_date: string
+              status: Database["public"]["Enums"]["vacation_status"]
+              updated_at: string
+              user_id: string
+              validated_by: string | null
+              work_location: string | null
+            }
+            SetofOptions: {
+              from: "*"
+              to: "vacation_requests"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: { _action: string; _id: string; _reason?: string }
+            Returns: {
+              assigned_approver_id: string | null
+              cancelled_at: string | null
+              company_id: string
+              created_at: string
+              decided_at: string | null
+              decided_by: string | null
+              decision_reason: string | null
+              end_date: string
+              id: string
+              note: string | null
+              prior_validation: boolean
+              start_date: string
+              status: Database["public"]["Enums"]["vacation_status"]
+              updated_at: string
+              user_id: string
+              validated_by: string | null
+              work_location: string | null
+            }
+            SetofOptions: {
+              from: "*"
+              to: "vacation_requests"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
       vacation_decide: {
         Args: { _action: string; _id: string; _reason?: string }
         Returns: {
@@ -3020,6 +3049,8 @@ export type Database = {
         | "vacation_confirmation_required"
         | "vacation_confirmed"
         | "vacation_declined"
+        | "vacation_created_by_manager"
+        | "vacation_change_requested"
       notification_priority: "baixa" | "media" | "alta" | "urgente"
       payslip_status: "unassigned" | "assigned" | "sent" | "failed" | "archived"
       punch_mode: "automatico" | "manual" | "ambos"
@@ -3252,6 +3283,8 @@ export const Constants = {
         "vacation_confirmation_required",
         "vacation_confirmed",
         "vacation_declined",
+        "vacation_created_by_manager",
+        "vacation_change_requested",
       ],
       notification_priority: ["baixa", "media", "alta", "urgente"],
       payslip_status: ["unassigned", "assigned", "sent", "failed", "archived"],
