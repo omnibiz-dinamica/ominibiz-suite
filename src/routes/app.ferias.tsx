@@ -254,7 +254,7 @@ function FeriasPage() {
       if (priorValidation === "sim" && !validatedBy.trim()) {
         throw new Error("Informe quem realizou a validação prévia");
       }
-      const { error } = await supabase.from("vacation_requests").insert({
+      const { data, error } = await supabase.from("vacation_requests").insert({
         company_id: currentCompanyId,
         user_id: user.id,
         start_date: start,
@@ -262,8 +262,9 @@ function FeriasPage() {
         note: note.trim() || null,
         prior_validation: priorValidation === "sim",
         validated_by: priorValidation === "sim" ? validatedBy.trim() : null,
-      });
+      }).select("id").single();
       if (error) throw error;
+      if (data?.id) await sendVacationEmail(data.id, "vacation_request", "vacation_request", "create");
     },
     onSuccess: () => {
       toast.success("Solicitação enviada");
@@ -274,6 +275,43 @@ function FeriasPage() {
     onError: (e: any) => toast.error(e.message ?? "Falha ao solicitar"),
   });
 
+  // ----- Manager creates vacation for a chosen employee -----
+  const [mgrTargetUser, setMgrTargetUser] = useState<string>("");
+  const [mgrStart, setMgrStart] = useState("");
+  const [mgrEnd, setMgrEnd] = useState("");
+  const [mgrNote, setMgrNote] = useState("");
+  const mgrCreate = useMutation({
+    mutationFn: async () => {
+      if (!mgrTargetUser) throw new Error("Selecione o colaborador");
+      if (!mgrStart || !mgrEnd) throw new Error("Informe início e fim");
+      if (mgrEnd < mgrStart) throw new Error("Data final deve ser após o início");
+      if (!currentCompanyId) throw new Error("Empresa não selecionada");
+      const { data, error } = await supabase.from("vacation_requests").insert({
+        company_id: currentCompanyId,
+        user_id: mgrTargetUser,
+        start_date: mgrStart,
+        end_date: mgrEnd,
+        note: mgrNote.trim() || null,
+        prior_validation: false,
+      }).select("id").single();
+      if (error) throw error;
+      if (data?.id) {
+        await sendVacationEmail(
+          data.id,
+          "vacation_created_by_manager",
+          "vacation_created_by_manager",
+          "manager-create",
+        );
+      }
+    },
+    onSuccess: () => {
+      toast.success("Férias agendadas — aguardando confirmação do funcionário");
+      setMgrTargetUser(""); setMgrStart(""); setMgrEnd(""); setMgrNote("");
+      qc.invalidateQueries({ queryKey: ["vacations"] });
+    },
+    onError: (e: any) => toast.error(e.message ?? "Falha ao agendar"),
+  });
+
   const decide = useMutation({
     mutationFn: async (vars: { id: string; action: "aprovar" | "rejeitar" | "cancelar"; reason?: string }) => {
       const { error } = await (supabase as any).rpc("vacation_decide", {
@@ -282,6 +320,11 @@ function FeriasPage() {
         _reason: vars.reason ?? null,
       });
       if (error) throw error;
+      if (vars.action === "aprovar") {
+        await sendVacationEmail(vars.id, "vacation_approved", "vacation_approved", "approve");
+      } else if (vars.action === "rejeitar") {
+        await sendVacationEmail(vars.id, "vacation_rejected", "vacation_rejected", "reject");
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["vacations"] });
@@ -290,17 +333,20 @@ function FeriasPage() {
   });
 
   const confirmMutation = useMutation({
-    mutationFn: async (vars: { id: string; accept: boolean; reason?: string }) => {
+    mutationFn: async (vars: { id: string; action: "confirmar" | "solicitar_alteracao"; reason?: string }) => {
       const { error } = await (supabase as any).rpc("vacation_confirm", {
         _id: vars.id,
-        _accept: vars.accept,
+        _action: vars.action,
         _reason: vars.reason ?? null,
       });
       if (error) throw error;
+      if (vars.action === "solicitar_alteracao") {
+        await sendVacationEmail(vars.id, "vacation_change_requested", "vacation_change_requested", "change-req");
+      }
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["vacations"] });
-      toast.success(vars.accept ? "Férias confirmadas" : "Recusadas");
+      toast.success(vars.action === "confirmar" ? "Férias confirmadas" : "Alteração solicitada");
     },
     onError: (e: any) => toast.error(e.message ?? "Falha na operação"),
   });
@@ -309,11 +355,19 @@ function FeriasPage() {
   // Filtros de visão
   const [filterUser, setFilterUser] = useState<string>("all");
   const [filterMonth, setFilterMonth] = useState<string>(""); // YYYY-MM
+  const [filterYear, setFilterYear] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterLocation, setFilterLocation] = useState<string>("");
   const [businessOnly, setBusinessOnly] = useState<boolean>(false);
 
   const matchesFilters = (r: VacationRow): boolean => {
     if (filterUser !== "all" && r.user_id !== filterUser) return false;
+    if (filterStatus !== "all" && r.status !== filterStatus) return false;
+    if (filterYear !== "all") {
+      const sY = r.start_date.slice(0, 4);
+      const eY = r.end_date.slice(0, 4);
+      if (sY !== filterYear && eY !== filterYear) return false;
+    }
     if (filterMonth) {
       // Mês "intersecta" o intervalo?
       const monthStart = filterMonth + "-01";
@@ -328,10 +382,20 @@ function FeriasPage() {
     return true;
   };
 
-  const approved = rows.filter((r) => r.status === "aprovado" && matchesFilters(r));
+  const filtered = rows.filter(matchesFilters);
+  const approved = filtered.filter((r) => r.status === "aprovado");
   const history = rows.filter(
     (r) => (r.status === "rejeitado" || r.status === "cancelado") && matchesFilters(r),
   );
+
+  const yearOptions = useMemo(() => {
+    const ys = new Set<string>();
+    for (const r of rows) {
+      ys.add(r.start_date.slice(0, 4));
+      ys.add(r.end_date.slice(0, 4));
+    }
+    return Array.from(ys).sort().reverse();
+  }, [rows]);
 
   const countDays = (r: VacationRow) =>
     businessOnly ? businessDaysBetween(r.start_date, r.end_date) : daysBetween(r.start_date, r.end_date);
