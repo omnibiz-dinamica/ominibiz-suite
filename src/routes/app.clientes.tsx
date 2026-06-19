@@ -127,7 +127,7 @@ function ClientsPage() {
   useEffect(() => {
     if (!user) return;
     const ch = supabase
-      .channel("clients-ui-sync")
+      .channel(`user:${user.id}:clients-ui-sync`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "clients" },

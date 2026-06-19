@@ -169,7 +169,7 @@ function PontoPage() {
   useEffect(() => {
     if (!user) return;
     const ch = supabase
-      .channel("punch-ui-sync")
+      .channel(`user:${user.id}:punch-ui-sync`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "time_entries" },
