@@ -140,7 +140,7 @@ function TasksPage() {
   useEffect(() => {
     if (!user) return;
     const ch = supabase
-      .channel("tasks-ui-sync")
+      .channel(`user:${user.id}:tasks-ui-sync`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "tasks" },
