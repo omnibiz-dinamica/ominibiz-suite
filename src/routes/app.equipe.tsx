@@ -13,6 +13,7 @@ import { Copy, Trash2, Pencil, Power, Send } from "lucide-react";
 import { RoleGuard } from "@/components/RoleGuard";
 import { sendTransactionalEmail } from "@/lib/email/send";
 import { buildAppUrl } from "@/lib/app-url";
+import { EmployeeEditor } from "@/components/equipe/EmployeeEditor";
 
 interface MemberRow {
   user_id: string;
@@ -325,14 +326,15 @@ function TeamPage() {
       </div>
 
       <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Editar usuário</DialogTitle>
+            <DialogTitle>Editar colaborador</DialogTitle>
           </DialogHeader>
           {editing && (
-            <EditMemberForm
-              member={editing}
+            <EmployeeEditor
+              userId={editing.user_id}
               companyId={currentCompanyId!}
+              currentRole={editing.role}
               onDone={() => {
                 setEditing(null);
                 qc.invalidateQueries({ queryKey: ["team-members"] });
