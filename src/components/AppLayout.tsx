@@ -126,6 +126,7 @@ function buildGroups(args: {
       id: "rh",
       label: "RH",
       items: [
+        { to: "/app/rh", label: "Dashboard RH", icon: LayoutDashboard },
         { to: "/app/equipe", label: "Usuários", icon: Users },
         { to: "/app/ferias", label: "Férias", icon: Plane },
         { to: "/app/rh/recibos", label: "Recibos", icon: Receipt },
