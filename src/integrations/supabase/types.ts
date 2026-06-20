@@ -766,6 +766,114 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_attachments: {
+        Row: {
+          category: string
+          company_id: string
+          created_at: string
+          file_name: string
+          id: string
+          mime_type: string | null
+          notes: string | null
+          profile_id: string
+          size_bytes: number | null
+          storage_path: string
+          updated_at: string
+          uploaded_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          category: string
+          company_id: string
+          created_at?: string
+          file_name: string
+          id?: string
+          mime_type?: string | null
+          notes?: string | null
+          profile_id: string
+          size_bytes?: number | null
+          storage_path: string
+          updated_at?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          category?: string
+          company_id?: string
+          created_at?: string
+          file_name?: string
+          id?: string
+          mime_type?: string | null
+          notes?: string | null
+          profile_id?: string
+          size_bytes?: number | null
+          storage_path?: string
+          updated_at?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_attachments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_attachments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_document_alerts: {
+        Row: {
+          company_id: string
+          doc_type: string
+          expires_at: string
+          id: string
+          notified_at: string
+          profile_id: string
+          threshold_days: number
+        }
+        Insert: {
+          company_id: string
+          doc_type: string
+          expires_at: string
+          id?: string
+          notified_at?: string
+          profile_id: string
+          threshold_days: number
+        }
+        Update: {
+          company_id?: string
+          doc_type?: string
+          expires_at?: string
+          id?: string
+          notified_at?: string
+          profile_id?: string
+          threshold_days?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_document_alerts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_document_alerts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financial_audit: {
         Row: {
           actor_id: string | null
@@ -1260,69 +1368,199 @@ export type Database = {
       }
       profiles: {
         Row: {
+          a1_expires_at: string | null
+          a1_number: string | null
+          address_be: string | null
+          allowance_meal: number | null
+          allowance_other: number | null
+          allowance_rent: number | null
+          allowance_transport: number | null
           avatar_url: string | null
+          birth_date: string | null
+          company_id_primary: string | null
+          contract_type: string | null
           created_at: string
           current_company_id: string | null
+          dependents_count: number | null
+          driver_license_expires_at: string | null
+          driver_license_number: string | null
           full_name: string | null
+          health_card_expires_at: string | null
+          health_card_number: string | null
+          hire_date: string | null
+          iban: string | null
           id: string
+          initials_url: string | null
           is_active: boolean
           job_title: string | null
+          main_doc_expires_at: string | null
+          main_doc_number: string | null
+          main_doc_type: string | null
           manual_fixed_rate: number | null
           manual_hour_rate: number | null
           manual_mixed_base_fixed: number | null
           manual_mixed_extra_hour_rate: number | null
           manual_mixed_included_minutes: number | null
+          marital_status: string | null
+          nationality: string | null
+          occ_health_last_at: string | null
+          occ_health_next_at: string | null
+          official_address: string | null
+          passport_expires_at: string | null
+          passport_number: string | null
           pay_model: string
           pay_rate_source: string
           phone: string | null
+          rate_day_be: number | null
+          rate_day_foreign: number | null
+          rate_hour_week: number | null
+          rate_hour_weekend: number | null
+          signature_url: string | null
+          social_security_niss: string | null
+          status: string | null
           supervisor_id: string | null
+          swift: string | null
+          tax_country: string | null
+          tax_id_nif: string | null
           team: string | null
+          team_number: number | null
+          termination_date: string | null
           updated_at: string
+          weekly_contracted_hours: number | null
           work_location: string | null
         }
         Insert: {
+          a1_expires_at?: string | null
+          a1_number?: string | null
+          address_be?: string | null
+          allowance_meal?: number | null
+          allowance_other?: number | null
+          allowance_rent?: number | null
+          allowance_transport?: number | null
           avatar_url?: string | null
+          birth_date?: string | null
+          company_id_primary?: string | null
+          contract_type?: string | null
           created_at?: string
           current_company_id?: string | null
+          dependents_count?: number | null
+          driver_license_expires_at?: string | null
+          driver_license_number?: string | null
           full_name?: string | null
+          health_card_expires_at?: string | null
+          health_card_number?: string | null
+          hire_date?: string | null
+          iban?: string | null
           id: string
+          initials_url?: string | null
           is_active?: boolean
           job_title?: string | null
+          main_doc_expires_at?: string | null
+          main_doc_number?: string | null
+          main_doc_type?: string | null
           manual_fixed_rate?: number | null
           manual_hour_rate?: number | null
           manual_mixed_base_fixed?: number | null
           manual_mixed_extra_hour_rate?: number | null
           manual_mixed_included_minutes?: number | null
+          marital_status?: string | null
+          nationality?: string | null
+          occ_health_last_at?: string | null
+          occ_health_next_at?: string | null
+          official_address?: string | null
+          passport_expires_at?: string | null
+          passport_number?: string | null
           pay_model?: string
           pay_rate_source?: string
           phone?: string | null
+          rate_day_be?: number | null
+          rate_day_foreign?: number | null
+          rate_hour_week?: number | null
+          rate_hour_weekend?: number | null
+          signature_url?: string | null
+          social_security_niss?: string | null
+          status?: string | null
           supervisor_id?: string | null
+          swift?: string | null
+          tax_country?: string | null
+          tax_id_nif?: string | null
           team?: string | null
+          team_number?: number | null
+          termination_date?: string | null
           updated_at?: string
+          weekly_contracted_hours?: number | null
           work_location?: string | null
         }
         Update: {
+          a1_expires_at?: string | null
+          a1_number?: string | null
+          address_be?: string | null
+          allowance_meal?: number | null
+          allowance_other?: number | null
+          allowance_rent?: number | null
+          allowance_transport?: number | null
           avatar_url?: string | null
+          birth_date?: string | null
+          company_id_primary?: string | null
+          contract_type?: string | null
           created_at?: string
           current_company_id?: string | null
+          dependents_count?: number | null
+          driver_license_expires_at?: string | null
+          driver_license_number?: string | null
           full_name?: string | null
+          health_card_expires_at?: string | null
+          health_card_number?: string | null
+          hire_date?: string | null
+          iban?: string | null
           id?: string
+          initials_url?: string | null
           is_active?: boolean
           job_title?: string | null
+          main_doc_expires_at?: string | null
+          main_doc_number?: string | null
+          main_doc_type?: string | null
           manual_fixed_rate?: number | null
           manual_hour_rate?: number | null
           manual_mixed_base_fixed?: number | null
           manual_mixed_extra_hour_rate?: number | null
           manual_mixed_included_minutes?: number | null
+          marital_status?: string | null
+          nationality?: string | null
+          occ_health_last_at?: string | null
+          occ_health_next_at?: string | null
+          official_address?: string | null
+          passport_expires_at?: string | null
+          passport_number?: string | null
           pay_model?: string
           pay_rate_source?: string
           phone?: string | null
+          rate_day_be?: number | null
+          rate_day_foreign?: number | null
+          rate_hour_week?: number | null
+          rate_hour_weekend?: number | null
+          signature_url?: string | null
+          social_security_niss?: string | null
+          status?: string | null
           supervisor_id?: string | null
+          swift?: string | null
+          tax_country?: string | null
+          tax_id_nif?: string | null
           team?: string | null
+          team_number?: number | null
+          termination_date?: string | null
           updated_at?: string
+          weekly_contracted_hours?: number | null
           work_location?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "profiles_company_id_primary_fkey"
+            columns: ["company_id_primary"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profiles_current_company_id_fkey"
             columns: ["current_company_id"]
@@ -2306,6 +2544,7 @@ export type Database = {
         Args: { _company_id?: string }
         Returns: number
       }
+      notify_document_expiries: { Args: never; Returns: number }
       payslip_assign: {
         Args: { _id: string; _user_id: string }
         Returns: {
@@ -2874,24 +3113,65 @@ export type Database = {
           _user_id: string
         }
         Returns: {
+          a1_expires_at: string | null
+          a1_number: string | null
+          address_be: string | null
+          allowance_meal: number | null
+          allowance_other: number | null
+          allowance_rent: number | null
+          allowance_transport: number | null
           avatar_url: string | null
+          birth_date: string | null
+          company_id_primary: string | null
+          contract_type: string | null
           created_at: string
           current_company_id: string | null
+          dependents_count: number | null
+          driver_license_expires_at: string | null
+          driver_license_number: string | null
           full_name: string | null
+          health_card_expires_at: string | null
+          health_card_number: string | null
+          hire_date: string | null
+          iban: string | null
           id: string
+          initials_url: string | null
           is_active: boolean
           job_title: string | null
+          main_doc_expires_at: string | null
+          main_doc_number: string | null
+          main_doc_type: string | null
           manual_fixed_rate: number | null
           manual_hour_rate: number | null
           manual_mixed_base_fixed: number | null
           manual_mixed_extra_hour_rate: number | null
           manual_mixed_included_minutes: number | null
+          marital_status: string | null
+          nationality: string | null
+          occ_health_last_at: string | null
+          occ_health_next_at: string | null
+          official_address: string | null
+          passport_expires_at: string | null
+          passport_number: string | null
           pay_model: string
           pay_rate_source: string
           phone: string | null
+          rate_day_be: number | null
+          rate_day_foreign: number | null
+          rate_hour_week: number | null
+          rate_hour_weekend: number | null
+          signature_url: string | null
+          social_security_niss: string | null
+          status: string | null
           supervisor_id: string | null
+          swift: string | null
+          tax_country: string | null
+          tax_id_nif: string | null
           team: string | null
+          team_number: number | null
+          termination_date: string | null
           updated_at: string
+          weekly_contracted_hours: number | null
           work_location: string | null
         }
         SetofOptions: {

@@ -13,6 +13,7 @@ import { Copy, Trash2, Pencil, Power, Send } from "lucide-react";
 import { RoleGuard } from "@/components/RoleGuard";
 import { sendTransactionalEmail } from "@/lib/email/send";
 import { buildAppUrl } from "@/lib/app-url";
+import { EmployeeEditor } from "@/components/equipe/EmployeeEditor";
 
 interface MemberRow {
   user_id: string;
@@ -325,14 +326,15 @@ function TeamPage() {
       </div>
 
       <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Editar usuário</DialogTitle>
+            <DialogTitle>Editar colaborador</DialogTitle>
           </DialogHeader>
           {editing && (
-            <EditMemberForm
-              member={editing}
+            <EmployeeEditor
+              userId={editing.user_id}
               companyId={currentCompanyId!}
+              currentRole={editing.role}
               onDone={() => {
                 setEditing(null);
                 qc.invalidateQueries({ queryKey: ["team-members"] });
@@ -516,135 +518,3 @@ function InvitesSection({
   );
 }
 
-function EditMemberForm({
-  member,
-  companyId,
-  onDone,
-}: {
-  member: MemberRow;
-  companyId: string;
-  onDone: () => void;
-}) {
-  const { isOwner, isSuperAdmin } = useAuth();
-  const [fullName, setFullName] = useState(member.profile?.full_name ?? "");
-  const [phone, setPhone] = useState(member.profile?.phone ?? "");
-  const [role, setRole] = useState<"manager" | "employee" | "owner">(
-    member.role === "manager" || member.role === "owner" || member.role === "employee"
-      ? (member.role as "manager" | "owner" | "employee")
-      : "employee",
-  );
-  const [jobTitle, setJobTitle] = useState(member.profile?.job_title ?? "");
-  const [workLocation, setWorkLocation] = useState(member.profile?.work_location ?? "");
-  const [team, setTeam] = useState(member.profile?.team ?? "");
-  const [supervisorId, setSupervisorId] = useState<string>(member.profile?.supervisor_id ?? "");
-  const [loading, setLoading] = useState(false);
-
-  const { data: peers = [] } = useQuery({
-    queryKey: ["team-peers", companyId],
-    queryFn: async () => {
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("company_id", companyId);
-      const ids = (roles ?? []).map((r) => r.user_id).filter((id) => id !== member.user_id);
-      if (ids.length === 0) return [] as { id: string; full_name: string | null }[];
-      const { data } = await supabase.from("profiles").select("id, full_name").in("id", ids);
-      return data ?? [];
-    },
-  });
-
-  return (
-    <form
-      className="space-y-4"
-      onSubmit={async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        try {
-          const { error: pErr } = await supabase
-            .from("profiles")
-            .update({
-              full_name: fullName.trim() || null,
-              phone: phone.trim() || null,
-              job_title: jobTitle.trim() || null,
-              work_location: workLocation.trim() || null,
-              team: team.trim() || null,
-              supervisor_id: supervisorId || null,
-            })
-            .eq("id", member.user_id);
-          if (pErr) throw pErr;
-          if (role !== member.role) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const { error: rErr } = await (supabase.rpc as any)("set_member_role", {
-              _user_id: member.user_id,
-              _company_id: companyId,
-              _role: role,
-            });
-            if (rErr) throw rErr;
-          }
-          toast.success("Usuário atualizado");
-          onDone();
-        } catch (err) {
-          toast.error((err as Error).message);
-        } finally {
-          setLoading(false);
-        }
-      }}
-    >
-      <div className="space-y-1.5">
-        <Label>Nome</Label>
-        <Input maxLength={150} value={fullName} onChange={(e) => setFullName(e.target.value)} />
-      </div>
-      <div className="space-y-1.5">
-        <Label>Telefone</Label>
-        <Input maxLength={40} value={phone} onChange={(e) => setPhone(e.target.value)} />
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label>Cargo</Label>
-          <Input maxLength={120} value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} placeholder="Ex.: Motorista" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Equipa / Departamento</Label>
-          <Input maxLength={120} value={team} onChange={(e) => setTeam(e.target.value)} placeholder="Opcional" />
-        </div>
-      </div>
-      <div className="space-y-1.5">
-        <Label>Local de trabalho principal</Label>
-        <Input
-          maxLength={200}
-          value={workLocation}
-          onChange={(e) => setWorkLocation(e.target.value)}
-          placeholder="Cliente, filial, posto..."
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label>Supervisor (opcional)</Label>
-        <Select value={supervisorId || "none"} onValueChange={(v) => setSupervisorId(v === "none" ? "" : v)}>
-          <SelectTrigger><SelectValue placeholder="Sem supervisor" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">Sem supervisor</SelectItem>
-            {peers.map((p) => (
-              <SelectItem key={p.id} value={p.id}>{p.full_name ?? p.id.slice(0, 8)}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-1.5">
-        <Label>Papel</Label>
-        <Select value={role} onValueChange={(v) => setRole(v as typeof role)}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="employee">Funcionário</SelectItem>
-            <SelectItem value="manager">Gestor</SelectItem>
-            {(isOwner || isSuperAdmin) && (
-              <SelectItem value="owner">Owner / Proprietário</SelectItem>
-            )}
-          </SelectContent>
-        </Select>
-      </div>
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Salvando..." : "Salvar"}
-      </Button>
-    </form>
-  );
-}
