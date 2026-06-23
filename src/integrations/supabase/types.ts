@@ -1800,6 +1800,8 @@ export type Database = {
       tasks: {
         Row: {
           absence_grace_minutes: number
+          archived_at: string | null
+          archived_by: string | null
           assigned_to: string | null
           authorized_at: string | null
           authorized_by: string | null
@@ -1832,6 +1834,8 @@ export type Database = {
         }
         Insert: {
           absence_grace_minutes?: number
+          archived_at?: string | null
+          archived_by?: string | null
           assigned_to?: string | null
           authorized_at?: string | null
           authorized_by?: string | null
@@ -1864,6 +1868,8 @@ export type Database = {
         }
         Update: {
           absence_grace_minutes?: number
+          archived_at?: string | null
+          archived_by?: string | null
           assigned_to?: string | null
           authorized_at?: string | null
           authorized_by?: string | null
@@ -1895,6 +1901,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "tasks_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tasks_assigned_to_fkey"
             columns: ["assigned_to"]
@@ -2948,6 +2961,8 @@ export type Database = {
         Args: { _payload: Json; _task_id: string }
         Returns: {
           absence_grace_minutes: number
+          archived_at: string | null
+          archived_by: string | null
           assigned_to: string | null
           authorized_at: string | null
           authorized_by: string | null
@@ -3018,6 +3033,49 @@ export type Database = {
         }
         Returns: undefined
       }
+      task_archive: {
+        Args: { _archive?: boolean; _task_id: string }
+        Returns: {
+          absence_grace_minutes: number
+          archived_at: string | null
+          archived_by: string | null
+          assigned_to: string | null
+          authorized_at: string | null
+          authorized_by: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          client_id: string | null
+          company_id: string
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          deleted_at: string | null
+          deleted_by: string | null
+          description: string | null
+          due_at: string | null
+          id: string
+          late_notified_at: string | null
+          location: string | null
+          marked_absent_at: string | null
+          notes: string | null
+          priority: Database["public"]["Enums"]["task_priority"]
+          punch_mode_override: Database["public"]["Enums"]["punch_mode"] | null
+          recurrence_date: string | null
+          recurrence_id: string | null
+          scheduled_end: string | null
+          scheduled_for: string | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tasks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       task_effective_punch_mode: {
         Args: { _task_id: string }
         Returns: Database["public"]["Enums"]["punch_mode"]
@@ -3026,6 +3084,8 @@ export type Database = {
         Args: { _note?: string; _task_id: string }
         Returns: {
           absence_grace_minutes: number
+          archived_at: string | null
+          archived_by: string | null
           assigned_to: string | null
           authorized_at: string | null
           authorized_by: string | null
@@ -3067,6 +3127,8 @@ export type Database = {
         Args: { _task_id: string }
         Returns: {
           absence_grace_minutes: number
+          archived_at: string | null
+          archived_by: string | null
           assigned_to: string | null
           authorized_at: string | null
           authorized_by: string | null
@@ -3108,6 +3170,8 @@ export type Database = {
         Args: { _action: string; _task_id: string }
         Returns: {
           absence_grace_minutes: number
+          archived_at: string | null
+          archived_by: string | null
           assigned_to: string | null
           authorized_at: string | null
           authorized_by: string | null
