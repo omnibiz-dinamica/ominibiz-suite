@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { sendTransactionalEmail } from "@/lib/email/send";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,7 +12,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Receipt, Upload, Download, Mail, UserPlus, Trash2, Loader2, FileText, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Receipt, Upload, Download, Mail, UserPlus, Trash2, Loader2, FileText, AlertTriangle, CheckCircle2, History, Send } from "lucide-react";
 import { extractPdfText, parsePayslipText, fuzzyMatchEmployee, MONTH_LABEL_PT } from "@/lib/payslip-parser";
 
 export const Route = createFileRoute("/app/rh/recibos")({ component: PayslipsAdminPage });
@@ -51,6 +52,7 @@ function PayslipsAdminPage() {
   const [tab, setTab] = useState<Payslip["status"] | "all">("unassigned");
   const [uploading, setUploading] = useState(false);
   const [assignTarget, setAssignTarget] = useState<Payslip | null>(null);
+  const [historyTarget, setHistoryTarget] = useState<Payslip | null>(null);
 
   const { data: counts } = useQuery({
     queryKey: ["payslip-counts", currentCompanyId],
@@ -161,16 +163,69 @@ function PayslipsAdminPage() {
     mutationFn: async (p: Payslip) => {
       if (!p.user_id) throw new Error("Associe a um funcionário primeiro");
       if (!p.email_to) throw new Error("Funcionário sem email cadastrado");
-      // Stub: registra evento como falha controlada até infra de email estar ativa.
-      const { error } = await (supabase as any).rpc("payslip_mark_sent", {
-        _id: p.id,
-        _status: "failed",
-        _detail: { error: "Configure o domínio de email em Cloud → Emails para ativar envio automático." },
+      // 1) Conta envios anteriores (sent/failed) para gerar idempotencyKey único.
+      const { count: prevCount } = await (supabase as any)
+        .from("payslip_email_events")
+        .select("id", { count: "exact", head: true })
+        .eq("payslip_id", p.id)
+        .in("event", ["sent", "failed"]);
+      const attempt = (prevCount ?? 0) + 1;
+
+      // 2) Link de download assinado, válido por 7 dias.
+      const SEVEN_DAYS = 60 * 60 * 24 * 7;
+      const { data: signed, error: urlErr } = await supabase.storage
+        .from("payslips")
+        .createSignedUrl(p.storage_path, SEVEN_DAYS);
+      if (urlErr || !signed?.signedUrl) {
+        throw new Error(urlErr?.message ?? "Falha ao gerar link de download");
+      }
+
+      const periodLabel =
+        p.period_year && p.period_month
+          ? `${MONTH_LABEL_PT[p.period_month - 1]}/${p.period_year}`
+          : undefined;
+      const expiresAt = new Date(Date.now() + SEVEN_DAYS * 1000);
+      const expiresLabel = expiresAt.toLocaleDateString("pt-PT", {
+        day: "2-digit", month: "2-digit", year: "numeric",
       });
-      if (error) throw error;
+
+      // 3) Envia (helper já loga em email_send_log com idempotencyKey).
+      try {
+        await sendTransactionalEmail({
+          templateName: "payslip_published",
+          recipientEmail: p.email_to,
+          idempotencyKey: `payslip-${p.id}-${attempt}`,
+          triggerSource: "payslip_published",
+          companyId: p.company_id,
+          templateData: {
+            periodLabel,
+            downloadUrl: signed.signedUrl,
+            downloadExpiresAt: expiresLabel,
+          },
+        });
+      } catch (e: any) {
+        await (supabase as any).rpc("payslip_mark_sent", {
+          _id: p.id,
+          _status: "failed",
+          _detail: { error: String(e?.message ?? e).slice(0, 500), attempt },
+        });
+        throw e;
+      }
+
+      // 4) Marca como enviado e registra evento.
+      const { error: markErr } = await (supabase as any).rpc("payslip_mark_sent", {
+        _id: p.id,
+        _status: "sent",
+        _detail: {
+          attempt,
+          recipient: p.email_to,
+          download_expires_at: expiresAt.toISOString(),
+        },
+      });
+      if (markErr) throw markErr;
     },
-    onSuccess: () => {
-      toast.info("Envio de email ainda não configurado. Configure o domínio de email para ativar.");
+    onSuccess: (_d, p) => {
+      toast.success(`Recibo enviado para ${p.email_to}`);
       qc.invalidateQueries({ queryKey: ["payslips"] });
       qc.invalidateQueries({ queryKey: ["payslip-counts"] });
     },
@@ -274,8 +329,25 @@ function PayslipsAdminPage() {
                     <Button size="sm" variant="ghost" onClick={() => downloadMut.mutate(p)} title="Baixar">
                       <Download className="h-4 w-4" />
                     </Button>
-                    <Button size="sm" variant="ghost" disabled={!p.user_id || sendMut.isPending} onClick={() => sendMut.mutate(p)} title="Enviar por email">
-                      <Mail className="h-4 w-4" />
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={!p.user_id || !p.email_to || sendMut.isPending}
+                      onClick={() => sendMut.mutate(p)}
+                      title={
+                        !p.user_id
+                          ? "Associe a um funcionário primeiro"
+                          : !p.email_to
+                          ? "Funcionário sem email cadastrado"
+                          : p.email_sent_at
+                          ? `Reenviar (último envio ${new Date(p.email_sent_at).toLocaleString("pt-PT")})`
+                          : "Enviar por email"
+                      }
+                    >
+                      {p.email_sent_at ? <Send className="h-4 w-4" /> : <Mail className="h-4 w-4" />}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setHistoryTarget(p)} title="Histórico de envios">
+                      <History className="h-4 w-4" />
                     </Button>
                     <Button size="sm" variant="ghost" className="text-destructive" onClick={() => { if (confirm("Remover este recibo?")) deleteMut.mutate(p); }} title="Remover">
                       <Trash2 className="h-4 w-4" />
@@ -298,6 +370,8 @@ function PayslipsAdminPage() {
           setAssignTarget(null);
         }}
       />
+
+      <HistoryDrawer payslip={historyTarget} onClose={() => setHistoryTarget(null)} />
     </div>
   );
 }
@@ -440,6 +514,78 @@ function AssignDrawer({
             </Button>
           </div>
         </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
+  );
+}
+
+function HistoryDrawer({ payslip, onClose }: { payslip: Payslip | null; onClose: () => void }) {
+  const { data: events = [] } = useQuery({
+    queryKey: ["payslip-events", payslip?.id],
+    enabled: !!payslip,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("payslip_email_events")
+        .select("id, event, detail, created_at")
+        .eq("payslip_id", payslip!.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as Array<{
+        id: string;
+        event: string;
+        detail: Record<string, any> | null;
+        created_at: string;
+      }>;
+    },
+  });
+
+  return (
+    <Drawer open={!!payslip} onOpenChange={(o) => !o && onClose()}>
+      <DrawerContent>
+        <DrawerHeader>
+          <DrawerTitle>Histórico de envios</DrawerTitle>
+        </DrawerHeader>
+        <div className="mx-auto w-full max-w-2xl space-y-3 px-4 pb-6">
+          {payslip && (
+            <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm">
+              <div className="font-medium">{payslip.original_filename}</div>
+              <div className="text-xs text-muted-foreground">
+                {payslip.email_to ?? "Sem email"} · Último status: {payslip.email_delivery_status ?? "—"}
+              </div>
+            </div>
+          )}
+          {events.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
+              Nenhum envio registado ainda.
+            </div>
+          ) : (
+            <ul className="divide-y divide-border rounded-lg border border-border">
+              {events.map((ev) => {
+                const tone =
+                  ev.event === "sent"
+                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                    : ev.event === "failed"
+                    ? "bg-destructive/15 text-destructive"
+                    : "bg-muted text-muted-foreground";
+                return (
+                  <li key={ev.id} className="flex flex-col gap-1 px-4 py-3 text-sm">
+                    <div className="flex items-center justify-between">
+                      <Badge variant="secondary" className={tone}>{ev.event}</Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(ev.created_at).toLocaleString("pt-PT")}
+                      </span>
+                    </div>
+                    {ev.detail && Object.keys(ev.detail).length > 0 && (
+                      <pre className="overflow-x-auto rounded bg-muted/40 p-2 text-[11px] text-muted-foreground">
+                        {JSON.stringify(ev.detail, null, 2)}
+                      </pre>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
       </DrawerContent>
     </Drawer>
   );

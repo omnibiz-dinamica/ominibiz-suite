@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { toast } from "sonner";
-import { Plus, Play, Check, X, ShieldCheck, UserX, Clock, Pencil, Repeat, UserCog, Users, Trash2 } from "lucide-react";
+import { Plus, Play, Check, X, ShieldCheck, UserX, Clock, Pencil, Repeat, UserCog, Users, Trash2, Archive, ArchiveRestore } from "lucide-react";
 import {
   STATUS_LABELS,
   STATUS_TONE,
@@ -34,6 +34,8 @@ import {
   isVisuallyLate,
   sweepAbsent,
   transitionTask,
+  archiveTask,
+  canArchive,
 } from "@/lib/tasks";
 import { RecurrenceForm, emptyRecurrence, type RecurrenceFormValue } from "@/components/tasks/RecurrenceForm";
 import { TaskDocuments } from "@/components/tasks/TaskDocuments";
@@ -61,6 +63,7 @@ function TasksPage() {
   const [editingSeries, setEditingSeries] = useState<TaskRow | null>(null);
   const [seriesRow, setSeriesRow] = useState<RecurrenceRow | null>(null);
   const [deleting, setDeleting] = useState<TaskRow | null>(null);
+  const [view, setView] = useState<"active" | "archived">("active");
 
   useEffect(() => {
     if (!editingSeries?.recurrence_id) {
@@ -80,7 +83,7 @@ function TasksPage() {
   }, [editingSeries?.recurrence_id]);
 
   const { data: tasks, isLoading } = useQuery({
-    queryKey: ["tasks", currentCompanyId, user?.id, isManager],
+    queryKey: ["tasks", currentCompanyId, user?.id, isManager, view],
     queryFn: async () => {
       let q = supabase
         .from("tasks")
@@ -89,6 +92,8 @@ function TasksPage() {
         .order("created_at", { ascending: false });
       if (!isManager) q = q.eq("assigned_to", user!.id);
       else if (currentCompanyId) q = q.eq("company_id", currentCompanyId);
+      if (view === "archived") q = q.not("archived_at", "is", null);
+      else q = q.is("archived_at", null);
       const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as unknown as TaskRow[];
@@ -176,6 +181,15 @@ function TasksPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const archiveMut = useMutation({
+    mutationFn: ({ id, archive }: { id: string; archive: boolean }) => archiveTask(id, archive),
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      toast.success(vars.archive ? "Tarefa arquivada" : "Tarefa desarquivada");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   // Status que podem ser excluídos (tarefas que ainda não foram iniciadas).
   // A presença de histórico operacional (folha de ponto, documentos)
   // é validada no servidor e devolve a mensagem padrão.
@@ -208,6 +222,22 @@ function TasksPage() {
         </div>
         {isManager && currentCompanyId && (
           <div className="flex flex-wrap gap-2">
+            <div className="inline-flex overflow-hidden rounded-md border border-border">
+              <button
+                type="button"
+                onClick={() => setView("active")}
+                className={`px-3 py-1.5 text-xs font-medium ${view === "active" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"}`}
+              >
+                Ativas
+              </button>
+              <button
+                type="button"
+                onClick={() => setView("archived")}
+                className={`px-3 py-1.5 text-xs font-medium ${view === "archived" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"}`}
+              >
+                Arquivadas
+              </button>
+            </div>
             <Button asChild variant="outline">
               <Link to="/app/tarefas/recorrentes"><Repeat className="mr-2 h-4 w-4" /> Recorrências</Link>
             </Button>
@@ -303,7 +333,7 @@ function TasksPage() {
       )}
       {!isLoading && (tasks ?? []).length === 0 && (
         <div className="rounded-2xl border border-border bg-card px-5 py-12 text-center text-sm text-muted-foreground">
-          Nenhuma tarefa ainda.
+          {view === "archived" ? "Nenhuma tarefa arquivada." : "Nenhuma tarefa ainda."}
         </div>
       )}
 
@@ -318,7 +348,9 @@ function TasksPage() {
           onReassign={setReassigning}
           onDelete={handleDeleteRequest}
           onTransition={(id, action) => transition.mutate({ id, action })}
+          onArchive={(id, archive) => archiveMut.mutate({ id, archive })}
           transitionPending={transition.isPending}
+          archivePending={archiveMut.isPending}
         />
       )}
 
@@ -336,7 +368,9 @@ function TasksPage() {
                 onReassign={setReassigning}
                 onDelete={handleDeleteRequest}
                 onTransition={(id, action) => transition.mutate({ id, action })}
+                onArchive={(id, archive) => archiveMut.mutate({ id, archive })}
                 transitionPending={transition.isPending}
+                archivePending={archiveMut.isPending}
               />
             ))}
           </ul>
@@ -358,7 +392,9 @@ interface RowHandlers {
   onReassign: (t: TaskRow) => void;
   onDelete: (t: TaskRow) => void;
   onTransition: (id: string, action: TaskAction) => void;
+  onArchive: (id: string, archive: boolean) => void;
   transitionPending: boolean;
+  archivePending: boolean;
 }
 
 function GroupedByAssignee({
@@ -427,10 +463,14 @@ function TaskRowItem({
   onReassign,
   onDelete,
   onTransition,
+  onArchive,
   transitionPending,
+  archivePending,
 }: RowHandlers & { task: TaskRow }) {
   const late = isVisuallyLate(t);
   const actions = availableActions(t, { userId, isManager });
+  const archived = !!t.archived_at;
+  const archivable = canArchive(t);
   const date = formatWallDate(t.scheduled_for);
   const start = formatWallTime(t.scheduled_for);
   const end = formatWallTime(t.scheduled_end);
@@ -490,6 +530,31 @@ function TaskRowItem({
             >
               <Trash2 className="h-3 w-3" />
             </Button>
+            {archived ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                title="Desarquivar"
+                disabled={archivePending}
+                onClick={() => onArchive(t.id, false)}
+              >
+                <ArchiveRestore className="h-3 w-3" />
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="ghost"
+                title={
+                  archivable
+                    ? "Arquivar"
+                    : "Apenas tarefas concluídas, canceladas ou ausentes podem ser arquivadas"
+                }
+                disabled={archivePending || !archivable}
+                onClick={() => onArchive(t.id, true)}
+              >
+                <Archive className="h-3 w-3" />
+              </Button>
+            )}
           </>
         )}
         {actions.map((a) => (
