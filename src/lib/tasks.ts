@@ -64,6 +64,9 @@ export interface TaskRow {
   punch_mode_override?: PunchMode | null;
   recurrence_id?: string | null;
   recurrence_date?: string | null;
+  archived_at?: string | null;
+  archived_by?: string | null;
+  deleted_at?: string | null;
 }
 
 // =========================================================
@@ -280,6 +283,23 @@ export async function transitionTask(taskId: string, action: TaskAction): Promis
   });
   if (error) throw error;
   return data as TaskRow;
+}
+
+/** Arquiva (soft) ou desarquiva uma tarefa. Apenas estados terminais podem ser arquivados. */
+export async function archiveTask(taskId: string, archive = true): Promise<TaskRow> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("task_archive", {
+    _task_id: taskId,
+    _archive: archive,
+  });
+  if (error) throw error;
+  return data as TaskRow;
+}
+
+/** Estados terminais elegíveis para arquivamento. */
+export function canArchive(t: Pick<TaskRow, "status" | "archived_at">): boolean {
+  if (t.archived_at) return false;
+  return t.status === "concluido" || t.status === "cancelado" || t.status === "ausente";
 }
 
 /**
