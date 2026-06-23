@@ -392,7 +392,9 @@ interface RowHandlers {
   onReassign: (t: TaskRow) => void;
   onDelete: (t: TaskRow) => void;
   onTransition: (id: string, action: TaskAction) => void;
+  onArchive: (id: string, archive: boolean) => void;
   transitionPending: boolean;
+  archivePending: boolean;
 }
 
 function GroupedByAssignee({
@@ -461,10 +463,14 @@ function TaskRowItem({
   onReassign,
   onDelete,
   onTransition,
+  onArchive,
   transitionPending,
+  archivePending,
 }: RowHandlers & { task: TaskRow }) {
   const late = isVisuallyLate(t);
   const actions = availableActions(t, { userId, isManager });
+  const archived = !!t.archived_at;
+  const archivable = canArchive(t);
   const date = formatWallDate(t.scheduled_for);
   const start = formatWallTime(t.scheduled_for);
   const end = formatWallTime(t.scheduled_end);
@@ -524,6 +530,31 @@ function TaskRowItem({
             >
               <Trash2 className="h-3 w-3" />
             </Button>
+            {archived ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                title="Desarquivar"
+                disabled={archivePending}
+                onClick={() => onArchive(t.id, false)}
+              >
+                <ArchiveRestore className="h-3 w-3" />
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="ghost"
+                title={
+                  archivable
+                    ? "Arquivar"
+                    : "Apenas tarefas concluídas, canceladas ou ausentes podem ser arquivadas"
+                }
+                disabled={archivePending || !archivable}
+                onClick={() => onArchive(t.id, true)}
+              >
+                <Archive className="h-3 w-3" />
+              </Button>
+            )}
           </>
         )}
         {actions.map((a) => (
