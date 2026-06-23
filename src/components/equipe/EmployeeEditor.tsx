@@ -281,6 +281,7 @@ function TabRH({ profile, onSave }: { profile: ProfileRow; onSave: (p: Record<st
     tax_country: str(profile.tax_country),
     contract_type: str(profile.contract_type),
     weekly_contracted_hours: num(profile.weekly_contracted_hours),
+    contract_renewal_date: str(profile.contract_renewal_date),
   });
   const upd = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((s) => ({ ...s, [k]: e.target.value }));
   const [loading, setLoading] = useState(false);
@@ -300,16 +301,22 @@ function TabRH({ profile, onSave }: { profile: ProfileRow; onSave: (p: Record<st
           tax_country: toNullableString(f.tax_country),
           contract_type: toNullableString(f.contract_type),
           weekly_contracted_hours: toNullableNumber(f.weekly_contracted_hours),
-        }, "Dados RH salvos");
+          contract_renewal_date: toNullableDate(f.contract_renewal_date),
+        }, "Dados de contabilidade salvos");
       } catch (err) { toast.error((err as Error).message); }
       finally { setLoading(false); }
     }}>
-      <div className="grid gap-3 sm:grid-cols-3">
+      {/* Ordem fixa pedida pela Contabilidade */}
+      <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Data de admissão"><Input type="date" value={f.hire_date} onChange={upd("hire_date")} /></Field>
         <Field label="Data de rescisão"><Input type="date" value={f.termination_date} onChange={upd("termination_date")} /></Field>
-        <Field label="Data de nascimento"><Input type="date" value={f.birth_date} onChange={upd("birth_date")} /></Field>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="NIF"><Input value={f.tax_id_nif} onChange={upd("tax_id_nif")} /></Field>
+        <Field label="NISS"><Input value={f.social_security_niss} onChange={upd("social_security_niss")} /></Field>
       </div>
       <div className="grid gap-3 sm:grid-cols-3">
+        <Field label="Data de nascimento"><Input type="date" value={f.birth_date} onChange={upd("birth_date")} /></Field>
         <Field label="Estado civil">
           <Select value={f.marital_status || "none"} onValueChange={(v) => setF((s) => ({ ...s, marital_status: v === "none" ? "" : v }))}>
             <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
@@ -324,15 +331,8 @@ function TabRH({ profile, onSave }: { profile: ProfileRow; onSave: (p: Record<st
           </Select>
         </Field>
         <Field label="Nº dependentes"><Input type="number" min="0" value={f.dependents_count} onChange={upd("dependents_count")} /></Field>
-        <Field label="Horas semanais"><Input type="number" step="0.5" value={f.weekly_contracted_hours} onChange={upd("weekly_contracted_hours")} /></Field>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="NIF"><Input value={f.tax_id_nif} onChange={upd("tax_id_nif")} /></Field>
-        <Field label="NISS"><Input value={f.social_security_niss} onChange={upd("social_security_niss")} /></Field>
       </div>
       <div className="grid gap-3 sm:grid-cols-3">
-        <Field label="Nacionalidade"><Input value={f.nationality} onChange={upd("nationality")} placeholder="Ex.: Portuguesa" /></Field>
-        <Field label="País fiscal"><Input value={f.tax_country} onChange={upd("tax_country")} placeholder="Ex.: PT" /></Field>
         <Field label="Tipo de contrato">
           <Select value={f.contract_type || "none"} onValueChange={(v) => setF((s) => ({ ...s, contract_type: v === "none" ? "" : v }))}>
             <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
@@ -347,8 +347,22 @@ function TabRH({ profile, onSave }: { profile: ProfileRow; onSave: (p: Record<st
             </SelectContent>
           </Select>
         </Field>
+        <Field label="Horas contratadas (semana)"><Input type="number" step="0.5" value={f.weekly_contracted_hours} onChange={upd("weekly_contracted_hours")} /></Field>
+        <Field label="Data de renovação do contrato">
+          <Input type="date" value={f.contract_renewal_date} onChange={upd("contract_renewal_date")} />
+        </Field>
       </div>
-      <Button type="submit" className="w-full" disabled={loading}>{loading ? "Salvando…" : "Salvar RH"}</Button>
+      <details className="rounded-lg border border-border/60 bg-muted/30 p-3">
+        <summary className="cursor-pointer text-xs font-medium text-muted-foreground">Informação complementar</summary>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <Field label="Nacionalidade"><Input value={f.nationality} onChange={upd("nationality")} placeholder="Ex.: Portuguesa" /></Field>
+          <Field label="País fiscal"><Input value={f.tax_country} onChange={upd("tax_country")} placeholder="Ex.: PT" /></Field>
+        </div>
+      </details>
+      <p className="text-xs text-muted-foreground">
+        Sistema alerta automaticamente 30 dias antes da renovação do contrato no Dashboard RH e em Notificações.
+      </p>
+      <Button type="submit" className="w-full" disabled={loading}>{loading ? "Salvando…" : "Salvar dados de contabilidade"}</Button>
     </form>
   );
 }

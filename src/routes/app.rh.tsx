@@ -10,6 +10,8 @@ import {
   Receipt,
   UserPlus,
   ChevronRight,
+  CreditCard,
+  FileSignature,
 } from "lucide-react";
 
 export const Route = createFileRoute("/app/rh")({
@@ -31,6 +33,7 @@ const DOC_LABEL: Record<string, string> = {
   passport: "Passaporte",
   health_card: "Cartão de saúde",
   occ_health: "Medicina do trabalho",
+  contract_renewal: "Renovação de contrato",
 };
 
 function daysBetween(iso: string) {
@@ -49,7 +52,7 @@ function DashboardRH() {
       const { data, error } = await supabase
         .from("profiles")
         .select(
-          "id, full_name, main_doc_expires_at, a1_expires_at, driver_license_expires_at, passport_expires_at, health_card_expires_at, occ_health_next_at",
+          "id, full_name, main_doc_expires_at, a1_expires_at, driver_license_expires_at, passport_expires_at, health_card_expires_at, occ_health_next_at, contract_renewal_date",
         )
         .eq("company_id_primary", currentCompanyId!);
       if (error) throw error;
@@ -62,6 +65,7 @@ function DashboardRH() {
           ["passport", (p as any).passport_expires_at],
           ["health_card", (p as any).health_card_expires_at],
           ["occ_health", (p as any).occ_health_next_at],
+          ["contract_renewal", (p as any).contract_renewal_date],
         ];
         for (const [doc_type, exp] of map) {
           if (!exp) continue;
@@ -125,6 +129,21 @@ function DashboardRH() {
     },
   });
 
+  const { data: expensesPending } = useQuery({
+    queryKey: ["rh-exp", currentCompanyId],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("employee_expenses")
+        .select("id, user_id, expense_date, amount, reason, status")
+        .eq("company_id", currentCompanyId!)
+        .eq("status", "pendente")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as Array<{ id: string; user_id: string; expense_date: string; amount: number; reason: string; status: string }>;
+    },
+  });
+
   if (!currentCompanyId) {
     return (
       <div className="rounded-2xl border border-warning/40 bg-warning/10 p-5">
@@ -135,11 +154,13 @@ function DashboardRH() {
 
   const docs90 = docs ?? [];
   const docsCritical = docs90.filter((d) => d.days_left <= 30).length;
+  const renewals = docs90.filter((d) => d.doc_type === "contract_renewal");
   const totalActions =
     (vacationsPending?.length ?? 0) +
     docs90.length +
     (payslipsPending?.length ?? 0) +
-    (invitesPending?.length ?? 0);
+    (invitesPending?.length ?? 0) +
+    (expensesPending?.length ?? 0);
 
   const summary = [
     {
@@ -155,6 +176,20 @@ function DashboardRH() {
       icon: FileWarning,
       tone: docsCritical ? "text-destructive" : "text-warning",
       to: "/app/equipe",
+    },
+    {
+      label: "Renovações de contrato",
+      value: renewals.length,
+      icon: FileSignature,
+      tone: renewals.some((d) => d.days_left <= 30) ? "text-destructive" : "text-warning",
+      to: "/app/equipe",
+    },
+    {
+      label: "Despesas pendentes",
+      value: expensesPending?.length ?? 0,
+      icon: CreditCard,
+      tone: "text-warning",
+      to: "/app/despesas",
     },
     {
       label: "Recibos pendentes",
@@ -263,6 +298,16 @@ function DashboardRH() {
                 v.end_date + "T00:00:00",
               ).toLocaleDateString("pt-PT")}`,
               secondary: v.status,
+            }))}
+          />
+          <PendingList
+            title="Despesas"
+            to="/app/despesas"
+            empty="Sem despesas pendentes."
+            items={(expensesPending ?? []).slice(0, 5).map((d) => ({
+              key: d.id,
+              primary: `${d.amount.toFixed(2)}€ · ${d.reason}`,
+              secondary: new Date(d.expense_date + "T00:00:00").toLocaleDateString("pt-PT"),
             }))}
           />
           <PendingList
