@@ -25,6 +25,7 @@ import {
   Receipt,
   ChevronDown,
   Repeat,
+  CreditCard,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
@@ -89,6 +90,7 @@ function buildGroups(args: {
     const rh: Item[] = [
       { to: "/app/meus-recibos", label: "Meus Recibos", icon: Receipt },
       { to: "/app/ferias", label: "Férias", icon: Plane },
+      { to: "/app/despesas", label: "Despesas", icon: CreditCard },
     ];
     const groups: Group[] = [
       { id: "operacao", label: "Operação", items: operacao },
@@ -129,6 +131,7 @@ function buildGroups(args: {
         { to: "/app/rh", label: "Dashboard RH", icon: LayoutDashboard },
         { to: "/app/equipe", label: "Usuários", icon: Users },
         { to: "/app/ferias", label: "Férias", icon: Plane },
+        { to: "/app/despesas", label: "Despesas", icon: CreditCard },
         { to: "/app/rh/recibos", label: "Recibos", icon: Receipt },
       ],
     },

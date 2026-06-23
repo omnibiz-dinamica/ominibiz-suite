@@ -29,6 +29,7 @@ import { Route as AppFrotaRouteImport } from './routes/app.frota'
 import { Route as AppFeriasRouteImport } from './routes/app.ferias'
 import { Route as AppEquipeRouteImport } from './routes/app.equipe'
 import { Route as AppEmpresaRouteImport } from './routes/app.empresa'
+import { Route as AppDespesasRouteImport } from './routes/app.despesas'
 import { Route as AppComercialRouteImport } from './routes/app.comercial'
 import { Route as AppClientesRouteImport } from './routes/app.clientes'
 import { Route as AppAssistenteRouteImport } from './routes/app.assistente'
@@ -150,6 +151,11 @@ const AppEmpresaRoute = AppEmpresaRouteImport.update({
   path: '/empresa',
   getParentRoute: () => AppRoute,
 } as any)
+const AppDespesasRoute = AppDespesasRouteImport.update({
+  id: '/despesas',
+  path: '/despesas',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppComercialRoute = AppComercialRouteImport.update({
   id: '/comercial',
   path: '/comercial',
@@ -266,6 +272,7 @@ export interface FileRoutesByFullPath {
   '/app/assistente': typeof AppAssistenteRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/comercial': typeof AppComercialRouteWithChildren
+  '/app/despesas': typeof AppDespesasRoute
   '/app/empresa': typeof AppEmpresaRoute
   '/app/equipe': typeof AppEquipeRoute
   '/app/ferias': typeof AppFeriasRoute
@@ -306,6 +313,7 @@ export interface FileRoutesByTo {
   '/app/admin': typeof AppAdminRoute
   '/app/assistente': typeof AppAssistenteRoute
   '/app/clientes': typeof AppClientesRoute
+  '/app/despesas': typeof AppDespesasRoute
   '/app/empresa': typeof AppEmpresaRoute
   '/app/equipe': typeof AppEquipeRoute
   '/app/ferias': typeof AppFeriasRoute
@@ -349,6 +357,7 @@ export interface FileRoutesById {
   '/app/assistente': typeof AppAssistenteRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/comercial': typeof AppComercialRouteWithChildren
+  '/app/despesas': typeof AppDespesasRoute
   '/app/empresa': typeof AppEmpresaRoute
   '/app/equipe': typeof AppEquipeRoute
   '/app/ferias': typeof AppFeriasRoute
@@ -393,6 +402,7 @@ export interface FileRouteTypes {
     | '/app/assistente'
     | '/app/clientes'
     | '/app/comercial'
+    | '/app/despesas'
     | '/app/empresa'
     | '/app/equipe'
     | '/app/ferias'
@@ -433,6 +443,7 @@ export interface FileRouteTypes {
     | '/app/admin'
     | '/app/assistente'
     | '/app/clientes'
+    | '/app/despesas'
     | '/app/empresa'
     | '/app/equipe'
     | '/app/ferias'
@@ -475,6 +486,7 @@ export interface FileRouteTypes {
     | '/app/assistente'
     | '/app/clientes'
     | '/app/comercial'
+    | '/app/despesas'
     | '/app/empresa'
     | '/app/equipe'
     | '/app/ferias'
@@ -664,6 +676,13 @@ declare module '@tanstack/react-router' {
       path: '/empresa'
       fullPath: '/app/empresa'
       preLoaderRoute: typeof AppEmpresaRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/despesas': {
+      id: '/app/despesas'
+      path: '/despesas'
+      fullPath: '/app/despesas'
+      preLoaderRoute: typeof AppDespesasRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/comercial': {
@@ -881,6 +900,7 @@ interface AppRouteChildren {
   AppAssistenteRoute: typeof AppAssistenteRoute
   AppClientesRoute: typeof AppClientesRoute
   AppComercialRoute: typeof AppComercialRouteWithChildren
+  AppDespesasRoute: typeof AppDespesasRoute
   AppEmpresaRoute: typeof AppEmpresaRoute
   AppEquipeRoute: typeof AppEquipeRoute
   AppFeriasRoute: typeof AppFeriasRoute
@@ -901,6 +921,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAssistenteRoute: AppAssistenteRoute,
   AppClientesRoute: AppClientesRoute,
   AppComercialRoute: AppComercialRouteWithChildren,
+  AppDespesasRoute: AppDespesasRoute,
   AppEmpresaRoute: AppEmpresaRoute,
   AppEquipeRoute: AppEquipeRoute,
   AppFeriasRoute: AppFeriasRoute,

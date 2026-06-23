@@ -874,6 +874,71 @@ export type Database = {
           },
         ]
       }
+      employee_expenses: {
+        Row: {
+          amount: number
+          attachment_mime: string | null
+          attachment_path: string | null
+          attachment_size: number | null
+          company_id: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_reason: string | null
+          expense_date: string
+          id: string
+          notes: string | null
+          reason: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          attachment_mime?: string | null
+          attachment_path?: string | null
+          attachment_size?: number | null
+          company_id: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_reason?: string | null
+          expense_date: string
+          id?: string
+          notes?: string | null
+          reason: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          attachment_mime?: string | null
+          attachment_path?: string | null
+          attachment_size?: number | null
+          company_id?: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_reason?: string | null
+          expense_date?: string
+          id?: string
+          notes?: string | null
+          reason?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_expenses_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financial_audit: {
         Row: {
           actor_id: string | null
@@ -1378,6 +1443,7 @@ export type Database = {
           avatar_url: string | null
           birth_date: string | null
           company_id_primary: string | null
+          contract_renewal_date: string | null
           contract_type: string | null
           created_at: string
           current_company_id: string | null
@@ -1440,6 +1506,7 @@ export type Database = {
           avatar_url?: string | null
           birth_date?: string | null
           company_id_primary?: string | null
+          contract_renewal_date?: string | null
           contract_type?: string | null
           created_at?: string
           current_company_id?: string | null
@@ -1502,6 +1569,7 @@ export type Database = {
           avatar_url?: string | null
           birth_date?: string | null
           company_id_primary?: string | null
+          contract_renewal_date?: string | null
           contract_type?: string | null
           created_at?: string
           current_company_id?: string | null
@@ -2446,6 +2514,33 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      expense_decide: {
+        Args: { _action: string; _id: string; _reason?: string }
+        Returns: {
+          amount: number
+          attachment_mime: string | null
+          attachment_path: string | null
+          attachment_size: number | null
+          company_id: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_reason: string | null
+          expense_date: string
+          id: string
+          notes: string | null
+          reason: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "employee_expenses"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       finance_summary: {
         Args: {
           _client_id?: string
@@ -3123,6 +3218,7 @@ export type Database = {
           avatar_url: string | null
           birth_date: string | null
           company_id_primary: string | null
+          contract_renewal_date: string | null
           contract_type: string | null
           created_at: string
           current_company_id: string | null
@@ -3303,6 +3399,9 @@ export type Database = {
         | "vacation_declined"
         | "vacation_created_by_manager"
         | "vacation_change_requested"
+        | "expense_created"
+        | "expense_approved"
+        | "expense_rejected"
       notification_priority: "baixa" | "media" | "alta" | "urgente"
       payslip_status: "unassigned" | "assigned" | "sent" | "failed" | "archived"
       punch_mode: "automatico" | "manual" | "ambos"
@@ -3537,6 +3636,9 @@ export const Constants = {
         "vacation_declined",
         "vacation_created_by_manager",
         "vacation_change_requested",
+        "expense_created",
+        "expense_approved",
+        "expense_rejected",
       ],
       notification_priority: ["baixa", "media", "alta", "urgente"],
       payslip_status: ["unassigned", "assigned", "sent", "failed", "archived"],
