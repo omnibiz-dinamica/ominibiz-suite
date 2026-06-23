@@ -181,6 +181,15 @@ function TasksPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const archiveMut = useMutation({
+    mutationFn: ({ id, archive }: { id: string; archive: boolean }) => archiveTask(id, archive),
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      toast.success(vars.archive ? "Tarefa arquivada" : "Tarefa desarquivada");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   // Status que podem ser excluídos (tarefas que ainda não foram iniciadas).
   // A presença de histórico operacional (folha de ponto, documentos)
   // é validada no servidor e devolve a mensagem padrão.
