@@ -1,44 +1,57 @@
-## Auditoria — Módulo Férias (estado real)
+## Objetivo
 
-| # | Requisito | Estado |
-|---|---|---|
-| 1 | Funcionário cria férias | IMPLEMENTADO |
-| 2 | Gestor recebe notificação ao ser criada | PARCIAL — existe função `vacation_notify_insert` no banco, mas não há trigger ativo em `vacation_requests` (sem registo em `information_schema.triggers`). Nada é gravado em `notifications` no fluxo frontend. |
-| 3 | Status pendente inicial | IMPLEMENTADO |
-| 4 | Gestor aprova/rejeita | IMPLEMENTADO via RPC `vacation_decide` |
-| 5 | Funcionário recebe notificação da decisão | NÃO IMPLEMENTADO — sem trigger/insert em `notifications` e sem chamada a `sendTransactionalEmail` no fluxo |
-| 6 | Gestor cria férias para funcionário | NÃO IMPLEMENTADO — o formulário insere sempre com `user_id = auth.uid()`; não há seletor de colaborador |
-| 7 | Funcionário recebe solicitação para aceitar/alterar | PARCIAL — a UI tem secção "Aguardando sua confirmação" e botões Confirmar/Recusar, mas o RPC `vacation_confirm` **não existe no banco** (rotinas presentes: `vacation_decide`, `vacation_notify_insert`, `vacation_fill_context`, `resolve_vacation_approver`). Clicar quebra em runtime. |
-| 8 | Gestor vê "Pendente de Confirmação" | PARCIAL — UI renderiza o status, mas como o fluxo de criação pelo gestor (#6) não existe, esse estado nunca é gerado |
-| 9 | Funcionário pode Confirmar / Solicitar alteração | PARCIAL — UI tem "Confirmar" e "Recusar" (não "Solicitar alteração"); ambos chamam RPC inexistente |
-| 10 | Tela mostra Local de trabalho | IMPLEMENTADO (form + lista de pendentes) |
-| 11 | Tela mostra Função (cargo) | NÃO IMPLEMENTADO |
-| 12 | Tela mostra Colaborador | IMPLEMENTADO (apenas vista de gestor) |
-| 13 | Filtro Colaborador | IMPLEMENTADO |
-| 14 | Filtro Mês | IMPLEMENTADO |
-| 15 | Filtro Ano | NÃO IMPLEMENTADO (apenas mês YYYY-MM) |
-| 16 | Filtro Status | NÃO IMPLEMENTADO (listas separadas por status, sem seletor) |
-| 17 | Dias úteis calculados automaticamente | IMPLEMENTADO (toggle "apenas dias úteis", `businessDaysBetween`) |
-| 18 | Exportação Excel | NÃO IMPLEMENTADO |
-| 19 | Exportação PDF | NÃO IMPLEMENTADO |
-| 20 | Emails integrados | NÃO IMPLEMENTADO — templates `vacation-request/approved/rejected` existem em `src/lib/email-templates/` e estão no registry, mas nenhum ponto do fluxo chama `sendTransactionalEmail` para férias |
-| 21 | Notificações integradas | NÃO IMPLEMENTADO — função `vacation_notify_insert` definida mas sem trigger; nenhum insert manual em `notifications` |
+Entregar um documento executivo, em PT-PT, para apresentar à direção da empresa o que o sistema faz, como faz e em que estado está. Formato final: **PDF** (~10–15 páginas), gerado a partir de um DOCX, com capa, índice e identidade visual do produto.
 
-### Arquivos relevantes inspecionados
-- `src/routes/app.ferias.tsx` (650 linhas) — UI completa do módulo
-- `src/lib/email/send.ts` — declara triggers `vacation_request|approved|rejected` mas sem call site
-- `src/lib/email-templates/vacation-{request,approved,rejected}.tsx` — templates prontos, não acionados
-- `src/lib/email-templates/registry.ts` — templates registados
+## Estrutura do documento
 
-### Migrations existentes (vacation)
-- `20260520092549`, `20260520112516`, `20260520113619`, `20260524105813`, `20260524140014`, `20260524141056`, `20260615181116`, `20260615181153`
+1. **Capa** — nome do produto, subtítulo "Visão executiva da plataforma", data, versão e destinatário (Direção).
+2. **Sumário executivo** (1 pág.) — o que é o sistema, problemas que resolve, ganhos operacionais esperados.
+3. **Arquitetura em alto nível** (1 pág.) — diagrama simples: utilizadores → aplicação web → backend (base de dados, autenticação, ficheiros, envio de email, jobs agendados). Sem jargão técnico.
+4. **Perfis de utilizador e segurança de acesso** (1 pág.) — Owner, Manager, Employee, Super Admin: o que cada um pode ver e fazer. Princípio: cada pessoa só acede ao que lhe pertence.
+5. **Módulos funcionais** (1 página por módulo, com: para que serve, fluxo principal, quem usa, status):
+   - Equipa / Colaboradores (cadastro, contabilidade, contratos, renovações)
+   - Férias (pedido, aprovação, criação pelo gestor, alteração, notificações, emails)
+   - Tarefas (criação, edição, cancelamento, arquivamento, recorrência)
+   - Recibos (upload, publicação, consulta pelo colaborador, envio por email com histórico)
+   - Despesas (submissão com anexo, aprovação/rejeição, histórico)
+   - Documentos do colaborador (upload, alertas de vencimento)
+   - Contratos comerciais (templates, workflow, auditoria)
+   - Viaturas e cartões de combustível (atribuição, registos)
+   - Tempo / Time entries (registo e valoração)
+   - Clientes e responsáveis
+   - Convites e onboarding
+   - Notificações e comunicação por email (templates, fila de envio, logs)
+   - Dashboard RH (consolidação: vencimentos, renovações, ações pendentes)
+6. **Como o sistema comunica** (1 pág.) — notificações in-app, emails transacionais via domínio próprio, jobs diários (ex.: alertas de documentos a expirar).
+7. **Segurança, privacidade e auditoria** (1 pág., linguagem de negócio) — autenticação, controlo de acesso por empresa, registo de auditoria em ações sensíveis, separação de papéis para evitar elevação de privilégios.
+8. **Estado atual / prontidão para produção** (1 pág.) — quadro com status por módulo: Implementado, Parcial, Pós-lançamento. Inclui resultado da auditoria final aprovada.
+9. **Itens diferidos para pós-lançamento** (½ pág.) — expiração automática de convites, ajustes de fuso horário em defaults, melhorias planeadas.
+10. **Roadmap curto prazo** (½ pág.) — reembolsos automáticos de despesas, integração contabilística, centros de custo, relatórios financeiros avançados.
+11. **Glossário** (½ pág.) — termos-chave em linguagem de negócio.
 
-Funções no banco: `vacation_decide`, `vacation_notify_insert`, `vacation_fill_context`, `resolve_vacation_approver`. **Sem** `vacation_confirm`. **Sem** triggers ativos em `vacation_requests`.
+## Identidade visual
 
-### Testes realizados
-- Inspeção estática do código (`app.ferias.tsx`, `email/send.ts`, registry).
-- Consulta a `information_schema.routines` e `information_schema.triggers` no banco para confirmar funções/triggers ativos.
-- Nenhum teste E2E executado (não solicitado e fora do escopo de uma auditoria de estado).
+- Cores e tipografia lidas dos tokens atuais do projeto (a confirmar nos ficheiros de tema antes de gerar). Cor primária do produto na capa, títulos e barras de status; cinzas neutros para o corpo.
+- Tipografia: Arial para máxima portabilidade no DOCX/PDF; tamanhos: título 32pt, H1 24pt, H2 18pt, corpo 11pt.
+- Capa com bloco de cor primária, nome do produto e marca de água discreta.
+- Cabeçalho e rodapé em todas as páginas (nome do produto à esquerda, paginação à direita).
+- Tabelas com cabeçalho preenchido na cor primária e linhas alternadas em cinza muito claro.
+- Sem ícones decorativos pesados; chips de status (Implementado / Parcial / Pós-lançamento) em verde / âmbar / cinza.
 
-### Resumo executivo
-Bloqueadores críticos: (a) `vacation_confirm` invocado pela UI não existe no banco — botão "Confirmar/Recusar" falha; (b) sem trigger ligando `vacation_notify_insert` a inserts/updates — nenhuma notificação chega; (c) emails de férias nunca disparados apesar dos templates existirem; (d) fluxo "Gestor cria férias para funcionário" inexistente; (e) sem exportação Excel/PDF; (f) faltam filtros Ano e Status e coluna Função.
+## Detalhes técnicos da geração
+
+- Gerar `relatorio-executivo.docx` com `docx-js` (skill DOCX), seguindo:
+  - Página A4, margens 2,5 cm.
+  - Estilos `Heading1`/`Heading2` sobrescritos com `outlineLevel` para gerar TOC.
+  - Tabelas em DXA com `columnWidths` somando à largura útil; padding interno nas células.
+  - Listas via `numbering.config` (sem bullets unicode).
+  - Sem quebras manuais com `\n`; usar `Paragraph` por linha.
+- Converter para PDF com LibreOffice headless e renderizar cada página em JPG (150 dpi) para QA visual: verificar transbordos, contraste, tabelas alinhadas, ausência de placeholders.
+- Entregar ambos os ficheiros em `/mnt/documents/`:
+  - `relatorio-executivo.pdf` (entrega principal)
+  - `relatorio-executivo.docx` (fonte editável, caso a direção peça ajustes)
+- Apresentar via `<presentation-artifact>` o PDF.
+
+## Confirmações antes de implementar
+
+Nenhuma — todas as decisões necessárias já foram respondidas (formato PDF a partir de DOCX, profundidade executiva, PT-PT com identidade do sistema, escopo completo incluindo auditoria e roadmap). Avanço diretamente para a geração assim que o plano for aprovado.
