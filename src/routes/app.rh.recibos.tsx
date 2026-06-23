@@ -518,3 +518,75 @@ function AssignDrawer({
     </Drawer>
   );
 }
+
+function HistoryDrawer({ payslip, onClose }: { payslip: Payslip | null; onClose: () => void }) {
+  const { data: events = [] } = useQuery({
+    queryKey: ["payslip-events", payslip?.id],
+    enabled: !!payslip,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("payslip_email_events")
+        .select("id, event, detail, created_at")
+        .eq("payslip_id", payslip!.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as Array<{
+        id: string;
+        event: string;
+        detail: Record<string, any> | null;
+        created_at: string;
+      }>;
+    },
+  });
+
+  return (
+    <Drawer open={!!payslip} onOpenChange={(o) => !o && onClose()}>
+      <DrawerContent>
+        <DrawerHeader>
+          <DrawerTitle>Histórico de envios</DrawerTitle>
+        </DrawerHeader>
+        <div className="mx-auto w-full max-w-2xl space-y-3 px-4 pb-6">
+          {payslip && (
+            <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm">
+              <div className="font-medium">{payslip.original_filename}</div>
+              <div className="text-xs text-muted-foreground">
+                {payslip.email_to ?? "Sem email"} · Último status: {payslip.email_delivery_status ?? "—"}
+              </div>
+            </div>
+          )}
+          {events.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
+              Nenhum envio registado ainda.
+            </div>
+          ) : (
+            <ul className="divide-y divide-border rounded-lg border border-border">
+              {events.map((ev) => {
+                const tone =
+                  ev.event === "sent"
+                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                    : ev.event === "failed"
+                    ? "bg-destructive/15 text-destructive"
+                    : "bg-muted text-muted-foreground";
+                return (
+                  <li key={ev.id} className="flex flex-col gap-1 px-4 py-3 text-sm">
+                    <div className="flex items-center justify-between">
+                      <Badge variant="secondary" className={tone}>{ev.event}</Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(ev.created_at).toLocaleString("pt-PT")}
+                      </span>
+                    </div>
+                    {ev.detail && Object.keys(ev.detail).length > 0 && (
+                      <pre className="overflow-x-auto rounded bg-muted/40 p-2 text-[11px] text-muted-foreground">
+                        {JSON.stringify(ev.detail, null, 2)}
+                      </pre>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </DrawerContent>
+    </Drawer>
+  );
+}
