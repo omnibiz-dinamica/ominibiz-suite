@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { toast } from "sonner";
-import { Plus, Play, Check, X, ShieldCheck, UserX, Clock, Pencil, Repeat, UserCog, Users, Trash2 } from "lucide-react";
+import { Plus, Play, Check, X, ShieldCheck, UserX, Clock, Pencil, Repeat, UserCog, Users, Trash2, Archive, ArchiveRestore } from "lucide-react";
 import {
   STATUS_LABELS,
   STATUS_TONE,
@@ -34,6 +34,8 @@ import {
   isVisuallyLate,
   sweepAbsent,
   transitionTask,
+  archiveTask,
+  canArchive,
 } from "@/lib/tasks";
 import { RecurrenceForm, emptyRecurrence, type RecurrenceFormValue } from "@/components/tasks/RecurrenceForm";
 import { TaskDocuments } from "@/components/tasks/TaskDocuments";
@@ -61,6 +63,7 @@ function TasksPage() {
   const [editingSeries, setEditingSeries] = useState<TaskRow | null>(null);
   const [seriesRow, setSeriesRow] = useState<RecurrenceRow | null>(null);
   const [deleting, setDeleting] = useState<TaskRow | null>(null);
+  const [view, setView] = useState<"active" | "archived">("active");
 
   useEffect(() => {
     if (!editingSeries?.recurrence_id) {
@@ -80,7 +83,7 @@ function TasksPage() {
   }, [editingSeries?.recurrence_id]);
 
   const { data: tasks, isLoading } = useQuery({
-    queryKey: ["tasks", currentCompanyId, user?.id, isManager],
+    queryKey: ["tasks", currentCompanyId, user?.id, isManager, view],
     queryFn: async () => {
       let q = supabase
         .from("tasks")
@@ -89,6 +92,8 @@ function TasksPage() {
         .order("created_at", { ascending: false });
       if (!isManager) q = q.eq("assigned_to", user!.id);
       else if (currentCompanyId) q = q.eq("company_id", currentCompanyId);
+      if (view === "archived") q = q.not("archived_at", "is", null);
+      else q = q.is("archived_at", null);
       const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as unknown as TaskRow[];
