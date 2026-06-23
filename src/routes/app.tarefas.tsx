@@ -222,6 +222,22 @@ function TasksPage() {
         </div>
         {isManager && currentCompanyId && (
           <div className="flex flex-wrap gap-2">
+            <div className="inline-flex overflow-hidden rounded-md border border-border">
+              <button
+                type="button"
+                onClick={() => setView("active")}
+                className={`px-3 py-1.5 text-xs font-medium ${view === "active" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"}`}
+              >
+                Ativas
+              </button>
+              <button
+                type="button"
+                onClick={() => setView("archived")}
+                className={`px-3 py-1.5 text-xs font-medium ${view === "archived" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"}`}
+              >
+                Arquivadas
+              </button>
+            </div>
             <Button asChild variant="outline">
               <Link to="/app/tarefas/recorrentes"><Repeat className="mr-2 h-4 w-4" /> Recorrências</Link>
             </Button>
@@ -317,7 +333,7 @@ function TasksPage() {
       )}
       {!isLoading && (tasks ?? []).length === 0 && (
         <div className="rounded-2xl border border-border bg-card px-5 py-12 text-center text-sm text-muted-foreground">
-          Nenhuma tarefa ainda.
+          {view === "archived" ? "Nenhuma tarefa arquivada." : "Nenhuma tarefa ainda."}
         </div>
       )}
 
@@ -332,7 +348,9 @@ function TasksPage() {
           onReassign={setReassigning}
           onDelete={handleDeleteRequest}
           onTransition={(id, action) => transition.mutate({ id, action })}
+          onArchive={(id, archive) => archiveMut.mutate({ id, archive })}
           transitionPending={transition.isPending}
+          archivePending={archiveMut.isPending}
         />
       )}
 
@@ -350,7 +368,9 @@ function TasksPage() {
                 onReassign={setReassigning}
                 onDelete={handleDeleteRequest}
                 onTransition={(id, action) => transition.mutate({ id, action })}
+                onArchive={(id, archive) => archiveMut.mutate({ id, archive })}
                 transitionPending={transition.isPending}
+                archivePending={archiveMut.isPending}
               />
             ))}
           </ul>
