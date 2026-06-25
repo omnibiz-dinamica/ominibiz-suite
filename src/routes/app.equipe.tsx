@@ -457,10 +457,10 @@ function InvitesSection({
           <thead>
             <tr className="border-b border-border text-left text-xs uppercase text-muted-foreground">
               <th className="py-2 pr-3">Email</th>
-              <th className="py-2 pr-3">Cargo</th>
+              <th className="py-2 pr-3 hidden sm:table-cell">Cargo</th>
               <th className="py-2 pr-3">Status</th>
-              <th className="py-2 pr-3">Criado</th>
-              <th className="py-2 pr-3">Último envio</th>
+              <th className="py-2 pr-3 hidden md:table-cell">Criado</th>
+              <th className="py-2 pr-3 hidden md:table-cell">Último envio</th>
               <th className="py-2 pr-3 text-right">Ações</th>
             </tr>
           </thead>
@@ -475,11 +475,11 @@ function InvitesSection({
                 Date.now() - new Date(i.last_sent_at).getTime() < 24 * 60 * 60 * 1000;
               return (
                 <tr key={i.id} className="border-b border-border/60">
-                  <td className="py-2 pr-3 font-medium">{i.email}</td>
-                  <td className="py-2 pr-3 text-muted-foreground">{i.role === "manager" ? "Gestor" : i.role === "employee" ? "Funcionário" : i.role}</td>
+                  <td className="py-2 pr-3 font-medium break-all">{i.email}</td>
+                  <td className="py-2 pr-3 text-muted-foreground hidden sm:table-cell">{i.role === "manager" ? "Gestor" : i.role === "employee" ? "Funcionário" : i.role}</td>
                   <td className="py-2 pr-3"><StatusBadge status={s} /></td>
-                  <td className="py-2 pr-3 text-xs text-muted-foreground">{fmtDate(i.created_at)}</td>
-                  <td className="py-2 pr-3 text-xs text-muted-foreground">
+                  <td className="py-2 pr-3 text-xs text-muted-foreground hidden md:table-cell">{fmtDate(i.created_at)}</td>
+                  <td className="py-2 pr-3 text-xs text-muted-foreground hidden md:table-cell">
                     {fmtDate(i.last_sent_at)} <span className="ml-1 opacity-70">({sendCount}x)</span>
                   </td>
                   <td className="py-2 pr-3">
