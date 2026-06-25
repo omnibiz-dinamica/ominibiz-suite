@@ -246,7 +246,7 @@ function TabDadosGerais({
           </Select>
         </Field>
       </div>
-      <Field label="Morada Bélgica">
+      <Field label="Morada">
         <Textarea rows={2} value={addressBe} onChange={(e) => setAddressBe(e.target.value)} />
       </Field>
       <Field label="Papel no sistema">
