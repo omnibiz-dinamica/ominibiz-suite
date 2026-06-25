@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public._run_calc_tests() TO PUBLIC;

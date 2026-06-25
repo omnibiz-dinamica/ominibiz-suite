@@ -2400,6 +2400,18 @@ export type Database = {
         }
         Returns: undefined
       }
+      _run_calc_tests: {
+        Args: never
+        Returns: {
+          diff: number
+          expected: number
+          formula: string
+          got: number
+          rate_source: string
+          scenario: string
+          status: string
+        }[]
+      }
       accept_invite: { Args: { _token: string }; Returns: string }
       admin_create_company_with_invite: {
         Args: {
