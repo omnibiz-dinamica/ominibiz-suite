@@ -509,14 +509,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
         </header>
         <main className="flex-1 px-4 py-6 md:px-8 md:py-10">{children ?? <Outlet />}</main>
         <footer className="border-t border-border bg-muted/30 px-4 py-2 text-[10px] text-muted-foreground md:px-8">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span>OmniBiz · Diagnóstico de deployment</span>
-            <span className="font-mono">
-              build {import.meta.env.VITE_BUILD_TIME ?? "dev"} · commit{" "}
-              {(import.meta.env.VITE_COMMIT_SHA ?? "dev").toString().slice(0, 7)} · host{" "}
-              {typeof window !== "undefined" ? window.location.host : "ssr"}
-            </span>
-          </div>
+          <DeploymentDiagnostics />
         </footer>
       </div>
     </div>
