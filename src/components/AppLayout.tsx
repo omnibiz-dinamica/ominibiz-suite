@@ -34,6 +34,62 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
+function detectBrowser(): { name: string; version: string } {
+  if (typeof navigator === "undefined") return { name: "ssr", version: "" };
+  const ua = navigator.userAgent;
+  // Order matters: Edge/Opera/Brave impersonate Chrome UA
+  const tests: Array<[string, RegExp]> = [
+    ["Edge", /Edg\/([\d.]+)/],
+    ["Opera", /OPR\/([\d.]+)/],
+    ["Firefox", /Firefox\/([\d.]+)/],
+    ["Chrome", /Chrome\/([\d.]+)/],
+    ["Safari", /Version\/([\d.]+).*Safari/],
+  ];
+  for (const [name, re] of tests) {
+    const m = ua.match(re);
+    if (m) return { name, version: m[1] };
+  }
+  return { name: "unknown", version: "" };
+}
+
+function DeploymentDiagnostics() {
+  const build = (import.meta.env.VITE_BUILD_TIME ?? "dev") as string;
+  const commit = ((import.meta.env.VITE_COMMIT_SHA ?? "dev") as string).slice(0, 7);
+  const host = typeof window !== "undefined" ? window.location.host : "ssr";
+  const env = /(^|\.)id-preview--/.test(host) || /(^|\.)preview--/.test(host)
+    ? "preview"
+    : host.includes("localhost")
+      ? "local"
+      : "prod";
+  const isStandalone =
+    typeof window !== "undefined" &&
+    (window.matchMedia?.("(display-mode: standalone)").matches ||
+      // @ts-expect-error iOS Safari
+      window.navigator?.standalone === true);
+  const swSupported = typeof navigator !== "undefined" && "serviceWorker" in navigator;
+  const [swCount, setSwCount] = useState<number | null>(null);
+  const { name: browser, version: browserVersion } = detectBrowser();
+
+  useEffect(() => {
+    if (!swSupported) return;
+    navigator.serviceWorker
+      .getRegistrations()
+      .then((regs) => setSwCount(regs.length))
+      .catch(() => setSwCount(-1));
+  }, [swSupported]);
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 font-mono">
+      <span className="font-sans">OmniBiz · Diagnóstico</span>
+      <span>
+        v1 · build {build} · commit {commit} · env {env} · host {host} · {browser}{" "}
+        {browserVersion} · pwa {isStandalone ? "on" : "off"} · sw{" "}
+        {swCount === null ? "?" : swCount === -1 ? "err" : swCount}
+      </span>
+    </div>
+  );
+}
+
 type Item = {
   to: string;
   label: string;
