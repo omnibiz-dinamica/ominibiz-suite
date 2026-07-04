@@ -107,6 +107,10 @@ export type Database = {
           created_by: string | null
           email: string | null
           fixed_rate: number | null
+          geo_address: string | null
+          geo_lat: number | null
+          geo_lng: number | null
+          geo_radius_m: number | null
           hourly_rate: number | null
           id: string
           mixed_base_fixed: number | null
@@ -126,6 +130,10 @@ export type Database = {
           created_by?: string | null
           email?: string | null
           fixed_rate?: number | null
+          geo_address?: string | null
+          geo_lat?: number | null
+          geo_lng?: number | null
+          geo_radius_m?: number | null
           hourly_rate?: number | null
           id?: string
           mixed_base_fixed?: number | null
@@ -145,6 +153,10 @@ export type Database = {
           created_by?: string | null
           email?: string | null
           fixed_rate?: number | null
+          geo_address?: string | null
+          geo_lat?: number | null
+          geo_lng?: number | null
+          geo_radius_m?: number | null
           hourly_rate?: number | null
           id?: string
           mixed_base_fixed?: number | null
@@ -336,6 +348,16 @@ export type Database = {
           default_punch_mode: Database["public"]["Enums"]["punch_mode"]
           employee_approver_kind: Database["public"]["Enums"]["employee_approver_kind"]
           employee_approver_user_id: string | null
+          geo_default_radius_m: number
+          geo_no_location_policy_start: Database["public"]["Enums"]["geo_policy"]
+          geo_no_location_policy_stop: Database["public"]["Enums"]["geo_policy"]
+          geo_out_of_range_policy_start: Database["public"]["Enums"]["geo_policy"]
+          geo_out_of_range_policy_stop: Database["public"]["Enums"]["geo_policy"]
+          geo_photo_start_enabled: boolean
+          geo_photo_stop_enabled: boolean
+          geo_policy_version: number
+          geo_required_start: boolean
+          geo_required_stop: boolean
           manager_approver_kind: Database["public"]["Enums"]["manager_approver_kind"]
           manager_approver_user_id: string | null
           overtime_multiplier: number
@@ -353,6 +375,16 @@ export type Database = {
           default_punch_mode?: Database["public"]["Enums"]["punch_mode"]
           employee_approver_kind?: Database["public"]["Enums"]["employee_approver_kind"]
           employee_approver_user_id?: string | null
+          geo_default_radius_m?: number
+          geo_no_location_policy_start?: Database["public"]["Enums"]["geo_policy"]
+          geo_no_location_policy_stop?: Database["public"]["Enums"]["geo_policy"]
+          geo_out_of_range_policy_start?: Database["public"]["Enums"]["geo_policy"]
+          geo_out_of_range_policy_stop?: Database["public"]["Enums"]["geo_policy"]
+          geo_photo_start_enabled?: boolean
+          geo_photo_stop_enabled?: boolean
+          geo_policy_version?: number
+          geo_required_start?: boolean
+          geo_required_stop?: boolean
           manager_approver_kind?: Database["public"]["Enums"]["manager_approver_kind"]
           manager_approver_user_id?: string | null
           overtime_multiplier?: number
@@ -370,6 +402,16 @@ export type Database = {
           default_punch_mode?: Database["public"]["Enums"]["punch_mode"]
           employee_approver_kind?: Database["public"]["Enums"]["employee_approver_kind"]
           employee_approver_user_id?: string | null
+          geo_default_radius_m?: number
+          geo_no_location_policy_start?: Database["public"]["Enums"]["geo_policy"]
+          geo_no_location_policy_stop?: Database["public"]["Enums"]["geo_policy"]
+          geo_out_of_range_policy_start?: Database["public"]["Enums"]["geo_policy"]
+          geo_out_of_range_policy_stop?: Database["public"]["Enums"]["geo_policy"]
+          geo_photo_start_enabled?: boolean
+          geo_photo_stop_enabled?: boolean
+          geo_policy_version?: number
+          geo_required_start?: boolean
+          geo_required_stop?: boolean
           manager_approver_kind?: Database["public"]["Enums"]["manager_approver_kind"]
           manager_approver_user_id?: string | null
           overtime_multiplier?: number
@@ -1944,7 +1986,13 @@ export type Database = {
           created_at: string
           created_by: string | null
           effective_minutes: number | null
+          end_geo_reason_code:
+            | Database["public"]["Enums"]["geo_reason_code"]
+            | null
+          end_geo_reason_text: string | null
+          end_geo_status: Database["public"]["Enums"]["geo_status"] | null
           ended_at: string | null
+          geo_policy_version: number | null
           id: string
           last_edit_reason: string | null
           last_edited_at: string | null
@@ -1953,6 +2001,11 @@ export type Database = {
           origin: string
           paused_at: string | null
           resumed_at: string | null
+          start_geo_reason_code:
+            | Database["public"]["Enums"]["geo_reason_code"]
+            | null
+          start_geo_reason_text: string | null
+          start_geo_status: Database["public"]["Enums"]["geo_status"] | null
           started_at: string
           task_id: string
           updated_at: string
@@ -1963,7 +2016,13 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           effective_minutes?: number | null
+          end_geo_reason_code?:
+            | Database["public"]["Enums"]["geo_reason_code"]
+            | null
+          end_geo_reason_text?: string | null
+          end_geo_status?: Database["public"]["Enums"]["geo_status"] | null
           ended_at?: string | null
+          geo_policy_version?: number | null
           id?: string
           last_edit_reason?: string | null
           last_edited_at?: string | null
@@ -1972,6 +2031,11 @@ export type Database = {
           origin?: string
           paused_at?: string | null
           resumed_at?: string | null
+          start_geo_reason_code?:
+            | Database["public"]["Enums"]["geo_reason_code"]
+            | null
+          start_geo_reason_text?: string | null
+          start_geo_status?: Database["public"]["Enums"]["geo_status"] | null
           started_at?: string
           task_id: string
           updated_at?: string
@@ -1982,7 +2046,13 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           effective_minutes?: number | null
+          end_geo_reason_code?:
+            | Database["public"]["Enums"]["geo_reason_code"]
+            | null
+          end_geo_reason_text?: string | null
+          end_geo_status?: Database["public"]["Enums"]["geo_status"] | null
           ended_at?: string | null
+          geo_policy_version?: number | null
           id?: string
           last_edit_reason?: string | null
           last_edited_at?: string | null
@@ -1991,6 +2061,11 @@ export type Database = {
           origin?: string
           paused_at?: string | null
           resumed_at?: string | null
+          start_geo_reason_code?:
+            | Database["public"]["Enums"]["geo_reason_code"]
+            | null
+          start_geo_reason_text?: string | null
+          start_geo_status?: Database["public"]["Enums"]["geo_status"] | null
           started_at?: string
           task_id?: string
           updated_at?: string
@@ -2071,6 +2146,158 @@ export type Database = {
             columns: ["time_entry_id"]
             isOneToOne: false
             referencedRelation: "time_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      time_entry_geopoints: {
+        Row: {
+          accuracy_m: number | null
+          captured_at: string
+          client_lat: number | null
+          client_lng: number | null
+          client_radius_m: number | null
+          company_id: string
+          created_at: string
+          device_fingerprint: Json | null
+          distance_m: number | null
+          event_kind: Database["public"]["Enums"]["punch_event_kind"]
+          geo_policy_version: number
+          geo_status: Database["public"]["Enums"]["geo_status"]
+          id: string
+          lat: number | null
+          lng: number | null
+          location_source: Database["public"]["Enums"]["location_source"]
+          mock_location_suspected: boolean
+          reason_code: Database["public"]["Enums"]["geo_reason_code"]
+          reason_text: string | null
+          server_at: string
+          time_entry_id: string
+          user_id: string
+        }
+        Insert: {
+          accuracy_m?: number | null
+          captured_at: string
+          client_lat?: number | null
+          client_lng?: number | null
+          client_radius_m?: number | null
+          company_id: string
+          created_at?: string
+          device_fingerprint?: Json | null
+          distance_m?: number | null
+          event_kind: Database["public"]["Enums"]["punch_event_kind"]
+          geo_policy_version?: number
+          geo_status: Database["public"]["Enums"]["geo_status"]
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          location_source?: Database["public"]["Enums"]["location_source"]
+          mock_location_suspected?: boolean
+          reason_code: Database["public"]["Enums"]["geo_reason_code"]
+          reason_text?: string | null
+          server_at?: string
+          time_entry_id: string
+          user_id: string
+        }
+        Update: {
+          accuracy_m?: number | null
+          captured_at?: string
+          client_lat?: number | null
+          client_lng?: number | null
+          client_radius_m?: number | null
+          company_id?: string
+          created_at?: string
+          device_fingerprint?: Json | null
+          distance_m?: number | null
+          event_kind?: Database["public"]["Enums"]["punch_event_kind"]
+          geo_policy_version?: number
+          geo_status?: Database["public"]["Enums"]["geo_status"]
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          location_source?: Database["public"]["Enums"]["location_source"]
+          mock_location_suspected?: boolean
+          reason_code?: Database["public"]["Enums"]["geo_reason_code"]
+          reason_text?: string | null
+          server_at?: string
+          time_entry_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_entry_geopoints_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entry_geopoints_time_entry_id_fkey"
+            columns: ["time_entry_id"]
+            isOneToOne: false
+            referencedRelation: "time_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entry_geopoints_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      time_entry_photos: {
+        Row: {
+          captured_at: string
+          company_id: string
+          created_at: string
+          event_kind: Database["public"]["Enums"]["punch_event_kind"]
+          id: string
+          storage_path: string
+          time_entry_id: string
+          user_id: string
+        }
+        Insert: {
+          captured_at: string
+          company_id: string
+          created_at?: string
+          event_kind: Database["public"]["Enums"]["punch_event_kind"]
+          id?: string
+          storage_path: string
+          time_entry_id: string
+          user_id: string
+        }
+        Update: {
+          captured_at?: string
+          company_id?: string
+          created_at?: string
+          event_kind?: Database["public"]["Enums"]["punch_event_kind"]
+          id?: string
+          storage_path?: string
+          time_entry_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_entry_photos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entry_photos_time_entry_id_fkey"
+            columns: ["time_entry_id"]
+            isOneToOne: false
+            referencedRelation: "time_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entry_photos_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2597,6 +2824,16 @@ export type Database = {
           default_punch_mode: Database["public"]["Enums"]["punch_mode"]
           employee_approver_kind: Database["public"]["Enums"]["employee_approver_kind"]
           employee_approver_user_id: string | null
+          geo_default_radius_m: number
+          geo_no_location_policy_start: Database["public"]["Enums"]["geo_policy"]
+          geo_no_location_policy_stop: Database["public"]["Enums"]["geo_policy"]
+          geo_out_of_range_policy_start: Database["public"]["Enums"]["geo_policy"]
+          geo_out_of_range_policy_stop: Database["public"]["Enums"]["geo_policy"]
+          geo_photo_start_enabled: boolean
+          geo_photo_stop_enabled: boolean
+          geo_policy_version: number
+          geo_required_start: boolean
+          geo_required_stop: boolean
           manager_approver_kind: Database["public"]["Enums"]["manager_approver_kind"]
           manager_approver_user_id: string | null
           overtime_multiplier: number
@@ -2630,6 +2867,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      haversine_m: {
+        Args: { lat1: number; lat2: number; lng1: number; lng2: number }
+        Returns: number
       }
       invite_email_audit: {
         Args: { _company_id: string; _email: string }
@@ -2721,7 +2962,13 @@ export type Database = {
           created_at: string
           created_by: string | null
           effective_minutes: number | null
+          end_geo_reason_code:
+            | Database["public"]["Enums"]["geo_reason_code"]
+            | null
+          end_geo_reason_text: string | null
+          end_geo_status: Database["public"]["Enums"]["geo_status"] | null
           ended_at: string | null
+          geo_policy_version: number | null
           id: string
           last_edit_reason: string | null
           last_edited_at: string | null
@@ -2730,6 +2977,11 @@ export type Database = {
           origin: string
           paused_at: string | null
           resumed_at: string | null
+          start_geo_reason_code:
+            | Database["public"]["Enums"]["geo_reason_code"]
+            | null
+          start_geo_reason_text: string | null
+          start_geo_status: Database["public"]["Enums"]["geo_status"] | null
           started_at: string
           task_id: string
           updated_at: string
@@ -2749,7 +3001,13 @@ export type Database = {
           created_at: string
           created_by: string | null
           effective_minutes: number | null
+          end_geo_reason_code:
+            | Database["public"]["Enums"]["geo_reason_code"]
+            | null
+          end_geo_reason_text: string | null
+          end_geo_status: Database["public"]["Enums"]["geo_status"] | null
           ended_at: string | null
+          geo_policy_version: number | null
           id: string
           last_edit_reason: string | null
           last_edited_at: string | null
@@ -2758,6 +3016,11 @@ export type Database = {
           origin: string
           paused_at: string | null
           resumed_at: string | null
+          start_geo_reason_code:
+            | Database["public"]["Enums"]["geo_reason_code"]
+            | null
+          start_geo_reason_text: string | null
+          start_geo_status: Database["public"]["Enums"]["geo_status"] | null
           started_at: string
           task_id: string
           updated_at: string
@@ -2796,7 +3059,13 @@ export type Database = {
           created_at: string
           created_by: string | null
           effective_minutes: number | null
+          end_geo_reason_code:
+            | Database["public"]["Enums"]["geo_reason_code"]
+            | null
+          end_geo_reason_text: string | null
+          end_geo_status: Database["public"]["Enums"]["geo_status"] | null
           ended_at: string | null
+          geo_policy_version: number | null
           id: string
           last_edit_reason: string | null
           last_edited_at: string | null
@@ -2805,6 +3074,11 @@ export type Database = {
           origin: string
           paused_at: string | null
           resumed_at: string | null
+          start_geo_reason_code:
+            | Database["public"]["Enums"]["geo_reason_code"]
+            | null
+          start_geo_reason_text: string | null
+          start_geo_status: Database["public"]["Enums"]["geo_status"] | null
           started_at: string
           task_id: string
           updated_at: string
@@ -2824,7 +3098,13 @@ export type Database = {
           created_at: string
           created_by: string | null
           effective_minutes: number | null
+          end_geo_reason_code:
+            | Database["public"]["Enums"]["geo_reason_code"]
+            | null
+          end_geo_reason_text: string | null
+          end_geo_status: Database["public"]["Enums"]["geo_status"] | null
           ended_at: string | null
+          geo_policy_version: number | null
           id: string
           last_edit_reason: string | null
           last_edited_at: string | null
@@ -2833,6 +3113,11 @@ export type Database = {
           origin: string
           paused_at: string | null
           resumed_at: string | null
+          start_geo_reason_code:
+            | Database["public"]["Enums"]["geo_reason_code"]
+            | null
+          start_geo_reason_text: string | null
+          start_geo_status: Database["public"]["Enums"]["geo_status"] | null
           started_at: string
           task_id: string
           updated_at: string
@@ -2852,7 +3137,13 @@ export type Database = {
           created_at: string
           created_by: string | null
           effective_minutes: number | null
+          end_geo_reason_code:
+            | Database["public"]["Enums"]["geo_reason_code"]
+            | null
+          end_geo_reason_text: string | null
+          end_geo_status: Database["public"]["Enums"]["geo_status"] | null
           ended_at: string | null
+          geo_policy_version: number | null
           id: string
           last_edit_reason: string | null
           last_edited_at: string | null
@@ -2861,6 +3152,11 @@ export type Database = {
           origin: string
           paused_at: string | null
           resumed_at: string | null
+          start_geo_reason_code:
+            | Database["public"]["Enums"]["geo_reason_code"]
+            | null
+          start_geo_reason_text: string | null
+          start_geo_status: Database["public"]["Enums"]["geo_status"] | null
           started_at: string
           task_id: string
           updated_at: string
@@ -2880,7 +3176,13 @@ export type Database = {
           created_at: string
           created_by: string | null
           effective_minutes: number | null
+          end_geo_reason_code:
+            | Database["public"]["Enums"]["geo_reason_code"]
+            | null
+          end_geo_reason_text: string | null
+          end_geo_status: Database["public"]["Enums"]["geo_status"] | null
           ended_at: string | null
+          geo_policy_version: number | null
           id: string
           last_edit_reason: string | null
           last_edited_at: string | null
@@ -2889,6 +3191,11 @@ export type Database = {
           origin: string
           paused_at: string | null
           resumed_at: string | null
+          start_geo_reason_code:
+            | Database["public"]["Enums"]["geo_reason_code"]
+            | null
+          start_geo_reason_text: string | null
+          start_geo_status: Database["public"]["Enums"]["geo_status"] | null
           started_at: string
           task_id: string
           updated_at: string
@@ -3233,6 +3540,10 @@ export type Database = {
           created_by: string | null
           email: string | null
           fixed_rate: number | null
+          geo_address: string | null
+          geo_lat: number | null
+          geo_lng: number | null
+          geo_radius_m: number | null
           hourly_rate: number | null
           id: string
           mixed_base_fixed: number | null
@@ -3264,6 +3575,16 @@ export type Database = {
           default_punch_mode: Database["public"]["Enums"]["punch_mode"]
           employee_approver_kind: Database["public"]["Enums"]["employee_approver_kind"]
           employee_approver_user_id: string | null
+          geo_default_radius_m: number
+          geo_no_location_policy_start: Database["public"]["Enums"]["geo_policy"]
+          geo_no_location_policy_stop: Database["public"]["Enums"]["geo_policy"]
+          geo_out_of_range_policy_start: Database["public"]["Enums"]["geo_policy"]
+          geo_out_of_range_policy_stop: Database["public"]["Enums"]["geo_policy"]
+          geo_photo_start_enabled: boolean
+          geo_photo_stop_enabled: boolean
+          geo_policy_version: number
+          geo_required_start: boolean
+          geo_required_stop: boolean
           manager_approver_kind: Database["public"]["Enums"]["manager_approver_kind"]
           manager_approver_user_id: string | null
           overtime_multiplier: number
@@ -3449,8 +3770,21 @@ export type Database = {
         | "gnv"
         | "eletrico"
         | "hibrido"
+      geo_policy: "alert" | "justify" | "block"
+      geo_reason_code:
+        | "WITHIN_RADIUS"
+        | "OUT_OF_RADIUS"
+        | "NO_GPS"
+        | "GPS_TIMEOUT"
+        | "GPS_DENIED"
+        | "CLIENT_WITHOUT_LOCATION"
+        | "LOW_ACCURACY"
+        | "MANUAL_OVERRIDE"
+        | "ADMIN_OVERRIDE"
+      geo_status: "within" | "out_of_range" | "no_location"
       invite_status: "pending" | "accepted" | "revoked" | "expired"
       invoice_status: "pending" | "paid" | "overdue" | "cancelled"
+      location_source: "gps" | "wifi" | "beacon" | "qr_code" | "nfc" | "manual"
       manager_approver_kind:
         | "owner"
         | "other_manager"
@@ -3481,6 +3815,13 @@ export type Database = {
         | "expense_rejected"
       notification_priority: "baixa" | "media" | "alta" | "urgente"
       payslip_status: "unassigned" | "assigned" | "sent" | "failed" | "archived"
+      punch_event_kind:
+        | "arrival"
+        | "start"
+        | "pause"
+        | "resume"
+        | "stop"
+        | "departure"
       punch_mode: "automatico" | "manual" | "ambos"
       recurrence_frequency: "daily" | "weekly" | "monthly" | "custom"
       recurrence_status: "active" | "paused" | "ended"
@@ -3685,8 +4026,22 @@ export const Constants = {
         "eletrico",
         "hibrido",
       ],
+      geo_policy: ["alert", "justify", "block"],
+      geo_reason_code: [
+        "WITHIN_RADIUS",
+        "OUT_OF_RADIUS",
+        "NO_GPS",
+        "GPS_TIMEOUT",
+        "GPS_DENIED",
+        "CLIENT_WITHOUT_LOCATION",
+        "LOW_ACCURACY",
+        "MANUAL_OVERRIDE",
+        "ADMIN_OVERRIDE",
+      ],
+      geo_status: ["within", "out_of_range", "no_location"],
       invite_status: ["pending", "accepted", "revoked", "expired"],
       invoice_status: ["pending", "paid", "overdue", "cancelled"],
+      location_source: ["gps", "wifi", "beacon", "qr_code", "nfc", "manual"],
       manager_approver_kind: [
         "owner",
         "other_manager",
@@ -3719,6 +4074,14 @@ export const Constants = {
       ],
       notification_priority: ["baixa", "media", "alta", "urgente"],
       payslip_status: ["unassigned", "assigned", "sent", "failed", "archived"],
+      punch_event_kind: [
+        "arrival",
+        "start",
+        "pause",
+        "resume",
+        "stop",
+        "departure",
+      ],
       punch_mode: ["automatico", "manual", "ambos"],
       recurrence_frequency: ["daily", "weekly", "monthly", "custom"],
       recurrence_status: ["active", "paused", "ended"],
