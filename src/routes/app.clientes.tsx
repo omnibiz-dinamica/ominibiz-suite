@@ -470,6 +470,11 @@ function ClientForm({
       className="space-y-4"
       onSubmit={async (e) => {
         e.preventDefault();
+        const geoError = validateClientGeo(geo);
+        if (geoError) {
+          toast.error(geoError);
+          return;
+        }
         setLoading(true);
         try {
           let clientId = initial?.id;
@@ -484,6 +489,10 @@ function ClientForm({
                 address: address.trim() || null,
                 notes: notes.trim() || null,
                 status,
+                geo_lat: geo.lat,
+                geo_lng: geo.lng,
+                geo_address: geo.address?.trim() || null,
+                geo_radius_m: geo.lat != null ? geo.radiusM : null,
               })
               .eq("id", initial.id);
             if (error) throw error;
@@ -500,6 +509,10 @@ function ClientForm({
                 notes: notes.trim() || null,
                 status,
                 created_by: userId,
+                geo_lat: geo.lat,
+                geo_lng: geo.lng,
+                geo_address: geo.address?.trim() || null,
+                geo_radius_m: geo.lat != null ? geo.radiusM : null,
               })
               .select("id")
               .single();
