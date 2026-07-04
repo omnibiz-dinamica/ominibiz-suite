@@ -152,7 +152,6 @@ export function ClientGeoEditor({ value, onChange, defaultRadiusM = 50 }: Props)
           )}
           <MapToolbar
             hasPoint={hasPoint}
-            onCenter={() => value.lat && value.lng /* handled inside */}
             onMyLocation={(pos) =>
               onChange({
                 ...value,
@@ -304,7 +303,6 @@ function MapToolbar({
   onMyLocation,
 }: {
   hasPoint: boolean;
-  onCenter: () => void;
   centerTo: { lat: number; lng: number } | null;
   onMyLocation: (pos: { lat: number; lng: number }) => void;
 }) {
