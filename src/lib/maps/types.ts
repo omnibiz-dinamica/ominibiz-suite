@@ -72,6 +72,8 @@ export interface MapHandle {
   addMarker(opts: MarkerOptions): () => void;
   drawCircle(opts: CircleOptions): () => void;
   drawPolyline(opts: PolylineOptions): () => void;
+  /** Subscribe to map click events. Returns unsubscribe. */
+  onClick(handler: (pos: LatLng) => void): () => void;
   clear(): void;
   destroy(): void;
 }

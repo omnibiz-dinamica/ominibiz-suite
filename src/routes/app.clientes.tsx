@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { Plus, Users, Phone, Mail, MapPin, Pencil, Power, Trash2, FileSpreadsheet, FileDown } from "lucide-react";
 import { RoleGuard } from "@/components/RoleGuard";
 import { exportToExcel, exportToPdf, type ExportColumn } from "@/lib/exports";
+import { ClientGeoEditor, validateClientGeo, type ClientGeoValue } from "@/components/clientes/ClientGeoEditor";
 
 export const Route = createFileRoute("/app/clientes")({
   component: () => (
@@ -47,6 +48,10 @@ interface ClientRow {
   billing_mode: "hourly" | "fixed" | "mixed";
   hourly_rate: number | null;
   fixed_rate: number | null;
+  geo_lat: number | null;
+  geo_lng: number | null;
+  geo_address: string | null;
+  geo_radius_m: number | null;
 }
 
 interface AssigneeRow {
@@ -433,6 +438,12 @@ function ClientForm({
   const [address, setAddress] = useState(initial?.address ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [status, setStatus] = useState<"ativo" | "inativo">(initial?.status ?? "ativo");
+  const [geo, setGeo] = useState<ClientGeoValue>({
+    lat: initial?.geo_lat ?? null,
+    lng: initial?.geo_lng ?? null,
+    address: initial?.geo_address ?? null,
+    radiusM: initial?.geo_radius_m ?? 50,
+  });
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set(assignees.map((a) => a.user_id)),
   );
@@ -459,6 +470,11 @@ function ClientForm({
       className="space-y-4"
       onSubmit={async (e) => {
         e.preventDefault();
+        const geoError = validateClientGeo(geo);
+        if (geoError) {
+          toast.error(geoError);
+          return;
+        }
         setLoading(true);
         try {
           let clientId = initial?.id;
@@ -473,6 +489,10 @@ function ClientForm({
                 address: address.trim() || null,
                 notes: notes.trim() || null,
                 status,
+                geo_lat: geo.lat,
+                geo_lng: geo.lng,
+                geo_address: geo.address?.trim() || null,
+                geo_radius_m: geo.lat != null ? geo.radiusM : null,
               })
               .eq("id", initial.id);
             if (error) throw error;
@@ -489,6 +509,10 @@ function ClientForm({
                 notes: notes.trim() || null,
                 status,
                 created_by: userId,
+                geo_lat: geo.lat,
+                geo_lng: geo.lng,
+                geo_address: geo.address?.trim() || null,
+                geo_radius_m: geo.lat != null ? geo.radiusM : null,
               })
               .select("id")
               .single();
@@ -589,6 +613,8 @@ function ClientForm({
           </SelectContent>
         </Select>
       </div>
+
+      <ClientGeoEditor value={geo} onChange={setGeo} />
 
       {members.length > 0 && (
         <div className="space-y-2">
