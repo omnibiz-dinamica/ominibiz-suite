@@ -33,7 +33,6 @@ import {
 } from "@/lib/tasks";
 import { usePunchFlow } from "@/hooks/use-punch-flow";
 import { PunchFlowOverlay } from "@/components/ponto/PunchFlowOverlay";
-import { toast as sonnerToast } from "sonner";
 import type { PunchV2Response } from "@/lib/punch/v2";
 
 export const Route = createFileRoute("/app/ponto")({ component: PontoPage });
