@@ -16,6 +16,7 @@
 | [`ARCHITECTURE_GEOFENCING.md`](./ARCHITECTURE_GEOFENCING.md) | **Aprovado** | 2026-07-04 | Validação de localização no início/término de tarefas na Folha de Ponto, configurações independentes start/stop, classificação de accuracy, histórico de eventos, fotos (v1.1), abstração de mapas. | [`ARCHITECTURE_RBAC.md`](./ARCHITECTURE_RBAC.md) |
 | [`ARCHITECTURE_MAP_PROVIDER.md`](./ARCHITECTURE_MAP_PROVIDER.md) | **Aprovado** | 2026-07-04 | Abstração única de provedores de mapas (Google, OSM, Mapbox), componentes reutilizáveis, fallback offline, diagnóstico Super Admin. | [`ARCHITECTURE_GEOFENCING.md`](./ARCHITECTURE_GEOFENCING.md) |
 | [`RPC_PUNCH_V2.md`](./RPC_PUNCH_V2.md) | **Passo 2 concluído** | 2026-07-04 | Especificação das RPCs `punch_*_v2` para o Geofencing: máquina de estados, idempotência, códigos de erro, log de rejeições, plano de homologação. | [`ARCHITECTURE_GEOFENCING.md`](./ARCHITECTURE_GEOFENCING.md) |
+| [`HOOK_PUNCH_GEOLOCATION.md`](./HOOK_PUNCH_GEOLOCATION.md) | **Passo 4 concluído** | 2026-07-04 | Hook `usePunchGeolocation` + `classifyAccuracy`: única camada de captura GPS no cliente, estados padronizados, códigos de erro, diagnóstico Super Admin. | [`ARCHITECTURE_GEOFENCING.md`](./ARCHITECTURE_GEOFENCING.md) |
 
 ---
 
