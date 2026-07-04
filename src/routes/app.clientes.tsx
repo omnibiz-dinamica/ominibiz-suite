@@ -614,6 +614,8 @@ function ClientForm({
         </Select>
       </div>
 
+      <ClientGeoEditor value={geo} onChange={setGeo} />
+
       {members.length > 0 && (
         <div className="space-y-2">
           <Label>Equipe responsável</Label>
