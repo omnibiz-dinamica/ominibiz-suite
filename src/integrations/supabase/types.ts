@@ -2627,6 +2627,56 @@ export type Database = {
         }
         Returns: undefined
       }
+      _punch_evaluate_geo: {
+        Args: {
+          p_accuracy_m: number
+          p_client_lat: number
+          p_client_lng: number
+          p_gps_status: string
+          p_lat: number
+          p_lng: number
+          p_no_loc_policy: Database["public"]["Enums"]["geo_policy"]
+          p_policy: Database["public"]["Enums"]["geo_policy"]
+          p_radius: number
+          p_reason_text: string
+          p_required: boolean
+        }
+        Returns: Json
+      }
+      _punch_last_accepted_event: {
+        Args: { p_entry_id: string }
+        Returns: Database["public"]["Enums"]["punch_event_kind"]
+      }
+      _punch_log_geopoint: {
+        Args: {
+          p_accepted: boolean
+          p_accuracy_m: number
+          p_captured_at: string
+          p_client_lat: number
+          p_client_lng: number
+          p_client_radius: number
+          p_company_id: string
+          p_device: Json
+          p_entry_id: string
+          p_event_kind: Database["public"]["Enums"]["punch_event_kind"]
+          p_geo_status: Database["public"]["Enums"]["geo_status"]
+          p_lat: number
+          p_lng: number
+          p_policy_version: number
+          p_reason_code: Database["public"]["Enums"]["geo_reason_code"]
+          p_reason_text: string
+          p_user_id: string
+        }
+        Returns: string
+      }
+      _punch_resolve_policy: {
+        Args: { p_client: string; p_company: string }
+        Returns: Json
+      }
+      _punch_state: {
+        Args: { p_entry: Database["public"]["Tables"]["time_entries"]["Row"] }
+        Returns: string
+      }
       _run_calc_tests: {
         Args: never
         Returns: {
@@ -3033,6 +3083,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      punch_arrival_v2: { Args: { p_input: Json }; Returns: Json }
       punch_audit_list: {
         Args: { _time_entry_id: string }
         Returns: {
@@ -3052,6 +3103,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      punch_departure_v2: { Args: { p_input: Json }; Returns: Json }
       punch_manual_end: {
         Args: { _task_id: string }
         Returns: {
@@ -3169,6 +3221,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      punch_pause_v2: { Args: { p_input: Json }; Returns: Json }
       punch_resume: {
         Args: never
         Returns: {
@@ -3208,6 +3261,9 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      punch_resume_v2: { Args: { p_input: Json }; Returns: Json }
+      punch_start_v2: { Args: { p_input: Json }; Returns: Json }
+      punch_stop_v2: { Args: { p_input: Json }; Returns: Json }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
