@@ -467,6 +467,12 @@ function PontoPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <PunchFlowOverlay
+        state={punch.state}
+        onSubmit={punch.submitJustification}
+        onCancel={punch.cancelJustification}
+      />
     </div>
   );
 }
