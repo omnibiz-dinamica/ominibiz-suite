@@ -18,8 +18,6 @@ import {
   type TimeEntryRow,
   type TaskRow,
   type PunchMode,
-  punchPause,
-  punchResume,
   punchState,
   effectiveSecondsNow,
   formatDuration,
@@ -33,6 +31,9 @@ import {
   STATUS_TONE,
   isVisuallyLate,
 } from "@/lib/tasks";
+import { usePunchFlow } from "@/hooks/use-punch-flow";
+import { PunchFlowOverlay } from "@/components/ponto/PunchFlowOverlay";
+import type { PunchV2Response } from "@/lib/punch/v2";
 
 export const Route = createFileRoute("/app/ponto")({ component: PontoPage });
 
@@ -48,6 +49,14 @@ function PontoPage() {
   const qc = useQueryClient();
   const [, setNow] = useState(() => Date.now());
   const [modeChoice, setModeChoice] = useState<TaskRow | null>(null);
+  const punch = usePunchFlow();
+
+  // Toast único por retorno de RPC v2 — sempre baseado no código do servidor.
+  function handleV2Toast(res: PunchV2Response) {
+    const msg = res.message ?? res.code;
+    if (res.success) toast.success(`${res.code} — ${msg}`);
+    else toast.error(`${res.code} — ${msg}`);
+  }
 
   // Tick visual (1s) — apenas para renderização.
   useEffect(() => {
@@ -195,62 +204,111 @@ function PontoPage() {
   }, [user?.id, qc]);
 
   const pauseMut = useMutation({
-    mutationFn: () => punchPause(),
-    onSuccess: () => {
-      toast.success("Pausa registrada");
-      qc.invalidateQueries({ queryKey: ["punch-open"] });
+    mutationFn: async () => {
+      if (!openEntry) throw new Error("Sem ponto aberto.");
+      const res = await punch.run({
+        op: "pause",
+        entryId: openEntry.id,
+        neverBlockOnGps: true,
+      });
+      handleV2Toast(res);
+      if (!res.success) throw new Error(res.code);
+      return res;
     },
-    onError: (e: Error) => toast.error(e.message),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["punch-open"] }),
   });
   const resumeMut = useMutation({
-    mutationFn: () => punchResume(),
-    onSuccess: () => {
-      toast.success("Retomado");
-      qc.invalidateQueries({ queryKey: ["punch-open"] });
+    mutationFn: async () => {
+      if (!openEntry) throw new Error("Sem ponto aberto.");
+      const res = await punch.run({
+        op: "resume",
+        entryId: openEntry.id,
+        neverBlockOnGps: true,
+      });
+      handleV2Toast(res);
+      if (!res.success) throw new Error(res.code);
+      return res;
     },
-    onError: (e: Error) => toast.error(e.message),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["punch-open"] }),
   });
   const endMut = useMutation({
-    mutationFn: () => transitionTask(openTask!.id, "concluir"),
+    mutationFn: async () => {
+      if (!openEntry || !openTask) throw new Error("Sem tarefa em andamento.");
+      // 1) Fecha o time_entry via v2 (grava geopoint + política de geofencing).
+      const res = await punch.run({ op: "stop", entryId: openEntry.id });
+      handleV2Toast(res);
+      if (!res.success) throw new Error(res.code);
+      // 2) Auditoria pós-parada (não bloqueia).
+      void punch.run({ op: "departure", entryId: openEntry.id, neverBlockOnGps: true });
+      // 3) Transiciona a tarefa (regra de tarefa continua em `task_transition`).
+      await transitionTask(openTask.id, "concluir");
+      return res;
+    },
     onSuccess: () => {
-      toast.success("Tarefa concluída e ponto encerrado");
       qc.invalidateQueries({ queryKey: ["punch-open"] });
       qc.invalidateQueries({ queryKey: ["punch-history"] });
       qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
       qc.invalidateQueries({ queryKey: ["tasks"] });
     },
-    onError: (e: Error) => toast.error(e.message),
   });
   const startMut = useMutation({
-    mutationFn: (taskId: string) => transitionTask(taskId, "iniciar"),
+    mutationFn: async (taskId: string) => {
+      // 1) Auditoria de chegada (não bloqueia se GPS falhar).
+      void punch.run({ op: "arrival", taskId, neverBlockOnGps: true });
+      // 2) Registra ponto via v2 (aplica geofencing + cria time_entry).
+      const res = await punch.run({ op: "start", taskId });
+      handleV2Toast(res);
+      if (!res.success) throw new Error(res.code);
+      // 3) Transiciona a tarefa.
+      await transitionTask(taskId, "iniciar");
+      return res;
+    },
     onSuccess: () => {
-      toast.success("Tarefa iniciada — ponto aberto");
       qc.invalidateQueries({ queryKey: ["punch-open"] });
       qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
       qc.invalidateQueries({ queryKey: ["tasks"] });
     },
-    onError: (e: Error) => toast.error(e.message),
   });
   const manualStartMut = useMutation({
-    mutationFn: (taskId: string) => punchManualStart(taskId),
+    mutationFn: async (taskId: string) => {
+      void punch.run({ op: "arrival", taskId, neverBlockOnGps: true });
+      const res = await punch.run({ op: "start", taskId });
+      handleV2Toast(res);
+      if (!res.success) {
+        // Modo manual pode ter regra própria — cai para RPC v1 apenas em erros de estado.
+        if (res.code !== "OUT_OF_RADIUS" && res.code !== "GPS_DENIED" && res.code !== "GPS_TIMEOUT" && res.code !== "NO_GPS") {
+          await punchManualStart(taskId);
+          return res;
+        }
+        throw new Error(res.code);
+      }
+      return res;
+    },
     onSuccess: () => {
-      toast.success("Entrada registrada — contador iniciado");
       qc.invalidateQueries({ queryKey: ["punch-open"] });
       qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
       qc.invalidateQueries({ queryKey: ["tasks"] });
     },
-    onError: (e: Error) => toast.error(e.message),
   });
   const manualEndMut = useMutation({
-    mutationFn: (taskId: string) => punchManualEnd(taskId),
+    mutationFn: async (taskId: string) => {
+      if (!openEntry) {
+        // Fallback: sem entry aberto, aciona RPC v1 manual (comportamento anterior).
+        await punchManualEnd(taskId);
+        return { success: true, code: "PUNCH_STOPPED" } as PunchV2Response;
+      }
+      const res = await punch.run({ op: "stop", entryId: openEntry.id });
+      handleV2Toast(res);
+      if (!res.success) throw new Error(res.code);
+      void punch.run({ op: "departure", entryId: openEntry.id, neverBlockOnGps: true });
+      return res;
+    },
     onSuccess: () => {
-      toast.success("Saída registrada — tarefa segue em andamento");
       qc.invalidateQueries({ queryKey: ["punch-open"] });
       qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
       qc.invalidateQueries({ queryKey: ["punch-history"] });
       qc.invalidateQueries({ queryKey: ["tasks"] });
     },
-    onError: (e: Error) => toast.error(e.message),
   });
   const requestAuthMut = useMutation({
     mutationFn: (taskId: string) => requestTaskAuthorization(taskId),
@@ -408,6 +466,12 @@ function PontoPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <PunchFlowOverlay
+        state={punch.state}
+        onSubmit={punch.submitJustification}
+        onCancel={punch.cancelJustification}
+      />
     </div>
   );
 }
