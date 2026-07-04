@@ -18,8 +18,6 @@ import {
   type TimeEntryRow,
   type TaskRow,
   type PunchMode,
-  punchPause,
-  punchResume,
   punchState,
   effectiveSecondsNow,
   formatDuration,
@@ -33,6 +31,10 @@ import {
   STATUS_TONE,
   isVisuallyLate,
 } from "@/lib/tasks";
+import { usePunchFlow } from "@/hooks/use-punch-flow";
+import { PunchFlowOverlay } from "@/components/ponto/PunchFlowOverlay";
+import { toast as sonnerToast } from "sonner";
+import type { PunchV2Response } from "@/lib/punch/v2";
 
 export const Route = createFileRoute("/app/ponto")({ component: PontoPage });
 
