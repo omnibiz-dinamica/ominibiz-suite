@@ -427,3 +427,24 @@ A homologação (Passo 9) validou:
 ## 19. Declaração de Encerramento
 
 Este documento representa o encerramento oficial do desenvolvimento da Geolocalização v1.0 do OmniBiz.
+
+---
+
+## 20. Encerramento Oficial
+
+O módulo de Geolocalização v1.0 está oficialmente encerrado.
+
+A partir desta versão o módulo entra em manutenção.
+
+Novas funcionalidades deverão ser desenvolvidas como versões futuras (v1.1, v1.2, v2.0), preservando a estabilidade da versão homologada.
+
+---
+
+## 21. Assinatura
+
+Documento aprovado.
+
+**OmniBiz**  
+Versão 1.0  
+Status: **Produção Aprovada**  
+Última revisão: **04/07/2026**
