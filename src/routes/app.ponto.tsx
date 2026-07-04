@@ -50,6 +50,14 @@ function PontoPage() {
   const qc = useQueryClient();
   const [, setNow] = useState(() => Date.now());
   const [modeChoice, setModeChoice] = useState<TaskRow | null>(null);
+  const punch = usePunchFlow();
+
+  // Toast único por retorno de RPC v2 — sempre baseado no código do servidor.
+  function handleV2Toast(res: PunchV2Response) {
+    const msg = res.message ?? res.code;
+    if (res.success) sonnerToast.success(`${res.code} — ${msg}`);
+    else sonnerToast.error(`${res.code} — ${msg}`);
+  }
 
   // Tick visual (1s) — apenas para renderização.
   useEffect(() => {
