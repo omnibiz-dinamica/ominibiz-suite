@@ -28,9 +28,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Filter, MoreHorizontal, Pencil, History, ChevronLeft, ChevronRight, X, FileSpreadsheet, FileDown } from "lucide-react";
+import { Plus, Filter, MoreHorizontal, Pencil, History, ChevronLeft, ChevronRight, X, FileSpreadsheet, FileDown, MapPin } from "lucide-react";
 import { PunchEditorDrawer } from "@/components/ponto/PunchEditorDrawer";
 import { PunchAuditDrawer } from "@/components/ponto/PunchAuditDrawer";
+import { PunchGeoDrawer } from "@/components/ponto/PunchGeoDrawer";
 import { ORIGIN_LABEL, ORIGIN_TONE, type AdminTimeEntry } from "@/lib/punch-admin";
 import { formatDuration } from "@/lib/tasks";
 import { exportToExcel, exportToPdf, type ExportColumn } from "@/lib/exports";
@@ -81,6 +82,8 @@ function GestaoPonto() {
   const [activeEntry, setActiveEntry] = useState<Row | null>(null);
   const [auditOpen, setAuditOpen] = useState(false);
   const [auditEntryId, setAuditEntryId] = useState<string | null>(null);
+  const [geoOpen, setGeoOpen] = useState(false);
+  const [geoEntry, setGeoEntry] = useState<Row | null>(null);
 
   // Membros
   const { data: members } = useQuery({
@@ -160,6 +163,7 @@ function GestaoPonto() {
   const openCreate = () => { setEditorMode("create"); setActiveEntry(null); setEditorOpen(true); };
   const openEdit = (r: Row) => { setEditorMode("edit"); setActiveEntry(r); setEditorOpen(true); };
   const openAudit = (r: Row) => { setAuditEntryId(r.id); setAuditOpen(true); };
+  const openGeo = (r: Row) => { setGeoEntry(r); setGeoOpen(true); };
 
   const { data: company } = useQuery({
     queryKey: ["company-branding", currentCompanyId],
@@ -379,6 +383,9 @@ function GestaoPonto() {
                         <DropdownMenuItem onClick={() => openAudit(r)}>
                           <History className="mr-2 h-4 w-4" /> Histórico
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openGeo(r)}>
+                          <MapPin className="mr-2 h-4 w-4" /> Geolocalização
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -411,6 +418,16 @@ function GestaoPonto() {
         open={auditOpen}
         onOpenChange={setAuditOpen}
         timeEntryId={auditEntryId}
+      />
+      <PunchGeoDrawer
+        open={geoOpen}
+        onOpenChange={setGeoOpen}
+        timeEntryId={geoEntry?.id ?? null}
+        entryLabel={{
+          user: geoEntry?.profiles?.full_name ?? null,
+          task: geoEntry?.tasks?.title ?? null,
+          client: geoEntry?.tasks?.client_id ? clientsMap[geoEntry.tasks.client_id] ?? null : null,
+        }}
       />
     </div>
   );
