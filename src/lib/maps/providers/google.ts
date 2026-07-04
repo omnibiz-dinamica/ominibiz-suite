@@ -55,6 +55,12 @@ function makeHandle(map: google.maps.Map): MapHandle {
   const markers = new Map<string, google.maps.Marker>();
   const circles = new Map<string, google.maps.Circle>();
   const polylines = new Map<string, google.maps.Polyline>();
+  const clickListeners = new Set<(pos: LatLng) => void>();
+  map.addListener("click", (ev: google.maps.MapMouseEvent) => {
+    if (!ev.latLng) return;
+    const pos = { lat: ev.latLng.lat(), lng: ev.latLng.lng() };
+    clickListeners.forEach((fn) => fn(pos));
+  });
 
   const handle: MapHandle = {
     providerId: "google",
@@ -144,6 +150,12 @@ function makeHandle(map: google.maps.Map): MapHandle {
           l.setMap(null);
           polylines.delete(opts.id);
         }
+      };
+    },
+    onClick(handler) {
+      clickListeners.add(handler);
+      return () => {
+        clickListeners.delete(handler);
       };
     },
     clear() {
