@@ -44,10 +44,10 @@ function ManagerDashboard() {
   };
 
   const cards = [
-    { label: "Pendentes", value: counts.pendente, icon: ClipboardList, tone: "text-info" },
-    { label: "Em andamento", value: counts.em_andamento, icon: Clock, tone: "text-primary" },
-    { label: "Concluídas", value: counts.concluido, icon: CheckCircle2, tone: "text-success" },
-    { label: "Atrasadas", value: counts.atrasadas, icon: AlertTriangle, tone: "text-destructive" },
+    { label: "Pendentes", value: counts.pendente, icon: ClipboardList, tone: "text-info", to: "/app/tarefas" as const },
+    { label: "Em andamento", value: counts.em_andamento, icon: Clock, tone: "text-primary", to: "/app/tarefas" as const },
+    { label: "Concluídas", value: counts.concluido, icon: CheckCircle2, tone: "text-success", to: "/app/tarefas" as const },
+    { label: "Atrasadas", value: counts.atrasadas, icon: AlertTriangle, tone: "text-destructive", to: "/app/tarefas" as const },
   ];
 
   return (
@@ -81,25 +81,38 @@ function ManagerDashboard() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {cards.map((c) => (
-          <div key={c.label} className="rounded-2xl border border-border bg-card p-5">
+          <Link
+            key={c.label}
+            to={c.to}
+            aria-label={`Ver tarefas — ${c.label}`}
+            className="group rounded-2xl border border-border bg-card p-5 text-left transition hover:border-primary/50 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">{c.label}</span>
               <c.icon className={`h-4 w-4 ${c.tone}`} />
             </div>
-            <div className="mt-3 font-display text-3xl font-semibold">{c.value}</div>
-          </div>
+            <div className="mt-3 font-display text-3xl font-semibold group-hover:text-primary">{c.value}</div>
+          </Link>
         ))}
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-6">
-        <h2 className="font-display text-lg font-semibold">Próximas tarefas</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-display text-lg font-semibold">Próximas tarefas</h2>
+          <Button asChild size="sm" variant="ghost"><Link to="/app/tarefas">Ver todas</Link></Button>
+        </div>
         <ul className="mt-4 divide-y divide-border">
           {(tasks ?? []).slice(0, 5).map((t) => (
-            <li key={t.id} className="flex items-center justify-between py-3">
-              <span className="text-sm">{t.title}</span>
-              <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                {t.status}
-              </span>
+            <li key={t.id}>
+              <Link
+                to="/app/tarefas"
+                className="flex items-center justify-between py-3 transition hover:text-primary"
+              >
+                <span className="text-sm">{t.title}</span>
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                  {t.status}
+                </span>
+              </Link>
             </li>
           ))}
           {(!tasks || tasks.length === 0) && (
