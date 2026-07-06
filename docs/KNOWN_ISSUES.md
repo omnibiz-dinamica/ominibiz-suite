@@ -91,6 +91,40 @@ A mutation de edição só invalida `["clients"]`; os demais permanecem em cache
 
 ---
 
+## KI-005 — Cards do Dashboard não navegáveis (Resolvido)
+
+- **Severidade:** 🔵 Baixa
+- **Módulo:** Dashboard
+- **Status:** Resolvido em Fase 2 (2026-07-06)
+
+**Sintoma:** Os cartões "Pendentes / Em andamento / Concluídas / Atrasadas" do Dashboard exibiam contagens mas não permitiam navegar para a lista de tarefas.
+
+**Correção:** Cartões convertidos em `<Link>` do TanStack Router apontando para `/app/tarefas`, com estados de hover, foco visível e `aria-label` descritivo. A lista "Próximas tarefas" recebeu link "Ver todas" e cada item também navega para tarefas.
+
+**Arquivo:** `src/routes/app.index.tsx`.
+
+---
+
+## KI-006 — Tradução automática do navegador quebra a hidratação (Resolvido)
+
+- **Severidade:** 🟠 Alta
+- **Módulo:** Global (SSR / Root)
+- **Status:** Resolvido em Fase 2 (2026-07-06)
+
+**Sintoma:** Com Chrome/Edge configurado para traduzir automaticamente páginas em português, o React reportava `Hydration failed` porque o DOM traduzido não coincidia com o HTML renderizado no servidor. Extensões de senha (ex.: Kaspersky `kpm-field-badge`) agravavam o efeito.
+
+**Correção:** Em `src/routes/__root.tsx`:
+- `<html lang="pt-BR" translate="no" className="notranslate">`
+- `<meta name="google" content="notranslate" />`
+
+Isso instrui o navegador a não traduzir a UI, preservando textos operacionais (status, valores monetários, nomes de clientes) e evitando divergência entre SSR e cliente.
+
+**Riscos:** nenhum. Usuários que precisem traduzir ainda podem selecionar trechos e traduzir manualmente.
+
+**Arquivo:** `src/routes/__root.tsx`.
+
+---
+
 ## Template para novos registros
 
 ```
