@@ -1,12 +1,14 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Bell, Check, CheckCheck, ExternalLink, ShieldCheck, X as XIcon } from "lucide-react";
 import { transitionTask } from "@/lib/tasks";
+import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
+import { invalidateNotificationsCache } from "@/lib/cache/notifications";
 
 type NotificationEvent =
   | "task_created"
@@ -94,21 +96,16 @@ function NotificationsPage() {
     enabled: !!user,
   });
 
-  // Realtime: apenas invalida cache. Nenhuma regra aqui.
-  useEffect(() => {
-    if (!user) return;
-    const ch = supabase
-      .channel(`user:${user.id}:notifications-ui-sync`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
-        () => qc.invalidateQueries({ queryKey: ["notifications"] }),
-      )
-      .subscribe();
-    return () => {
-      void supabase.removeChannel(ch);
-    };
-  }, [user?.id, qc]);
+  // Realtime unificado (Fase 4): infra em `src/lib/realtime/subscribe.ts`
+  // + helper de cache central em `src/lib/cache/notifications.ts`.
+  useRealtimeInvalidate({
+    channel: `user:${user?.id ?? "anon"}:notifications`,
+    table: "notifications",
+    filter: user ? `user_id=eq.${user.id}` : undefined,
+    enabled: !!user,
+    queryClient: qc,
+    invalidate: invalidateNotificationsCache,
+  });
 
   const markRead = useMutation({
     mutationFn: async (id: string | null) => {
@@ -118,7 +115,7 @@ function NotificationsPage() {
       );
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+    onSuccess: () => invalidateNotificationsCache(qc),
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -127,7 +124,7 @@ function NotificationsPage() {
       transitionTask(id, action),
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
-      qc.invalidateQueries({ queryKey: ["notifications"] });
+      invalidateNotificationsCache(qc);
       toast.success(vars.action === "autorizar" ? "Tarefa autorizada" : "Solicitação rejeitada");
     },
     onError: (e: Error) => toast.error(e.message),
