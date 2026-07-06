@@ -12,6 +12,7 @@
 
 | Documento | Status | Última revisão | Escopo | Dependências |
 |---|---|---|---|---|
+| [`ARCHITECTURE_PRINCIPLES.md`](./ARCHITECTURE_PRINCIPLES.md) | **Produção** | 2026-07-06 | Princípios obrigatórios: auditoria, timeline, IA-ready, mobile-ready, Domain Events, dashboards realtime, checklists evolutivos, fluxo de comprovação. | Nenhuma — documento raiz |
 | [`ARCHITECTURE_RBAC.md`](./ARCHITECTURE_RBAC.md) | **Produção** | 2026-07-04 | Hierarquia de perfis, matriz de permissões, regras de notificação e email, governação de novas features. | Nenhuma — documento raiz |
 | [`ARCHITECTURE_GEOFENCING.md`](./ARCHITECTURE_GEOFENCING.md) | **Aprovado** | 2026-07-04 | Validação de localização no início/término de tarefas na Folha de Ponto, configurações independentes start/stop, classificação de accuracy, histórico de eventos, fotos (v1.1), abstração de mapas. | [`ARCHITECTURE_RBAC.md`](./ARCHITECTURE_RBAC.md) |
 | [`ARCHITECTURE_MAP_PROVIDER.md`](./ARCHITECTURE_MAP_PROVIDER.md) | **Aprovado** | 2026-07-04 | Abstração única de provedores de mapas (Google, OSM, Mapbox), componentes reutilizáveis, fallback offline, diagnóstico Super Admin. | [`ARCHITECTURE_GEOFENCING.md`](./ARCHITECTURE_GEOFENCING.md) |
