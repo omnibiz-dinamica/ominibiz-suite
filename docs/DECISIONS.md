@@ -116,4 +116,34 @@
 
 ---
 
+## ADR-011 — Infraestrutura Realtime unificada (`useRealtimeInvalidate`)
+
+- **Data:** 2026-07-06 · **Status:** Aceita (Fase 4)
+- **Contexto:** Cada módulo criava seu próprio `supabase.channel(...).subscribe()` inline, com risco alto de: (a) esquecer o cleanup e vazar subscribers em loop, (b) colidir nome de canal entre módulos, (c) reagir com `invalidateQueries` avulso — bypassing o helper de cache do módulo. A regra `cloud-realtime` já obriga cleanup em `useEffect`; faltava um wrapper que impedisse regressão.
+- **Decisão:** `src/lib/realtime/subscribe.ts` centraliza toda subscrição Realtime. Módulos NUNCA chamam `supabase.channel(...)` diretamente para reagir a `postgres_changes`. Padrão obrigatório em novos módulos: `useRealtimeInvalidate({ channel, table, filter, queryClient, invalidate: <cacheHelper> })`.
+- **Consequências:** (+) contrato uniforme (nome de canal, cleanup, filtro); (+) força uso do helper de cache do módulo (ADR-012); (+) trivial migrar para Domain Events (ADR-007) — basta trocar `table` por `domain_events` com filtro `aggregate_type=eq.<x>`; (−) uma camada de indireção.
+- **Alternativas consideradas:** (a) manter subscribe inline por módulo — rejeitada (padrão frágil); (b) mover tudo para um único WebSocket agregador server-side — reavaliada em ADR-007 quando `domain_events` existir.
+
+---
+
+## ADR-012 — Helpers de cache obrigatórios por módulo
+
+- **Data:** 2026-07-06 · **Status:** Aceita (Fase 4)
+- **Contexto:** KI-002 nasceu porque cada tela criava seu próprio `queryKey` e mutations invalidavam parcialmente. A Fase 3 resolveu para Clientes com `invalidateClientsCache`. Precisamos padronizar antes que novos módulos repitam o padrão antigo.
+- **Decisão:** Todo módulo com dois ou mais `queryKey` que leem da mesma entidade DEVE expor `src/lib/cache/<modulo>.ts` com: (a) constante `<MODULO>_QUERY_PREFIXES`, (b) `invalidate<Modulo>Cache(qc)` e opcional `invalidate<Modulo>CacheAsync(qc)`. Nenhum código de produção pode invalidar prefixos de tabelas cobertas por helper via `qc.invalidateQueries` avulso.
+- **Consequências:** (+) fonte única de verdade; (+) auditável (grep no prefixo revela todos os consumers); (+) adiciona uma tela nova = 1 linha no array; (−) fluxo levemente mais burocrático em módulos triviais.
+- **Aplicado em Fase 4:** `src/lib/cache/notifications.ts`. Roadmap: RH, Tarefas, Férias, Despesas, Comercial, Frota, Contratos.
+
+---
+
+## ADR-013 — Componentes reutilizáveis em `src/components/common/*`
+
+- **Data:** 2026-07-06 · **Status:** Aceita (Fase 4)
+- **Contexto:** `<EmployeePicker />` seria útil em Tarefas, RH, Férias, Despesas, Comercial, Frota, Recibos e Contratos. Sem regra clara, cada módulo criaria a sua variante.
+- **Decisão:** Componentes de uso transversal (picker de funcionário, picker de cliente, timeline, uploader de fotos etc.) vivem em `src/components/common/`. Contratos de props devem ser abertos (aceitam superconjunto de campos) para reduzir acoplamento com o schema exato de cada tela. Componentes específicos de módulo permanecem em `src/components/<modulo>/`.
+- **Consequências:** (+) reduz duplicação; (+) evolução central (a11y, virtualização, i18n) beneficia todos os módulos; (−) exige disciplina para não vazar lógica de módulo dentro do componente comum.
+- **Aplicado em Fase 4:** `src/components/common/EmployeePicker.tsx`. Roadmap Fase 5: `ClientPicker`, `PhotoUploader`, `AuditTimeline`.
+
+---
+
 **Regra:** ADR aprovada é imutável. Mudança de rumo cria nova ADR marcando a anterior como `Superseded por ADR-YYY`.
