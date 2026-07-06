@@ -111,7 +111,10 @@ function TasksPage() {
         .eq("company_id", currentCompanyId);
       const ids = (roles ?? []).map((r) => r.user_id);
       if (ids.length === 0) return [];
-      const { data: profs } = await supabase.from("profiles").select("id, full_name").in("id", ids);
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, full_name, job_title")
+        .in("id", ids);
       return profs ?? [];
     },
     enabled: isManager && !!currentCompanyId,
