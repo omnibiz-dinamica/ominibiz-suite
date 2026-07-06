@@ -26,6 +26,7 @@ import { Plus, Users, Phone, Mail, MapPin, Pencil, Power, Trash2, FileSpreadshee
 import { RoleGuard } from "@/components/RoleGuard";
 import { exportToExcel, exportToPdf, type ExportColumn } from "@/lib/exports";
 import { ClientGeoEditor, validateClientGeo, type ClientGeoValue } from "@/components/clientes/ClientGeoEditor";
+import { invalidateClientsCache } from "@/lib/cache/clients";
 
 export const Route = createFileRoute("/app/clientes")({
   component: () => (
@@ -136,12 +137,12 @@ function ClientsPage() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "clients" },
-        () => qc.invalidateQueries({ queryKey: ["clients"] }),
+        () => invalidateClientsCache(qc),
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "client_assignees" },
-        () => qc.invalidateQueries({ queryKey: ["client-assignees"] }),
+        () => invalidateClientsCache(qc),
       )
       .subscribe();
     return () => {
@@ -158,7 +159,7 @@ function ClientsPage() {
     },
     onSuccess: () => {
       toast.success("Status atualizado");
-      qc.invalidateQueries({ queryKey: ["clients"] });
+      invalidateClientsCache(qc);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -172,7 +173,7 @@ function ClientsPage() {
     },
     onSuccess: () => {
       toast.success("Cliente removido");
-      qc.invalidateQueries({ queryKey: ["clients"] });
+      invalidateClientsCache(qc);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -285,8 +286,7 @@ function ClientsPage() {
                 onDone={() => {
                   setOpen(false);
                   setEditing(null);
-                  qc.invalidateQueries({ queryKey: ["clients"] });
-                  qc.invalidateQueries({ queryKey: ["client-assignees"] });
+                  invalidateClientsCache(qc);
                 }}
               />
             </DialogContent>

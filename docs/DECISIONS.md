@@ -96,4 +96,24 @@
 
 ---
 
+## ADR-009 — Geocoding server-side via Lovable Connector Gateway
+
+- **Data:** 2026-07-06 · **Status:** Aceita (Fase 3)
+- **Contexto:** A browser key gerida pela Lovable é restrita por HTTP Referrer e só autoriza Maps JavaScript API + Places API (New); chamadas ao Geocoding API sempre retornam `REQUEST_DENIED` (KI-001). Expor uma key com Geocoding habilitado no navegador criaria risco de abuso e custos incontroláveis.
+- **Decisão:** Todo geocoding (direto e reverso) roda em **server functions TanStack Start** (`src/lib/maps/geocoding.functions.ts`) que chamam `connector-gateway.lovable.dev/google_maps/maps/api/geocode/json` com `Authorization: Bearer ${LOVABLE_API_KEY}` + `X-Connection-Api-Key: ${GOOGLE_MAPS_API_KEY}`. O provider `MapProvider.geocode/reverseGeocode` continua sendo o único ponto de acoplamento da UI (contrato preservado).
+- **Consequências:** (+) segredos nunca cruzam o boundary do navegador; (+) roundtrip único mesmo em Preview e Produção; (+) telemetria server-side no gateway; (−) latência adicional de 1 hop; (−) endpoint sujeito às cotas do gateway.
+- **Alternativas consideradas:** (a) Habilitar Geocoding na browser key — rejeitada por exposição/custos; (b) Usar Places API (New) no browser para autocomplete — mantém-se em avaliação para autocomplete, mas o geocoding textual permanece server-side.
+
+---
+
+## ADR-010 — Cache central de Clientes (`invalidateClientsCache`)
+
+- **Data:** 2026-07-06 · **Status:** Aceita (Fase 3)
+- **Contexto:** Seis queryKeys diferentes leem `public.clients` (KI-002). Cada mutation local só invalidava uma parte, causando UI desatualizada em telas secundárias (tarefas, ponto, gestão, wizard).
+- **Decisão:** Um único helper `invalidateClientsCache(qc)` em `src/lib/cache/clients.ts` invalida em bloco todos os prefixos declarados em `CLIENTS_QUERY_PREFIXES`. Toda mutation e realtime subscriber que altere `public.clients` DEVE chamar esse helper — nunca invalidar prefixos avulsos.
+- **Consequências:** (+) fonte única de verdade para invalidação; (+) adicionar nova tela que consome clientes vira uma linha no array; (−) invalidações extras (baixo custo — dados pequenos).
+- **Alternativas consideradas:** (a) Padronizar um único queryKey em toda a base — rejeitada por custo de refactor e perda de granularidade; (b) Depender apenas de Realtime — rejeitada porque a UI otimista precisa refletir antes do broadcast.
+
+---
+
 **Regra:** ADR aprovada é imutável. Mudança de rumo cria nova ADR marcando a anterior como `Superseded por ADR-YYY`.

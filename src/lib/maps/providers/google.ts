@@ -10,6 +10,7 @@ import type {
   PolylineOptions,
 } from "../types";
 import { timed } from "../diagnostics";
+import { geocodeAddressFn, reverseGeocodeFn } from "../geocoding.functions";
 
 const BROWSER_KEY = (import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY ?? "") as string;
 const TRACKING_ID = (import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_TRACKING_ID ?? "") as string;
@@ -173,43 +174,22 @@ function makeHandle(map: google.maps.Map): MapHandle {
   return handle;
 }
 
-const GATEWAY_URL = "https://connector-gateway.lovable.dev/google_maps";
-
+// Fase 3 · Item 16 (KI-001): Geocoding roda em server function para evitar
+// REQUEST_DENIED da browser key restrita por HTTP Referrer. Ver
+// src/lib/maps/geocoding.functions.ts e docs/KNOWN_ISSUES.md#KI-001.
 async function gatewayGeocode(query: string): Promise<GeocodeResult[]> {
-  // Server-side call — only useful when the app calls this from a server fn.
-  // Client geocoding uses the Places API via the JS SDK.
-  const gmaps = await loadGoogleMaps();
-  return new Promise((resolve, reject) => {
-    const svc = new gmaps.maps.Geocoder();
-    svc.geocode({ address: query }, (results, status) => {
-      if (status !== "OK" || !results) {
-        reject(new Error(`geocode: ${status}`));
-        return;
-      }
-      resolve(
-        results.map((r) => ({
-          formattedAddress: r.formatted_address,
-          location: { lat: r.geometry.location.lat(), lng: r.geometry.location.lng() },
-          placeId: r.place_id,
-          source: "google" as const,
-        })),
-      );
-    });
-  });
+  const { results } = await geocodeAddressFn({ data: { query } });
+  return results.map((r) => ({
+    formattedAddress: r.formattedAddress,
+    location: { lat: r.lat, lng: r.lng },
+    placeId: r.placeId ?? undefined,
+    source: "google" as const,
+  }));
 }
 
 async function gatewayReverse(pos: LatLng): Promise<string | null> {
-  const gmaps = await loadGoogleMaps();
-  return new Promise((resolve) => {
-    const svc = new gmaps.maps.Geocoder();
-    svc.geocode({ location: pos }, (results, status) => {
-      if (status !== "OK" || !results || results.length === 0) {
-        resolve(null);
-        return;
-      }
-      resolve(results[0].formatted_address ?? null);
-    });
-  });
+  const { formattedAddress } = await reverseGeocodeFn({ data: pos });
+  return formattedAddress;
 }
 
 export const googleMapsProvider: MapProvider = {
@@ -238,6 +218,3 @@ export const googleMapsProvider: MapProvider = {
     return timed("google", "reverse", () => gatewayReverse(pos));
   },
 };
-
-// Silence unused var linter for GATEWAY_URL — reserved for server-side geocoding.
-void GATEWAY_URL;
