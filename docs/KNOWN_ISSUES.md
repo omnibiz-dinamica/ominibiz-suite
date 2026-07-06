@@ -20,7 +20,7 @@
 
 - **Severidade:** 🟠 Alta
 - **Módulo:** Mapas / Clientes
-- **Status:** Em análise (Fase 1)
+- **Status:** ✅ Resolvido em Fase 3 (2026-07-06)
 - **Detectado em:** 2026-07-05
 - **Origem:** relatório do sprint de refinamento (item 16)
 
@@ -28,11 +28,7 @@
 
 **Causa raiz confirmada:** `src/lib/maps/providers/google.ts:178` chama `google.maps.Geocoder()` (SDK JS, browser key). A browser key da Lovable é restrita por referrer e autoriza apenas **Maps JavaScript API** e **Places API (New)**. Chamadas ao **Geocoding API** são rejeitadas por design.
 
-**Impacto:** Cadastro de cliente sem coordenadas manuais fica sem endereço legível; geofencing ainda funciona com clique manual no mapa.
-
-**Workaround:** clicar diretamente no mapa para fixar as coordenadas.
-
-**Correção planejada (Fase 3):** mover geocoding para server function via gateway `connector-gateway.lovable.dev/google_maps/maps/api/geocode/json` com headers `Authorization: Bearer ${LOVABLE_API_KEY}` + `X-Connection-Api-Key`. Detalhes em `docs/RELATORIO_GEOCODING.md`.
+**Solução aplicada (Fase 3):** geocoding e reverse geocoding migrados para server functions em `src/lib/maps/geocoding.functions.ts` (`geocodeAddressFn`, `reverseGeocodeFn`). Chamam o Lovable Connector Gateway (`connector-gateway.lovable.dev/google_maps/maps/api/geocode/json`) com `Authorization: Bearer ${LOVABLE_API_KEY}` + `X-Connection-Api-Key: ${GOOGLE_MAPS_API_KEY}`. Nenhum segredo é exposto ao navegador. O provider `google.ts` foi atualizado para usar as server functions, mantendo o contrato `MapProvider.geocode()` / `MapProvider.reverseGeocode()` — 100% retrocompatível.
 
 ---
 
@@ -40,7 +36,7 @@
 
 - **Severidade:** 🟠 Alta
 - **Módulo:** Clientes
-- **Status:** Em análise (Fase 1)
+- **Status:** ✅ Resolvido em Fase 3 (2026-07-06)
 - **Detectado em:** 2026-07-05
 
 **Sintoma:** Após renomear cliente, algumas telas (tarefas, ponto, gestão, comercial) continuam mostrando o nome antigo até refresh.
@@ -59,7 +55,7 @@
 
 A mutation de edição só invalida `["clients"]`; os demais permanecem em cache até o TTL padrão do React Query.
 
-**Correção planejada (Fase 3):** helper central `invalidateClientCaches(qc, companyId)` que invalida todos os 7 keys, chamado após qualquer mutation em `clients`. Detalhes em `docs/RELATORIO_CACHE_CLIENTES.md`.
+**Solução aplicada (Fase 3):** criado o helper `invalidateClientsCache(qc)` em `src/lib/cache/clients.ts` que invalida em bloco todos os prefixos que dependem de `public.clients` (`clients`, `client-assignees`, `clients-min`, `clients-map`, `wizard-clients`, `punch-admin-clients-filter`). Todas as mutations e realtime subscribers de `app.clientes.tsx` foram migrados para o helper. `commercial_clients` fica fora de escopo por ser tabela independente do módulo Comercial.
 
 ---
 
