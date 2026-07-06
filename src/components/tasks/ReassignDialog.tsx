@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { EmployeePicker, type EmployeeOption } from "@/components/common/EmployeePicker";
 import { recurrenceReassign, type ReassignScope, type TaskRow } from "@/lib/tasks";
 import { toast } from "sonner";
 
@@ -14,7 +15,7 @@ export function ReassignDialog({
   onDone,
 }: {
   task: TaskRow | null;
-  members: { id: string; full_name: string | null }[];
+  members: EmployeeOption[];
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onDone: () => void;
@@ -46,14 +47,13 @@ export function ReassignDialog({
         <div className="space-y-4">
           <div className="space-y-1.5">
             <Label>Novo responsável</Label>
-            <Select value={user} onValueChange={setUser}>
-              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-              <SelectContent>
-                {members.map((m) => (
-                  <SelectItem key={m.id} value={m.id}>{m.full_name ?? m.id.slice(0, 8)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <EmployeePicker
+              employees={members}
+              value={user || null}
+              onChange={setUser}
+              placeholder="Selecione o funcionário"
+              ariaLabel="Selecionar novo responsável pela tarefa"
+            />
           </div>
           {isRecurring && (
             <div className="space-y-1.5">

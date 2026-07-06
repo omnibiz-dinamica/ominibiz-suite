@@ -25,6 +25,10 @@
 | [`ARCHITECTURE_MAP_PROVIDER.md`](./ARCHITECTURE_MAP_PROVIDER.md) | **Aprovado** | 2026-07-04 | Abstração única de provedores de mapas (Google, OSM, Mapbox), componentes reutilizáveis, fallback offline, diagnóstico Super Admin. | [`ARCHITECTURE_GEOFENCING.md`](./ARCHITECTURE_GEOFENCING.md) |
 | [`RPC_PUNCH_V2.md`](./RPC_PUNCH_V2.md) | **Passo 2 concluído** | 2026-07-04 | Especificação das RPCs `punch_*_v2` para o Geofencing: máquina de estados, idempotência, códigos de erro, log de rejeições, plano de homologação. | [`ARCHITECTURE_GEOFENCING.md`](./ARCHITECTURE_GEOFENCING.md) |
 | [`HOOK_PUNCH_GEOLOCATION.md`](./HOOK_PUNCH_GEOLOCATION.md) | **Passo 4 concluído** | 2026-07-04 | Hook `usePunchGeolocation` + `classifyAccuracy`: única camada de captura GPS no cliente, estados padronizados, códigos de erro, diagnóstico Super Admin. | [`ARCHITECTURE_GEOFENCING.md`](./ARCHITECTURE_GEOFENCING.md) |
+| `src/lib/realtime/subscribe.ts` | **Produção** | 2026-07-06 | Infra Realtime unificada (ADR-011): `useRealtimeSubscription`, `useRealtimeInvalidate`. Obrigatória em todo módulo novo. | [`DECISIONS.md`](./DECISIONS.md) |
+| `src/lib/cache/*` | **Produção** | 2026-07-06 | Helpers de cache por módulo (ADR-012). Novos módulos não invalidam prefixos avulsos. Ativo: `clients.ts`, `notifications.ts`. | [`DECISIONS.md`](./DECISIONS.md) |
+| `src/lib/events/` | **Scaffold** | 2026-07-06 | Reserva estrutural para Domain Events (ADR-007). Sem implementação funcional. | [`ARCHITECTURE_PRINCIPLES.md`](./ARCHITECTURE_PRINCIPLES.md) §5 |
+| `src/components/common/EmployeePicker.tsx` | **Produção** | 2026-07-06 | Picker reutilizável de funcionário (ADR-013): debounce, virtualização leve, busca por nome/cargo/equipe/email. | [`DECISIONS.md`](./DECISIONS.md) |
 
 ---
 

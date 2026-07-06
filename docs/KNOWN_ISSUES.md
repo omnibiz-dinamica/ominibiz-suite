@@ -121,6 +121,20 @@ Isso instrui o navegador a não traduzir a UI, preservando textos operacionais (
 
 ---
 
+## KI-007 — Risco de subscribers Realtime duplicados (Resolvido preventivamente)
+
+- **Severidade:** 🟡 Média
+- **Módulo:** Global (Realtime)
+- **Status:** Resolvido em Fase 4 (2026-07-06)
+
+**Sintoma potencial:** múltiplos módulos criando `supabase.channel(...).subscribe()` inline correm risco de: (a) esquecer `removeChannel` no cleanup e vazar subscribers em loop, agravando o custo de Realtime; (b) colidir nome de canal entre módulos; (c) invalidar prefixos avulsos, bypassando os helpers de cache.
+
+**Correção preventiva:** criado `src/lib/realtime/subscribe.ts` (`useRealtimeSubscription`, `useRealtimeInvalidate`). Nenhum código novo pode chamar `supabase.channel(...)` diretamente para `postgres_changes`. Ver ADR-011.
+
+**Aplicado em Fase 4:** `src/routes/app.notificacoes.tsx` migrado para a nova infraestrutura. Demais módulos permanecem inalterados até refactor natural.
+
+---
+
 ## Template para novos registros
 
 ```
