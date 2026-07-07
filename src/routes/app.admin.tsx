@@ -23,9 +23,10 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Building2, CheckCircle2, Copy, Plus } from "lucide-react";
+import { Building2, CheckCircle2, Copy, Plus, MailCheck, AlertCircle } from "lucide-react";
 import { COUNTRIES, countryDefaults, slugify, type CountryCode } from "@/lib/locale";
 import { RoleGuard } from "@/components/RoleGuard";
+import { sendInviteEmail } from "@/lib/invites/send-invite-email";
 
 export const Route = createFileRoute("/app/admin")({
   component: () => (
@@ -62,35 +63,74 @@ function AdminPage() {
   const [country, setCountry] = useState<CountryCode>("PT");
   const [adminName, setAdminName] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
-  const [createdLink, setCreatedLink] = useState<string | null>(null);
+  const [result, setResult] = useState<
+    | { email: string; link: string; companyName: string; emailSent: boolean; emailError?: string }
+    | null
+  >(null);
 
   const create = useMutation({
     mutationFn: async () => {
       const d = countryDefaults(country);
       const slug = `${slugify(name)}-${Date.now().toString(36)}`;
-      const { data, error } = await supabase.rpc("admin_create_company_with_invite", {
-        _name: name,
+      const recipient = adminEmail.trim().toLowerCase();
+      const companyName = name.trim();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.rpc as any)("admin_create_company_with_invite", {
+        _name: companyName,
         _slug: slug,
         _country: country,
         _currency: d.currency,
         _language: d.language,
         _timezone: d.timezone,
-        _admin_email: adminEmail.trim().toLowerCase(),
+        _admin_email: recipient,
       });
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
-      return row as { company_id: string; invite_token: string };
+      const inviteId: string = row.invite_id;
+      const token: string = row.invite_token;
+      const companyId: string = row.company_id;
+      const link = buildAppUrl(`/aceitar-convite?token=${token}`);
+
+      let emailSent = true;
+      let emailError: string | undefined;
+      try {
+        await sendInviteEmail({
+          inviteId,
+          token,
+          email: recipient,
+          role: "manager",
+          companyId,
+          companyName,
+          sendCount: 1,
+          kind: "create",
+        });
+      } catch (e) {
+        emailSent = false;
+        emailError = e instanceof Error ? e.message : String(e);
+        console.warn("[admin] Falha ao enviar convite automaticamente", e);
+      }
+
+      return { companyId, email: recipient, link, companyName, emailSent, emailError };
     },
     onSuccess: async (row) => {
-      const link = buildAppUrl(`/aceitar-convite?token=${row.invite_token}`);
-      setCreatedLink(link);
+      setResult({
+        email: row.email,
+        link: row.link,
+        companyName: row.companyName,
+        emailSent: row.emailSent,
+        emailError: row.emailError,
+      });
       setName("");
       setAdminName("");
       setAdminEmail("");
-      await switchCompany(row.company_id);
+      await switchCompany(row.companyId);
       await refresh();
       qc.invalidateQueries({ queryKey: ["admin-companies"] });
-      toast.success("Empresa criada e convite gerado");
+      if (row.emailSent) {
+        toast.success(`Empresa criada com sucesso. Convite enviado para ${row.email}.`);
+      } else {
+        toast.warning(`Empresa criada. Envio automático do email falhou — use o envio manual como contingência.`);
+      }
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -110,7 +150,7 @@ function AdminPage() {
           open={open}
           onOpenChange={(v) => {
             setOpen(v);
-            if (!v) setCreatedLink(null);
+            if (!v) setResult(null);
           }}
         >
           <DialogTrigger asChild>
@@ -122,22 +162,55 @@ function AdminPage() {
             <DialogHeader>
               <DialogTitle>Nova empresa</DialogTitle>
             </DialogHeader>
-            {createdLink ? (
+            {result ? (
               <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Empresa criada. Envie este link ao administrador para concluir o acesso:
-                </p>
-                <div className="rounded-lg border border-border bg-muted p-3 text-xs break-all">
-                  {createdLink}
-                </div>
-                <Button
-                  className="w-full"
-                  onClick={() => {
-                    navigator.clipboard.writeText(createdLink);
-                    toast.success("Link copiado");
-                  }}
-                >
-                  <Copy className="mr-2 h-4 w-4" /> Copiar link do convite
+                {result.emailSent ? (
+                  <div className="flex items-start gap-3 rounded-lg border border-success/40 bg-success/10 p-3 text-sm">
+                    <MailCheck className="mt-0.5 h-4 w-4 text-success" />
+                    <div>
+                      <p className="font-medium">Empresa criada com sucesso.</p>
+                      <p className="text-muted-foreground">
+                        Convite enviado para <span className="font-medium">{result.email}</span>.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-start gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+                    <AlertCircle className="mt-0.5 h-4 w-4 text-warning" />
+                    <div>
+                      <p className="font-medium">Empresa criada, mas o envio automático falhou.</p>
+                      <p className="text-muted-foreground">
+                        Use o botão "Reenviar convite" em <b>Empresa</b> ou copie o link abaixo como contingência.
+                      </p>
+                      {result.emailError && (
+                        <p className="mt-1 text-xs text-muted-foreground">{result.emailError}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+                <details className="rounded-lg border border-border bg-muted/40 p-3 text-xs">
+                  <summary className="cursor-pointer select-none text-muted-foreground">
+                    Envio manual (contingência)
+                  </summary>
+                  <div className="mt-2 space-y-2">
+                    <div className="break-all rounded-md border border-border bg-background p-2">
+                      {result.link}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => {
+                        navigator.clipboard.writeText(result.link);
+                        toast.success("Link copiado");
+                      }}
+                    >
+                      <Copy className="mr-2 h-4 w-4" /> Copiar link do convite
+                    </Button>
+                  </div>
+                </details>
+                <Button className="w-full" onClick={() => { setResult(null); setOpen(false); }}>
+                  Concluir
                 </Button>
               </div>
             ) : (
