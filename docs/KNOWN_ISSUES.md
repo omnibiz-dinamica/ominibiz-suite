@@ -135,6 +135,20 @@ Isso instrui o navegador a não traduzir a UI, preservando textos operacionais (
 
 ---
 
+## KI-008 — Convite manual no fluxo Super Admin (Resolvido)
+
+- **Severidade:** 🟠 Alta (UX + auditoria)
+- **Módulo:** Onboarding · `/app/admin`
+- **Status:** Resolvido em Fase 5 (2026-07-07)
+
+**Sintoma:** ao criar uma empresa, o Super Admin recebia apenas o link do convite, sem envio automático. O gestor dependia de canal externo (Slack/WhatsApp) e o envio não ficava em `email_send_log`.
+
+**Causa raiz:** `admin_create_company_with_invite` não retornava `invite_id` e a UI não disparava o email transacional após a criação.
+
+**Correção:** RPC ajustada (retorna `invite_id`, `invite_email`); `app.admin.tsx` dispara automaticamente `sendInviteEmail` (ADR-014). Novo `ManagerInviteCard` em `/app/empresa` cobre reenvio e troca de email (nova RPC `admin_replace_manager_invite`).
+
+---
+
 ## Template para novos registros
 
 ```

@@ -2702,7 +2702,31 @@ export type Database = {
         }
         Returns: {
           company_id: string
+          invite_email: string
+          invite_id: string
           invite_token: string
+        }[]
+      }
+      admin_replace_manager_invite: {
+        Args: { _invite_id: string; _new_email: string }
+        Returns: {
+          company_id: string
+          email: string
+          expires_at: string
+          id: string
+          last_sent_at: string
+          role: Database["public"]["Enums"]["app_role"]
+          send_count: number
+          token: string
+        }[]
+      }
+      admin_revoke_user_from_company: {
+        Args: { _company_id: string; _email: string }
+        Returns: {
+          invites_revoked: number
+          profile_cleared: boolean
+          roles_removed: number
+          user_id: string
         }[]
       }
       audit_list: {

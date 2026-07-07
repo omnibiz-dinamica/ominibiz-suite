@@ -147,3 +147,23 @@
 ---
 
 **Regra:** ADR aprovada é imutável. Mudança de rumo cria nova ADR marcando a anterior como `Superseded por ADR-YYY`.
+
+---
+
+## ADR-014 — Envio automático do convite (Onboarding)
+
+- **Data:** 2026-07-07 · **Status:** Aceita (Fase 5)
+- **Contexto:** O fluxo Super Admin → criar empresa exibia link para o gestor copiar. Isso obrigava envio manual, gerava links fora do canal oficial e não ficava registado em `email_send_log`.
+- **Decisão:** Toda criação/reenvio/troca-de-email de convite dispara automaticamente `sendTransactionalEmail` (template `invite`, `trigger_source='invite'`). O envio manual sobrevive **apenas como contingência** oculta em `<details>` caso o envio automático falhe.
+- **Consequências:** (+) auditoria completa em `email_send_log`; (+) UX consistente com o fluxo já homologado em Equipe; (+) elimina passo manual do Super Admin; (−) exige monitorar falhas de envio (visível ao Super Admin no toast + card de convite da empresa).
+- **Aplicado em Fase 5:** `src/routes/app.admin.tsx`, `src/components/empresa/ManagerInviteCard.tsx`.
+
+---
+
+## ADR-015 — Helper único `sendInviteEmail`
+
+- **Data:** 2026-07-07 · **Status:** Aceita (Fase 5)
+- **Contexto:** `app.equipe.tsx` já montava payload de email de convite. `app.admin.tsx` e o novo card de empresa precisariam repetir a lógica (montar `inviteUrl`, `idempotencyKey`, `templateData`).
+- **Decisão:** Centralizar em `src/lib/invites/send-invite-email.ts`. `idempotencyKey` deriva de `kind + inviteId + sendCount` (`create` / `resend` / `replace`), garantindo dedupe correta.
+- **Consequências:** (+) fonte única para o payload do template; (+) alterações futuras (novo campo, novo template) num único ponto; (−) call sites existentes em `app.equipe.tsx` continuarão funcionando; migração para o helper é oportunista, não obrigatória agora.
+- **Aplicado em Fase 5:** `app.admin.tsx`, `ManagerInviteCard`. Roadmap: refatorar `app.equipe.tsx` para consumir o helper.

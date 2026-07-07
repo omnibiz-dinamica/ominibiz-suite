@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { GeoSettingsCard } from "@/components/empresa/GeoSettingsCard";
+import { ManagerInviteCard } from "@/components/empresa/ManagerInviteCard";
 
 export const Route = createFileRoute("/app/empresa")({
   component: () => (
@@ -55,6 +56,8 @@ function CompanyPage() {
       </div>
 
       <HRSettingsCard companyId={currentCompanyId!} />
+
+      <ManagerInviteCard companyId={currentCompanyId!} companyName={company.name} />
 
       <GeoSettingsCard companyId={currentCompanyId!} />
     </div>

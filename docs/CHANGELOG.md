@@ -7,6 +7,46 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### Fase 5 — Onboarding automático de empresas (2026-07-07)
+
+#### Adicionado
+- **Envio automático do convite ao criar empresa (Super Admin):** `src/routes/app.admin.tsx`
+  agora dispara o email de convite imediatamente após `admin_create_company_with_invite`,
+  usando o helper unificado `sendInviteEmail` (registado em `email_send_log`,
+  `trigger_source='invite'`). Toast: "Empresa criada com sucesso. Convite enviado para …".
+  Envio manual permanece disponível apenas como contingência dentro de `<details>`.
+- **`src/lib/invites/send-invite-email.ts`** — helper único para create/resend/replace
+  (ADR-015). `idempotencyKey` derivada de `kind + inviteId + sendCount`.
+- **`ManagerInviteCard`** em `src/components/empresa/ManagerInviteCard.tsx`, incluído
+  em `/app/empresa` para super_admin e owner: lista convites de gestor com badge
+  de status (Pendente/Aceito/Expirado/Revogado), contagem de envios, últimos
+  timestamps, botão **Reenviar** (RPC `resend_invite`) e **Alterar email** (nova
+  RPC `admin_replace_manager_invite`).
+- **RPC `admin_replace_manager_invite(_invite_id, _new_email)`** SECURITY DEFINER:
+  revoga o convite pendente e cria um novo com o novo email (mesma empresa/role).
+- **RPC `admin_revoke_user_from_company(_email, _company_id)`** SECURITY DEFINER:
+  remove `user_roles`, revoga convites pending/accepted e limpa
+  `profiles.current_company_id`/`company_id_primary` para a empresa alvo. Não toca
+  em `auth.users`, notificações, documentos ou histórico. Proteção: nunca remove
+  o único owner da empresa.
+
+#### Alterado
+- `admin_create_company_with_invite` agora retorna também `invite_id` e
+  `invite_email` (adição retrocompatível — nomes de coluna).
+
+#### Manutenção
+- Removidos os vínculos operacionais de `letrasmodestas@hotmail.com` na empresa
+  **OMNIBIZ TESTES** (`eec32f9a-32ad-4af8-9c10-25eb9cd26099`): 1 role removida,
+  1 invite `accepted` → `revoked`. Utilizador preservado no Auth; convite
+  pendente noutra empresa e histórico intactos.
+
+#### Decisões arquiteturais
+- ADR-014 — Convites disparam email **automaticamente**. Envio manual só existe como
+  fallback quando o send falha.
+- ADR-015 — Todo envio de convite passa pelo helper `sendInviteEmail`.
+
+---
+
 ### Fase 4 — Infraestrutura Realtime + EmployeePicker (2026-07-06)
 
 #### Adicionado
