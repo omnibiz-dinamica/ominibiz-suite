@@ -116,10 +116,12 @@ export type Database = {
           mixed_base_fixed: number | null
           mixed_extra_hour_rate: number | null
           mixed_included_minutes: number | null
+          monthly_rate: number | null
           name: string
           notes: string | null
           phone: string | null
           status: Database["public"]["Enums"]["client_status"]
+          timing_mode: string
           updated_at: string
         }
         Insert: {
@@ -139,10 +141,12 @@ export type Database = {
           mixed_base_fixed?: number | null
           mixed_extra_hour_rate?: number | null
           mixed_included_minutes?: number | null
+          monthly_rate?: number | null
           name: string
           notes?: string | null
           phone?: string | null
           status?: Database["public"]["Enums"]["client_status"]
+          timing_mode?: string
           updated_at?: string
         }
         Update: {
@@ -162,10 +166,12 @@ export type Database = {
           mixed_base_fixed?: number | null
           mixed_extra_hour_rate?: number | null
           mixed_included_minutes?: number | null
+          monthly_rate?: number | null
           name?: string
           notes?: string | null
           phone?: string | null
           status?: Database["public"]["Enums"]["client_status"]
+          timing_mode?: string
           updated_at?: string
         }
         Relationships: [
@@ -291,6 +297,9 @@ export type Database = {
           created_at: string
           created_by: string | null
           currency: string
+          default_fixed_rate: number | null
+          default_hourly_rate: number | null
+          default_monthly_rate: number | null
           email_from_name: string | null
           id: string
           language: string
@@ -307,6 +316,9 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           currency?: string
+          default_fixed_rate?: number | null
+          default_hourly_rate?: number | null
+          default_monthly_rate?: number | null
           email_from_name?: string | null
           id?: string
           language?: string
@@ -323,6 +335,9 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           currency?: string
+          default_fixed_rate?: number | null
+          default_hourly_rate?: number | null
+          default_monthly_rate?: number | null
           email_from_name?: string | null
           id?: string
           language?: string
@@ -1509,6 +1524,7 @@ export type Database = {
           manual_mixed_base_fixed: number | null
           manual_mixed_extra_hour_rate: number | null
           manual_mixed_included_minutes: number | null
+          manual_monthly_rate: number | null
           marital_status: string | null
           nationality: string | null
           occ_health_last_at: string | null
@@ -1572,6 +1588,7 @@ export type Database = {
           manual_mixed_base_fixed?: number | null
           manual_mixed_extra_hour_rate?: number | null
           manual_mixed_included_minutes?: number | null
+          manual_monthly_rate?: number | null
           marital_status?: string | null
           nationality?: string | null
           occ_health_last_at?: string | null
@@ -1635,6 +1652,7 @@ export type Database = {
           manual_mixed_base_fixed?: number | null
           manual_mixed_extra_hour_rate?: number | null
           manual_mixed_included_minutes?: number | null
+          manual_monthly_rate?: number | null
           marital_status?: string | null
           nationality?: string | null
           occ_health_last_at?: string | null
@@ -2707,6 +2725,7 @@ export type Database = {
           invite_token: string
         }[]
       }
+      admin_release_user_identity: { Args: { _user_id: string }; Returns: Json }
       admin_replace_manager_invite: {
         Args: { _invite_id: string; _new_email: string }
         Returns: {
@@ -3629,10 +3648,12 @@ export type Database = {
           mixed_base_fixed: number | null
           mixed_extra_hour_rate: number | null
           mixed_included_minutes: number | null
+          monthly_rate: number | null
           name: string
           notes: string | null
           phone: string | null
           status: Database["public"]["Enums"]["client_status"]
+          timing_mode: string
           updated_at: string
         }
         SetofOptions: {
@@ -3720,6 +3741,7 @@ export type Database = {
           manual_mixed_base_fixed: number | null
           manual_mixed_extra_hour_rate: number | null
           manual_mixed_included_minutes: number | null
+          manual_monthly_rate: number | null
           marital_status: string | null
           nationality: string | null
           occ_health_last_at: string | null
