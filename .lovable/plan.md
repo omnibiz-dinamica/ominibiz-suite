@@ -1,73 +1,67 @@
-## Situação atual (auditoria)
+# Plano — Atualizações Operacionais V1.0
 
-- Infra já existente e reutilizada: tabela `public.invites` (token, status, send_count, expires_at, RLS por manager/super_admin), RPCs `admin_create_company_with_invite`, `create_or_resend_invite`, `resend_invite`, `accept_invite`, `get_invite_preview`, template `invite` no registry, helper `sendTransactionalEmail` já grava em `email_send_log` com `trigger_source='invite'`.
-- **Equipe (`app.equipe.tsx`) já envia email automaticamente** ao criar/reenviar convite. Único gap operacional: **`app.admin.tsx` (Super Admin) ainda mostra o link para copiar** — não dispara email.
-- `admin_create_company_with_invite` cria empresa + convite, mas não trata *conflict* caso já exista convite pendente para o mesmo email nessa empresa (raro no fluxo Super Admin, mas planejar).
-- Não há "trocar email do gestor antes do aceite" no Super Admin — precisa novo botão + fluxo.
-- `letrasmodestas@hotmail.com`: invite `accepted` em `OMNIBIZ TESTES` (empresa `eec32f9a-…`) + invite `pending` em outra empresa (`7b79e6a5-…`). auth.users é inacessível via psql restrito; usar RPC `SECURITY DEFINER` para resolver `user_id` por email e limpar vínculos.
+Escopo grande — execução faseada. Cada fase é atômica e verificável.
 
-Nenhuma alteração de RLS/RBAC/schemas necessária — apenas 1 RPC nova (revogar acesso por email) e 1 RPC nova (trocar email do convite pendente do Super Admin). Zero migração destrutiva.
+## Fase A · Fundações de banco (esta fase)
 
-## Fase 1 — Fluxo automático de convite (Super Admin)
+1. `clients.timing_mode` (`start_stop` | `manual`) — ADR-008 alinhado.
+2. `clients.monthly_rate numeric` — complemento a `billing_mode`.
+3. `companies.default_hourly_rate|default_fixed_rate|default_monthly_rate`.
+4. `profiles.manual_monthly_rate` — override do funcionário.
+5. RPC `public.admin_release_user_identity(_user_id uuid)` SECURITY DEFINER:
+   - remove `user_roles`
+   - limpa `profiles.current_company_id` + `company_id_primary`
+   - `profiles.is_active=false`
+   - revoga convites `pending` do email atual
+   - renomeia `auth.users.email` → `retired+<uuid>@homologacao.invalid` e sincroniza `auth.identities.identity_data->>'email'`
+   - PRESERVA todo histórico operacional (tarefas, ponto, geo, férias, despesas, notificações, contratos, recibos, uploads, auditoria)
+   - Apenas Super Admin pode invocar
+   - Idempotente (chama de novo é no-op)
+   - Identidade sempre por UUID (email é atributo)
 
-**Frontend (`src/routes/app.admin.tsx`)**
-- Após `admin_create_company_with_invite`, disparar `sendTransactionalEmail({ templateName:'invite', recipientEmail, idempotencyKey:'invite-<invite_id>-1', triggerSource:'invite', companyId, templateData:{ inviteUrl, companyName, inviterName:'OmniBiz' } })`.
-- Substituir a UI "Copiar link" por **toast** `Empresa criada com sucesso. Convite enviado para <email>` + fechar modal.
-- Manter fallback "Copiar link" **apenas** dentro de um `<details>` "Envio manual (contingência)" caso o email falhe — o erro do send é logado e exibido, o convite não é revertido.
-- Para expor `invite_id` no retorno, alterar `admin_create_company_with_invite` para também retornar `invite_id` (adição de coluna no RETURN TABLE, retrocompatível — clientes existentes leem por nome).
+## Fase B · UI Clientes (billing_mode + timing_mode)
 
-**Impacto:** somente a rota Super Admin. Fluxo homologado de `app.equipe.tsx` intocado.
+Editor de cliente em `app.clientes.tsx`:
+- Radio "Modo de apontamento" (Start/Stop | Manual).
+- Radio "Forma de cobrança" (Hora | Valor Fixo | Mensal).
+- Campos condicionais: `hourly_rate` / `fixed_rate` / `monthly_rate`.
 
-## Fase 2 — Reenvio + Troca de email na tela da empresa
+## Fase C · UI Empresa (valores padrão)
 
-**Nova seção "Convite do Gestor" em `src/routes/app.empresa.tsx`** (visível apenas para super_admin ou owner):
-- Listar convite pendente/aceito para role `manager/owner` da empresa atual (query em `invites`, filtrada pelas RLS existentes).
-- Badge de status: **Pendente** / **Enviado há Xh** / **Expirado** / **Aceito**. Mostrar `send_count`, `last_sent_at`, `expires_at`.
-- **Botão "Reenviar convite"**: chama `resend_invite(_invite_id)` (RPC existente — rotaciona token, incrementa send_count, atualiza `last_sent_at`) → dispara email com `idempotencyKey: 'invite-resend-<id>-<send_count>'`. Mesma lógica já em `app.equipe.tsx`.
-- **Botão "Alterar email do gestor"** (só se `status='pending'`): abre dialog → nova RPC `admin_replace_manager_invite(_invite_id uuid, _new_email text)` SECURITY DEFINER que:
-  1. valida super_admin;
-  2. marca invite atual como `revoked`;
-  3. cria novo invite (mesma company, role='manager', novo token) → retorna nova row;
-  4. registra em `invite_email_audit` (função existente para auditoria).
-  Frontend então envia email para o novo endereço com `idempotencyKey: 'invite-replace-<new_invite_id>-1'`.
+Card "Valores padrão" em `app.empresa.tsx` (RoleGuard manager/owner/super_admin).
 
-Todos os envios continuam gravados em `email_send_log` (feito pela `sendTransactionalEmail`).
+## Fase D · UI Funcionário (overrides)
 
-## Fase 3 — Remover vínculos de `letrasmodestas@hotmail.com` em OMNIBIZ TESTES
+`EmployeeEditor.tsx` — seção "Sobrescrever valores" com hora/fixo/mensal.
 
-Nova RPC SECURITY DEFINER, executada uma vez via `supabase--insert`:
+## Fase E · Recorrência
 
-```sql
--- 1. Resolver user_id por email em auth.users (dentro da RPC, service role)
--- 2. DELETE FROM public.user_roles WHERE user_id=? AND company_id='eec32f9a-…'
--- 3. UPDATE public.invites SET status='revoked'
---    WHERE lower(email)='letrasmodestas@hotmail.com' AND company_id='eec32f9a-…' AND status IN ('pending','accepted')
--- 4. UPDATE public.profiles SET current_company_id = NULL WHERE id=? AND current_company_id='eec32f9a-…'
--- 5. Retornar contagem de rows afetadas para relatório
-```
+`RecurrenceForm.tsx`:
+- Se cliente `timing_mode='manual'` → esconder horário/duração; exigir só datas.
+- Se `start_stop` → usar HH início/fim já preenchidos no topo (não duplicar).
+`EditRecurrenceDialog.tsx` — mantém escopo "esta/futuras/todas" (já existe).
 
-Não toca: `auth.users`, `notifications`, `task_documents`, `employee_attachments`, `time_entries*`, `payslips`, `employee_expenses` etc. Histórico preservado. Usuário continua existindo. Como o email fica **sem** vínculo em OMNIBIZ TESTES e o convite pendente na outra empresa fica intacto, ele já pode ser usado como Gestor Principal de nova empresa (não há UNIQUE(email) global em invites/profiles que impeça).
+## Fase F · Dashboard
 
-Validações pré-execução (relatório antes de rodar):
-- Confirmar user_id resolvido;
-- Confirmar não é o único `owner` da empresa (não é — owner é `82ae91cb-…`);
-- Confirmar contagem exata de rows a remover (esperado: 1 role, 1 invite accepted → revoked).
+`app.index.tsx` — cards Pendentes/Andamento/Concluídas/Atrasadas ligam a `/app/tarefas?status=<x>`; `app.tarefas.tsx` lê `?status=` e aplica.
+Seletor Funcionário no topo do dashboard e das tarefas usando `<EmployeePicker />`.
 
-## Fase 4 — Testes E2E
+## Fase G · EmployeePicker universal
 
-Sequência via Playwright (localhost + Supabase real): criar empresa nova como super_admin → verificar toast → conferir `email_send_log` (SELECT via psql) com `template_name='invite'` e `trigger_source='invite'` → aceitar convite via `/aceitar-convite?token=…` → criar senha → login → checar `user_roles` e `current_company_id`. Depois: rodar RPC de limpeza → SELECT confirmando 0 rows em `user_roles` para letrasmodestas em OMNIBIZ TESTES → criar nova empresa usando esse email → aceitar → login.
+Rollout de `<EmployeePicker />` (already em `src/components/common/`) para Ponto, RH, Férias, Despesas, Recibos, Comercial — como filtro de listagem.
 
-## Entregáveis
+## Fase H · Homologação — senhas
 
-1. Migração: alteração de `admin_create_company_with_invite` (retornar `invite_id`), nova RPC `admin_replace_manager_invite`, nova RPC `admin_revoke_user_from_company`.
-2. Código: `app.admin.tsx` (auto-send + toast), `app.empresa.tsx` (card "Convite do Gestor" com reenviar/trocar-email), helper `src/lib/invites/send.ts` centralizando montagem do payload de email (evitar duplicação com `app.equipe.tsx`).
-3. Execução única do revoke para OMNIBIZ TESTES + letrasmodestas.
-4. Atualizar `docs/CHANGELOG.md`, `docs/DECISIONS.md` (ADR-014 auto-send invite + ADR-015 helper unificado), `docs/KNOWN_ISSUES.md` (registrar como resolvido o envio manual).
-5. Relatório final: arquivos, fluxo antigo × novo, evidências (SELECTs de `email_send_log` e `user_roles`), testes, riscos residuais (email pode falhar → super admin vê erro + tem contingência de copiar link).
+Não é possível ler senhas do auth.users (hash). Estratégia:
+- Listar todos os utilizadores homologação (`@homologacao` ou empresas de teste).
+- Resetar via `supabase.auth.admin.updateUserById` com senha fixa `Homolog@2026`.
+- Entregar relatório CSV em `/mnt/documents/`.
 
-## Fora do escopo (não mexer)
+## Fase I · Documentação
 
-- `app.equipe.tsx` (fluxo homologado, apenas refatora para consumir novo helper — sem mudança de comportamento).
-- Templates de email, RLS, RBAC, esquema de `invites`, `companies`, `profiles`, `auth.*`.
+`docs/ATUALIZACOES_OPERACIONAIS_V1_0.md` + PDF (`reportlab`) em `docs/` e `/mnt/documents/`.
+Atualizar CHANGELOG.md, DECISIONS.md (ADR-016 Liberação de Identidade, ADR-017 Herança de valores), KNOWN_ISSUES.md.
 
-Aguardo aprovação para iniciar Fase 1.
+## Diretriz permanente
+
+UUID = identidade. Email = atributo. Todas as novas RPCs recebem UUID.
