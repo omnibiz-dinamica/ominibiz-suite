@@ -46,9 +46,11 @@ interface ClientRow {
   notes: string | null;
   status: "ativo" | "inativo";
   created_at: string;
-  billing_mode: "hourly" | "fixed" | "mixed";
+  billing_mode: "hourly" | "fixed" | "mixed" | "monthly";
   hourly_rate: number | null;
   fixed_rate: number | null;
+  monthly_rate: number | null;
+  timing_mode: "start_stop" | "manual";
   geo_lat: number | null;
   geo_lng: number | null;
   geo_address: string | null;
@@ -191,6 +193,7 @@ function ClientsPage() {
     hourly: "Por hora",
     fixed: "Valor fixo",
     mixed: "Misto",
+    monthly: "Mensal",
   };
 
   const buildExportColumns = (): ExportColumn<ClientRow>[] => [
@@ -217,6 +220,16 @@ function ClientsPage() {
       header: "Valor / hora",
       accessor: (c) => (c.hourly_rate != null ? `€ ${Number(c.hourly_rate).toFixed(2)}` : ""),
       width: 70,
+    },
+    {
+      header: "Mensal",
+      accessor: (c) => (c.monthly_rate != null ? `€ ${Number(c.monthly_rate).toFixed(2)}` : ""),
+      width: 70,
+    },
+    {
+      header: "Apontamento",
+      accessor: (c) => (c.timing_mode === "manual" ? "Manual" : "Start/Stop"),
+      width: 80,
     },
     { header: "Status", accessor: (c) => c.status, width: 60 },
   ];
@@ -438,6 +451,21 @@ function ClientForm({
   const [address, setAddress] = useState(initial?.address ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [status, setStatus] = useState<"ativo" | "inativo">(initial?.status ?? "ativo");
+  const [timingMode, setTimingMode] = useState<"start_stop" | "manual">(
+    initial?.timing_mode ?? "start_stop",
+  );
+  const [billingMode, setBillingMode] = useState<ClientRow["billing_mode"]>(
+    initial?.billing_mode ?? "hourly",
+  );
+  const [hourlyRate, setHourlyRate] = useState<string>(
+    initial?.hourly_rate != null ? String(initial.hourly_rate) : "",
+  );
+  const [fixedRate, setFixedRate] = useState<string>(
+    initial?.fixed_rate != null ? String(initial.fixed_rate) : "",
+  );
+  const [monthlyRate, setMonthlyRate] = useState<string>(
+    initial?.monthly_rate != null ? String(initial.monthly_rate) : "",
+  );
   const [geo, setGeo] = useState<ClientGeoValue>({
     lat: initial?.geo_lat ?? null,
     lng: initial?.geo_lng ?? null,
@@ -477,6 +505,15 @@ function ClientForm({
         }
         setLoading(true);
         try {
+          const parseRate = (s: string): number | null => {
+            const n = Number(s.replace(",", "."));
+            return Number.isFinite(n) && s.trim() !== "" ? n : null;
+          };
+          const rates = {
+            hourly_rate: billingMode === "hourly" || billingMode === "mixed" ? parseRate(hourlyRate) : null,
+            fixed_rate: billingMode === "fixed" || billingMode === "mixed" ? parseRate(fixedRate) : null,
+            monthly_rate: billingMode === "monthly" ? parseRate(monthlyRate) : null,
+          };
           let clientId = initial?.id;
           if (initial) {
             const { error } = await (
@@ -489,6 +526,9 @@ function ClientForm({
                 address: address.trim() || null,
                 notes: notes.trim() || null,
                 status,
+                timing_mode: timingMode,
+                billing_mode: billingMode,
+                ...rates,
                 geo_lat: geo.lat,
                 geo_lng: geo.lng,
                 geo_address: geo.address?.trim() || null,
@@ -509,6 +549,9 @@ function ClientForm({
                 notes: notes.trim() || null,
                 status,
                 created_by: userId,
+                timing_mode: timingMode,
+                billing_mode: billingMode,
+                ...rates,
                 geo_lat: geo.lat,
                 geo_lng: geo.lng,
                 geo_address: geo.address?.trim() || null,
@@ -613,6 +656,90 @@ function ClientForm({
           </SelectContent>
         </Select>
       </div>
+
+      <div className="space-y-1.5">
+        <Label>Modo de apontamento</Label>
+        <div className="flex gap-2">
+          {(
+            [
+              { v: "start_stop", label: "Start/Stop", hint: "Funcionário marca início e fim" },
+              { v: "manual", label: "Manual", hint: "Sem horário — apenas datas" },
+            ] as const
+          ).map((opt) => (
+            <button
+              key={opt.v}
+              type="button"
+              onClick={() => setTimingMode(opt.v)}
+              className={`flex-1 rounded-lg border p-2 text-left text-xs transition ${
+                timingMode === opt.v
+                  ? "border-primary bg-primary/10"
+                  : "border-border hover:border-primary/50"
+              }`}
+            >
+              <div className="font-medium">{opt.label}</div>
+              <div className="text-[10px] text-muted-foreground">{opt.hint}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>Forma de cobrança</Label>
+        <Select value={billingMode} onValueChange={(v) => setBillingMode(v as ClientRow["billing_mode"])}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="hourly">Por hora</SelectItem>
+            <SelectItem value="fixed">Valor fixo</SelectItem>
+            <SelectItem value="monthly">Mensal</SelectItem>
+            <SelectItem value="mixed">Misto (hora + fixo)</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        {(billingMode === "hourly" || billingMode === "mixed") && (
+          <div className="space-y-1.5">
+            <Label className="text-xs">Valor / hora (€)</Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              value={hourlyRate}
+              onChange={(e) => setHourlyRate(e.target.value)}
+              placeholder="Herda da empresa"
+            />
+          </div>
+        )}
+        {(billingMode === "fixed" || billingMode === "mixed") && (
+          <div className="space-y-1.5">
+            <Label className="text-xs">Valor fixo (€)</Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              value={fixedRate}
+              onChange={(e) => setFixedRate(e.target.value)}
+              placeholder="Herda da empresa"
+            />
+          </div>
+        )}
+        {billingMode === "monthly" && (
+          <div className="space-y-1.5 col-span-3">
+            <Label className="text-xs">Valor mensal (€)</Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              value={monthlyRate}
+              onChange={(e) => setMonthlyRate(e.target.value)}
+              placeholder="Herda da empresa"
+            />
+          </div>
+        )}
+      </div>
+      <p className="text-[10px] text-muted-foreground">
+        Deixe em branco para herdar o valor padrão da empresa (ADR-017).
+      </p>
 
       <ClientGeoEditor value={geo} onChange={setGeo} />
 
