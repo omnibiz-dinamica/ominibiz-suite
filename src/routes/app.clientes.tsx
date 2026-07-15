@@ -451,6 +451,21 @@ function ClientForm({
   const [address, setAddress] = useState(initial?.address ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [status, setStatus] = useState<"ativo" | "inativo">(initial?.status ?? "ativo");
+  const [timingMode, setTimingMode] = useState<"start_stop" | "manual">(
+    initial?.timing_mode ?? "start_stop",
+  );
+  const [billingMode, setBillingMode] = useState<ClientRow["billing_mode"]>(
+    initial?.billing_mode ?? "hourly",
+  );
+  const [hourlyRate, setHourlyRate] = useState<string>(
+    initial?.hourly_rate != null ? String(initial.hourly_rate) : "",
+  );
+  const [fixedRate, setFixedRate] = useState<string>(
+    initial?.fixed_rate != null ? String(initial.fixed_rate) : "",
+  );
+  const [monthlyRate, setMonthlyRate] = useState<string>(
+    initial?.monthly_rate != null ? String(initial.monthly_rate) : "",
+  );
   const [geo, setGeo] = useState<ClientGeoValue>({
     lat: initial?.geo_lat ?? null,
     lng: initial?.geo_lng ?? null,
