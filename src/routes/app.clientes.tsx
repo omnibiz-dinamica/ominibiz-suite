@@ -46,9 +46,11 @@ interface ClientRow {
   notes: string | null;
   status: "ativo" | "inativo";
   created_at: string;
-  billing_mode: "hourly" | "fixed" | "mixed";
+  billing_mode: "hourly" | "fixed" | "mixed" | "monthly";
   hourly_rate: number | null;
   fixed_rate: number | null;
+  monthly_rate: number | null;
+  timing_mode: "start_stop" | "manual";
   geo_lat: number | null;
   geo_lng: number | null;
   geo_address: string | null;
@@ -191,6 +193,7 @@ function ClientsPage() {
     hourly: "Por hora",
     fixed: "Valor fixo",
     mixed: "Misto",
+    monthly: "Mensal",
   };
 
   const buildExportColumns = (): ExportColumn<ClientRow>[] => [
@@ -217,6 +220,16 @@ function ClientsPage() {
       header: "Valor / hora",
       accessor: (c) => (c.hourly_rate != null ? `€ ${Number(c.hourly_rate).toFixed(2)}` : ""),
       width: 70,
+    },
+    {
+      header: "Mensal",
+      accessor: (c) => (c.monthly_rate != null ? `€ ${Number(c.monthly_rate).toFixed(2)}` : ""),
+      width: 70,
+    },
+    {
+      header: "Apontamento",
+      accessor: (c) => (c.timing_mode === "manual" ? "Manual" : "Start/Stop"),
+      width: 80,
     },
     { header: "Status", accessor: (c) => c.status, width: 60 },
   ];
