@@ -505,6 +505,15 @@ function ClientForm({
         }
         setLoading(true);
         try {
+          const parseRate = (s: string): number | null => {
+            const n = Number(s.replace(",", "."));
+            return Number.isFinite(n) && s.trim() !== "" ? n : null;
+          };
+          const rates = {
+            hourly_rate: billingMode === "hourly" || billingMode === "mixed" ? parseRate(hourlyRate) : null,
+            fixed_rate: billingMode === "fixed" || billingMode === "mixed" ? parseRate(fixedRate) : null,
+            monthly_rate: billingMode === "monthly" ? parseRate(monthlyRate) : null,
+          };
           let clientId = initial?.id;
           if (initial) {
             const { error } = await (
@@ -517,6 +526,9 @@ function ClientForm({
                 address: address.trim() || null,
                 notes: notes.trim() || null,
                 status,
+                timing_mode: timingMode,
+                billing_mode: billingMode,
+                ...rates,
                 geo_lat: geo.lat,
                 geo_lng: geo.lng,
                 geo_address: geo.address?.trim() || null,
@@ -537,6 +549,9 @@ function ClientForm({
                 notes: notes.trim() || null,
                 status,
                 created_by: userId,
+                timing_mode: timingMode,
+                billing_mode: billingMode,
+                ...rates,
                 geo_lat: geo.lat,
                 geo_lng: geo.lng,
                 geo_address: geo.address?.trim() || null,
