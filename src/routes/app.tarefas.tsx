@@ -809,6 +809,21 @@ function TaskForm({
         if (initial) {
           ({ error } = await supabase.from("tasks").update(payload).eq("id", initial.id));
         } else if (recurrence.enabled) {
+          // Horário e duração da recorrência SEMPRE derivados do topo do formulário.
+          // • start_stop: usa scheduledFor (HH:MM) e (end - start) em minutos.
+          // • manual:     "00:00" e 0 min — funcionário registra hora no apontamento.
+          const parseHM = (v: string): string => {
+            const m = /T(\d{2}):(\d{2})/.exec(v);
+            return m ? `${m[1]}:${m[2]}` : "00:00";
+          };
+          const derivedTime = timingMode === "manual" ? "00:00" : parseHM(scheduledFor);
+          let derivedDuration = 0;
+          if (timingMode !== "manual" && startISO && endISO) {
+            derivedDuration = Math.max(
+              0,
+              Math.round((new Date(endISO).getTime() - new Date(startISO).getTime()) / 60000),
+            );
+          }
           // Cria recorrência e materializa as próximas 14 dias.
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const ins = await (supabase.from("task_recurrences" as any) as any).insert({
@@ -827,8 +842,8 @@ function TaskForm({
               recurrence.frequency === "monthly" ? { day_of_month: recurrence.dayOfMonth } : {},
             start_date: recurrence.startDate,
             end_date: recurrence.endDate || null,
-            scheduled_time: recurrence.scheduledTime,
-            duration_minutes: recurrence.durationMinutes,
+            scheduled_time: derivedTime,
+            duration_minutes: derivedDuration,
           });
           error = ins.error;
           if (!error) {

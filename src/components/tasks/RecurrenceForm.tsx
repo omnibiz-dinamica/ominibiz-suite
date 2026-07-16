@@ -51,7 +51,10 @@ export function RecurrenceForm({
     onChange({ ...value, [k]: v });
 
   const [open, setOpen] = useState(value.enabled);
-  const isManual = timingMode === "manual";
+  // Recorrência opera apenas com datas.
+  // • start_stop: horário e duração herdados do topo do formulário (Início/Fim).
+  // • manual:     horário preenchido pelo funcionário no apontamento.
+  // Em ambos os modos, o bloco de recorrência exibe SOMENTE Data inicial / Data final.
 
   return (
     <div className="space-y-3 rounded-xl border border-border p-3">
@@ -59,9 +62,9 @@ export function RecurrenceForm({
         <div>
           <div className="text-sm font-medium">Recorrência</div>
           <div className="text-xs text-muted-foreground">
-            {isManual
+            {timingMode === "manual"
               ? "Cliente em modo Manual — apenas as datas são obrigatórias."
-              : "Gera ocorrências automaticamente até o evento de encerramento."}
+              : "Horários herdados do topo (Início/Fim). Configure apenas as datas."}
           </div>
         </div>
         <Button
@@ -80,24 +83,16 @@ export function RecurrenceForm({
 
       {open && value.enabled && (
         <div className="space-y-3 border-t border-border pt-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>Frequência</Label>
-              <Select value={value.frequency} onValueChange={(v) => set("frequency", v as RecurrenceFrequency)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {(Object.keys(FREQUENCY_LABELS) as RecurrenceFrequency[]).map((f) => (
-                    <SelectItem key={f} value={f}>{FREQUENCY_LABELS[f]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {!isManual && (
-              <div className="space-y-1.5">
-                <Label>Horário</Label>
-                <Input type="time" value={value.scheduledTime} onChange={(e) => set("scheduledTime", e.target.value)} />
-              </div>
-            )}
+          <div className="space-y-1.5">
+            <Label>Frequência</Label>
+            <Select value={value.frequency} onValueChange={(v) => set("frequency", v as RecurrenceFrequency)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {(Object.keys(FREQUENCY_LABELS) as RecurrenceFrequency[]).map((f) => (
+                  <SelectItem key={f} value={f}>{FREQUENCY_LABELS[f]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {value.frequency === "weekly" && (
@@ -145,25 +140,13 @@ export function RecurrenceForm({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Início</Label>
+              <Label>Data inicial</Label>
               <Input type="date" value={value.startDate} onChange={(e) => set("startDate", e.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label>Fim (opcional)</Label>
+              <Label>Data final (opcional)</Label>
               <Input type="date" value={value.endDate} onChange={(e) => set("endDate", e.target.value)} />
             </div>
-            {!isManual && (
-              <div className="space-y-1.5 col-span-2">
-                <Label>Duração estimada (min)</Label>
-                <Input
-                  type="number"
-                  min={5}
-                  max={1440}
-                  value={value.durationMinutes}
-                  onChange={(e) => set("durationMinutes", Math.max(5, Number(e.target.value) || 60))}
-                />
-              </div>
-            )}
           </div>
 
           <p className="text-[11px] text-muted-foreground">

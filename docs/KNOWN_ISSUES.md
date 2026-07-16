@@ -1,5 +1,13 @@
 # OmniBiz — Known Issues
 
+## KI-025 — Homologação Sara V1.0: exportações Excel/PDF sem validação de conteúdo
+
+- **Severidade:** 🔵 Baixa · **Status:** Aberto · **Módulo:** Exportações
+- **Descrição:** Botões de exportação (Excel e PDF) foram acionados sem erro visual durante a homologação Sara V1.0, mas o conteúdo dos arquivos não foi inspecionado.
+- **Impacto:** Baixo — nenhum indício de corrupção. Requerida bateria Playwright que abra os binários, valide extensão, cabeçalhos, filtros aplicados e paginação/layout no caso do PDF.
+- **Workaround:** validação manual pontual.
+- **Plano:** próxima janela de QA, sem bloqueio de release.
+
 > **Status:** Oficial · **Versão:** 1.0 · **Última revisão:** 2026-07-06
 > **Escopo:** Registro vivo de problemas conhecidos, seu impacto, workaround e plano de resolução.
 > **Regra:** todo bug reproduzível em produção deve ser lançado aqui antes de ir para o backlog.

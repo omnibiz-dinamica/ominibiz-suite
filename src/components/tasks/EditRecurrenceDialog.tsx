@@ -33,7 +33,7 @@ export function EditRecurrenceDialog({
 }) {
   const fromTask = task ?? null;
   const allowThis = !!fromTask;
-  const [scope, setScope] = useState<ReassignScope>(allowThis ? "this" : "all");
+  const [scope, setScope] = useState<ReassignScope>(allowThis ? "this" : "future");
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<Priority>("media");
   const [assignedTo, setAssignedTo] = useState<string>("");
@@ -44,7 +44,7 @@ export function EditRecurrenceDialog({
 
   useEffect(() => {
     if (!open) return;
-    setScope(allowThis ? "this" : "all");
+    setScope(allowThis ? "this" : "future");
     if (fromTask) {
       setTitle(fromTask.title);
       setPriority(fromTask.priority);
@@ -123,9 +123,8 @@ export function EditRecurrenceDialog({
             <Select value={scope} onValueChange={(v) => setScope(v as ReassignScope)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {allowThis && <SelectItem value="this">Somente esta ocorrência</SelectItem>}
-                <SelectItem value="future">A partir desta (futuras)</SelectItem>
-                <SelectItem value="all">Recorrência completa</SelectItem>
+                {allowThis && <SelectItem value="this">Apenas esta ocorrência</SelectItem>}
+                <SelectItem value="future">Esta e todas as futuras</SelectItem>
               </SelectContent>
             </Select>
           </div>
