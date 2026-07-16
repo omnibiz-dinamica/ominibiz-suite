@@ -82,6 +82,8 @@ export const Route = createFileRoute("/app/tarefas")({
 function TasksPage() {
   const { user, isManager, currentCompanyId } = useAuth();
   const qc = useQueryClient();
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<TaskRow | null>(null);
   const [reassigning, setReassigning] = useState<TaskRow | null>(null);
