@@ -678,15 +678,13 @@ function FeriasPage() {
           <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
             <div>
               <Label className="text-xs">Colaborador</Label>
-              <Select value={filterUser} onValueChange={setFilterUser}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {uniqueUsers.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <EmployeePicker
+                employees={uniqueUsers.map((u) => ({ id: u.id, full_name: u.name }))}
+                value={filterUser === "all" ? null : filterUser}
+                onChange={(id: string) => setFilterUser(id || "all")}
+                placeholder="Todos"
+                ariaLabel="Filtrar por colaborador"
+              />
             </div>
             <div>
               <Label className="text-xs">Mês</Label>
