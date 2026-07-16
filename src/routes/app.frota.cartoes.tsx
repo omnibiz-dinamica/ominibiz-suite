@@ -9,8 +9,15 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { CreditCard, Plus, ArrowLeft, X } from "lucide-react";
 import { PhotoPicker } from "@/components/PhotoPicker";
+import { RoleGuard } from "@/components/RoleGuard";
 
-export const Route = createFileRoute("/app/frota/cartoes")({ component: CardsPage });
+export const Route = createFileRoute("/app/frota/cartoes")({
+  component: () => (
+    <RoleGuard allow={["manager", "owner", "super_admin"]}>
+      <CardsPage />
+    </RoleGuard>
+  ),
+});
 
 type FuelCard = {
   id: string; number: string; label: string | null; photo_path: string | null;
