@@ -63,9 +63,9 @@ export function RecurrenceForm({
         <div>
           <div className="text-sm font-medium">Recorrência</div>
           <div className="text-xs text-muted-foreground">
-            {isManual
+            {timingMode === "manual"
               ? "Cliente em modo Manual — apenas as datas são obrigatórias."
-              : "Gera ocorrências automaticamente até o evento de encerramento."}
+              : "Horários herdados do topo (Início/Fim). Configure apenas as datas."}
           </div>
         </div>
         <Button
