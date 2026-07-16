@@ -51,8 +51,32 @@ import {
   formatLocalTime,
 } from "@/lib/wall-clock";
 
+// Filtros aceitos via search-params. `atrasadas` é filtro derivado
+// (não é status persistido) — combina "não concluído" + due_at no passado.
+const STATUS_FILTERS = [
+  "pendente",
+  "autorizado",
+  "em_andamento",
+  "concluido",
+  "cancelado",
+  "ausente",
+  "atrasadas",
+] as const;
+type StatusFilter = (typeof STATUS_FILTERS)[number];
+type TasksSearch = { status?: StatusFilter; employee?: string };
+
 export const Route = createFileRoute("/app/tarefas")({
   component: TasksPage,
+  validateSearch: (raw): TasksSearch => {
+    const s = raw as Record<string, unknown>;
+    const status =
+      typeof s.status === "string" && (STATUS_FILTERS as readonly string[]).includes(s.status)
+        ? (s.status as StatusFilter)
+        : undefined;
+    const employee =
+      typeof s.employee === "string" && s.employee ? s.employee : undefined;
+    return { status, employee };
+  },
 });
 
 function TasksPage() {
