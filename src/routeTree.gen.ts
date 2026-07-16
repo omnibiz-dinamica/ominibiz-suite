@@ -20,7 +20,6 @@ import { Route as SignTokenRouteImport } from './routes/sign.$token'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as AppTarefasRouteImport } from './routes/app.tarefas'
 import { Route as AppSuporteRouteImport } from './routes/app.suporte'
-import { Route as AppRhRouteImport } from './routes/app.rh'
 import { Route as AppPontoRouteImport } from './routes/app.ponto'
 import { Route as AppPerfilRouteImport } from './routes/app.perfil'
 import { Route as AppNotificacoesRouteImport } from './routes/app.notificacoes'
@@ -35,6 +34,7 @@ import { Route as AppComercialRouteImport } from './routes/app.comercial'
 import { Route as AppClientesRouteImport } from './routes/app.clientes'
 import { Route as AppAssistenteRouteImport } from './routes/app.assistente'
 import { Route as AppAdminRouteImport } from './routes/app.admin'
+import { Route as AppRhIndexRouteImport } from './routes/app.rh.index'
 import { Route as AppComercialIndexRouteImport } from './routes/app.comercial.index'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as AppTarefasRecorrentesRouteImport } from './routes/app.tarefas.recorrentes'
@@ -109,11 +109,6 @@ const AppSuporteRoute = AppSuporteRouteImport.update({
   path: '/suporte',
   getParentRoute: () => AppRoute,
 } as any)
-const AppRhRoute = AppRhRouteImport.update({
-  id: '/rh',
-  path: '/rh',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppPontoRoute = AppPontoRouteImport.update({
   id: '/ponto',
   path: '/ponto',
@@ -184,6 +179,11 @@ const AppAdminRoute = AppAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AppRoute,
 } as any)
+const AppRhIndexRoute = AppRhIndexRouteImport.update({
+  id: '/rh/',
+  path: '/rh/',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppComercialIndexRoute = AppComercialIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -205,9 +205,9 @@ const AppSuporteIdRoute = AppSuporteIdRouteImport.update({
   getParentRoute: () => AppSuporteRoute,
 } as any)
 const AppRhRecibosRoute = AppRhRecibosRouteImport.update({
-  id: '/recibos',
-  path: '/recibos',
-  getParentRoute: () => AppRhRoute,
+  id: '/rh/recibos',
+  path: '/rh/recibos',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppPontoGestaoRoute = AppPontoGestaoRouteImport.update({
   id: '/ponto_/gestao',
@@ -300,7 +300,6 @@ export interface FileRoutesByFullPath {
   '/app/notificacoes': typeof AppNotificacoesRoute
   '/app/perfil': typeof AppPerfilRoute
   '/app/ponto': typeof AppPontoRoute
-  '/app/rh': typeof AppRhRouteWithChildren
   '/app/suporte': typeof AppSuporteRouteWithChildren
   '/app/tarefas': typeof AppTarefasRouteWithChildren
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
@@ -317,6 +316,7 @@ export interface FileRoutesByFullPath {
   '/app/tarefas/recorrentes': typeof AppTarefasRecorrentesRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/app/comercial/': typeof AppComercialIndexRoute
+  '/app/rh/': typeof AppRhIndexRoute
   '/app/comercial/contratos/$id': typeof AppComercialContratosIdRoute
   '/app/comercial/contratos/novo': typeof AppComercialContratosNovoRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -344,7 +344,6 @@ export interface FileRoutesByTo {
   '/app/notificacoes': typeof AppNotificacoesRoute
   '/app/perfil': typeof AppPerfilRoute
   '/app/ponto': typeof AppPontoRoute
-  '/app/rh': typeof AppRhRouteWithChildren
   '/app/suporte': typeof AppSuporteRouteWithChildren
   '/app/tarefas': typeof AppTarefasRouteWithChildren
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
@@ -361,6 +360,7 @@ export interface FileRoutesByTo {
   '/app/tarefas/recorrentes': typeof AppTarefasRecorrentesRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/app/comercial': typeof AppComercialIndexRoute
+  '/app/rh': typeof AppRhIndexRoute
   '/app/comercial/contratos/$id': typeof AppComercialContratosIdRoute
   '/app/comercial/contratos/novo': typeof AppComercialContratosNovoRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -391,7 +391,6 @@ export interface FileRoutesById {
   '/app/notificacoes': typeof AppNotificacoesRoute
   '/app/perfil': typeof AppPerfilRoute
   '/app/ponto': typeof AppPontoRoute
-  '/app/rh': typeof AppRhRouteWithChildren
   '/app/suporte': typeof AppSuporteRouteWithChildren
   '/app/tarefas': typeof AppTarefasRouteWithChildren
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
@@ -408,6 +407,7 @@ export interface FileRoutesById {
   '/app/tarefas/recorrentes': typeof AppTarefasRecorrentesRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/app/comercial/': typeof AppComercialIndexRoute
+  '/app/rh/': typeof AppRhIndexRoute
   '/app/comercial/contratos/$id': typeof AppComercialContratosIdRoute
   '/app/comercial/contratos/novo': typeof AppComercialContratosNovoRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -439,7 +439,6 @@ export interface FileRouteTypes {
     | '/app/notificacoes'
     | '/app/perfil'
     | '/app/ponto'
-    | '/app/rh'
     | '/app/suporte'
     | '/app/tarefas'
     | '/email/unsubscribe'
@@ -456,6 +455,7 @@ export interface FileRouteTypes {
     | '/app/tarefas/recorrentes'
     | '/lovable/email/suppression'
     | '/app/comercial/'
+    | '/app/rh/'
     | '/app/comercial/contratos/$id'
     | '/app/comercial/contratos/novo'
     | '/lovable/email/auth/preview'
@@ -483,7 +483,6 @@ export interface FileRouteTypes {
     | '/app/notificacoes'
     | '/app/perfil'
     | '/app/ponto'
-    | '/app/rh'
     | '/app/suporte'
     | '/app/tarefas'
     | '/email/unsubscribe'
@@ -500,6 +499,7 @@ export interface FileRouteTypes {
     | '/app/tarefas/recorrentes'
     | '/lovable/email/suppression'
     | '/app/comercial'
+    | '/app/rh'
     | '/app/comercial/contratos/$id'
     | '/app/comercial/contratos/novo'
     | '/lovable/email/auth/preview'
@@ -529,7 +529,6 @@ export interface FileRouteTypes {
     | '/app/notificacoes'
     | '/app/perfil'
     | '/app/ponto'
-    | '/app/rh'
     | '/app/suporte'
     | '/app/tarefas'
     | '/email/unsubscribe'
@@ -546,6 +545,7 @@ export interface FileRouteTypes {
     | '/app/tarefas/recorrentes'
     | '/lovable/email/suppression'
     | '/app/comercial/'
+    | '/app/rh/'
     | '/app/comercial/contratos/$id'
     | '/app/comercial/contratos/novo'
     | '/lovable/email/auth/preview'
@@ -651,13 +651,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSuporteRouteImport
       parentRoute: typeof AppRoute
     }
-    '/app/rh': {
-      id: '/app/rh'
-      path: '/rh'
-      fullPath: '/app/rh'
-      preLoaderRoute: typeof AppRhRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/app/ponto': {
       id: '/app/ponto'
       path: '/ponto'
@@ -756,6 +749,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/rh/': {
+      id: '/app/rh/'
+      path: '/rh'
+      fullPath: '/app/rh/'
+      preLoaderRoute: typeof AppRhIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/comercial/': {
       id: '/app/comercial/'
       path: '/'
@@ -786,10 +786,10 @@ declare module '@tanstack/react-router' {
     }
     '/app/rh/recibos': {
       id: '/app/rh/recibos'
-      path: '/recibos'
+      path: '/rh/recibos'
       fullPath: '/app/rh/recibos'
       preLoaderRoute: typeof AppRhRecibosRouteImport
-      parentRoute: typeof AppRhRoute
+      parentRoute: typeof AppRoute
     }
     '/app/ponto_/gestao': {
       id: '/app/ponto_/gestao'
@@ -942,16 +942,6 @@ const AppFrotaRouteWithChildren = AppFrotaRoute._addFileChildren(
   AppFrotaRouteChildren,
 )
 
-interface AppRhRouteChildren {
-  AppRhRecibosRoute: typeof AppRhRecibosRoute
-}
-
-const AppRhRouteChildren: AppRhRouteChildren = {
-  AppRhRecibosRoute: AppRhRecibosRoute,
-}
-
-const AppRhRouteWithChildren = AppRhRoute._addFileChildren(AppRhRouteChildren)
-
 interface AppSuporteRouteChildren {
   AppSuporteIdRoute: typeof AppSuporteIdRoute
 }
@@ -991,11 +981,12 @@ interface AppRouteChildren {
   AppNotificacoesRoute: typeof AppNotificacoesRoute
   AppPerfilRoute: typeof AppPerfilRoute
   AppPontoRoute: typeof AppPontoRoute
-  AppRhRoute: typeof AppRhRouteWithChildren
   AppSuporteRoute: typeof AppSuporteRouteWithChildren
   AppTarefasRoute: typeof AppTarefasRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
   AppPontoGestaoRoute: typeof AppPontoGestaoRoute
+  AppRhRecibosRoute: typeof AppRhRecibosRoute
+  AppRhIndexRoute: typeof AppRhIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -1013,11 +1004,12 @@ const AppRouteChildren: AppRouteChildren = {
   AppNotificacoesRoute: AppNotificacoesRoute,
   AppPerfilRoute: AppPerfilRoute,
   AppPontoRoute: AppPontoRoute,
-  AppRhRoute: AppRhRouteWithChildren,
   AppSuporteRoute: AppSuporteRouteWithChildren,
   AppTarefasRoute: AppTarefasRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
   AppPontoGestaoRoute: AppPontoGestaoRoute,
+  AppRhRecibosRoute: AppRhRecibosRoute,
+  AppRhIndexRoute: AppRhIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

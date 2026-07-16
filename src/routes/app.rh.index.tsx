@@ -14,7 +14,7 @@ import {
   FileSignature,
 } from "lucide-react";
 
-export const Route = createFileRoute("/app/rh")({
+export const Route = createFileRoute("/app/rh/")({
   component: DashboardRH,
 });
 
