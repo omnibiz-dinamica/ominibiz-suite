@@ -1,9 +1,11 @@
 # OmniBiz — Manual Operacional do Gestor
 
-**Versão:** 1.0
-**Data:** 04/07/2026
+**Versão:** 1.0 (Addendum V1.0 Operacional — 16/07/2026)
+**Data:** 04/07/2026 · **Última revisão:** 16/07/2026
 **Público:** Gestores, RH e Super Admin.
 **Status:** Documento oficial.
+
+> **Addendum V1.0 Operacional (2026-07-16).** As novidades da sprint de refinamento operacional (modo de apontamento, cobrança mensal, valores padrão, overrides, recorrência condicional, dashboard clicável, filtros persistentes em Tarefas e `EmployeePicker` universal) estão consolidadas em [`../ATUALIZACOES_OPERACIONAIS_V1_0.md`](../ATUALIZACOES_OPERACIONAIS_V1_0.md). Este manual continua sendo a referência de dia-a-dia; consulte o addendum para o passo-a-passo das novidades.
 
 ---
 

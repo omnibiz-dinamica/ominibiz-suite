@@ -7,6 +7,32 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### Atualizações Operacionais V1.0 — Bloco 3 (Fases H · I) (2026-07-16)
+
+#### Adicionado
+- **Documento consolidado da versão** `docs/ATUALIZACOES_OPERACIONAIS_V1_0.md`
+  cobrindo as 9 novidades V1.0 com formato Objetivo · Como utilizar ·
+  Benefícios · Observações · FAQ e marcadores de screenshot.
+- **Release Notes por público** em `docs/release-notes/`:
+  - `RELEASE_NOTES_ADMIN_V1.0.md`
+  - `RELEASE_NOTES_GESTOR_V1.0.md`
+  - `RELEASE_NOTES_FUNCIONARIO_V1.0.md`
+- **Manuais operacionais** receberam addendum V1.0
+  (`docs/manuals/Manual_Operacional_Gestor.md`,
+  `docs/manuals/Manual_Operacional_Funcionario.md`).
+- **PDFs** dos manuais gerados em `/mnt/documents/omnibiz-v1.0/`.
+- **ADR-019** — Filtros de listagem em Tarefas via search-params validados.
+- **ADR-020** — `EmployeePicker` como componente canônico.
+- **Roadmap Técnico Futuro** em `docs/DECISIONS.md` — 10 recomendações
+  arquiteturais identificadas durante V1.0.
+- **KI-022** — Reset de senhas de homologação não executável do sandbox.
+
+#### Fase H — não executada tecnicamente
+O reset em massa das contas de homologação (`Homolog@2026`) não foi
+executado pelo sandbox por ausência de service-role acessível e do wiring
+de `functionMiddleware` em `src/start.ts`. Procedimento e workaround
+documentados em KI-022 e no item 4 do "Roadmap Técnico Futuro".
+
 ### Atualizações Operacionais V1.0 — Bloco 2 (Fases F · G) (2026-07-16)
 
 #### Adicionado
