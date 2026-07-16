@@ -31,6 +31,28 @@
 
 ---
 
+## KI-022 — Reset de senhas de homologação não executável do sandbox
+
+- **Severidade:** 🔵 Baixa
+- **Status:** Aberto
+- **Módulo:** Auth · Homologação
+- **Contexto:** A Fase H prevê reset em massa (`Homolog@2026`) das contas de
+  homologação via `supabase.auth.admin.updateUserById`. Executar isso a partir
+  do sandbox de build exige (a) service role acessível ao processo, (b)
+  `src/start.ts` com `functionMiddleware` de bearer registrado e (c)
+  `createServerFn` protegido por `requireSupabaseAuth` invocável do painel
+  Super Admin. O projeto ainda não expõe `src/start.ts` nem tem o painel de
+  reset.
+- **Workaround:** procedimento manual pelo Super Admin — usar a Auth Admin
+  API do Supabase (script server-side com service role) ou disparar o fluxo
+  padrão de recuperação de senha (`supabase.auth.resetPasswordForEmail`) para
+  cada e-mail de homologação. Preservar sempre o fluxo oficial dos e-mails
+  listados em `docs/HOMOLOGACAO_RBAC.md`.
+- **Plano:** implementar item 4 do "Roadmap Técnico Futuro" em `DECISIONS.md`
+  (painel Super Admin de reset) — resolve esta KI.
+
+---
+
 ## KI-001 — Geocoding retorna `REQUEST_DENIED`
 
 - **Severidade:** 🟠 Alta
