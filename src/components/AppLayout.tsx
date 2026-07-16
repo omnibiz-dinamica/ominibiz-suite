@@ -26,6 +26,7 @@ import {
   ChevronDown,
   Repeat,
   CreditCard,
+  LifeBuoy,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
@@ -33,6 +34,7 @@ import { useTheme } from "@/lib/theme";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { NewTicketDialog } from "@/components/support/NewTicketDialog";
 
 function detectBrowser(): { name: string; version: string } {
   if (typeof navigator === "undefined") return { name: "ssr", version: "" };
@@ -224,6 +226,23 @@ function buildGroups(args: {
     },
   ];
 
+  // Central de Suporte — Gestor/Owner. Super Admin operando dentro de empresa
+  // também vê (herança). Super Admin sem empresa acessa Central Global.
+  groups.splice(groups.length - 1, 0, {
+    id: "suporte",
+    label: "Suporte",
+    items: [{ to: "/app/suporte", label: "Central de Suporte", icon: LifeBuoy }],
+  });
+
+  if (superAdminOperating) {
+    // já cai no bloco acima; adicionar entrada global
+    groups.push({
+      id: "suporte-global",
+      label: "Suporte Global",
+      items: [{ to: "/app/admin/suporte", label: "Todos os Tickets", icon: LifeBuoy }],
+    });
+  }
+
   if (superAdminOperating) {
     groups.splice(4, 0, {
       id: "superadmin",
@@ -242,6 +261,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
   const qc = useQueryClient();
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
 
   const superAdminOperating = isSuperAdmin && !!currentCompanyId;
 
