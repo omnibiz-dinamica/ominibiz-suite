@@ -7,6 +7,60 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### Central de Suporte — Painel Operacional do Super Admin (2026-07-16)
+
+#### Adicionado
+- **RPC `get_support_ticket_requester_info(_ticket_id)`** (`SECURITY DEFINER`,
+  `search_path = public`): retorna nome do solicitante, email
+  (`auth.users.email`) e nome da empresa. Autorizado a Super Admin
+  sempre; Gestor/Owner apenas para tickets da própria empresa.
+  Nenhuma alteração de RLS ou tabelas.
+- **Detalhe do ticket enriquecido** (`/app/suporte/$id`):
+  - Bloco *Dados gerais* com empresa, solicitante, email (clicável +
+    copiar), datas de abertura/atualização/resolução/fechamento.
+  - Bloco *Local do erro* com módulo, rota e URL (link externo + copiar).
+  - Bloco *Informações técnicas* (collapsible) com build, commit,
+    ambiente, navegador, plataforma, idioma, resolução, viewport e
+    timezone; botão *copiar JSON* do contexto completo.
+  - Grid de anexos com miniaturas para imagens, ícone para PDFs,
+    Signed URLs (900s) e ação de download por item.
+  - Timeline unificada em ordem cronológica (eventos + mensagens),
+    com rótulos humanos (`EVENT_TYPE_LABEL`).
+  - Nome do autor nas mensagens (Solicitante / Suporte / Você).
+  - Botão *copiar título+descrição* e *copiar número*.
+- **Respostas rápidas** (Super Admin apenas): 7 templates prontos
+  (Recebido, Em análise, Preciso de mais informação, Problema
+  identificado, Correção aplicada, Atualize o sistema, Encerramento).
+- **Central Global (`/app/admin/suporte`) — filtros e KPIs
+  operacionais**:
+  - Filtros por status, prioridade, tipo, empresa (populada da
+    query) e intervalo de datas.
+  - Pesquisa passa a considerar também a descrição.
+  - Ordenação corrigida: prioridade (urgente → alta → normal → baixa),
+    depois abertos primeiro, depois **mais antigos primeiro** (FIFO
+    operacional).
+  - 6 KPI-cards clicáveis: Total, Abertos, Urgentes (não fechados),
+    Em análise, Aguardando cliente, Resolvidos hoje.
+  - 4 painéis adicionais: tempo médio de 1ª resposta, tempo médio de
+    resolução, top 3 empresas e top 3 módulos.
+- **Cores de prioridade padronizadas** conforme spec Sara:
+  urgente = vermelho, alta = laranja, normal = azul, baixa = cinza.
+
+#### Segurança
+- Nenhuma política RLS alterada. A nova RPC replica no plpgsql o
+  mesmo predicado de acesso já existente em `support_tickets`
+  (`has_role('super_admin')` ou pertencer à empresa via
+  `profiles.current_company_id` / `company_id_primary`).
+- `auth.users.email` acessado apenas dentro do `SECURITY DEFINER`;
+  nunca exposto por join no cliente.
+
+#### Documentação
+- `docs/ARCHITECTURE_SUPPORT_TICKETS.md` — nova seção *Painel
+  operacional do Super Admin*.
+- `docs/HOMOLOGACAO_SUPORTE_V1.md` — bateria de homologação.
+- `docs/KNOWN_ISSUES.md` — registrada KI-026 (respostas rápidas não
+  editáveis pelo Super Admin nesta fase; edição na Fase 2).
+
 ### Correção da Homologação Sara V1.0 (2026-07-16)
 
 #### Segurança
