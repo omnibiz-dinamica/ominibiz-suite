@@ -20,6 +20,7 @@ import { Route as SignTokenRouteImport } from './routes/sign.$token'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as AppTarefasRouteImport } from './routes/app.tarefas'
 import { Route as AppSuporteRouteImport } from './routes/app.suporte'
+import { Route as AppRhRouteImport } from './routes/app.rh'
 import { Route as AppPontoRouteImport } from './routes/app.ponto'
 import { Route as AppPerfilRouteImport } from './routes/app.perfil'
 import { Route as AppNotificacoesRouteImport } from './routes/app.notificacoes'
@@ -109,6 +110,11 @@ const AppSuporteRoute = AppSuporteRouteImport.update({
   path: '/suporte',
   getParentRoute: () => AppRoute,
 } as any)
+const AppRhRoute = AppRhRouteImport.update({
+  id: '/rh',
+  path: '/rh',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppPontoRoute = AppPontoRouteImport.update({
   id: '/ponto',
   path: '/ponto',
@@ -180,9 +186,9 @@ const AppAdminRoute = AppAdminRouteImport.update({
   getParentRoute: () => AppRoute,
 } as any)
 const AppRhIndexRoute = AppRhIndexRouteImport.update({
-  id: '/rh/',
-  path: '/rh/',
-  getParentRoute: () => AppRoute,
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRhRoute,
 } as any)
 const AppComercialIndexRoute = AppComercialIndexRouteImport.update({
   id: '/',
@@ -205,9 +211,9 @@ const AppSuporteIdRoute = AppSuporteIdRouteImport.update({
   getParentRoute: () => AppSuporteRoute,
 } as any)
 const AppRhRecibosRoute = AppRhRecibosRouteImport.update({
-  id: '/rh/recibos',
-  path: '/rh/recibos',
-  getParentRoute: () => AppRoute,
+  id: '/recibos',
+  path: '/recibos',
+  getParentRoute: () => AppRhRoute,
 } as any)
 const AppPontoGestaoRoute = AppPontoGestaoRouteImport.update({
   id: '/ponto_/gestao',
@@ -300,6 +306,7 @@ export interface FileRoutesByFullPath {
   '/app/notificacoes': typeof AppNotificacoesRoute
   '/app/perfil': typeof AppPerfilRoute
   '/app/ponto': typeof AppPontoRoute
+  '/app/rh': typeof AppRhRouteWithChildren
   '/app/suporte': typeof AppSuporteRouteWithChildren
   '/app/tarefas': typeof AppTarefasRouteWithChildren
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
@@ -391,6 +398,7 @@ export interface FileRoutesById {
   '/app/notificacoes': typeof AppNotificacoesRoute
   '/app/perfil': typeof AppPerfilRoute
   '/app/ponto': typeof AppPontoRoute
+  '/app/rh': typeof AppRhRouteWithChildren
   '/app/suporte': typeof AppSuporteRouteWithChildren
   '/app/tarefas': typeof AppTarefasRouteWithChildren
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
@@ -439,6 +447,7 @@ export interface FileRouteTypes {
     | '/app/notificacoes'
     | '/app/perfil'
     | '/app/ponto'
+    | '/app/rh'
     | '/app/suporte'
     | '/app/tarefas'
     | '/email/unsubscribe'
@@ -529,6 +538,7 @@ export interface FileRouteTypes {
     | '/app/notificacoes'
     | '/app/perfil'
     | '/app/ponto'
+    | '/app/rh'
     | '/app/suporte'
     | '/app/tarefas'
     | '/email/unsubscribe'
@@ -651,6 +661,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSuporteRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/rh': {
+      id: '/app/rh'
+      path: '/rh'
+      fullPath: '/app/rh'
+      preLoaderRoute: typeof AppRhRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/ponto': {
       id: '/app/ponto'
       path: '/ponto'
@@ -751,10 +768,10 @@ declare module '@tanstack/react-router' {
     }
     '/app/rh/': {
       id: '/app/rh/'
-      path: '/rh'
+      path: '/'
       fullPath: '/app/rh/'
       preLoaderRoute: typeof AppRhIndexRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof AppRhRoute
     }
     '/app/comercial/': {
       id: '/app/comercial/'
@@ -786,10 +803,10 @@ declare module '@tanstack/react-router' {
     }
     '/app/rh/recibos': {
       id: '/app/rh/recibos'
-      path: '/rh/recibos'
+      path: '/recibos'
       fullPath: '/app/rh/recibos'
       preLoaderRoute: typeof AppRhRecibosRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof AppRhRoute
     }
     '/app/ponto_/gestao': {
       id: '/app/ponto_/gestao'
@@ -942,6 +959,18 @@ const AppFrotaRouteWithChildren = AppFrotaRoute._addFileChildren(
   AppFrotaRouteChildren,
 )
 
+interface AppRhRouteChildren {
+  AppRhRecibosRoute: typeof AppRhRecibosRoute
+  AppRhIndexRoute: typeof AppRhIndexRoute
+}
+
+const AppRhRouteChildren: AppRhRouteChildren = {
+  AppRhRecibosRoute: AppRhRecibosRoute,
+  AppRhIndexRoute: AppRhIndexRoute,
+}
+
+const AppRhRouteWithChildren = AppRhRoute._addFileChildren(AppRhRouteChildren)
+
 interface AppSuporteRouteChildren {
   AppSuporteIdRoute: typeof AppSuporteIdRoute
 }
@@ -981,12 +1010,11 @@ interface AppRouteChildren {
   AppNotificacoesRoute: typeof AppNotificacoesRoute
   AppPerfilRoute: typeof AppPerfilRoute
   AppPontoRoute: typeof AppPontoRoute
+  AppRhRoute: typeof AppRhRouteWithChildren
   AppSuporteRoute: typeof AppSuporteRouteWithChildren
   AppTarefasRoute: typeof AppTarefasRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
   AppPontoGestaoRoute: typeof AppPontoGestaoRoute
-  AppRhRecibosRoute: typeof AppRhRecibosRoute
-  AppRhIndexRoute: typeof AppRhIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -1004,12 +1032,11 @@ const AppRouteChildren: AppRouteChildren = {
   AppNotificacoesRoute: AppNotificacoesRoute,
   AppPerfilRoute: AppPerfilRoute,
   AppPontoRoute: AppPontoRoute,
+  AppRhRoute: AppRhRouteWithChildren,
   AppSuporteRoute: AppSuporteRouteWithChildren,
   AppTarefasRoute: AppTarefasRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
   AppPontoGestaoRoute: AppPontoGestaoRoute,
-  AppRhRecibosRoute: AppRhRecibosRoute,
-  AppRhIndexRoute: AppRhIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
