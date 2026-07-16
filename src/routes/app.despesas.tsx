@@ -258,15 +258,18 @@ function DespesasPage() {
               </SelectContent>
             </Select>
             {isManager && (
-              <Select value={filterUser} onValueChange={setFilterUser}>
-                <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os colaboradores</SelectItem>
-                  {Object.entries(names).map(([id, name]) => (
-                    <SelectItem key={id} value={id}>{name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="w-[240px]">
+                <EmployeePicker
+                  employees={Object.entries(names).map(([id, name]) => ({
+                    id,
+                    full_name: name,
+                  }))}
+                  value={filterUser === "all" ? null : filterUser}
+                  onChange={(id) => setFilterUser(id || "all")}
+                  placeholder="Todos os colaboradores"
+                  ariaLabel="Filtrar por colaborador"
+                />
+              </div>
             )}
           </div>
         </div>
