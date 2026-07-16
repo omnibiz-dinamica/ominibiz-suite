@@ -1,5 +1,39 @@
 # OmniBiz — Known Issues
 
+## KI-028 — [RESOLVIDO] RLS cross-tenant em anexos/mensagens de suporte
+
+- **Severidade:** 🔴 Crítica · **Status:** ✅ Resolvido (2026-07-16) · **Módulo:** Suporte · Segurança
+- **Sintoma:** As policies `INSERT` de `support_ticket_attachments` e
+  `support_ticket_messages` avaliavam `t.company_id = t.company_id`
+  (comparação autorreferencial, sempre `TRUE`). Um Gestor autenticado
+  poderia — via chamada direta ao Data API — inserir anexo/mensagem
+  referenciando um `ticket_id` pertencente a outra empresa, desde que
+  informasse no payload seu próprio `company_id`.
+- **Impacto:** Potencial escrita cross-tenant em duas tabelas do
+  módulo de Suporte. Sem evidência de exploração; RPCs `SECURITY
+  DEFINER` do módulo (`register_support_attachment`,
+  `post_support_ticket_message`) já validavam o vínculo, mas a policy
+  em si estava permissiva.
+- **Correção:** Substituída a condição por
+  `t.company_id = support_ticket_<tabela>.company_id`. Migração
+  aplicada em 2026-07-16.
+
+## KI-027 — `support_tickets.company_id` mutável em UPDATE
+
+- **Severidade:** 🟡 Média · **Status:** Aberto · **Módulo:** Suporte · Segurança
+- **Sintoma:** A policy `managers update own company support_tickets`
+  usa `USING = WITH CHECK = is_company_manager(auth.uid(), company_id)`.
+  Isso protege contra ataques triviais, mas não impede que um Gestor
+  que administre duas empresas mova um ticket entre elas via UPDATE
+  do `company_id`.
+- **Impacto:** Baixo em prática (cenário exige duplo vínculo de
+  gestor); nenhuma escrita externa ao usuário legítimo. As RPCs do
+  módulo não expõem esse campo para edição.
+- **Correção planejada:** Adicionar predicado
+  `OLD.company_id = NEW.company_id` via trigger ou coluna gerada; ou
+  travar `company_id` como imutável através de trigger `BEFORE UPDATE`.
+  Fora do escopo do P0 atual — registrado para próxima janela.
+
 ## KI-026 — Central de Suporte: respostas rápidas hardcoded e auditoria de leitura de anexo
 
 - **Severidade:** 🔵 Baixa · **Status:** Aberto · **Módulo:** Suporte
