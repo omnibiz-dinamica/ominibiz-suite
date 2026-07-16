@@ -7,6 +7,36 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### Correção da Homologação Sara V1.0 (2026-07-16)
+
+#### Segurança
+- **`/app/rh` e filhos protegidos por RoleGuard de layout**: a rota
+  passou a ser um layout `_authenticated`-only com guarda para
+  `manager`/`owner`/`super_admin`. Funcionário digitando `/app/rh`,
+  `/app/rh/recibos` ou qualquer filho é redirecionado a `/app` — o
+  menu deixa de ser o único mecanismo de segurança.
+- **`/app/frota/cartoes` protegido por RoleGuard** (gestor/owner/super
+  admin). Cartões de combustível deixam de ser acessíveis por URL
+  direta a funcionários.
+
+#### Corrigido
+- **Recibos do Gestor abrem a tela própria**: `app.rh.tsx` era um leaf
+  sem `<Outlet />` e engolia `/app/rh/recibos`, redirecionando para o
+  Dashboard RH. A rota agora é `app.rh.index.tsx` e o layout `app.rh`
+  monta os filhos via `<Outlet />`.
+- **Recorrência sem horário/duração no bloco**: o formulário agora
+  exibe apenas Data inicial / Data final. Horário e duração são
+  herdados do topo do modal (Início/Fim). Em clientes `timing_mode =
+  manual`, a hora é preenchida no apontamento.
+- **Edição de recorrência com escopo obrigatório**: o diálogo oferece
+  apenas "Apenas esta ocorrência" e "Esta e todas as futuras". A
+  opção silenciosa "Recorrência completa" foi removida.
+- **Duração exibida em HH:MM** (`formatDuration`) — nunca minutos
+  brutos ao utilizador.
+- **Separadores do editor de colaborador** renomeados para
+  "Contabilidade/RH" e "Documentos" (apenas rótulos visuais; rotas,
+  APIs e banco preservados).
+
 ### Módulo Central de Suporte — Fase 1 (2026-07-16)
 
 #### Adicionado
