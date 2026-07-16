@@ -7,6 +7,30 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### Atualizações Operacionais V1.0 — Bloco 1 (Fases C · D · E) (2026-07-16)
+
+#### Adicionado
+- **Card "Valores padrão" em `/app/empresa`** (`src/routes/app.empresa.tsx`,
+  componente `DefaultRatesCard`). Manager/owner/super_admin configuram
+  `default_hourly_rate`, `default_fixed_rate` e `default_monthly_rate` na tabela
+  `companies`. Deixar em branco = herança desligada.
+- **Sobrescrita de valores por funcionário** na aba Financeiro do
+  `EmployeeEditor` (`src/components/equipe/EmployeeEditor.tsx`,
+  `TabFinanceiro`). Novos campos `manual_hourly_rate`, `manual_fixed_rate`,
+  `manual_monthly_rate` na `profiles`. Herdam do cliente/empresa quando `NULL`.
+- **Recorrência condicional por modo de apontamento**
+  (`src/components/tasks/RecurrenceForm.tsx`). Novo prop opcional `timingMode`:
+  quando `manual`, os campos "Horário" e "Duração estimada" ficam ocultos —
+  apenas datas são requeridas. Consumidor (`src/routes/app.tarefas.tsx`)
+  passa `timing_mode` do cliente selecionado; sem cliente, mantém o
+  comportamento clássico (`start_stop`).
+
+#### Banco (migration `20260716…manual_rate_overrides`)
+- `profiles.manual_hourly_rate numeric(12,4)` (nullable)
+- `profiles.manual_fixed_rate numeric(12,4)` (nullable)
+- Comentários COLUMN documentam a herança ADR-017.
+- Nenhuma alteração em RLS, GRANTs ou RBAC.
+
 ### Fase 5 — Onboarding automático de empresas (2026-07-07)
 
 #### Adicionado
