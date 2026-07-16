@@ -38,6 +38,7 @@ import { Route as AppAdminRouteImport } from './routes/app.admin'
 import { Route as AppComercialIndexRouteImport } from './routes/app.comercial.index'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as AppTarefasRecorrentesRouteImport } from './routes/app.tarefas.recorrentes'
+import { Route as AppSuporteIdRouteImport } from './routes/app.suporte.$id'
 import { Route as AppRhRecibosRouteImport } from './routes/app.rh.recibos'
 import { Route as AppPontoGestaoRouteImport } from './routes/app.ponto_.gestao'
 import { Route as AppFrotaCartoesRouteImport } from './routes/app.frota.cartoes'
@@ -197,6 +198,11 @@ const AppTarefasRecorrentesRoute = AppTarefasRecorrentesRouteImport.update({
   path: '/recorrentes',
   getParentRoute: () => AppTarefasRoute,
 } as any)
+const AppSuporteIdRoute = AppSuporteIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppSuporteRoute,
+} as any)
 const AppRhRecibosRoute = AppRhRecibosRouteImport.update({
   id: '/recibos',
   path: '/recibos',
@@ -289,7 +295,7 @@ export interface FileRoutesByFullPath {
   '/app/perfil': typeof AppPerfilRoute
   '/app/ponto': typeof AppPontoRoute
   '/app/rh': typeof AppRhRouteWithChildren
-  '/app/suporte': typeof AppSuporteRoute
+  '/app/suporte': typeof AppSuporteRouteWithChildren
   '/app/tarefas': typeof AppTarefasRouteWithChildren
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/sign/$token': typeof SignTokenRoute
@@ -300,6 +306,7 @@ export interface FileRoutesByFullPath {
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
   '/app/ponto/gestao': typeof AppPontoGestaoRoute
   '/app/rh/recibos': typeof AppRhRecibosRoute
+  '/app/suporte/$id': typeof AppSuporteIdRoute
   '/app/tarefas/recorrentes': typeof AppTarefasRecorrentesRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/app/comercial/': typeof AppComercialIndexRoute
@@ -331,7 +338,7 @@ export interface FileRoutesByTo {
   '/app/perfil': typeof AppPerfilRoute
   '/app/ponto': typeof AppPontoRoute
   '/app/rh': typeof AppRhRouteWithChildren
-  '/app/suporte': typeof AppSuporteRoute
+  '/app/suporte': typeof AppSuporteRouteWithChildren
   '/app/tarefas': typeof AppTarefasRouteWithChildren
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/sign/$token': typeof SignTokenRoute
@@ -342,6 +349,7 @@ export interface FileRoutesByTo {
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
   '/app/ponto/gestao': typeof AppPontoGestaoRoute
   '/app/rh/recibos': typeof AppRhRecibosRoute
+  '/app/suporte/$id': typeof AppSuporteIdRoute
   '/app/tarefas/recorrentes': typeof AppTarefasRecorrentesRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/app/comercial': typeof AppComercialIndexRoute
@@ -376,7 +384,7 @@ export interface FileRoutesById {
   '/app/perfil': typeof AppPerfilRoute
   '/app/ponto': typeof AppPontoRoute
   '/app/rh': typeof AppRhRouteWithChildren
-  '/app/suporte': typeof AppSuporteRoute
+  '/app/suporte': typeof AppSuporteRouteWithChildren
   '/app/tarefas': typeof AppTarefasRouteWithChildren
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/sign/$token': typeof SignTokenRoute
@@ -387,6 +395,7 @@ export interface FileRoutesById {
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
   '/app/ponto_/gestao': typeof AppPontoGestaoRoute
   '/app/rh/recibos': typeof AppRhRecibosRoute
+  '/app/suporte/$id': typeof AppSuporteIdRoute
   '/app/tarefas/recorrentes': typeof AppTarefasRecorrentesRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/app/comercial/': typeof AppComercialIndexRoute
@@ -433,6 +442,7 @@ export interface FileRouteTypes {
     | '/app/frota/cartoes'
     | '/app/ponto/gestao'
     | '/app/rh/recibos'
+    | '/app/suporte/$id'
     | '/app/tarefas/recorrentes'
     | '/lovable/email/suppression'
     | '/app/comercial/'
@@ -475,6 +485,7 @@ export interface FileRouteTypes {
     | '/app/frota/cartoes'
     | '/app/ponto/gestao'
     | '/app/rh/recibos'
+    | '/app/suporte/$id'
     | '/app/tarefas/recorrentes'
     | '/lovable/email/suppression'
     | '/app/comercial'
@@ -519,6 +530,7 @@ export interface FileRouteTypes {
     | '/app/frota/cartoes'
     | '/app/ponto_/gestao'
     | '/app/rh/recibos'
+    | '/app/suporte/$id'
     | '/app/tarefas/recorrentes'
     | '/lovable/email/suppression'
     | '/app/comercial/'
@@ -753,6 +765,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTarefasRecorrentesRouteImport
       parentRoute: typeof AppTarefasRoute
     }
+    '/app/suporte/$id': {
+      id: '/app/suporte/$id'
+      path: '/$id'
+      fullPath: '/app/suporte/$id'
+      preLoaderRoute: typeof AppSuporteIdRouteImport
+      parentRoute: typeof AppSuporteRoute
+    }
     '/app/rh/recibos': {
       id: '/app/rh/recibos'
       path: '/recibos'
@@ -902,6 +921,18 @@ const AppRhRouteChildren: AppRhRouteChildren = {
 
 const AppRhRouteWithChildren = AppRhRoute._addFileChildren(AppRhRouteChildren)
 
+interface AppSuporteRouteChildren {
+  AppSuporteIdRoute: typeof AppSuporteIdRoute
+}
+
+const AppSuporteRouteChildren: AppSuporteRouteChildren = {
+  AppSuporteIdRoute: AppSuporteIdRoute,
+}
+
+const AppSuporteRouteWithChildren = AppSuporteRoute._addFileChildren(
+  AppSuporteRouteChildren,
+)
+
 interface AppTarefasRouteChildren {
   AppTarefasRecorrentesRoute: typeof AppTarefasRecorrentesRoute
 }
@@ -930,7 +961,7 @@ interface AppRouteChildren {
   AppPerfilRoute: typeof AppPerfilRoute
   AppPontoRoute: typeof AppPontoRoute
   AppRhRoute: typeof AppRhRouteWithChildren
-  AppSuporteRoute: typeof AppSuporteRoute
+  AppSuporteRoute: typeof AppSuporteRouteWithChildren
   AppTarefasRoute: typeof AppTarefasRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
   AppPontoGestaoRoute: typeof AppPontoGestaoRoute
@@ -952,7 +983,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppPerfilRoute: AppPerfilRoute,
   AppPontoRoute: AppPontoRoute,
   AppRhRoute: AppRhRouteWithChildren,
-  AppSuporteRoute: AppSuporteRoute,
+  AppSuporteRoute: AppSuporteRouteWithChildren,
   AppTarefasRoute: AppTarefasRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
   AppPontoGestaoRoute: AppPontoGestaoRoute,
