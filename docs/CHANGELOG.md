@@ -7,6 +7,41 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### Restauração das credenciais de homologação (2026-07-16)
+
+#### Corrigido
+- **Senhas de homologação (`manager@homologacao.test`,
+  `employee@homologacao.test`)** redefinidas para `Homolog@2026`
+  via `UPDATE auth.users SET encrypted_password = crypt(..., gen_salt('bf'))`
+  com trava dupla por `email` **e** `id`. UUIDs preservados
+  (`549e267d-6809-473c-9f50-04c413026564` e
+  `58f72122-cd91-4db6-9fd0-55bd66885ce3`). Nenhuma linha de
+  `profiles`, `user_roles`, `companies`, `tasks`, `time_entries`,
+  `time_entries_audit`, `notifications`, `payslips`, `contracts` ou
+  qualquer tabela operacional foi tocada.
+- **Validação E2E:** ambos os utilizadores autenticam via
+  `/login` (`grant_type=password → 200`), recebem `access_token`,
+  são redirecionados para `/app`, hidratam empresa (`OMNIBIZ TESTES`,
+  `eec32f9a-32ad-4af8-9c10-25eb9cd26099`), papel correto (`manager` /
+  `employee`) e histórico intacto (tarefas COIFA legadas visíveis para
+  o gestor).
+- **Super Admin (`edurts.pt@gmail.com`) intencionalmente não tocado.**
+  Conta pertence ao dono do produto, autentica normalmente com senha
+  real (último login registado em `2026-07-15 15:28`). Menções à
+  senha `Homolog@2026` para essa conta em documentos anteriores devem
+  ser lidas como *descrição do padrão de homologação*, não como
+  aplicação efetiva sobre a conta real.
+
+#### Observações estruturais (fora do escopo, registadas em KNOWN_ISSUES)
+- KI-023: `public.user_roles` sem `UNIQUE(user_id, role)` — Super
+  Admin acumulou 615 linhas duplicadas de `super_admin`.
+- KI-024: `public.profiles.is_active = false` para o Super Admin,
+  apesar de o login funcionar (campo não é consultado no gate de auth).
+
+#### Impacto
+- **KI-022 → parcialmente resolvido** para as contas de homologação
+  operacionais (manager/employee). Super Admin sai do escopo.
+
 ### Atualizações Operacionais V1.0 — Bloco 3 (Fases H · I) (2026-07-16)
 
 #### Adicionado

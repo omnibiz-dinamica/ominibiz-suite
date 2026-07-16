@@ -34,7 +34,13 @@
 ## KI-022 — Reset de senhas de homologação não executável do sandbox
 
 - **Severidade:** 🔵 Baixa
-- **Status:** Aberto
+- **Status:** ✅ Resolvido para `manager@homologacao.test` e
+  `employee@homologacao.test` em 2026-07-16 (reset direto via SQL
+  `UPDATE auth.users SET encrypted_password = crypt('Homolog@2026',
+  gen_salt('bf'))` com trava por `email` + `id`, UUIDs preservados,
+  histórico operacional intacto, login E2E validado). Super Admin
+  (`edurts.pt@gmail.com`) permanece fora de escopo por ser conta real
+  do dono do produto — não deve ser resetado.
 - **Módulo:** Auth · Homologação
 - **Contexto:** A Fase H prevê reset em massa (`Homolog@2026`) das contas de
   homologação via `supabase.auth.admin.updateUserById`. Executar isso a partir
@@ -50,6 +56,63 @@
   listados em `docs/HOMOLOGACAO_RBAC.md`.
 - **Plano:** implementar item 4 do "Roadmap Técnico Futuro" em `DECISIONS.md`
   (painel Super Admin de reset) — resolve esta KI.
+
+---
+
+## KI-023 — `public.user_roles` sem UNIQUE(user_id, role)
+
+- **Severidade:** 🟡 Média
+- **Status:** Aberto
+- **Módulo:** Auth · RBAC
+- **Detectado em:** 2026-07-16
+
+**Sintoma:** Super Admin (`82ae91cb-315c-4641-8eaa-9b75b6f153f5`) possui
+615 linhas em `public.user_roles` com `role='super_admin'`. O
+`ARCHITECTURE_RBAC.md` prevê `UNIQUE(user_id, role)` na criação da tabela.
+
+**Causa provável:** constraint ausente ou removida em migração histórica;
+algum path de código chama insert em vez de upsert para o par
+(`user_id`,`role`).
+
+**Impacto:** aumento marginal de custo em `has_role()` (STABLE, cacheável)
+e em joins com `user_roles`. Sem risco funcional imediato — a função
+`has_role` usa `EXISTS`, então duplicidade não altera resposta booleana.
+
+**Workaround:** nenhum necessário no momento.
+
+**Correção planejada:**
+1. Migration `DELETE ... WHERE ctid NOT IN (SELECT min(ctid) ...)` para
+   deduplicar; 2. `ALTER TABLE public.user_roles ADD CONSTRAINT
+   user_roles_user_role_uniq UNIQUE(user_id, role);` 3. Auditar
+   call-sites que inserem em `user_roles` para usar `ON CONFLICT
+   (user_id, role) DO NOTHING`.
+
+---
+
+## KI-024 — Super Admin com `profiles.is_active = false`
+
+- **Severidade:** 🔵 Baixa
+- **Status:** Aberto
+- **Módulo:** Auth · Profiles
+- **Detectado em:** 2026-07-16
+
+**Sintoma:** O profile do Super Admin real
+(`82ae91cb-315c-4641-8eaa-9b75b6f153f5`) está com `is_active=false`,
+apesar de a autenticação e navegação funcionarem normalmente
+(`last_sign_in_at = 2026-07-15`).
+
+**Causa provável:** estado herdado de rotina antiga de desativação/
+/reativação. O gate de login não consulta `profiles.is_active`; guards
+de rota usam `user_roles` + `effectiveRole`.
+
+**Impacto:** nenhum funcional confirmado. Risco de futuras políticas
+RLS que passem a filtrar por `profiles.is_active` bloquearem o Super
+Admin inadvertidamente.
+
+**Correção planejada:** validar semanticamente o significado de
+`profiles.is_active` (documentar em `ARCHITECTURE_PRINCIPLES.md`) e
+então normalizar via UPDATE pontual — não incluída nesta tarefa por
+estar fora do escopo do pedido de restauração de credenciais.
 
 ---
 
