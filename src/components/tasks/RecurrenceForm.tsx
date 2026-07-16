@@ -55,7 +55,6 @@ export function RecurrenceForm({
   // • start_stop: horário e duração herdados do topo do formulário (Início/Fim).
   // • manual:     horário preenchido pelo funcionário no apontamento.
   // Em ambos os modos, o bloco de recorrência exibe SOMENTE Data inicial / Data final.
-  void timingMode;
 
   return (
     <div className="space-y-3 rounded-xl border border-border p-3">
