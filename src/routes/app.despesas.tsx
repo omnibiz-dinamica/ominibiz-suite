@@ -266,7 +266,7 @@ function DespesasPage() {
                     full_name: name,
                   }))}
                   value={filterUser === "all" ? null : filterUser}
-                  onChange={(id) => setFilterUser(id || "all")}
+                  onChange={(id: string) => setFilterUser(id || "all")}
                   placeholder="Todos os colaboradores"
                   ariaLabel="Filtrar por colaborador"
                 />
