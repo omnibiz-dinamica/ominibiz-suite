@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Calendar as CalendarIcon, Check, X as XIcon, Plus, Plane, FileSpreadsheet, FileText, Pencil } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { EmployeePicker } from "@/components/common/EmployeePicker";
 import { Switch } from "@/components/ui/switch";
 import { sendTransactionalEmail } from "@/lib/email/send";
 import { exportToExcel, exportToPdf } from "@/lib/exports";
