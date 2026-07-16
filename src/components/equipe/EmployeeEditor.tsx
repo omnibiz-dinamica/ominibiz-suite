@@ -78,8 +78,8 @@ export function EmployeeEditor({ userId, companyId, currentRole, onDone }: Emplo
     <Tabs value={tab} onValueChange={setTab} className="w-full">
       <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6">
         <TabsTrigger value="dados">Dados</TabsTrigger>
-        <TabsTrigger value="rh">RH</TabsTrigger>
-        <TabsTrigger value="docs">Docs</TabsTrigger>
+        <TabsTrigger value="rh">Contabilidade/RH</TabsTrigger>
+        <TabsTrigger value="docs">Documentos</TabsTrigger>
         <TabsTrigger value="fin">Financeiro</TabsTrigger>
         <TabsTrigger value="sig">Assinaturas</TabsTrigger>
         <TabsTrigger value="anx">Anexos</TabsTrigger>
