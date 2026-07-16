@@ -123,14 +123,14 @@ function TasksPage() {
   const { data: clientsList } = useQuery({
     queryKey: ["clients-min", currentCompanyId],
     queryFn: async () => {
-      if (!currentCompanyId) return [] as { id: string; name: string }[];
+      if (!currentCompanyId) return [] as { id: string; name: string; timing_mode: "start_stop" | "manual" | null }[];
       const { data, error } = await (supabase.from("clients" as never) as any)
-        .select("id,name")
+        .select("id,name,timing_mode")
         .eq("company_id", currentCompanyId)
         .eq("status", "ativo")
         .order("name", { ascending: true });
       if (error) throw error;
-      return (data ?? []) as unknown as { id: string; name: string }[];
+      return (data ?? []) as unknown as { id: string; name: string; timing_mode: "start_stop" | "manual" | null }[];
     },
     enabled: isManager && !!currentCompanyId,
   });
@@ -607,7 +607,7 @@ function TaskForm({
   onDone,
 }: {
   members: { id: string; full_name: string | null }[];
-  clients: { id: string; name: string }[];
+  clients: { id: string; name: string; timing_mode?: "start_stop" | "manual" | null }[];
   companyId: string;
   userId: string;
   initial?: TaskRow;
@@ -626,6 +626,9 @@ function TaskForm({
   );
   const [recurrence, setRecurrence] = useState<RecurrenceFormValue>(emptyRecurrence());
   const [loading, setLoading] = useState(false);
+  const selectedClient = clients.find((c) => c.id === clientId);
+  const timingMode: "start_stop" | "manual" =
+    selectedClient?.timing_mode === "manual" ? "manual" : "start_stop";
 
   return (
     <form
@@ -770,7 +773,7 @@ function TaskForm({
         </div>
       </div>
       {!initial && (
-        <RecurrenceForm value={recurrence} onChange={setRecurrence} />
+        <RecurrenceForm value={recurrence} onChange={setRecurrence} timingMode={timingMode} />
       )}
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? "Salvando..." : initial ? "Salvar alterações" : "Criar tarefa"}
