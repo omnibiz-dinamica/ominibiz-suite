@@ -3240,6 +3240,16 @@ export type Database = {
           status: Database["public"]["Enums"]["invite_status"]
         }[]
       }
+      get_support_ticket_requester_info: {
+        Args: { _ticket_id: string }
+        Returns: {
+          company_id: string
+          company_name: string
+          requester_email: string
+          requester_full_name: string
+          requester_user_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _company_id?: string
