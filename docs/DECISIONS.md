@@ -206,3 +206,40 @@
 - **Decisão:** `RecurrenceForm` aceita prop `timingMode?: 'start_stop' | 'manual'`. Quando `manual`, os campos "Horário" e "Duração estimada" são ocultados; apenas datas (início/fim) são requeridas. O consumidor (formulário de tarefa) deriva o `timingMode` a partir do cliente selecionado; `undefined` mantém o comportamento clássico (start_stop) por retrocompatibilidade.
 - **Consequências:** (+) UI segue o contrato do cliente sem duplicação de código; (+) retrocompatível — chamadores existentes não quebram; (−) o valor `scheduled_time` gravado em `task_recurrences` para clientes manual será o default do form (`09:00`); ao materializar tarefas o motor de materialização deve ignorar `scheduled_time` quando o cliente é manual (já está no roadmap do motor de valorização).
 - **Aplicado em:** `src/components/tasks/RecurrenceForm.tsx`, `src/routes/app.tarefas.tsx`.
+
+---
+
+## ADR-019 — Filtros de listagem em Tarefas via search-params validados
+
+- **Data:** 2026-07-16 · **Status:** Aceita (Fase F das Atualizações Operacionais V1.0)
+- **Contexto:** A tela `/app/tarefas` precisava aceitar filtros vindos do dashboard (status) e permitir filtragem por funcionário sem recarga, mas o estado devia ser compartilhável (bookmark, chat, deep-link).
+- **Decisão:** Adotar `validateSearch` do TanStack Router com o shape `{ status?: StatusFilter; employee?: string }`. O filtro `atrasadas` é **derivado** (não é status persistido) — combina `status ≠ concluido` + `due_at < now()`. O dashboard passa `search={{ status }}` no `<Link>` e a UI de tarefas lê `Route.useSearch()`; alterações usam `Route.useNavigate({ replace: true })` para não poluir o histórico de navegação.
+- **Consequências:** (+) filtros bookmarkable/compartilháveis; (+) validação forte de search-params impede injeção; (+) retrocompatível — URLs sem query continuam válidas; (−) filtro `atrasadas` fica no cliente (pequenos volumes) — quando lista escalar, mover cálculo para a query.
+- **Aplicado em:** `src/routes/app.tarefas.tsx`, `src/routes/app.index.tsx`.
+
+---
+
+## ADR-020 — `EmployeePicker` como componente canônico de filtro por funcionário
+
+- **Data:** 2026-07-16 · **Status:** Aceita (Fase G das Atualizações Operacionais V1.0)
+- **Contexto:** Cada módulo gerencial reinventava seu `<Select>` de "colaborador" — sem busca por cargo/equipe, sem virtualização, com UX divergente.
+- **Decisão:** `src/components/common/EmployeePicker.tsx` é a única implementação canônica. Contrato aberto (`{ id, full_name, email?, job_title?, team? }`), debounce 180 ms, virtualização automática > 60 itens, `role="combobox"`. Rollout inicial: Tarefas, Despesas, Férias e Ponto/Gestão. RH-Recibos e Comercial adotarão no próximo ciclo (KI-021).
+- **Consequências:** (+) UX consistente e código não duplicado; (+) performance previsível; (−) módulos ainda não migrados apresentam divergência de UX temporária.
+- **Aplicado em:** `src/routes/app.tarefas.tsx`, `src/routes/app.despesas.tsx`, `src/routes/app.ferias.tsx`, `src/routes/app.ponto_.gestao.tsx`.
+
+---
+
+## Roadmap Técnico Futuro
+
+Recomendações arquiteturais identificadas durante o desenvolvimento das Atualizações Operacionais V1.0, registradas aqui para que nenhuma melhoria seja perdida. Ordem sugerida:
+
+1. **Helper `resolve_billing_rate(user_id, client_id)`** — encapsular a hierarquia funcionário → cliente → empresa em uma única função (SQL + TS). Motor de valorização, payslips e relatórios devem consumir apenas esse helper. Prevê-se ADR-021.
+2. **Motor de materialização ciente de `timing_mode`** — quando o cliente é manual, ignorar `scheduled_time` e `duration_minutes` no materializador de `task_recurrences` (hoje o form já esconde, mas o backend ainda persiste defaults).
+3. **Rollout do `EmployeePicker` em RH-Recibos e Comercial** — completar a paridade de UX (KI-021).
+4. **Painel Super Admin: "Homologação — reset de senhas"** — implementar UI + `createServerFn` protegido por `requireSupabaseAuth` + validação Super Admin + `supabaseAdmin.auth.admin.updateUserById`, com whitelist explícita de e-mails de homologação. Substitui procedimentos SQL manuais e resolve KI-022.
+5. **Auditoria de mudança de `billing_mode` e `timing_mode`** — hoje as alterações em `clients` gravam `updated_at` mas não emitem Domain Event específico. Adicionar `client_billing_changed` e `client_timing_changed` ao futuro barramento de Domain Events.
+6. **Materialização de "Atrasadas" no servidor** — quando volumes crescerem, mover o cálculo do filtro derivado `atrasadas` para uma view SQL ou índice parcial, evitando trazer toda a lista para o cliente.
+7. **`inputValidator` com Zod em todas as serverFns** — padronização progressiva; começar por funções de alto risco (admin, financeiro).
+8. **Testes E2E em Playwright para os fluxos V1.0** — cobrir dashboard clicável, filtros persistentes, hierarquia de valores e recorrência condicional.
+9. **Índice `tasks (assigned_to, status, due_at)`** — o filtro derivado atrasadas + `EmployeePicker` combinados serão os queries mais frequentes; um índice composto acelera o dashboard.
+10. **Wiring de `functionMiddleware` em `src/start.ts`** — atualmente o projeto não expõe `start.ts`. Sem esse wiring, `createServerFn` protegido por `requireSupabaseAuth` não recebe bearer no cliente. Pré-requisito para o item 4.
