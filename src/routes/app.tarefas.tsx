@@ -392,15 +392,69 @@ function TasksPage() {
           Carregando...
         </div>
       )}
-      {!isLoading && (tasks ?? []).length === 0 && (
+      {isManager && currentCompanyId && (
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card px-3 py-2">
+          <div className="flex flex-wrap items-center gap-1">
+            <FilterChip
+              label="Todos"
+              active={!search.status}
+              onClick={() => setStatusFilter(undefined)}
+            />
+            {(
+              [
+                ["pendente", "Pendentes"],
+                ["em_andamento", "Em andamento"],
+                ["concluido", "Concluídas"],
+                ["atrasadas", "Atrasadas"],
+              ] as const
+            ).map(([key, label]) => (
+              <FilterChip
+                key={key}
+                label={label}
+                active={search.status === key}
+                onClick={() =>
+                  setStatusFilter(search.status === key ? undefined : (key as StatusFilter))
+                }
+              />
+            ))}
+          </div>
+          <div className="ml-auto w-full sm:w-72">
+            <EmployeePicker
+              employees={(members ?? []).map((m) => ({
+                id: m.id,
+                full_name: m.full_name,
+                job_title: (m as { job_title?: string | null }).job_title ?? null,
+              }))}
+              value={search.employee ?? null}
+              onChange={(id) => setEmployeeFilter(id || undefined)}
+              placeholder="Todos os funcionários"
+              ariaLabel="Filtrar por funcionário"
+            />
+            {search.employee && (
+              <button
+                type="button"
+                onClick={() => setEmployeeFilter(undefined)}
+                className="mt-1 text-xs text-muted-foreground underline-offset-2 hover:underline"
+              >
+                Limpar filtro de funcionário
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+      {!isLoading && filteredTasks.length === 0 && (
         <div className="rounded-2xl border border-border bg-card px-5 py-12 text-center text-sm text-muted-foreground">
-          {view === "archived" ? "Nenhuma tarefa arquivada." : "Nenhuma tarefa ainda."}
+          {view === "archived"
+            ? "Nenhuma tarefa arquivada."
+            : search.status || search.employee
+              ? "Nenhuma tarefa corresponde ao filtro atual."
+              : "Nenhuma tarefa ainda."}
         </div>
       )}
 
-      {!isLoading && (tasks ?? []).length > 0 && isManager && (
+      {!isLoading && filteredTasks.length > 0 && isManager && (
         <GroupedByAssignee
-          tasks={tasks ?? []}
+          tasks={filteredTasks}
           members={members ?? []}
           userId={user!.id}
           isManager={isManager}
@@ -415,10 +469,10 @@ function TasksPage() {
         />
       )}
 
-      {!isLoading && (tasks ?? []).length > 0 && !isManager && (
+      {!isLoading && filteredTasks.length > 0 && !isManager && (
         <div className="rounded-2xl border border-border bg-card">
           <ul className="divide-y divide-border">
-            {(tasks ?? []).map((t) => (
+            {filteredTasks.map((t) => (
               <TaskRowItem
                 key={t.id}
                 task={t}
@@ -438,6 +492,32 @@ function TasksPage() {
         </div>
       )}
     </div>
+  );
+}
+
+function FilterChip({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={
+        "rounded-full px-3 py-1 text-xs font-medium transition " +
+        (active
+          ? "bg-primary text-primary-foreground"
+          : "bg-muted text-muted-foreground hover:text-foreground")
+      }
+    >
+      {label}
+    </button>
   );
 }
 
