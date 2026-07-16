@@ -587,12 +587,38 @@ export function AppLayout({ children }: { children?: ReactNode }) {
           <Button variant="ghost" size="icon" onClick={toggle} aria-label="Alternar tema">
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
+          {effectiveRole !== "employee" && effectiveRole !== null && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="hidden sm:inline-flex"
+              onClick={() => setReportDialogOpen(true)}
+              disabled={!currentCompanyId}
+              title={
+                !currentCompanyId
+                  ? "Selecione uma empresa antes de reportar"
+                  : "Reportar problema nesta tela"
+              }
+            >
+              <LifeBuoy className="mr-1.5 h-4 w-4" /> Reportar problema
+            </Button>
+          )}
         </header>
         <main className="flex-1 px-4 py-6 md:px-8 md:py-10">{children ?? <Outlet />}</main>
         <footer className="border-t border-border bg-muted/30 px-4 py-2 text-[10px] text-muted-foreground md:px-8">
           <DeploymentDiagnostics />
         </footer>
       </div>
+
+      <NewTicketDialog
+        open={reportDialogOpen}
+        onOpenChange={setReportDialogOpen}
+        defaultType="erro"
+        defaultTitle=""
+        defaultModule={
+          typeof window !== "undefined" ? window.location.pathname.replace(/^\/app\/?/, "") : ""
+        }
+      />
     </div>
   );
 }
