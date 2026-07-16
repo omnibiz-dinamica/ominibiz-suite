@@ -7,6 +7,36 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### Atualizações Operacionais V1.0 — Bloco 2 (Fases F · G) (2026-07-16)
+
+#### Adicionado
+- **Dashboard clicável por status** (`src/routes/app.index.tsx`). Cards
+  Pendentes / Em andamento / Concluídas / Atrasadas agora navegam para
+  `/app/tarefas` já com o filtro aplicado via search-param
+  (`?status=pendente|em_andamento|concluido|atrasadas`). "Atrasadas" é filtro
+  derivado (não é status persistido): `status ≠ concluido` + `due_at < now()`.
+- **Filtros de status + funcionário em `/app/tarefas`**
+  (`src/routes/app.tarefas.tsx`). `validateSearch` valida `status` e
+  `employee`; barra de chips troca o filtro sem recarregar; picker no topo
+  filtra por responsável. Estado persistente na URL — compartilhável e
+  bookmarkable.
+- **Rollout do `<EmployeePicker />` como filtro de listagem**:
+  - `/app/tarefas` (visão gestor)
+  - `/app/despesas` (filtro de colaborador)
+  - `/app/ferias` (filtro de colaborador)
+  - `/app/ponto/gestao` (filtro de funcionário)
+  Padrão único (busca por nome/cargo/equipe/email, debounce 180 ms,
+  virtualização automática > 60 itens) substitui os antigos `<Select>` de
+  colaborador nesses módulos.
+
+#### Notas de compatibilidade
+- Nenhuma migration necessária.
+- Search-params são retro-compatíveis: URLs antigas (`/app/tarefas` sem
+  query) continuam funcionando — filtros ficam em "Todos".
+- RH (recibos) e Comercial não possuíam filtro de colaborador em listagens
+  — nada foi retrocedido. Adoção do picker nesses módulos fica registrada
+  em `docs/KNOWN_ISSUES.md` como oportunidade futura.
+
 ### Atualizações Operacionais V1.0 — Bloco 1 (Fases C · D · E) (2026-07-16)
 
 #### Adicionado

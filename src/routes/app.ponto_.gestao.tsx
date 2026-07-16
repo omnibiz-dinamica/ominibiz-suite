@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { EmployeePicker } from "@/components/common/EmployeePicker";
 import { RoleGuard } from "@/components/RoleGuard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -283,13 +284,13 @@ function GestaoPonto() {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
           <div>
             <Label className="text-xs">Funcionário</Label>
-            <Select value={filters.userId} onValueChange={(v) => onFilterChange("userId", v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {(members ?? []).map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <EmployeePicker
+              employees={(members ?? []).map((m) => ({ id: m.id, full_name: m.name }))}
+              value={filters.userId === "all" ? null : filters.userId}
+              onChange={(id: string) => onFilterChange("userId", id || "all")}
+              placeholder="Todos"
+              ariaLabel="Filtrar por funcionário"
+            />
           </div>
           <div>
             <Label className="text-xs">Cliente</Label>

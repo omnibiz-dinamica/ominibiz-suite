@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,7 @@ import { TaskDocuments } from "@/components/tasks/TaskDocuments";
 import { ReassignDialog } from "@/components/tasks/ReassignDialog";
 import { EditRecurrenceDialog } from "@/components/tasks/EditRecurrenceDialog";
 import type { RecurrenceRow } from "@/lib/tasks";
+import { EmployeePicker } from "@/components/common/EmployeePicker";
 import {
   wallInputToISO,
   wallISOToInput,
@@ -50,13 +51,39 @@ import {
   formatLocalTime,
 } from "@/lib/wall-clock";
 
+// Filtros aceitos via search-params. `atrasadas` é filtro derivado
+// (não é status persistido) — combina "não concluído" + due_at no passado.
+const STATUS_FILTERS = [
+  "pendente",
+  "autorizado",
+  "em_andamento",
+  "concluido",
+  "cancelado",
+  "ausente",
+  "atrasadas",
+] as const;
+type StatusFilter = (typeof STATUS_FILTERS)[number];
+type TasksSearch = { status?: StatusFilter; employee?: string };
+
 export const Route = createFileRoute("/app/tarefas")({
   component: TasksPage,
+  validateSearch: (raw): TasksSearch => {
+    const s = raw as Record<string, unknown>;
+    const status =
+      typeof s.status === "string" && (STATUS_FILTERS as readonly string[]).includes(s.status)
+        ? (s.status as StatusFilter)
+        : undefined;
+    const employee =
+      typeof s.employee === "string" && s.employee ? s.employee : undefined;
+    return { status, employee };
+  },
 });
 
 function TasksPage() {
   const { user, isManager, currentCompanyId } = useAuth();
   const qc = useQueryClient();
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<TaskRow | null>(null);
   const [reassigning, setReassigning] = useState<TaskRow | null>(null);
@@ -214,6 +241,37 @@ function TasksPage() {
     setDeleting(t);
   };
 
+  // Filtros derivados (status + funcionário) — Fase F.
+  const filteredTasks = useMemo(() => {
+    const all = tasks ?? [];
+    const now = Date.now();
+    return all.filter((t) => {
+      if (search.employee && t.assigned_to !== search.employee) return false;
+      if (!search.status) return true;
+      if (search.status === "atrasadas") {
+        return (
+          t.status !== "concluido" &&
+          t.due_at != null &&
+          new Date(t.due_at).getTime() < now
+        );
+      }
+      return t.status === search.status;
+    });
+  }, [tasks, search.status, search.employee]);
+
+  const setStatusFilter = (next: StatusFilter | undefined) => {
+    void navigate({
+      search: (prev: TasksSearch) => ({ ...prev, status: next }),
+      replace: true,
+    });
+  };
+  const setEmployeeFilter = (next: string | undefined) => {
+    void navigate({
+      search: (prev: TasksSearch) => ({ ...prev, employee: next }),
+      replace: true,
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -334,15 +392,69 @@ function TasksPage() {
           Carregando...
         </div>
       )}
-      {!isLoading && (tasks ?? []).length === 0 && (
+      {isManager && currentCompanyId && (
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card px-3 py-2">
+          <div className="flex flex-wrap items-center gap-1">
+            <FilterChip
+              label="Todos"
+              active={!search.status}
+              onClick={() => setStatusFilter(undefined)}
+            />
+            {(
+              [
+                ["pendente", "Pendentes"],
+                ["em_andamento", "Em andamento"],
+                ["concluido", "Concluídas"],
+                ["atrasadas", "Atrasadas"],
+              ] as const
+            ).map(([key, label]) => (
+              <FilterChip
+                key={key}
+                label={label}
+                active={search.status === key}
+                onClick={() =>
+                  setStatusFilter(search.status === key ? undefined : (key as StatusFilter))
+                }
+              />
+            ))}
+          </div>
+          <div className="ml-auto w-full sm:w-72">
+            <EmployeePicker
+              employees={(members ?? []).map((m) => ({
+                id: m.id,
+                full_name: m.full_name,
+                job_title: (m as { job_title?: string | null }).job_title ?? null,
+              }))}
+              value={search.employee ?? null}
+              onChange={(id) => setEmployeeFilter(id || undefined)}
+              placeholder="Todos os funcionários"
+              ariaLabel="Filtrar por funcionário"
+            />
+            {search.employee && (
+              <button
+                type="button"
+                onClick={() => setEmployeeFilter(undefined)}
+                className="mt-1 text-xs text-muted-foreground underline-offset-2 hover:underline"
+              >
+                Limpar filtro de funcionário
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+      {!isLoading && filteredTasks.length === 0 && (
         <div className="rounded-2xl border border-border bg-card px-5 py-12 text-center text-sm text-muted-foreground">
-          {view === "archived" ? "Nenhuma tarefa arquivada." : "Nenhuma tarefa ainda."}
+          {view === "archived"
+            ? "Nenhuma tarefa arquivada."
+            : search.status || search.employee
+              ? "Nenhuma tarefa corresponde ao filtro atual."
+              : "Nenhuma tarefa ainda."}
         </div>
       )}
 
-      {!isLoading && (tasks ?? []).length > 0 && isManager && (
+      {!isLoading && filteredTasks.length > 0 && isManager && (
         <GroupedByAssignee
-          tasks={tasks ?? []}
+          tasks={filteredTasks}
           members={members ?? []}
           userId={user!.id}
           isManager={isManager}
@@ -357,10 +469,10 @@ function TasksPage() {
         />
       )}
 
-      {!isLoading && (tasks ?? []).length > 0 && !isManager && (
+      {!isLoading && filteredTasks.length > 0 && !isManager && (
         <div className="rounded-2xl border border-border bg-card">
           <ul className="divide-y divide-border">
-            {(tasks ?? []).map((t) => (
+            {filteredTasks.map((t) => (
               <TaskRowItem
                 key={t.id}
                 task={t}
@@ -380,6 +492,32 @@ function TasksPage() {
         </div>
       )}
     </div>
+  );
+}
+
+function FilterChip({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={
+        "rounded-full px-3 py-1 text-xs font-medium transition " +
+        (active
+          ? "bg-primary text-primary-foreground"
+          : "bg-muted text-muted-foreground hover:text-foreground")
+      }
+    >
+      {label}
+    </button>
   );
 }
 

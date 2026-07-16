@@ -44,10 +44,10 @@ function ManagerDashboard() {
   };
 
   const cards = [
-    { label: "Pendentes", value: counts.pendente, icon: ClipboardList, tone: "text-info", to: "/app/tarefas" as const },
-    { label: "Em andamento", value: counts.em_andamento, icon: Clock, tone: "text-primary", to: "/app/tarefas" as const },
-    { label: "Concluídas", value: counts.concluido, icon: CheckCircle2, tone: "text-success", to: "/app/tarefas" as const },
-    { label: "Atrasadas", value: counts.atrasadas, icon: AlertTriangle, tone: "text-destructive", to: "/app/tarefas" as const },
+    { label: "Pendentes", value: counts.pendente, icon: ClipboardList, tone: "text-info", status: "pendente" as const },
+    { label: "Em andamento", value: counts.em_andamento, icon: Clock, tone: "text-primary", status: "em_andamento" as const },
+    { label: "Concluídas", value: counts.concluido, icon: CheckCircle2, tone: "text-success", status: "concluido" as const },
+    { label: "Atrasadas", value: counts.atrasadas, icon: AlertTriangle, tone: "text-destructive", status: "atrasadas" as const },
   ];
 
   return (
@@ -83,7 +83,8 @@ function ManagerDashboard() {
         {cards.map((c) => (
           <Link
             key={c.label}
-            to={c.to}
+            to="/app/tarefas"
+            search={{ status: c.status }}
             aria-label={`Ver tarefas — ${c.label}`}
             className="group rounded-2xl border border-border bg-card p-5 text-left transition hover:border-primary/50 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >

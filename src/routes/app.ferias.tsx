@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Calendar as CalendarIcon, Check, X as XIcon, Plus, Plane, FileSpreadsheet, FileText, Pencil } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { EmployeePicker } from "@/components/common/EmployeePicker";
 import { Switch } from "@/components/ui/switch";
 import { sendTransactionalEmail } from "@/lib/email/send";
 import { exportToExcel, exportToPdf } from "@/lib/exports";
@@ -678,15 +679,13 @@ function FeriasPage() {
           <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
             <div>
               <Label className="text-xs">Colaborador</Label>
-              <Select value={filterUser} onValueChange={setFilterUser}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {uniqueUsers.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <EmployeePicker
+                employees={uniqueUsers.map((u) => ({ id: u.id, full_name: u.name }))}
+                value={filterUser === "all" ? null : filterUser}
+                onChange={(id: string) => setFilterUser(id || "all")}
+                placeholder="Todos"
+                ariaLabel="Filtrar por colaborador"
+              />
             </div>
             <div>
               <Label className="text-xs">Mês</Label>
