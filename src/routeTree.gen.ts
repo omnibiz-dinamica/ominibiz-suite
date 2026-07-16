@@ -45,6 +45,7 @@ import { Route as AppFrotaCartoesRouteImport } from './routes/app.frota.cartoes'
 import { Route as AppComercialTemplatesRouteImport } from './routes/app.comercial.templates'
 import { Route as AppComercialContratosRouteImport } from './routes/app.comercial.contratos'
 import { Route as AppComercialClientesRouteImport } from './routes/app.comercial.clientes'
+import { Route as AppAdminSuporteRouteImport } from './routes/app.admin.suporte'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -233,6 +234,11 @@ const AppComercialClientesRoute = AppComercialClientesRouteImport.update({
   path: '/clientes',
   getParentRoute: () => AppComercialRoute,
 } as any)
+const AppAdminSuporteRoute = AppAdminSuporteRouteImport.update({
+  id: '/suporte',
+  path: '/suporte',
+  getParentRoute: () => AppAdminRoute,
+} as any)
 const LovableEmailTransactionalSendRoute =
   LovableEmailTransactionalSendRouteImport.update({
     id: '/lovable/email/transactional/send',
@@ -280,7 +286,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/unsubscribe': typeof UnsubscribeRoute
-  '/app/admin': typeof AppAdminRoute
+  '/app/admin': typeof AppAdminRouteWithChildren
   '/app/assistente': typeof AppAssistenteRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/comercial': typeof AppComercialRouteWithChildren
@@ -300,6 +306,7 @@ export interface FileRoutesByFullPath {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/sign/$token': typeof SignTokenRoute
   '/app/': typeof AppIndexRoute
+  '/app/admin/suporte': typeof AppAdminSuporteRoute
   '/app/comercial/clientes': typeof AppComercialClientesRoute
   '/app/comercial/contratos': typeof AppComercialContratosRouteWithChildren
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
@@ -324,7 +331,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/unsubscribe': typeof UnsubscribeRoute
-  '/app/admin': typeof AppAdminRoute
+  '/app/admin': typeof AppAdminRouteWithChildren
   '/app/assistente': typeof AppAssistenteRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/despesas': typeof AppDespesasRoute
@@ -343,6 +350,7 @@ export interface FileRoutesByTo {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/sign/$token': typeof SignTokenRoute
   '/app': typeof AppIndexRoute
+  '/app/admin/suporte': typeof AppAdminSuporteRoute
   '/app/comercial/clientes': typeof AppComercialClientesRoute
   '/app/comercial/contratos': typeof AppComercialContratosRouteWithChildren
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
@@ -369,7 +377,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/unsubscribe': typeof UnsubscribeRoute
-  '/app/admin': typeof AppAdminRoute
+  '/app/admin': typeof AppAdminRouteWithChildren
   '/app/assistente': typeof AppAssistenteRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/comercial': typeof AppComercialRouteWithChildren
@@ -389,6 +397,7 @@ export interface FileRoutesById {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/sign/$token': typeof SignTokenRoute
   '/app/': typeof AppIndexRoute
+  '/app/admin/suporte': typeof AppAdminSuporteRoute
   '/app/comercial/clientes': typeof AppComercialClientesRoute
   '/app/comercial/contratos': typeof AppComercialContratosRouteWithChildren
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
@@ -436,6 +445,7 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/sign/$token'
     | '/app/'
+    | '/app/admin/suporte'
     | '/app/comercial/clientes'
     | '/app/comercial/contratos'
     | '/app/comercial/templates'
@@ -479,6 +489,7 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/sign/$token'
     | '/app'
+    | '/app/admin/suporte'
     | '/app/comercial/clientes'
     | '/app/comercial/contratos'
     | '/app/comercial/templates'
@@ -524,6 +535,7 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/sign/$token'
     | '/app/'
+    | '/app/admin/suporte'
     | '/app/comercial/clientes'
     | '/app/comercial/contratos'
     | '/app/comercial/templates'
@@ -814,6 +826,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppComercialClientesRouteImport
       parentRoute: typeof AppComercialRoute
     }
+    '/app/admin/suporte': {
+      id: '/app/admin/suporte'
+      path: '/suporte'
+      fullPath: '/app/admin/suporte'
+      preLoaderRoute: typeof AppAdminSuporteRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
     '/lovable/email/transactional/send': {
       id: '/lovable/email/transactional/send'
       path: '/lovable/email/transactional/send'
@@ -865,6 +884,18 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface AppAdminRouteChildren {
+  AppAdminSuporteRoute: typeof AppAdminSuporteRoute
+}
+
+const AppAdminRouteChildren: AppAdminRouteChildren = {
+  AppAdminSuporteRoute: AppAdminSuporteRoute,
+}
+
+const AppAdminRouteWithChildren = AppAdminRoute._addFileChildren(
+  AppAdminRouteChildren,
+)
 
 interface AppComercialContratosRouteChildren {
   AppComercialContratosIdRoute: typeof AppComercialContratosIdRoute
@@ -946,7 +977,7 @@ const AppTarefasRouteWithChildren = AppTarefasRoute._addFileChildren(
 )
 
 interface AppRouteChildren {
-  AppAdminRoute: typeof AppAdminRoute
+  AppAdminRoute: typeof AppAdminRouteWithChildren
   AppAssistenteRoute: typeof AppAssistenteRoute
   AppClientesRoute: typeof AppClientesRoute
   AppComercialRoute: typeof AppComercialRouteWithChildren
@@ -968,7 +999,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
-  AppAdminRoute: AppAdminRoute,
+  AppAdminRoute: AppAdminRouteWithChildren,
   AppAssistenteRoute: AppAssistenteRoute,
   AppClientesRoute: AppClientesRoute,
   AppComercialRoute: AppComercialRouteWithChildren,
