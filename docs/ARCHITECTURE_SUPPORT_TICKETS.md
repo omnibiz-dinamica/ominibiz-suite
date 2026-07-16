@@ -72,6 +72,14 @@ support_ticket_events (append-only)
 | `support_ticket_events` | ALL | SELECT da empresa (append via RPC) | — |
 | `storage.objects` (bucket `support-ticket-attachments`) | ALL | SELECT/INSERT quando `foldername[0] = company_id` gerenciado | — |
 
+> **Correção 2026-07-16 (P0 · KI-028):** as policies `INSERT` de
+> `support_ticket_attachments` e `support_ticket_messages` tinham
+> `t.company_id = t.company_id` (autorreferencial, sempre `TRUE`).
+> Corrigido para `t.company_id = <tabela>.company_id`, garantindo que
+> anexos/mensagens só possam ser inseridos quando o ticket
+> referenciado pertence à mesma empresa informada no payload. Todos
+> os demais predicados foram preservados.
+
 ## 3. RPCs (SECURITY DEFINER, `search_path = public`)
 
 Todas as operações de escrita passam por RPCs para centralizar regras,
