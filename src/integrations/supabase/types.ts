@@ -1521,6 +1521,7 @@ export type Database = {
           main_doc_type: string | null
           manual_fixed_rate: number | null
           manual_hour_rate: number | null
+          manual_hourly_rate: number | null
           manual_mixed_base_fixed: number | null
           manual_mixed_extra_hour_rate: number | null
           manual_mixed_included_minutes: number | null
@@ -1585,6 +1586,7 @@ export type Database = {
           main_doc_type?: string | null
           manual_fixed_rate?: number | null
           manual_hour_rate?: number | null
+          manual_hourly_rate?: number | null
           manual_mixed_base_fixed?: number | null
           manual_mixed_extra_hour_rate?: number | null
           manual_mixed_included_minutes?: number | null
@@ -1649,6 +1651,7 @@ export type Database = {
           main_doc_type?: string | null
           manual_fixed_rate?: number | null
           manual_hour_rate?: number | null
+          manual_hourly_rate?: number | null
           manual_mixed_base_fixed?: number | null
           manual_mixed_extra_hour_rate?: number | null
           manual_mixed_included_minutes?: number | null
@@ -3738,6 +3741,7 @@ export type Database = {
           main_doc_type: string | null
           manual_fixed_rate: number | null
           manual_hour_rate: number | null
+          manual_hourly_rate: number | null
           manual_mixed_base_fixed: number | null
           manual_mixed_extra_hour_rate: number | null
           manual_mixed_included_minutes: number | null

@@ -167,3 +167,42 @@
 - **Decisão:** Centralizar em `src/lib/invites/send-invite-email.ts`. `idempotencyKey` deriva de `kind + inviteId + sendCount` (`create` / `resend` / `replace`), garantindo dedupe correta.
 - **Consequências:** (+) fonte única para o payload do template; (+) alterações futuras (novo campo, novo template) num único ponto; (−) call sites existentes em `app.equipe.tsx` continuarão funcionando; migração para o helper é oportunista, não obrigatória agora.
 - **Aplicado em Fase 5:** `app.admin.tsx`, `ManagerInviteCard`. Roadmap: refatorar `app.equipe.tsx` para consumir o helper.
+---
+
+## ADR-016 — Liberação de Identidade (soft release)
+
+- **Data:** 2026-07-14 · **Status:** Aceita (Fase A das Atualizações Operacionais V1.0)
+- **Contexto:** Em homologação surgem casos em que um email precisa ser reutilizado sem apagar o histórico operacional (tarefas, ponto, geolocalização, valorizações) daquele UUID. Um `DELETE` em `auth.users` violaria a integridade referencial do OmniBiz, cujo princípio é UUID = identidade permanente.
+- **Decisão:** Introduzir a RPC `public.admin_release_user_identity(_user_id uuid)` (SECURITY DEFINER, restrita a super_admin), que:
+  1. remove `user_roles` do utilizador;
+  2. limpa `profiles.current_company_id` e `company_id_primary`;
+  3. marca `profiles.is_active = false`;
+  4. revoga convites `pending` do email atual;
+  5. renomeia `auth.users.email` para `retired+<uuid>@homologacao.invalid` e sincroniza `auth.identities.identity_data->>'email'`.
+  Nada é apagado. Todo histórico operacional (tasks, time_entries, geopoints, valuations, employee_expenses, vacation_requests, contracts, notifications, payslips) permanece íntegro. Idempotente.
+- **Consequências:** (+) reutilização segura de emails em homologação; (+) auditoria preservada; (+) fluxo oficial de convite volta a funcionar; (−) o UUID retirado permanece visível em relatórios históricos com o email `retired+…@homologacao.invalid` (aceito, pois é o próprio propósito da preservação).
+- **Aplicado em:** migration Fase A · consumida via SQL admin ou (roadmap) endpoint interno restrito.
+
+---
+
+## ADR-017 — Hierarquia de valores de faturação
+
+- **Data:** 2026-07-15 · **Status:** Aceita (Fases A · B · C · D das Atualizações Operacionais V1.0)
+- **Contexto:** Cada cliente pode ter forma de cobrança própria (hora, fixo, mensal ou misto) e cada funcionário pode receber valorização diferente por acordo individual. Sem regra clara de precedência, cada rotina de valorização inventaria a sua.
+- **Decisão:** Estabelecer hierarquia única de resolução do valor efetivo, aplicada em toda rotina de valorização (tasks → time_entry_valuations → payslips):
+  1. **`profiles.manual_hourly_rate` / `manual_fixed_rate` / `manual_monthly_rate`** — override individual do funcionário (Aba Financeiro do EmployeeEditor).
+  2. **`clients.hourly_rate` / `fixed_rate` / `monthly_rate`** — valor definido no cliente (`app.clientes`).
+  3. **`companies.default_hourly_rate` / `default_fixed_rate` / `default_monthly_rate`** — fallback da empresa (card "Valores padrão" em `/app/empresa`).
+  Valor `NULL` significa "herda do nível seguinte". Se todos forem `NULL`, o motor de valorização registra `not_applicable` — nunca zero implícito.
+- **Consequências:** (+) resolução previsível e auditável; (+) permite migrar clientes/funcionários gradualmente para valores próprios; (+) integra `billing_mode` misto (hora + fixo + mensal); (−) exige que todas as futuras rotinas de valorização consumam a mesma cadeia (encapsular num helper `resolve_billing_rate` é a próxima ADR quando o motor de valorização for reescrito).
+- **Aplicado em:** migrations Fase A + Bloco 1; UIs `app.empresa` (empresa), `app.clientes` (cliente), `EmployeeEditor · Financeiro` (funcionário).
+
+---
+
+## ADR-018 — Recorrência condicional por modo de apontamento
+
+- **Data:** 2026-07-16 · **Status:** Aceita (Fase E das Atualizações Operacionais V1.0)
+- **Contexto:** Clientes com `timing_mode = 'manual'` não usam start/stop de folha de ponto — apenas registram a existência da tarefa. Exibir "Horário" e "Duração estimada" no formulário de recorrência confunde e induz dados inúteis.
+- **Decisão:** `RecurrenceForm` aceita prop `timingMode?: 'start_stop' | 'manual'`. Quando `manual`, os campos "Horário" e "Duração estimada" são ocultados; apenas datas (início/fim) são requeridas. O consumidor (formulário de tarefa) deriva o `timingMode` a partir do cliente selecionado; `undefined` mantém o comportamento clássico (start_stop) por retrocompatibilidade.
+- **Consequências:** (+) UI segue o contrato do cliente sem duplicação de código; (+) retrocompatível — chamadores existentes não quebram; (−) o valor `scheduled_time` gravado em `task_recurrences` para clientes manual será o default do form (`09:00`); ao materializar tarefas o motor de materialização deve ignorar `scheduled_time` quando o cliente é manual (já está no roadmap do motor de valorização).
+- **Aplicado em:** `src/components/tasks/RecurrenceForm.tsx`, `src/routes/app.tarefas.tsx`.

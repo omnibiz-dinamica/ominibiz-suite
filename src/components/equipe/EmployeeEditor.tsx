@@ -464,6 +464,9 @@ function TabFinanceiro({ profile, onSave }: { profile: ProfileRow; onSave: (p: R
     allowance_transport: num(profile.allowance_transport),
     allowance_rent: num(profile.allowance_rent),
     allowance_other: num(profile.allowance_other),
+    manual_hourly_rate: num(profile.manual_hourly_rate),
+    manual_fixed_rate: num(profile.manual_fixed_rate),
+    manual_monthly_rate: num(profile.manual_monthly_rate),
   });
   const upd = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((s) => ({ ...s, [k]: e.target.value }));
   const [loading, setLoading] = useState(false);
@@ -482,6 +485,9 @@ function TabFinanceiro({ profile, onSave }: { profile: ProfileRow; onSave: (p: R
           allowance_transport: toNullableNumber(f.allowance_transport),
           allowance_rent: toNullableNumber(f.allowance_rent),
           allowance_other: toNullableNumber(f.allowance_other),
+          manual_hourly_rate: toNullableNumber(f.manual_hourly_rate),
+          manual_fixed_rate: toNullableNumber(f.manual_fixed_rate),
+          manual_monthly_rate: toNullableNumber(f.manual_monthly_rate),
         }, "Financeiro salvo");
       } catch (err) { toast.error((err as Error).message); }
       finally { setLoading(false); }
@@ -505,6 +511,24 @@ function TabFinanceiro({ profile, onSave }: { profile: ProfileRow; onSave: (p: R
         <Field label="Transporte"><Input type="number" step="0.01" value={f.allowance_transport} onChange={upd("allowance_transport")} /></Field>
         <Field label="Renda"><Input type="number" step="0.01" value={f.allowance_rent} onChange={upd("allowance_rent")} /></Field>
         <Field label="Outros"><Input type="number" step="0.01" value={f.allowance_other} onChange={upd("allowance_other")} /></Field>
+      </div>
+      <div className="rounded-xl border border-dashed border-border bg-muted/20 p-4">
+        <div className="mb-1 text-sm font-semibold">Sobrescrever valores de faturação</div>
+        <p className="mb-3 text-xs text-muted-foreground">
+          ADR-017 — Hierarquia: <strong>funcionário</strong> &gt; cliente &gt; empresa. Deixe em branco para herdar.
+          Estes valores são usados pelas rotinas de valorização quando o cliente não define valor próprio.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Field label="Valor/hora (override)">
+            <Input type="number" step="0.01" placeholder="herda" value={f.manual_hourly_rate} onChange={upd("manual_hourly_rate")} />
+          </Field>
+          <Field label="Valor fixo por tarefa (override)">
+            <Input type="number" step="0.01" placeholder="herda" value={f.manual_fixed_rate} onChange={upd("manual_fixed_rate")} />
+          </Field>
+          <Field label="Mensalidade (override)">
+            <Input type="number" step="0.01" placeholder="herda" value={f.manual_monthly_rate} onChange={upd("manual_monthly_rate")} />
+          </Field>
+        </div>
       </div>
       <Button type="submit" className="w-full" disabled={loading}>{loading ? "Salvando…" : "Salvar financeiro"}</Button>
     </form>
