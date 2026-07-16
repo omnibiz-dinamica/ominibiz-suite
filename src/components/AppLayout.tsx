@@ -131,6 +131,11 @@ function buildGroups(args: {
         items: [{ to: "/app/comercial", label: "Comercial", icon: FileSignature }],
       },
       {
+        id: "suporte-global",
+        label: "Suporte Global",
+        items: [{ to: "/app/admin/suporte", label: "Todos os Tickets", icon: LifeBuoy }],
+      },
+      {
         id: "conta",
         label: "Conta",
         items: [{ to: "/app/perfil", label: "Perfil", icon: UserCircle }],
