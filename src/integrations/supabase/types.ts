@@ -1701,6 +1701,268 @@ export type Database = {
           },
         ]
       }
+      support_ticket_attachments: {
+        Row: {
+          company_id: string
+          created_at: string
+          file_name: string
+          id: string
+          mime_type: string
+          sha256_hex: string | null
+          size_bytes: number
+          storage_path: string
+          ticket_id: string
+          uploaded_by: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          file_name: string
+          id?: string
+          mime_type: string
+          sha256_hex?: string | null
+          size_bytes: number
+          storage_path: string
+          ticket_id: string
+          uploaded_by: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          file_name?: string
+          id?: string
+          mime_type?: string
+          sha256_hex?: string | null
+          size_bytes?: number
+          storage_path?: string
+          ticket_id?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_attachments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_ticket_attachments_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_ticket_attachments_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_ticket_events: {
+        Row: {
+          actor_user_id: string | null
+          after_data: Json | null
+          before_data: Json | null
+          company_id: string
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json
+          ticket_id: string
+        }
+        Insert: {
+          actor_user_id?: string | null
+          after_data?: Json | null
+          before_data?: Json | null
+          company_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json
+          ticket_id: string
+        }
+        Update: {
+          actor_user_id?: string | null
+          after_data?: Json | null
+          before_data?: Json | null
+          company_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_events_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_ticket_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_ticket_events_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_ticket_messages: {
+        Row: {
+          author_user_id: string
+          company_id: string
+          created_at: string
+          id: string
+          is_internal: boolean
+          message: string
+          ticket_id: string
+        }
+        Insert: {
+          author_user_id: string
+          company_id: string
+          created_at?: string
+          id?: string
+          is_internal?: boolean
+          message: string
+          ticket_id: string
+        }
+        Update: {
+          author_user_id?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_internal?: boolean
+          message?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_messages_author_user_id_fkey"
+            columns: ["author_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_ticket_messages_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_ticket_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_tickets: {
+        Row: {
+          archived_at: string | null
+          assigned_user_id: string | null
+          closed_at: string | null
+          company_id: string
+          created_at: string
+          description: string
+          first_response_at: string | null
+          id: string
+          module: string | null
+          page_url: string | null
+          priority: Database["public"]["Enums"]["support_ticket_priority"]
+          requester_user_id: string
+          resolved_at: string | null
+          route: string | null
+          status: Database["public"]["Enums"]["support_ticket_status"]
+          technical_context: Json
+          ticket_number: string
+          title: string
+          type: Database["public"]["Enums"]["support_ticket_type"]
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          assigned_user_id?: string | null
+          closed_at?: string | null
+          company_id: string
+          created_at?: string
+          description: string
+          first_response_at?: string | null
+          id?: string
+          module?: string | null
+          page_url?: string | null
+          priority?: Database["public"]["Enums"]["support_ticket_priority"]
+          requester_user_id: string
+          resolved_at?: string | null
+          route?: string | null
+          status?: Database["public"]["Enums"]["support_ticket_status"]
+          technical_context?: Json
+          ticket_number?: string
+          title: string
+          type?: Database["public"]["Enums"]["support_ticket_type"]
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          assigned_user_id?: string | null
+          closed_at?: string | null
+          company_id?: string
+          created_at?: string
+          description?: string
+          first_response_at?: string | null
+          id?: string
+          module?: string | null
+          page_url?: string | null
+          priority?: Database["public"]["Enums"]["support_ticket_priority"]
+          requester_user_id?: string
+          resolved_at?: string | null
+          route?: string | null
+          status?: Database["public"]["Enums"]["support_ticket_status"]
+          technical_context?: Json
+          ticket_number?: string
+          title?: string
+          type?: Database["public"]["Enums"]["support_ticket_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_assigned_user_id_fkey"
+            columns: ["assigned_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_requester_user_id_fkey"
+            columns: ["requester_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppressed_emails: {
         Row: {
           created_at: string
@@ -2751,6 +3013,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      assign_support_ticket: {
+        Args: { _assignee_user_id: string; _ticket_id: string }
+        Returns: undefined
+      }
       audit_list: {
         Args: { _contract_id: string }
         Returns: {
@@ -2850,6 +3116,23 @@ export type Database = {
           token: string
         }[]
       }
+      create_support_ticket: {
+        Args: {
+          _company_id: string
+          _description: string
+          _module: string
+          _page_url: string
+          _priority: Database["public"]["Enums"]["support_ticket_priority"]
+          _route: string
+          _technical_context: Json
+          _title: string
+          _type: Database["public"]["Enums"]["support_ticket_type"]
+        }
+        Returns: {
+          id: string
+          ticket_number: string
+        }[]
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -2900,6 +3183,7 @@ export type Database = {
         }
         Returns: Json
       }
+      generate_support_ticket_number: { Args: never; Returns: string }
       get_auth_context: {
         Args: never
         Returns: {
@@ -3050,6 +3334,10 @@ export type Database = {
       payslip_mark_sent: {
         Args: { _detail?: Json; _id: string; _status: string }
         Returns: undefined
+      }
+      post_support_ticket_message: {
+        Args: { _is_internal: boolean; _message: string; _ticket_id: string }
+        Returns: string
       }
       punch_admin_create: {
         Args: { _payload: Json; _reason: string }
@@ -3422,8 +3710,23 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      register_support_attachment: {
+        Args: {
+          _file_name: string
+          _mime_type: string
+          _sha256_hex: string
+          _size_bytes: number
+          _storage_path: string
+          _ticket_id: string
+        }
+        Returns: string
+      }
       remove_member: {
         Args: { _company_id: string; _user_id: string }
+        Returns: undefined
+      }
+      reopen_support_ticket: {
+        Args: { _reason: string; _ticket_id: string }
         Returns: undefined
       }
       resend_invite: {
@@ -3454,6 +3757,40 @@ export type Database = {
           _user_id: string
         }
         Returns: undefined
+      }
+      support_notify_super_admins: {
+        Args: {
+          _body: string
+          _company_id: string
+          _event: Database["public"]["Enums"]["notification_event"]
+          _priority?: Database["public"]["Enums"]["notification_priority"]
+          _ticket_id: string
+          _title: string
+        }
+        Returns: number
+      }
+      support_notify_user: {
+        Args: {
+          _body: string
+          _company_id: string
+          _event: Database["public"]["Enums"]["notification_event"]
+          _priority?: Database["public"]["Enums"]["notification_priority"]
+          _ticket_id: string
+          _title: string
+          _user_id: string
+        }
+        Returns: string
+      }
+      support_ticket_log_event: {
+        Args: {
+          _after: Json
+          _before: Json
+          _company_id: string
+          _event_type: string
+          _metadata?: Json
+          _ticket_id: string
+        }
+        Returns: string
       }
       task_archive: {
         Args: { _archive?: boolean; _task_id: string }
@@ -3781,6 +4118,21 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      update_support_ticket_priority: {
+        Args: {
+          _new_priority: Database["public"]["Enums"]["support_ticket_priority"]
+          _ticket_id: string
+        }
+        Returns: undefined
+      }
+      update_support_ticket_status: {
+        Args: {
+          _new_status: Database["public"]["Enums"]["support_ticket_status"]
+          _reason?: string
+          _ticket_id: string
+        }
+        Returns: undefined
+      }
       vacation_confirm: {
         Args: { _action: string; _id: string; _reason?: string }
         Returns: {
@@ -3919,6 +4271,12 @@ export type Database = {
         | "expense_created"
         | "expense_approved"
         | "expense_rejected"
+        | "ticket_created"
+        | "ticket_updated"
+        | "ticket_message_added"
+        | "ticket_status_changed"
+        | "ticket_resolved"
+        | "ticket_reopened"
       notification_priority: "baixa" | "media" | "alta" | "urgente"
       payslip_status: "unassigned" | "assigned" | "sent" | "failed" | "archived"
       punch_event_kind:
@@ -3931,6 +4289,32 @@ export type Database = {
       punch_mode: "automatico" | "manual" | "ambos"
       recurrence_frequency: "daily" | "weekly" | "monthly" | "custom"
       recurrence_status: "active" | "paused" | "ended"
+      support_ticket_priority: "baixa" | "normal" | "alta" | "urgente"
+      support_ticket_status:
+        | "aberto"
+        | "em_analise"
+        | "aguardando_cliente"
+        | "em_desenvolvimento"
+        | "em_validacao"
+        | "resolvido"
+        | "rejeitado"
+        | "fechado"
+      support_ticket_type:
+        | "erro"
+        | "alteracao"
+        | "inclusao"
+        | "duvida"
+        | "acesso"
+        | "financeiro"
+        | "rh"
+        | "tarefas"
+        | "ponto"
+        | "ferias"
+        | "despesas"
+        | "recibos"
+        | "clientes"
+        | "geolocalizacao"
+        | "outro"
       task_document_kind: "pdf" | "image" | "checklist" | "video"
       task_priority: "baixa" | "media" | "alta" | "urgente"
       task_status:
@@ -4177,6 +4561,12 @@ export const Constants = {
         "expense_created",
         "expense_approved",
         "expense_rejected",
+        "ticket_created",
+        "ticket_updated",
+        "ticket_message_added",
+        "ticket_status_changed",
+        "ticket_resolved",
+        "ticket_reopened",
       ],
       notification_priority: ["baixa", "media", "alta", "urgente"],
       payslip_status: ["unassigned", "assigned", "sent", "failed", "archived"],
@@ -4191,6 +4581,34 @@ export const Constants = {
       punch_mode: ["automatico", "manual", "ambos"],
       recurrence_frequency: ["daily", "weekly", "monthly", "custom"],
       recurrence_status: ["active", "paused", "ended"],
+      support_ticket_priority: ["baixa", "normal", "alta", "urgente"],
+      support_ticket_status: [
+        "aberto",
+        "em_analise",
+        "aguardando_cliente",
+        "em_desenvolvimento",
+        "em_validacao",
+        "resolvido",
+        "rejeitado",
+        "fechado",
+      ],
+      support_ticket_type: [
+        "erro",
+        "alteracao",
+        "inclusao",
+        "duvida",
+        "acesso",
+        "financeiro",
+        "rh",
+        "tarefas",
+        "ponto",
+        "ferias",
+        "despesas",
+        "recibos",
+        "clientes",
+        "geolocalizacao",
+        "outro",
+      ],
       task_document_kind: ["pdf", "image", "checklist", "video"],
       task_priority: ["baixa", "media", "alta", "urgente"],
       task_status: [
