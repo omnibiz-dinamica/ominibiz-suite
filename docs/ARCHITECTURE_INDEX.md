@@ -4,7 +4,7 @@
 >
 > **Objetivo:** Centralizar as arquiteturas oficiais do OmniBiz, garantir rastreabilidade entre documentos e definir o estado atual de cada uma antes de iniciar novas implementações.
 >
-> **Última revisão:** 2026-07-04
+> **Última revisão:** 2026-07-16
 
 ---
 
@@ -16,6 +16,10 @@
 | [`ARCHITECTURE_RBAC.md`](./ARCHITECTURE_RBAC.md) | **Produção** | 2026-07-04 | Hierarquia de perfis, matriz de permissões, regras de notificação e email, governação de novas features. | Nenhuma — documento raiz |
 | [`DECISIONS.md`](./DECISIONS.md) | **Produção** | 2026-07-06 | Architecture Decision Records (ADRs) — registro imutável de decisões arquiteturais. | Nenhuma |
 | [`KNOWN_ISSUES.md`](./KNOWN_ISSUES.md) | **Produção** | 2026-07-06 | Registro vivo de bugs conhecidos, causa raiz, workaround e plano de correção. | Nenhuma |
+| [`ATUALIZACOES_OPERACIONAIS_V1_0.md`](./ATUALIZACOES_OPERACIONAIS_V1_0.md) | **Produção** | 2026-07-16 | Manual das novidades V1.0 Operacional — modo de apontamento, cobrança mensal, valores padrão, overrides, recorrência condicional, dashboard clicável, filtros persistentes, `EmployeePicker` universal, Liberação de Identidade. | `DECISIONS.md` (ADR-016/017/018), `CHANGELOG.md` |
+| [`release-notes/RELEASE_NOTES_ADMIN_V1.0.md`](./release-notes/RELEASE_NOTES_ADMIN_V1.0.md) | **Produção** | 2026-07-16 | Release notes por público — Administrador. | `ATUALIZACOES_OPERACIONAIS_V1_0.md` |
+| [`release-notes/RELEASE_NOTES_GESTOR_V1.0.md`](./release-notes/RELEASE_NOTES_GESTOR_V1.0.md) | **Produção** | 2026-07-16 | Release notes por público — Gestor. | `ATUALIZACOES_OPERACIONAIS_V1_0.md` |
+| [`release-notes/RELEASE_NOTES_FUNCIONARIO_V1.0.md`](./release-notes/RELEASE_NOTES_FUNCIONARIO_V1.0.md) | **Produção** | 2026-07-16 | Release notes por público — Funcionário. | `ATUALIZACOES_OPERACIONAIS_V1_0.md` |
 | [`ARCHITECTURE_TASK_PHOTOS.md`](./ARCHITECTURE_TASK_PHOTOS.md) | **Proposta** | 2026-07-06 | Fotos, IA de validação, offline queue, LGPD, certificado de execução (item 12). | `ARCHITECTURE_PRINCIPLES.md`, `ARCHITECTURE_GEOFENCING.md` |
 | [`RELATORIO_GEOLOCALIZACAO.md`](./RELATORIO_GEOLOCALIZACAO.md) | **Diagnóstico Fase 1** | 2026-07-06 | Análise do fluxo GPS atual + proposta `watchPosition` progressivo (item 09). | `ARCHITECTURE_GEOFENCING.md` |
 | [`RELATORIO_GEOCODING.md`](./RELATORIO_GEOCODING.md) | **Diagnóstico Fase 1** | 2026-07-06 | Causa raiz do `REQUEST_DENIED` + proposta de correção via gateway (item 16). | `ARCHITECTURE_MAP_PROVIDER.md` |
