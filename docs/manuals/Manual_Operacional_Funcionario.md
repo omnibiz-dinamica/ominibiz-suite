@@ -1,9 +1,11 @@
 # OmniBiz — Manual Operacional do Funcionário
 
-**Versão:** 1.0
-**Data:** 04/07/2026
+**Versão:** 1.0 (Addendum V1.0 Operacional — 16/07/2026)
+**Data:** 04/07/2026 · **Última revisão:** 16/07/2026
 **Público:** Colaboradores operacionais.
 **Status:** Documento oficial.
+
+> **Addendum V1.0 Operacional (2026-07-16).** Se o seu gestor configurou algum cliente em **modo Manual**, você não precisa apertar Iniciar/Parar para esse cliente — o apontamento é registrado depois. O dashboard também ficou clicável: um toque nos cards leva direto para a lista de tarefas correspondente. Detalhes em [`../release-notes/RELEASE_NOTES_FUNCIONARIO_V1.0.md`](../release-notes/RELEASE_NOTES_FUNCIONARIO_V1.0.md).
 
 ---
 
