@@ -7,6 +7,27 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### 🔒 Correção Crítica de Segurança — RLS cross-tenant (2026-07-16)
+
+#### Corrigido
+- **P0 — Isolamento multiempresa em anexos e mensagens de suporte.**
+  As policies `INSERT` de `public.support_ticket_attachments` e
+  `public.support_ticket_messages` continham a comparação
+  autorreferencial `t.company_id = t.company_id` (sempre verdadeira),
+  permitindo teoricamente que um Gestor da Empresa A inserisse
+  anexos/mensagens referenciando um `ticket_id` da Empresa B.
+- Corrigido para `t.company_id = support_ticket_<tabela>.company_id`,
+  garantindo que o ticket referenciado pertence à mesma empresa
+  informada na linha nova. Demais predicados preservados
+  (`is_company_manager`, `uploaded_by/author_user_id = auth.uid()`,
+  `is_internal = false` para mensagens).
+- Nenhuma alteração em RBAC, dados, RPCs ou funcionalidades. Super
+  Admin permanece coberto pela policy `ALL` existente.
+- Auditoria completa das 4 tabelas do módulo — nenhuma outra
+  comparação autorreferencial detectada. Registrado `KI-027` para
+  endurecimento futuro de `UPDATE` de `support_tickets`
+  (mutabilidade de `company_id`).
+
 ### Central de Suporte — Painel Operacional do Super Admin (2026-07-16)
 
 #### Adicionado
