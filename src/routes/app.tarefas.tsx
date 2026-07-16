@@ -260,10 +260,16 @@ function TasksPage() {
   }, [tasks, search.status, search.employee]);
 
   const setStatusFilter = (next: StatusFilter | undefined) => {
-    void navigate({ search: (prev) => ({ ...prev, status: next }), replace: true });
+    void navigate({
+      search: (prev: TasksSearch) => ({ ...prev, status: next }),
+      replace: true,
+    });
   };
   const setEmployeeFilter = (next: string | undefined) => {
-    void navigate({ search: (prev) => ({ ...prev, employee: next }), replace: true });
+    void navigate({
+      search: (prev: TasksSearch) => ({ ...prev, employee: next }),
+      replace: true,
+    });
   };
 
   return (
