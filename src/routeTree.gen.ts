@@ -19,6 +19,7 @@ import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as SignTokenRouteImport } from './routes/sign.$token'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as AppTarefasRouteImport } from './routes/app.tarefas'
+import { Route as AppSuporteRouteImport } from './routes/app.suporte'
 import { Route as AppRhRouteImport } from './routes/app.rh'
 import { Route as AppPontoRouteImport } from './routes/app.ponto'
 import { Route as AppPerfilRouteImport } from './routes/app.perfil'
@@ -99,6 +100,11 @@ const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
 const AppTarefasRoute = AppTarefasRouteImport.update({
   id: '/tarefas',
   path: '/tarefas',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSuporteRoute = AppSuporteRouteImport.update({
+  id: '/suporte',
+  path: '/suporte',
   getParentRoute: () => AppRoute,
 } as any)
 const AppRhRoute = AppRhRouteImport.update({
@@ -283,6 +289,7 @@ export interface FileRoutesByFullPath {
   '/app/perfil': typeof AppPerfilRoute
   '/app/ponto': typeof AppPontoRoute
   '/app/rh': typeof AppRhRouteWithChildren
+  '/app/suporte': typeof AppSuporteRoute
   '/app/tarefas': typeof AppTarefasRouteWithChildren
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/sign/$token': typeof SignTokenRoute
@@ -324,6 +331,7 @@ export interface FileRoutesByTo {
   '/app/perfil': typeof AppPerfilRoute
   '/app/ponto': typeof AppPontoRoute
   '/app/rh': typeof AppRhRouteWithChildren
+  '/app/suporte': typeof AppSuporteRoute
   '/app/tarefas': typeof AppTarefasRouteWithChildren
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/sign/$token': typeof SignTokenRoute
@@ -368,6 +376,7 @@ export interface FileRoutesById {
   '/app/perfil': typeof AppPerfilRoute
   '/app/ponto': typeof AppPontoRoute
   '/app/rh': typeof AppRhRouteWithChildren
+  '/app/suporte': typeof AppSuporteRoute
   '/app/tarefas': typeof AppTarefasRouteWithChildren
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/sign/$token': typeof SignTokenRoute
@@ -413,6 +422,7 @@ export interface FileRouteTypes {
     | '/app/perfil'
     | '/app/ponto'
     | '/app/rh'
+    | '/app/suporte'
     | '/app/tarefas'
     | '/email/unsubscribe'
     | '/sign/$token'
@@ -454,6 +464,7 @@ export interface FileRouteTypes {
     | '/app/perfil'
     | '/app/ponto'
     | '/app/rh'
+    | '/app/suporte'
     | '/app/tarefas'
     | '/email/unsubscribe'
     | '/sign/$token'
@@ -497,6 +508,7 @@ export interface FileRouteTypes {
     | '/app/perfil'
     | '/app/ponto'
     | '/app/rh'
+    | '/app/suporte'
     | '/app/tarefas'
     | '/email/unsubscribe'
     | '/sign/$token'
@@ -606,6 +618,13 @@ declare module '@tanstack/react-router' {
       path: '/tarefas'
       fullPath: '/app/tarefas'
       preLoaderRoute: typeof AppTarefasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/suporte': {
+      id: '/app/suporte'
+      path: '/suporte'
+      fullPath: '/app/suporte'
+      preLoaderRoute: typeof AppSuporteRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/rh': {
@@ -911,6 +930,7 @@ interface AppRouteChildren {
   AppPerfilRoute: typeof AppPerfilRoute
   AppPontoRoute: typeof AppPontoRoute
   AppRhRoute: typeof AppRhRouteWithChildren
+  AppSuporteRoute: typeof AppSuporteRoute
   AppTarefasRoute: typeof AppTarefasRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
   AppPontoGestaoRoute: typeof AppPontoGestaoRoute
@@ -932,6 +952,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppPerfilRoute: AppPerfilRoute,
   AppPontoRoute: AppPontoRoute,
   AppRhRoute: AppRhRouteWithChildren,
+  AppSuporteRoute: AppSuporteRoute,
   AppTarefasRoute: AppTarefasRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
   AppPontoGestaoRoute: AppPontoGestaoRoute,
