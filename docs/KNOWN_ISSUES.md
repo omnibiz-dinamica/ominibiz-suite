@@ -1,5 +1,18 @@
 # OmniBiz — Known Issues
 
+## KI-026 — Central de Suporte: respostas rápidas hardcoded e auditoria de leitura de anexo
+
+- **Severidade:** 🔵 Baixa · **Status:** Aberto · **Módulo:** Suporte
+- **Descrição:** Fase 1.1 introduz 7 templates de resposta rápida
+  hardcoded em `src/lib/support/constants.ts`. Super Admin ainda não
+  pode editar/criar templates via UI. Além disso, o download/preview
+  de anexo não gera evento em `support_ticket_events`.
+- **Impacto:** Baixo — templates cobrem os cenários mais comuns e o
+  Storage já mantém logs próprios; a auditoria de metadata de anexo
+  já é feita no `attachment_added`.
+- **Plano:** Fase 2 — tabela `support_reply_templates` (RLS por Super
+  Admin) e evento `attachment_read`.
+
 ## KI-025 — Homologação Sara V1.0: exportações Excel/PDF sem validação de conteúdo
 
 - **Severidade:** 🔵 Baixa · **Status:** Aberto · **Módulo:** Exportações

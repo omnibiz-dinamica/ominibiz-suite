@@ -59,9 +59,40 @@ export const TICKET_PRIORITY_LABEL: Record<SupportTicketPriority, string> = {
 
 export const TICKET_PRIORITY_TONE: Record<SupportTicketPriority, string> = {
   baixa: "bg-muted text-muted-foreground",
-  normal: "bg-secondary text-secondary-foreground",
-  alta: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  urgente: "bg-destructive/15 text-destructive",
+  normal: "bg-blue-500/15 text-blue-700 dark:text-blue-300",
+  alta: "bg-orange-500/15 text-orange-700 dark:text-orange-300",
+  urgente: "bg-red-500/15 text-red-700 dark:text-red-300",
+};
+
+/** Ordem canónica por prioridade (urgente → baixa). */
+export const PRIORITY_ORDER: Record<SupportTicketPriority, number> = {
+  urgente: 0,
+  alta: 1,
+  normal: 2,
+  baixa: 3,
+};
+
+/** Respostas rápidas prontas (Fase 1 — sem edição). */
+export const QUICK_REPLIES: { label: string; text: string }[] = [
+  { label: "Recebido", text: "Olá! Recebemos a sua solicitação e já iniciámos a análise. Retornaremos em breve com uma atualização." },
+  { label: "Em análise", text: "Estamos a analisar o problema reportado. Assim que houver conclusão, entraremos em contacto." },
+  { label: "Preciso de mais informação", text: "Para avançarmos, poderia partilhar mais detalhes? (passos para reproduzir, print da tela e horário aproximado do ocorrido)" },
+  { label: "Problema identificado", text: "Confirmámos o problema e já foi encaminhado para a equipa técnica. Iremos manter este ticket atualizado." },
+  { label: "Correção aplicada", text: "A correção foi aplicada. Por favor, atualize o sistema (Ctrl+F5) e valide se o comportamento está correto." },
+  { label: "Atualize o sistema", text: "Por favor, faça um refresh da página (Ctrl+F5) para carregar a versão mais recente e tente novamente." },
+  { label: "Encerramento", text: "Como não obtivemos mais retorno, iremos encerrar este ticket. Caso o problema volte a ocorrer, poderá reabrir dentro de 7 dias." },
+];
+
+/** Descrições humanas para eventos de auditoria. */
+export const EVENT_TYPE_LABEL: Record<string, string> = {
+  ticket_created: "Ticket criado",
+  message_added: "Mensagem enviada",
+  internal_note_added: "Nota interna adicionada",
+  status_changed: "Status alterado",
+  priority_changed: "Prioridade alterada",
+  assignee_changed: "Responsável alterado",
+  attachment_added: "Anexo enviado",
+  ticket_reopened: "Ticket reaberto",
 };
 
 export const TICKET_STATUS_LABEL: Record<SupportTicketStatus, string> = {
