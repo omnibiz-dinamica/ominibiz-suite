@@ -16,6 +16,21 @@
 
 ---
 
+## KI-021 — `EmployeePicker` ainda não presente em RH (recibos) e Comercial
+
+- **Severidade:** 🔵 Baixa
+- **Status:** Aberto
+- **Módulo:** RH · Comercial
+- **Contexto:** Bloco 2 (Fases F/G) padronizou o `<EmployeePicker />` como
+  filtro de listagem em Tarefas, Despesas, Férias e Ponto/Gestão. RH
+  (recibos) e Comercial não expõem filtro de colaborador nas listagens
+  atuais — nada regrediu, mas a paridade de UX ainda não existe.
+- **Workaround:** filtro por texto/estado atual continua funcional.
+- **Plano:** adotar o picker quando esses módulos passarem por refino de
+  listagem no próximo ciclo.
+
+---
+
 ## KI-001 — Geocoding retorna `REQUEST_DENIED`
 
 - **Severidade:** 🟠 Alta
