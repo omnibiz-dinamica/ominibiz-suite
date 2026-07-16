@@ -57,6 +57,8 @@ function CompanyPage() {
 
       <HRSettingsCard companyId={currentCompanyId!} />
 
+      <DefaultRatesCard companyId={currentCompanyId!} />
+
       <ManagerInviteCard companyId={currentCompanyId!} companyName={company.name} />
 
       <GeoSettingsCard companyId={currentCompanyId!} />
@@ -69,6 +71,133 @@ function Field({ label, value, highlight }: { label: string; value: string; high
     <div>
       <dt className="text-xs uppercase tracking-wide text-muted-foreground">{label}</dt>
       <dd className={`mt-1 ${highlight ? "font-display text-lg font-semibold" : "text-sm"}`}>{value}</dd>
+    </div>
+  );
+}
+
+/**
+ * ADR-017 — Valores padrão da empresa.
+ * Servem como fallback quando o cliente e o funcionário não sobrescrevem.
+ * Hierarquia efetiva:
+ *   1) profiles.manual_* (override do funcionário)
+ *   2) clients.hourly_rate / fixed_rate / monthly_rate (valor do cliente)
+ *   3) companies.default_* (este card)
+ */
+function DefaultRatesCard({ companyId }: { companyId: string }) {
+  const qc = useQueryClient();
+  const { data, isLoading } = useQuery({
+    queryKey: ["company-default-rates", companyId],
+    queryFn: async () => {
+      const { data, error } = await (supabase.from("companies") as any)
+        .select("default_hourly_rate,default_fixed_rate,default_monthly_rate")
+        .eq("id", companyId)
+        .maybeSingle();
+      if (error) throw error;
+      return (data ?? {}) as {
+        default_hourly_rate: number | null;
+        default_fixed_rate: number | null;
+        default_monthly_rate: number | null;
+      };
+    },
+  });
+
+  const [hourly, setHourly] = useState("");
+  const [fixed, setFixed] = useState("");
+  const [monthly, setMonthly] = useState("");
+
+  useEffect(() => {
+    if (data) {
+      setHourly(data.default_hourly_rate == null ? "" : String(data.default_hourly_rate));
+      setFixed(data.default_fixed_rate == null ? "" : String(data.default_fixed_rate));
+      setMonthly(data.default_monthly_rate == null ? "" : String(data.default_monthly_rate));
+    }
+  }, [data]);
+
+  const toNum = (s: string): number | null => {
+    if (s.trim() === "") return null;
+    const n = Number(s.replace(",", "."));
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const { error } = await (supabase.from("companies") as any)
+        .update({
+          default_hourly_rate: toNum(hourly),
+          default_fixed_rate: toNum(fixed),
+          default_monthly_rate: toNum(monthly),
+        })
+        .eq("id", companyId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Valores padrão atualizados");
+      qc.invalidateQueries({ queryKey: ["company-default-rates", companyId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-6">
+      <h2 className="font-display text-lg font-semibold">Valores padrão</h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Usados quando o cliente e o funcionário não têm valor próprio. Deixe em branco para não aplicar.
+      </p>
+
+      {isLoading ? (
+        <div className="mt-4 text-sm text-muted-foreground">Carregando…</div>
+      ) : (
+        <div className="mt-5 grid gap-4 sm:grid-cols-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="def-hourly">Valor/hora padrão</Label>
+            <input
+              id="def-hourly"
+              type="number"
+              step="0.01"
+              inputMode="decimal"
+              placeholder="0,00"
+              value={hourly}
+              onChange={(e) => setHourly(e.target.value)}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="def-fixed">Valor fixo padrão (por tarefa)</Label>
+            <input
+              id="def-fixed"
+              type="number"
+              step="0.01"
+              inputMode="decimal"
+              placeholder="0,00"
+              value={fixed}
+              onChange={(e) => setFixed(e.target.value)}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="def-monthly">Mensalidade padrão</Label>
+            <input
+              id="def-monthly"
+              type="number"
+              step="0.01"
+              inputMode="decimal"
+              placeholder="0,00"
+              value={monthly}
+              onChange={(e) => setMonthly(e.target.value)}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="mt-5 flex justify-end">
+        <Button onClick={() => save.mutate()} disabled={save.isPending || isLoading}>
+          Salvar valores padrão
+        </Button>
+      </div>
+      <p className="mt-3 text-xs text-muted-foreground">
+        Hierarquia: funcionário &gt; cliente &gt; empresa. Alterar aqui não afeta clientes/funcionários com valor próprio.
+      </p>
     </div>
   );
 }
