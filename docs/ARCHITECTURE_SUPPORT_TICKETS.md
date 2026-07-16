@@ -132,6 +132,40 @@ Não há duplicação porque a fonte de disparo é a própria RPC.
 
 ## 8. Pendências (Fase 2 / Fase 3)
 
+## 7.1 Painel operacional do Super Admin (2026-07-16)
+
+O painel do Super Admin foi consolidado como ferramenta de atendimento:
+
+- **Detalhe (`/app/suporte/$id`)** — blocos *Dados gerais* (empresa,
+  solicitante, email, datas), *Local do erro* (módulo/rota/URL) e
+  *Informações técnicas* (build, commit, ambiente, navegador,
+  plataforma, idioma, resolução, viewport, timezone), grid de anexos
+  com miniaturas + download individual (Signed URLs 900s), timeline
+  unificada (eventos + mensagens) cronológica com rótulos humanos,
+  respostas rápidas (7 templates), botões *copiar* para
+  número/título+descrição/URL/JSON técnico.
+- **Central Global (`/app/admin/suporte`)** — filtros por status,
+  prioridade, tipo, empresa e intervalo de datas; pesquisa por
+  número/título/descrição/empresa; ordenação operacional
+  (prioridade → em aberto → mais antigos primeiro); 6 KPI-cards
+  clicáveis + 4 painéis (1ª resposta média, resolução média, top 3
+  empresas, top 3 módulos).
+
+### RPC auxiliar
+
+`get_support_ticket_requester_info(_ticket_id)` — `SECURITY DEFINER`,
+`search_path = public`, retorna `(requester_user_id, requester_full_name,
+requester_email, company_id, company_name)`. Aplica o mesmo predicado
+de acesso da RLS de `support_tickets` (Super Admin sempre;
+Gestor/Owner apenas da própria empresa via
+`profiles.current_company_id`/`company_id_primary`). Único ponto onde
+`auth.users.email` é lido — nunca por join no cliente.
+
+### Cores de prioridade
+
+Urgente = vermelho, Alta = laranja, Normal = azul, Baixa = cinza
+(`TICKET_PRIORITY_TONE` em `src/lib/support/constants.ts`).
+
 - Emails transacionais (`ticket_created`, `ticket_updated`,
   `ticket_waiting_customer`, `ticket_resolved`, `ticket_closed`).
 - KPIs de tempo médio de 1ª resposta e resolução no Dashboard Super
