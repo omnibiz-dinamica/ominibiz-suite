@@ -7,6 +7,61 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### Módulo Central de Suporte — Fase 1 (2026-07-16)
+
+#### Adicionado
+- **Central de Suporte** disponível no menu do Gestor/Owner em
+  `/app/suporte`, e **Central Global** exclusiva do Super Admin em
+  `/app/admin/suporte`. Funcionário não tem acesso.
+- **Botão global “Reportar problema”** no header do AppLayout: preenche
+  automaticamente rota, URL, navegador, resolução, timezone, build e
+  commit; nunca envia senha ou token.
+- **4 tabelas** com RLS por `company_id`, GRANTs explícitos e trigger
+  append-only para eventos:
+  - `support_tickets` (com número humano `SUP-YYYY-NNNNNN` gerado
+    automaticamente);
+  - `support_ticket_messages` (com flag `is_internal` — nota interna
+    visível apenas ao Super Admin);
+  - `support_ticket_attachments` (metadados + hash SHA-256);
+  - `support_ticket_events` (append-only; `UPDATE`/`DELETE` bloqueados
+    por trigger).
+- **7 RPCs `SECURITY DEFINER`** com validação de papel no servidor:
+  `create_support_ticket`, `post_support_ticket_message`,
+  `update_support_ticket_status`, `update_support_ticket_priority`,
+  `assign_support_ticket`, `reopen_support_ticket`,
+  `register_support_attachment`. Todas registram evento na timeline e
+  disparam notificações via `support_notify_super_admins` /
+  `support_notify_user`.
+- **Rate limit** de 20 tickets por utilizador nas últimas 24h (server-side).
+- **Bucket privado `support-ticket-attachments`** com RLS por
+  `company_id` (Super Admin acesso total; Gestor apenas pasta da
+  própria empresa). Signed URLs de 10 min. Tipos aceitos: imagem
+  (PNG/JPEG/WEBP/GIF), PDF, DOC/DOCX, XLS/XLSX, TXT/CSV. Vídeo não
+  suportado. Limite 20 MB.
+- **Timeline append-only** exibida no detalhe do ticket.
+- **Reabertura pelo Gestor** dentro de 7 dias do fechamento
+  (`ticketReopenableByManager`); Super Admin pode reabrir sempre.
+- **Realtime** publicado em `support_tickets`, `support_ticket_messages`
+  e `support_ticket_events`.
+- **6 novos eventos** no enum `notification_event`: `ticket_created`,
+  `ticket_updated`, `ticket_message_added`, `ticket_status_changed`,
+  `ticket_resolved`, `ticket_reopened`.
+
+#### Segurança
+- Todas as regras validadas server-side via RLS + RPC. Nenhuma
+  confiança no frontend. Notas internas nunca aparecem em queries do
+  Gestor (policy `support_ticket_messages` filtra por `is_internal =
+  false`). Nomes de arquivo sanitizados; caminho no bucket segue
+  `<company_id>/<ticket_id>/<uuid>-<nome>`.
+- Ticket, mensagem, anexo ou evento nunca são apagados fisicamente:
+  apenas mudanças de status (`fechado`, `rejeitado`) ou `archived_at`
+  para eventual arquivamento futuro.
+
+#### Documentação
+- Documentação de arquitetura em `docs/ARCHITECTURE_SUPPORT_TICKETS.md`.
+- Fase 2 (emails transacionais, dashboards, KPIs Super Admin/Gestor) e
+  Fase 3 (manuais PDF, homologação E2E, release notes) pendentes.
+
 ### Restauração das credenciais de homologação (2026-07-16)
 
 #### Corrigido

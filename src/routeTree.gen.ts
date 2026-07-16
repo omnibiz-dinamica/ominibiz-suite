@@ -19,6 +19,7 @@ import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as SignTokenRouteImport } from './routes/sign.$token'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as AppTarefasRouteImport } from './routes/app.tarefas'
+import { Route as AppSuporteRouteImport } from './routes/app.suporte'
 import { Route as AppRhRouteImport } from './routes/app.rh'
 import { Route as AppPontoRouteImport } from './routes/app.ponto'
 import { Route as AppPerfilRouteImport } from './routes/app.perfil'
@@ -37,12 +38,14 @@ import { Route as AppAdminRouteImport } from './routes/app.admin'
 import { Route as AppComercialIndexRouteImport } from './routes/app.comercial.index'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as AppTarefasRecorrentesRouteImport } from './routes/app.tarefas.recorrentes'
+import { Route as AppSuporteIdRouteImport } from './routes/app.suporte.$id'
 import { Route as AppRhRecibosRouteImport } from './routes/app.rh.recibos'
 import { Route as AppPontoGestaoRouteImport } from './routes/app.ponto_.gestao'
 import { Route as AppFrotaCartoesRouteImport } from './routes/app.frota.cartoes'
 import { Route as AppComercialTemplatesRouteImport } from './routes/app.comercial.templates'
 import { Route as AppComercialContratosRouteImport } from './routes/app.comercial.contratos'
 import { Route as AppComercialClientesRouteImport } from './routes/app.comercial.clientes'
+import { Route as AppAdminSuporteRouteImport } from './routes/app.admin.suporte'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -99,6 +102,11 @@ const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
 const AppTarefasRoute = AppTarefasRouteImport.update({
   id: '/tarefas',
   path: '/tarefas',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSuporteRoute = AppSuporteRouteImport.update({
+  id: '/suporte',
+  path: '/suporte',
   getParentRoute: () => AppRoute,
 } as any)
 const AppRhRoute = AppRhRouteImport.update({
@@ -191,6 +199,11 @@ const AppTarefasRecorrentesRoute = AppTarefasRecorrentesRouteImport.update({
   path: '/recorrentes',
   getParentRoute: () => AppTarefasRoute,
 } as any)
+const AppSuporteIdRoute = AppSuporteIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppSuporteRoute,
+} as any)
 const AppRhRecibosRoute = AppRhRecibosRouteImport.update({
   id: '/recibos',
   path: '/recibos',
@@ -220,6 +233,11 @@ const AppComercialClientesRoute = AppComercialClientesRouteImport.update({
   id: '/clientes',
   path: '/clientes',
   getParentRoute: () => AppComercialRoute,
+} as any)
+const AppAdminSuporteRoute = AppAdminSuporteRouteImport.update({
+  id: '/suporte',
+  path: '/suporte',
+  getParentRoute: () => AppAdminRoute,
 } as any)
 const LovableEmailTransactionalSendRoute =
   LovableEmailTransactionalSendRouteImport.update({
@@ -268,7 +286,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/unsubscribe': typeof UnsubscribeRoute
-  '/app/admin': typeof AppAdminRoute
+  '/app/admin': typeof AppAdminRouteWithChildren
   '/app/assistente': typeof AppAssistenteRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/comercial': typeof AppComercialRouteWithChildren
@@ -283,16 +301,19 @@ export interface FileRoutesByFullPath {
   '/app/perfil': typeof AppPerfilRoute
   '/app/ponto': typeof AppPontoRoute
   '/app/rh': typeof AppRhRouteWithChildren
+  '/app/suporte': typeof AppSuporteRouteWithChildren
   '/app/tarefas': typeof AppTarefasRouteWithChildren
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/sign/$token': typeof SignTokenRoute
   '/app/': typeof AppIndexRoute
+  '/app/admin/suporte': typeof AppAdminSuporteRoute
   '/app/comercial/clientes': typeof AppComercialClientesRoute
   '/app/comercial/contratos': typeof AppComercialContratosRouteWithChildren
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
   '/app/ponto/gestao': typeof AppPontoGestaoRoute
   '/app/rh/recibos': typeof AppRhRecibosRoute
+  '/app/suporte/$id': typeof AppSuporteIdRoute
   '/app/tarefas/recorrentes': typeof AppTarefasRecorrentesRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/app/comercial/': typeof AppComercialIndexRoute
@@ -310,7 +331,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/unsubscribe': typeof UnsubscribeRoute
-  '/app/admin': typeof AppAdminRoute
+  '/app/admin': typeof AppAdminRouteWithChildren
   '/app/assistente': typeof AppAssistenteRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/despesas': typeof AppDespesasRoute
@@ -324,16 +345,19 @@ export interface FileRoutesByTo {
   '/app/perfil': typeof AppPerfilRoute
   '/app/ponto': typeof AppPontoRoute
   '/app/rh': typeof AppRhRouteWithChildren
+  '/app/suporte': typeof AppSuporteRouteWithChildren
   '/app/tarefas': typeof AppTarefasRouteWithChildren
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/sign/$token': typeof SignTokenRoute
   '/app': typeof AppIndexRoute
+  '/app/admin/suporte': typeof AppAdminSuporteRoute
   '/app/comercial/clientes': typeof AppComercialClientesRoute
   '/app/comercial/contratos': typeof AppComercialContratosRouteWithChildren
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
   '/app/ponto/gestao': typeof AppPontoGestaoRoute
   '/app/rh/recibos': typeof AppRhRecibosRoute
+  '/app/suporte/$id': typeof AppSuporteIdRoute
   '/app/tarefas/recorrentes': typeof AppTarefasRecorrentesRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/app/comercial': typeof AppComercialIndexRoute
@@ -353,7 +377,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/unsubscribe': typeof UnsubscribeRoute
-  '/app/admin': typeof AppAdminRoute
+  '/app/admin': typeof AppAdminRouteWithChildren
   '/app/assistente': typeof AppAssistenteRoute
   '/app/clientes': typeof AppClientesRoute
   '/app/comercial': typeof AppComercialRouteWithChildren
@@ -368,16 +392,19 @@ export interface FileRoutesById {
   '/app/perfil': typeof AppPerfilRoute
   '/app/ponto': typeof AppPontoRoute
   '/app/rh': typeof AppRhRouteWithChildren
+  '/app/suporte': typeof AppSuporteRouteWithChildren
   '/app/tarefas': typeof AppTarefasRouteWithChildren
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/sign/$token': typeof SignTokenRoute
   '/app/': typeof AppIndexRoute
+  '/app/admin/suporte': typeof AppAdminSuporteRoute
   '/app/comercial/clientes': typeof AppComercialClientesRoute
   '/app/comercial/contratos': typeof AppComercialContratosRouteWithChildren
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
   '/app/ponto_/gestao': typeof AppPontoGestaoRoute
   '/app/rh/recibos': typeof AppRhRecibosRoute
+  '/app/suporte/$id': typeof AppSuporteIdRoute
   '/app/tarefas/recorrentes': typeof AppTarefasRecorrentesRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/app/comercial/': typeof AppComercialIndexRoute
@@ -413,16 +440,19 @@ export interface FileRouteTypes {
     | '/app/perfil'
     | '/app/ponto'
     | '/app/rh'
+    | '/app/suporte'
     | '/app/tarefas'
     | '/email/unsubscribe'
     | '/sign/$token'
     | '/app/'
+    | '/app/admin/suporte'
     | '/app/comercial/clientes'
     | '/app/comercial/contratos'
     | '/app/comercial/templates'
     | '/app/frota/cartoes'
     | '/app/ponto/gestao'
     | '/app/rh/recibos'
+    | '/app/suporte/$id'
     | '/app/tarefas/recorrentes'
     | '/lovable/email/suppression'
     | '/app/comercial/'
@@ -454,16 +484,19 @@ export interface FileRouteTypes {
     | '/app/perfil'
     | '/app/ponto'
     | '/app/rh'
+    | '/app/suporte'
     | '/app/tarefas'
     | '/email/unsubscribe'
     | '/sign/$token'
     | '/app'
+    | '/app/admin/suporte'
     | '/app/comercial/clientes'
     | '/app/comercial/contratos'
     | '/app/comercial/templates'
     | '/app/frota/cartoes'
     | '/app/ponto/gestao'
     | '/app/rh/recibos'
+    | '/app/suporte/$id'
     | '/app/tarefas/recorrentes'
     | '/lovable/email/suppression'
     | '/app/comercial'
@@ -497,16 +530,19 @@ export interface FileRouteTypes {
     | '/app/perfil'
     | '/app/ponto'
     | '/app/rh'
+    | '/app/suporte'
     | '/app/tarefas'
     | '/email/unsubscribe'
     | '/sign/$token'
     | '/app/'
+    | '/app/admin/suporte'
     | '/app/comercial/clientes'
     | '/app/comercial/contratos'
     | '/app/comercial/templates'
     | '/app/frota/cartoes'
     | '/app/ponto_/gestao'
     | '/app/rh/recibos'
+    | '/app/suporte/$id'
     | '/app/tarefas/recorrentes'
     | '/lovable/email/suppression'
     | '/app/comercial/'
@@ -606,6 +642,13 @@ declare module '@tanstack/react-router' {
       path: '/tarefas'
       fullPath: '/app/tarefas'
       preLoaderRoute: typeof AppTarefasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/suporte': {
+      id: '/app/suporte'
+      path: '/suporte'
+      fullPath: '/app/suporte'
+      preLoaderRoute: typeof AppSuporteRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/rh': {
@@ -734,6 +777,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTarefasRecorrentesRouteImport
       parentRoute: typeof AppTarefasRoute
     }
+    '/app/suporte/$id': {
+      id: '/app/suporte/$id'
+      path: '/$id'
+      fullPath: '/app/suporte/$id'
+      preLoaderRoute: typeof AppSuporteIdRouteImport
+      parentRoute: typeof AppSuporteRoute
+    }
     '/app/rh/recibos': {
       id: '/app/rh/recibos'
       path: '/recibos'
@@ -775,6 +825,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/comercial/clientes'
       preLoaderRoute: typeof AppComercialClientesRouteImport
       parentRoute: typeof AppComercialRoute
+    }
+    '/app/admin/suporte': {
+      id: '/app/admin/suporte'
+      path: '/suporte'
+      fullPath: '/app/admin/suporte'
+      preLoaderRoute: typeof AppAdminSuporteRouteImport
+      parentRoute: typeof AppAdminRoute
     }
     '/lovable/email/transactional/send': {
       id: '/lovable/email/transactional/send'
@@ -827,6 +884,18 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface AppAdminRouteChildren {
+  AppAdminSuporteRoute: typeof AppAdminSuporteRoute
+}
+
+const AppAdminRouteChildren: AppAdminRouteChildren = {
+  AppAdminSuporteRoute: AppAdminSuporteRoute,
+}
+
+const AppAdminRouteWithChildren = AppAdminRoute._addFileChildren(
+  AppAdminRouteChildren,
+)
 
 interface AppComercialContratosRouteChildren {
   AppComercialContratosIdRoute: typeof AppComercialContratosIdRoute
@@ -883,6 +952,18 @@ const AppRhRouteChildren: AppRhRouteChildren = {
 
 const AppRhRouteWithChildren = AppRhRoute._addFileChildren(AppRhRouteChildren)
 
+interface AppSuporteRouteChildren {
+  AppSuporteIdRoute: typeof AppSuporteIdRoute
+}
+
+const AppSuporteRouteChildren: AppSuporteRouteChildren = {
+  AppSuporteIdRoute: AppSuporteIdRoute,
+}
+
+const AppSuporteRouteWithChildren = AppSuporteRoute._addFileChildren(
+  AppSuporteRouteChildren,
+)
+
 interface AppTarefasRouteChildren {
   AppTarefasRecorrentesRoute: typeof AppTarefasRecorrentesRoute
 }
@@ -896,7 +977,7 @@ const AppTarefasRouteWithChildren = AppTarefasRoute._addFileChildren(
 )
 
 interface AppRouteChildren {
-  AppAdminRoute: typeof AppAdminRoute
+  AppAdminRoute: typeof AppAdminRouteWithChildren
   AppAssistenteRoute: typeof AppAssistenteRoute
   AppClientesRoute: typeof AppClientesRoute
   AppComercialRoute: typeof AppComercialRouteWithChildren
@@ -911,13 +992,14 @@ interface AppRouteChildren {
   AppPerfilRoute: typeof AppPerfilRoute
   AppPontoRoute: typeof AppPontoRoute
   AppRhRoute: typeof AppRhRouteWithChildren
+  AppSuporteRoute: typeof AppSuporteRouteWithChildren
   AppTarefasRoute: typeof AppTarefasRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
   AppPontoGestaoRoute: typeof AppPontoGestaoRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
-  AppAdminRoute: AppAdminRoute,
+  AppAdminRoute: AppAdminRouteWithChildren,
   AppAssistenteRoute: AppAssistenteRoute,
   AppClientesRoute: AppClientesRoute,
   AppComercialRoute: AppComercialRouteWithChildren,
@@ -932,6 +1014,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppPerfilRoute: AppPerfilRoute,
   AppPontoRoute: AppPontoRoute,
   AppRhRoute: AppRhRouteWithChildren,
+  AppSuporteRoute: AppSuporteRouteWithChildren,
   AppTarefasRoute: AppTarefasRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
   AppPontoGestaoRoute: AppPontoGestaoRoute,
