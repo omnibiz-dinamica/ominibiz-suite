@@ -633,10 +633,12 @@ function TaskRowItem({
         </div>
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
           {date && <span>{date}</span>}
-          {(start || end) && (
+          {start || end ? (
             <span className="font-mono">
               {start || "--:--"} → {end || "--:--"}
             </span>
+          ) : (
+            !t.scheduled_for && <span className="italic">Sem horário definido</span>
           )}
           {updated && <span>Atualizado: {updated}</span>}
         </div>
