@@ -7,6 +7,44 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### 🛠️ Correções Operacionais — Tarefas & Horário-Parede (2026-07-17)
+
+#### Corrigido
+- **Divergência de horário Gestor × Funcionário (P1).** Quatro pontos da
+  visão do funcionário renderizavam `scheduled_for` com
+  `new Date(iso).toLocaleString/toLocaleTimeString`, o que interpreta o
+  timestamp armazenado (carimbado como `...Z` para preservar horário-parede)
+  como UTC e converte para o fuso do dispositivo — resultando em desvio
+  de 1h para operadores em `Europe/Lisbon` no verão (14:06 do Gestor
+  aparecia como 15:06 para o Funcionário).
+  - `src/routes/app.ponto.tsx` (hero, cabeçalho de execução, fila "Depois").
+  - `src/components/dashboards/EmployeeDashboard.tsx` (lista "Próximas tarefas").
+  - Passaram todos a usar `formatWallDate` / `formatWallTime` de
+    `src/lib/wall-clock.ts`, que já é o padrão oficial para exibição de
+    horários operacionais.
+- **Recorrência com fallback silencioso de 60 minutos.** `emptyRecurrence()`
+  em `RecurrenceForm.tsx` inicializava `scheduledTime: "09:00"` e
+  `durationMinutes: 60`. Embora esses campos já sejam sobrescritos no
+  submit por valores derivados do topo do formulário (start_stop) ou
+  fixados em `00:00` / 0 (manual), o default residual foi removido para
+  eliminar qualquer risco de fallback silencioso.
+
+#### Adicionado
+- **Tarefa sem horário para clientes em modo Manual.** O formulário de
+  criação/edição agora exibe hint informativo quando o cliente selecionado
+  tem `timing_mode = 'manual'`, marcando Início/Fim como opcionais e
+  esclarecendo que o funcionário informará entrada/saída na Folha de
+  Ponto. A UI passa a exibir **"Sem horário definido"** em listas do
+  Gestor, no painel do Funcionário e no dashboard quando `scheduled_for`
+  é nulo (a coluna já era nullable no banco — nenhuma migration necessária).
+
+#### Não alterado
+- Nenhuma alteração em RLS/RBAC, schema, RPCs, políticas ou UUIDs.
+- Timestamps reais de ponto (`time_entries`) permanecem intocados.
+- Detalhamento em `docs/homologacoes/CORRECOES_TAREFAS_SUPORTE_V1.md`.
+
+---
+
 ### 🔒 Correção Crítica de Segurança — RLS cross-tenant (2026-07-16)
 
 #### Corrigido
