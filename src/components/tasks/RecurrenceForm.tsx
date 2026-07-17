@@ -27,8 +27,11 @@ export const emptyRecurrence = (): RecurrenceFormValue => ({
   dayOfMonth: 1,
   startDate: new Date().toISOString().slice(0, 10),
   endDate: "",
-  scheduledTime: "09:00",
-  durationMinutes: 60,
+  // Sem defaults implícitos: horário/duração são derivados do topo do formulário
+  // no submit (start_stop) ou fixados em 00:00 / 0 (manual). Nunca aplicar 60 min
+  // como fallback silencioso.
+  scheduledTime: "",
+  durationMinutes: 0,
 });
 
 export function RecurrenceForm({
