@@ -34,6 +34,7 @@ import {
 import { usePunchFlow } from "@/hooks/use-punch-flow";
 import { PunchFlowOverlay } from "@/components/ponto/PunchFlowOverlay";
 import type { PunchV2Response } from "@/lib/punch/v2";
+import { formatWallDate, formatWallTime } from "@/lib/wall-clock";
 
 export const Route = createFileRoute("/app/ponto")({ component: PontoPage });
 
@@ -531,7 +532,7 @@ function ActiveTaskCard({
             {task.scheduled_for && (
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                 <ClockIcon className="h-3 w-3" />
-                {new Date(task.scheduled_for).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                {formatWallTime(task.scheduled_for)}
               </span>
             )}
             <span className="text-xs text-muted-foreground">
@@ -664,12 +665,7 @@ function UpcomingTasks({
           {nextStartable.scheduled_for && (
             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
               <ClockIcon className="h-3 w-3" />
-              {new Date(nextStartable.scheduled_for).toLocaleString([], {
-                day: "2-digit",
-                month: "2-digit",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
+              {formatWallDate(nextStartable.scheduled_for)} · {formatWallTime(nextStartable.scheduled_for)}
             </span>
           )}
         </div>
@@ -789,13 +785,8 @@ function UpcomingTasks({
                 )}
                 <div className="mt-0.5 text-xs text-muted-foreground">
                   {t.scheduled_for
-                    ? new Date(t.scheduled_for).toLocaleString([], {
-                        day: "2-digit",
-                        month: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
-                    : "sem horário"}
+                    ? `${formatWallDate(t.scheduled_for)} · ${formatWallTime(t.scheduled_for)}`
+                    : "Sem horário definido"}
                 </div>
               </div>
               <Button
