@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Clock, ListChecks, Play } from "lucide-react";
 import type { TaskRow } from "@/lib/tasks";
 import { STATUS_LABELS, STATUS_TONE } from "@/lib/tasks";
+import { formatWallDate, formatWallTime } from "@/lib/wall-clock";
 
 export function EmployeeDashboard() {
   const { user, profile } = useAuth();
@@ -77,16 +78,11 @@ export function EmployeeDashboard() {
               <li key={t.id} className="flex items-center justify-between gap-3 px-5 py-3">
                 <div className="min-w-0">
                   <div className="truncate font-medium">{t.title}</div>
-                  {t.scheduled_for && (
-                    <div className="text-xs text-muted-foreground">
-                      {new Date(t.scheduled_for).toLocaleString([], {
-                        day: "2-digit",
-                        month: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </div>
-                  )}
+                  <div className="text-xs text-muted-foreground">
+                    {t.scheduled_for
+                      ? `${formatWallDate(t.scheduled_for)} · ${formatWallTime(t.scheduled_for)}`
+                      : "Sem horário definido"}
+                  </div>
                 </div>
                 <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_TONE[t.status]}`}>
                   {STATUS_LABELS[t.status]}
