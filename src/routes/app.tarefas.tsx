@@ -21,7 +21,24 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { toast } from "sonner";
-import { Plus, Play, Check, X, ShieldCheck, UserX, Clock, Pencil, Repeat, UserCog, Users, Trash2, Archive, ArchiveRestore } from "lucide-react";
+import {
+  Plus,
+  Play,
+  Check,
+  X,
+  ShieldCheck,
+  UserX,
+  Clock,
+  Pencil,
+  Repeat,
+  UserCog,
+  Users,
+  Trash2,
+  Archive,
+  ArchiveRestore,
+  CalendarDays,
+  Building2,
+} from "lucide-react";
 import {
   STATUS_LABELS,
   STATUS_TONE,
@@ -43,13 +60,7 @@ import { ReassignDialog } from "@/components/tasks/ReassignDialog";
 import { EditRecurrenceDialog } from "@/components/tasks/EditRecurrenceDialog";
 import type { RecurrenceRow } from "@/lib/tasks";
 import { EmployeePicker } from "@/components/common/EmployeePicker";
-import {
-  wallInputToISO,
-  wallISOToInput,
-  formatWallDate,
-  formatWallTime,
-  formatLocalTime,
-} from "@/lib/wall-clock";
+import { wallInputToISO, wallISOToInput, formatWallDate, formatWallTime, formatLocalTime } from "@/lib/wall-clock";
 
 // Filtros aceitos via search-params. `atrasadas` é filtro derivado
 // (não é status persistido) — combina "não concluído" + due_at no passado.
@@ -63,7 +74,8 @@ const STATUS_FILTERS = [
   "atrasadas",
 ] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
-type TasksSearch = { status?: StatusFilter; employee?: string };
+type TasksSearch = { status?: StatusFilter; employee?: string; client?: string };
+type ClientOption = { id: string; name: string; timing_mode?: "start_stop" | "manual" | null };
 
 export const Route = createFileRoute("/app/tarefas")({
   component: TasksPage,
@@ -73,9 +85,9 @@ export const Route = createFileRoute("/app/tarefas")({
       typeof s.status === "string" && (STATUS_FILTERS as readonly string[]).includes(s.status)
         ? (s.status as StatusFilter)
         : undefined;
-    const employee =
-      typeof s.employee === "string" && s.employee ? s.employee : undefined;
-    return { status, employee };
+    const employee = typeof s.employee === "string" && s.employee ? s.employee : undefined;
+    const client = typeof s.client === "string" && s.client ? s.client : undefined;
+    return { status, employee, client };
   },
 });
 
@@ -91,6 +103,8 @@ function TasksPage() {
   const [seriesRow, setSeriesRow] = useState<RecurrenceRow | null>(null);
   const [deleting, setDeleting] = useState<TaskRow | null>(null);
   const [view, setView] = useState<"active" | "archived">("active");
+  const [taskView, setTaskView] = useState<"list" | "calendar">("list");
+  const [calendarGroup, setCalendarGroup] = useState<"assignee" | "client">("assignee");
 
   useEffect(() => {
     if (!editingSeries?.recurrence_id) {
@@ -106,7 +120,9 @@ function TasksPage() {
         .maybeSingle();
       if (!cancelled) setSeriesRow((data ?? null) as RecurrenceRow | null);
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [editingSeries?.recurrence_id]);
 
   const { data: tasks, isLoading } = useQuery({
@@ -132,16 +148,10 @@ function TasksPage() {
     queryKey: ["members", currentCompanyId],
     queryFn: async () => {
       if (!currentCompanyId) return [];
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("company_id", currentCompanyId);
+      const { data: roles } = await supabase.from("user_roles").select("user_id").eq("company_id", currentCompanyId);
       const ids = (roles ?? []).map((r) => r.user_id);
       if (ids.length === 0) return [];
-      const { data: profs } = await supabase
-        .from("profiles")
-        .select("id, full_name, job_title")
-        .in("id", ids);
+      const { data: profs } = await supabase.from("profiles").select("id, full_name, job_title").in("id", ids);
       return profs ?? [];
     },
     enabled: isManager && !!currentCompanyId,
@@ -150,14 +160,14 @@ function TasksPage() {
   const { data: clientsList } = useQuery({
     queryKey: ["clients-min", currentCompanyId],
     queryFn: async () => {
-      if (!currentCompanyId) return [] as { id: string; name: string; timing_mode: "start_stop" | "manual" | null }[];
+      if (!currentCompanyId) return [] as ClientOption[];
       const { data, error } = await (supabase.from("clients" as never) as any)
         .select("id,name,timing_mode")
         .eq("company_id", currentCompanyId)
         .eq("status", "ativo")
         .order("name", { ascending: true });
       if (error) throw error;
-      return (data ?? []) as unknown as { id: string; name: string; timing_mode: "start_stop" | "manual" | null }[];
+      return (data ?? []) as unknown as ClientOption[];
     },
     enabled: isManager && !!currentCompanyId,
   });
@@ -176,10 +186,8 @@ function TasksPage() {
     if (!user) return;
     const ch = supabase
       .channel(`user:${user.id}:tasks-ui-sync`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "tasks" },
-        () => qc.invalidateQueries({ queryKey: ["tasks"] }),
+      .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, () =>
+        qc.invalidateQueries({ queryKey: ["tasks"] }),
       )
       .subscribe();
     return () => {
@@ -223,14 +231,8 @@ function TasksPage() {
   // Status que podem ser excluídos (tarefas que ainda não foram iniciadas).
   // A presença de histórico operacional (folha de ponto, documentos)
   // é validada no servidor e devolve a mensagem padrão.
-  const DELETABLE_STATUSES: TaskRow["status"][] = [
-    "pendente",
-    "autorizado",
-    "cancelado",
-    "ausente",
-  ];
-  const canDelete = (t: TaskRow) =>
-    isManager && DELETABLE_STATUSES.includes(t.status);
+  const DELETABLE_STATUSES: TaskRow["status"][] = ["pendente", "autorizado", "cancelado", "ausente"];
+  const canDelete = (t: TaskRow) => isManager && DELETABLE_STATUSES.includes(t.status);
 
   const handleDeleteRequest = (t: TaskRow) => {
     if (!isManager) return;
@@ -247,17 +249,14 @@ function TasksPage() {
     const now = Date.now();
     return all.filter((t) => {
       if (search.employee && t.assigned_to !== search.employee) return false;
+      if (search.client && t.client_id !== search.client) return false;
       if (!search.status) return true;
       if (search.status === "atrasadas") {
-        return (
-          t.status !== "concluido" &&
-          t.due_at != null &&
-          new Date(t.due_at).getTime() < now
-        );
+        return t.status !== "concluido" && t.due_at != null && new Date(t.due_at).getTime() < now;
       }
       return t.status === search.status;
     });
-  }, [tasks, search.status, search.employee]);
+  }, [tasks, search.status, search.employee, search.client]);
 
   const setStatusFilter = (next: StatusFilter | undefined) => {
     void navigate({
@@ -268,6 +267,12 @@ function TasksPage() {
   const setEmployeeFilter = (next: string | undefined) => {
     void navigate({
       search: (prev: TasksSearch) => ({ ...prev, employee: next }),
+      replace: true,
+    });
+  };
+  const setClientFilter = (next: string | undefined) => {
+    void navigate({
+      search: (prev: TasksSearch) => ({ ...prev, client: next }),
       replace: true,
     });
   };
@@ -300,34 +305,54 @@ function TasksPage() {
               </button>
             </div>
             <Button asChild variant="outline">
-              <Link to="/app/tarefas/recorrentes"><Repeat className="mr-2 h-4 w-4" /> Recorrências</Link>
+              <Link to="/app/tarefas/recorrentes">
+                <Repeat className="mr-2 h-4 w-4" /> Recorrências
+              </Link>
             </Button>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button><Plus className="mr-2 h-4 w-4" /> Nova tarefa</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader><DialogTitle>Nova tarefa</DialogTitle></DialogHeader>
-              <TaskForm members={members ?? []} clients={clientsList ?? []} companyId={currentCompanyId} userId={user!.id} onDone={() => { setOpen(false); qc.invalidateQueries({ queryKey: ["tasks"] }); }} />
-            </DialogContent>
-          </Dialog>
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" /> Nova tarefa
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Nova tarefa</DialogTitle>
+                </DialogHeader>
+                <TaskForm
+                  members={members ?? []}
+                  clients={clientsList ?? []}
+                  companyId={currentCompanyId}
+                  userId={user!.id}
+                  onDone={() => {
+                    setOpen(false);
+                    qc.invalidateQueries({ queryKey: ["tasks"] });
+                  }}
+                />
+              </DialogContent>
+            </Dialog>
           </div>
         )}
       </div>
 
       <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Editar tarefa</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Editar tarefa</DialogTitle>
+          </DialogHeader>
           {editing && (
             <>
-            <TaskForm
-              initial={editing}
-              members={members ?? []}
-              clients={clientsList ?? []}
-              companyId={editing.company_id}
-              userId={user!.id}
-              onDone={() => { setEditing(null); qc.invalidateQueries({ queryKey: ["tasks"] }); }}
-            />
+              <TaskForm
+                initial={editing}
+                members={members ?? []}
+                clients={clientsList ?? []}
+                companyId={editing.company_id}
+                userId={user!.id}
+                onDone={() => {
+                  setEditing(null);
+                  qc.invalidateQueries({ queryKey: ["tasks"] });
+                }}
+              />
               <div className="mt-6 border-t border-border pt-4">
                 <TaskDocuments taskId={editing.id} companyId={editing.company_id} canManage={isManager} />
               </div>
@@ -395,11 +420,25 @@ function TasksPage() {
       {isManager && currentCompanyId && (
         <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card px-3 py-2">
           <div className="flex flex-wrap items-center gap-1">
-            <FilterChip
-              label="Todos"
-              active={!search.status}
-              onClick={() => setStatusFilter(undefined)}
-            />
+            <FilterChip label="Lista" active={taskView === "list"} onClick={() => setTaskView("list")} />
+            <FilterChip label="Calendário" active={taskView === "calendar"} onClick={() => setTaskView("calendar")} />
+          </div>
+          {taskView === "calendar" && (
+            <div className="flex flex-wrap items-center gap-1">
+              <FilterChip
+                label="Por colaborador"
+                active={calendarGroup === "assignee"}
+                onClick={() => setCalendarGroup("assignee")}
+              />
+              <FilterChip
+                label="Por cliente"
+                active={calendarGroup === "client"}
+                onClick={() => setCalendarGroup("client")}
+              />
+            </div>
+          )}
+          <div className="flex flex-wrap items-center gap-1">
+            <FilterChip label="Todos" active={!search.status} onClick={() => setStatusFilter(undefined)} />
             {(
               [
                 ["pendente", "Pendentes"],
@@ -412,13 +451,11 @@ function TasksPage() {
                 key={key}
                 label={label}
                 active={search.status === key}
-                onClick={() =>
-                  setStatusFilter(search.status === key ? undefined : (key as StatusFilter))
-                }
+                onClick={() => setStatusFilter(search.status === key ? undefined : (key as StatusFilter))}
               />
             ))}
           </div>
-          <div className="ml-auto w-full sm:w-72">
+          <div className="ml-auto grid w-full gap-2 sm:w-auto sm:grid-cols-2">
             <EmployeePicker
               employees={(members ?? []).map((m) => ({
                 id: m.id,
@@ -430,6 +467,22 @@ function TasksPage() {
               placeholder="Todos os funcionários"
               ariaLabel="Filtrar por funcionário"
             />
+            <Select
+              value={search.client ?? "all"}
+              onValueChange={(id) => setClientFilter(id === "all" ? undefined : id)}
+            >
+              <SelectTrigger aria-label="Filtrar por cliente">
+                <SelectValue placeholder="Todos os clientes" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os clientes</SelectItem>
+                {(clientsList ?? []).map((client) => (
+                  <SelectItem key={client.id} value={client.id}>
+                    {client.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {search.employee && (
               <button
                 type="button"
@@ -439,6 +492,15 @@ function TasksPage() {
                 Limpar filtro de funcionário
               </button>
             )}
+            {search.client && (
+              <button
+                type="button"
+                onClick={() => setClientFilter(undefined)}
+                className="text-left text-xs text-muted-foreground underline-offset-2 hover:underline"
+              >
+                Limpar filtro de cliente
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -446,16 +508,35 @@ function TasksPage() {
         <div className="rounded-2xl border border-border bg-card px-5 py-12 text-center text-sm text-muted-foreground">
           {view === "archived"
             ? "Nenhuma tarefa arquivada."
-            : search.status || search.employee
+            : search.status || search.employee || search.client
               ? "Nenhuma tarefa corresponde ao filtro atual."
               : "Nenhuma tarefa ainda."}
         </div>
       )}
 
-      {!isLoading && filteredTasks.length > 0 && isManager && (
+      {!isLoading && filteredTasks.length > 0 && isManager && taskView === "list" && (
         <GroupedByAssignee
           tasks={filteredTasks}
           members={members ?? []}
+          userId={user!.id}
+          isManager={isManager}
+          onEdit={setEditing}
+          onEditSeries={setEditingSeries}
+          onReassign={setReassigning}
+          onDelete={handleDeleteRequest}
+          onTransition={(id, action) => transition.mutate({ id, action })}
+          onArchive={(id, archive) => archiveMut.mutate({ id, archive })}
+          transitionPending={transition.isPending}
+          archivePending={archiveMut.isPending}
+        />
+      )}
+
+      {!isLoading && filteredTasks.length > 0 && isManager && taskView === "calendar" && (
+        <TaskCalendar
+          tasks={filteredTasks}
+          members={members ?? []}
+          clients={clientsList ?? []}
+          groupBy={calendarGroup}
           userId={user!.id}
           isManager={isManager}
           onEdit={setEditing}
@@ -495,15 +576,7 @@ function TasksPage() {
   );
 }
 
-function FilterChip({
-  label,
-  active,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
+function FilterChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
     <button
       type="button"
@@ -511,9 +584,7 @@ function FilterChip({
       aria-pressed={active}
       className={
         "rounded-full px-3 py-1 text-xs font-medium transition " +
-        (active
-          ? "bg-primary text-primary-foreground"
-          : "bg-muted text-muted-foreground hover:text-foreground")
+        (active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground")
       }
     >
       {label}
@@ -538,6 +609,219 @@ interface RowHandlers {
   archivePending: boolean;
 }
 
+function TaskCalendar({
+  tasks,
+  members,
+  clients,
+  groupBy,
+  ...handlers
+}: RowHandlers & {
+  tasks: TaskRow[];
+  members: { id: string; full_name: string | null }[];
+  clients: ClientOption[];
+  groupBy: "assignee" | "client";
+}) {
+  const memberName = (id: string | null) =>
+    members.find((m) => m.id === id)?.full_name ?? (id ? id.slice(0, 8) : "Sem responsável");
+  const clientName = (id: string | null) =>
+    clients.find((c) => c.id === id)?.name ?? (id ? id.slice(0, 8) : "Sem cliente");
+
+  const groups = new Map<string, TaskRow[]>();
+  for (const task of tasks) {
+    const key = groupBy === "assignee" ? (task.assigned_to ?? "__unassigned__") : (task.client_id ?? "__no_client__");
+    const list = groups.get(key) ?? [];
+    list.push(task);
+    groups.set(key, list);
+  }
+
+  const groupEntries = Array.from(groups.entries()).sort(([a], [b]) => {
+    const labelA =
+      groupBy === "assignee"
+        ? memberName(a === "__unassigned__" ? null : a)
+        : clientName(a === "__no_client__" ? null : a);
+    const labelB =
+      groupBy === "assignee"
+        ? memberName(b === "__unassigned__" ? null : b)
+        : clientName(b === "__no_client__" ? null : b);
+    return labelA.localeCompare(labelB);
+  });
+
+  const dayKey = (task: TaskRow) => {
+    if (!task.scheduled_for) return "__unscheduled__";
+    const date = new Date(task.scheduled_for);
+    if (Number.isNaN(date.getTime())) return "__unscheduled__";
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+  const dayLabel = (key: string) => {
+    if (key === "__unscheduled__") return "Sem data";
+    const [year, month, day] = key.split("-").map(Number);
+    return new Date(year, month - 1, day).toLocaleDateString("pt-PT", {
+      weekday: "short",
+      day: "2-digit",
+      month: "2-digit",
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      {groupEntries.map(([key, groupTasks]) => {
+        const title =
+          groupBy === "assignee"
+            ? memberName(key === "__unassigned__" ? null : key)
+            : clientName(key === "__no_client__" ? null : key);
+        const byDay = new Map<string, TaskRow[]>();
+        for (const task of groupTasks) {
+          const keyForDay = dayKey(task);
+          const list = byDay.get(keyForDay) ?? [];
+          list.push(task);
+          byDay.set(keyForDay, list);
+        }
+        const dayEntries = Array.from(byDay.entries()).sort(([a], [b]) => {
+          if (a === "__unscheduled__") return 1;
+          if (b === "__unscheduled__") return -1;
+          return a.localeCompare(b);
+        });
+
+        return (
+          <section key={key} className="rounded-2xl border border-border bg-card">
+            <div className="flex items-center gap-3 border-b border-border px-5 py-4">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+                {groupBy === "assignee" ? <Users className="h-4 w-4" /> : <Building2 className="h-4 w-4" />}
+              </span>
+              <div>
+                <h2 className="font-display text-base font-semibold">{title}</h2>
+                <p className="text-xs text-muted-foreground">
+                  {groupTasks.length} {groupTasks.length === 1 ? "tarefa" : "tarefas"}
+                </p>
+              </div>
+            </div>
+            <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">
+              {dayEntries.map(([day, dayTasks]) => (
+                <div key={day} className="min-h-32 rounded-lg border border-border bg-background">
+                  <div className="flex items-center justify-between border-b border-border px-3 py-2">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                      {dayLabel(day)}
+                    </div>
+                    <span className="text-xs text-muted-foreground">{dayTasks.length}</span>
+                  </div>
+                  <ul className="divide-y divide-border">
+                    {dayTasks
+                      .slice()
+                      .sort((a, b) => (a.scheduled_for ?? "").localeCompare(b.scheduled_for ?? ""))
+                      .map((task) => (
+                        <CalendarTaskCard
+                          key={task.id}
+                          task={task}
+                          members={members}
+                          clients={clients}
+                          groupBy={groupBy}
+                          {...handlers}
+                        />
+                      ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+function CalendarTaskCard({
+  task,
+  members,
+  clients,
+  groupBy,
+  userId,
+  isManager,
+  onEdit,
+  onEditSeries,
+  onReassign,
+  onDelete,
+  onTransition,
+  transitionPending,
+}: RowHandlers & {
+  task: TaskRow;
+  members: { id: string; full_name: string | null }[];
+  clients: ClientOption[];
+  groupBy: "assignee" | "client";
+}) {
+  const late = isVisuallyLate(task);
+  const actions = availableActions(task, { userId, isManager });
+  const start = formatWallTime(task.scheduled_for);
+  const end = formatWallTime(task.scheduled_end);
+  const memberName = members.find((m) => m.id === task.assigned_to)?.full_name ?? "Sem responsável";
+  const clientName = clients.find((c) => c.id === task.client_id)?.name ?? "Sem cliente";
+
+  return (
+    <li className="space-y-2 px-3 py-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="truncate text-sm font-medium">{task.title}</div>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            {start || end ? (
+              <span className="font-mono">
+                {start || "--:--"} → {end || "--:--"}
+              </span>
+            ) : (
+              <span className="italic">Sem horário definido</span>
+            )}
+            <span>{groupBy === "assignee" ? clientName : memberName}</span>
+          </div>
+        </div>
+        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${STATUS_TONE[task.status]}`}>
+          {STATUS_LABELS[task.status]}
+        </span>
+      </div>
+      {late && (
+        <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-destructive">
+          <Clock className="h-3 w-3" /> atrasado
+        </span>
+      )}
+      <div className="flex flex-wrap justify-end gap-1">
+        {isManager && (
+          <>
+            <Button size="sm" variant="ghost" title="Editar" onClick={() => onEdit(task)}>
+              <Pencil className="h-3 w-3" />
+            </Button>
+            {task.recurrence_id && (
+              <Button size="sm" variant="ghost" title="Editar série" onClick={() => onEditSeries(task)}>
+                <Repeat className="h-3 w-3" />
+              </Button>
+            )}
+            <Button size="sm" variant="ghost" title="Reatribuir" onClick={() => onReassign(task)}>
+              <UserCog className="h-3 w-3" />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              title="Excluir tarefa"
+              className="text-destructive hover:text-destructive"
+              onClick={() => onDelete(task)}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </>
+        )}
+        {actions.map((action) => (
+          <ActionButton
+            key={action}
+            action={action}
+            disabled={transitionPending}
+            onClick={() => onTransition(task.id, action)}
+          />
+        ))}
+      </div>
+    </li>
+  );
+}
+
 function GroupedByAssignee({
   tasks,
   members,
@@ -557,9 +841,7 @@ function GroupedByAssignee({
     groups.set(k, arr);
   }
   const entries = Array.from(groups.entries()).sort(([a], [b]) =>
-    nameOf(a === "__unassigned__" ? null : a).localeCompare(
-      nameOf(b === "__unassigned__" ? null : b),
-    ),
+    nameOf(a === "__unassigned__" ? null : a).localeCompare(nameOf(b === "__unassigned__" ? null : b)),
   );
 
   return (
@@ -642,9 +924,7 @@ function TaskRowItem({
           )}
           {updated && <span>Atualizado: {updated}</span>}
         </div>
-        {t.description && (
-          <div className="mt-1 line-clamp-1 text-xs text-muted-foreground">{t.description}</div>
-        )}
+        {t.description && <div className="mt-1 line-clamp-1 text-xs text-muted-foreground">{t.description}</div>}
       </div>
       <div className="flex flex-wrap justify-end gap-2">
         {isManager && (
@@ -688,9 +968,7 @@ function TaskRowItem({
                 size="sm"
                 variant="ghost"
                 title={
-                  archivable
-                    ? "Arquivar"
-                    : "Apenas tarefas concluídas, canceladas ou ausentes podem ser arquivadas"
+                  archivable ? "Arquivar" : "Apenas tarefas concluídas, canceladas ou ausentes podem ser arquivadas"
                 }
                 disabled={archivePending || !archivable}
                 onClick={() => onArchive(t.id, true)}
@@ -701,27 +979,14 @@ function TaskRowItem({
           </>
         )}
         {actions.map((a) => (
-          <ActionButton
-            key={a}
-            action={a}
-            disabled={transitionPending}
-            onClick={() => onTransition(t.id, a)}
-          />
+          <ActionButton key={a} action={a} disabled={transitionPending} onClick={() => onTransition(t.id, a)} />
         ))}
       </div>
     </li>
   );
 }
 
-function ActionButton({
-  action,
-  onClick,
-  disabled,
-}: {
-  action: TaskAction;
-  onClick: () => void;
-  disabled?: boolean;
-}) {
+function ActionButton({ action, onClick, disabled }: { action: TaskAction; onClick: () => void; disabled?: boolean }) {
   const map = {
     autorizar: { Icon: ShieldCheck, variant: "outline" as const },
     iniciar: { Icon: Play, variant: "outline" as const },
@@ -761,14 +1026,11 @@ function TaskForm({
   const [scheduledFor, setScheduledFor] = useState<string>(wallISOToInput(initial?.scheduled_for));
   const [scheduledEnd, setScheduledEnd] = useState<string>(wallISOToInput(initial?.scheduled_end));
   const [graceMinutes, setGraceMinutes] = useState<number>(initial?.absence_grace_minutes ?? 15);
-  const [punchMode, setPunchMode] = useState<PunchMode | "">(
-    (initial?.punch_mode_override as PunchMode) ?? "",
-  );
+  const [punchMode, setPunchMode] = useState<PunchMode | "">((initial?.punch_mode_override as PunchMode) ?? "");
   const [recurrence, setRecurrence] = useState<RecurrenceFormValue>(emptyRecurrence());
   const [loading, setLoading] = useState(false);
   const selectedClient = clients.find((c) => c.id === clientId);
-  const timingMode: "start_stop" | "manual" =
-    selectedClient?.timing_mode === "manual" ? "manual" : "start_stop";
+  const timingMode: "start_stop" | "manual" = selectedClient?.timing_mode === "manual" ? "manual" : "start_stop";
 
   return (
     <form
@@ -793,8 +1055,7 @@ function TaskForm({
         setLoading(true);
         // Título derivado do cliente quando não preenchido manualmente.
         const clientName = clients.find((c) => c.id === clientId)?.name ?? "";
-        const finalTitle =
-          title.trim() || clientName.trim() || (description.trim().slice(0, 80) || "Tarefa");
+        const finalTitle = title.trim() || clientName.trim() || description.trim().slice(0, 80) || "Tarefa";
         const payload = {
           title: finalTitle,
           description: description.trim() || null,
@@ -840,8 +1101,7 @@ function TaskForm({
             punch_mode_override: payload.punch_mode_override,
             frequency: recurrence.frequency,
             weekdays: recurrence.frequency === "weekly" ? recurrence.weekdays : [],
-            monthly_rule:
-              recurrence.frequency === "monthly" ? { day_of_month: recurrence.dayOfMonth } : {},
+            monthly_rule: recurrence.frequency === "monthly" ? { day_of_month: recurrence.dayOfMonth } : {},
             start_date: recurrence.startDate,
             end_date: recurrence.endDate || null,
             scheduled_time: derivedTime,
@@ -856,9 +1116,7 @@ function TaskForm({
             });
           }
         } else {
-          ({ error } = await supabase
-            .from("tasks")
-            .insert({ ...payload, company_id: companyId, created_by: userId }));
+          ({ error } = await supabase.from("tasks").insert({ ...payload, company_id: companyId, created_by: userId }));
         }
         setLoading(false);
         if (error) {
@@ -872,10 +1130,14 @@ function TaskForm({
       <div className="space-y-1.5">
         <Label>Cliente</Label>
         <Select value={clientId} onValueChange={setClientId}>
-          <SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione o cliente" />
+          </SelectTrigger>
           <SelectContent>
             {clients.map((c) => (
-              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              <SelectItem key={c.id} value={c.id}>
+                {c.name}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -888,17 +1150,22 @@ function TaskForm({
         <div className="space-y-1.5">
           <Label>Atribuir a</Label>
           <Select value={assignedTo} onValueChange={setAssignedTo}>
-            <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione" />
+            </SelectTrigger>
             <SelectContent>
               {members.map((m) => (
-                <SelectItem key={m.id} value={m.id}>{m.full_name ?? m.id.slice(0, 8)}</SelectItem>
+                <SelectItem key={m.id} value={m.id}>
+                  {m.full_name ?? m.id.slice(0, 8)}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-1.5">
           <Label>
-            Início{timingMode === "manual" ? <span className="ml-1 text-xs text-muted-foreground">(opcional)</span> : null}
+            Início
+            {timingMode === "manual" ? <span className="ml-1 text-xs text-muted-foreground">(opcional)</span> : null}
           </Label>
           <Input
             type="datetime-local"
@@ -920,9 +1187,9 @@ function TaskForm({
         </div>
         {timingMode === "manual" && (
           <div className="col-span-2 rounded-md border border-info/40 bg-info/5 px-3 py-2 text-xs text-info">
-            Cliente em modo <b>Manual</b>: apenas a <b>data</b> é obrigatória. Se deixar Início/Fim
-            em branco, a tarefa será salva como <b>“Sem horário definido”</b> e o funcionário
-            informará hora de entrada e saída na Folha de Ponto.
+            Cliente em modo <b>Manual</b>: apenas a <b>data</b> é obrigatória. Se deixar Início/Fim em branco, a tarefa
+            será salva como <b>“Sem horário definido”</b> e o funcionário informará hora de entrada e saída na Folha de
+            Ponto.
           </div>
         )}
         <div className="space-y-1.5">
@@ -937,8 +1204,13 @@ function TaskForm({
         </div>
         <div className="space-y-1.5 col-span-2">
           <Label>Modo de folha de ponto</Label>
-          <Select value={punchMode || "default"} onValueChange={(v) => setPunchMode(v === "default" ? "" : (v as PunchMode))}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+          <Select
+            value={punchMode || "default"}
+            onValueChange={(v) => setPunchMode(v === "default" ? "" : (v as PunchMode))}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="default">Padrão da empresa</SelectItem>
               <SelectItem value="automatico">{PUNCH_MODE_LABELS.automatico}</SelectItem>
@@ -948,9 +1220,7 @@ function TaskForm({
           </Select>
         </div>
       </div>
-      {!initial && (
-        <RecurrenceForm value={recurrence} onChange={setRecurrence} timingMode={timingMode} />
-      )}
+      {!initial && <RecurrenceForm value={recurrence} onChange={setRecurrence} timingMode={timingMode} />}
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? "Salvando..." : initial ? "Salvar alterações" : "Criar tarefa"}
       </Button>
