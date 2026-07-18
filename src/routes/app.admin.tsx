@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,21 +7,8 @@ import { buildAppUrl } from "@/lib/app-url";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Building2, CheckCircle2, Copy, Plus, MailCheck, AlertCircle } from "lucide-react";
 import { COUNTRIES, countryDefaults, slugify, type CountryCode } from "@/lib/locale";
@@ -31,10 +18,17 @@ import { sendInviteEmail } from "@/lib/invites/send-invite-email";
 export const Route = createFileRoute("/app/admin")({
   component: () => (
     <RoleGuard allow={["super_admin"]}>
-      <AdminPage />
+      <AdminRouteContent />
     </RoleGuard>
   ),
 });
+
+function AdminRouteContent() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const isListRoute = pathname === "/app/admin" || pathname === "/app/admin/";
+
+  return isListRoute ? <AdminPage /> : <Outlet />;
+}
 
 function AdminPage() {
   const { isSuperAdmin, loading, currentCompanyId, switchCompany, refresh } = useAuth();
@@ -63,10 +57,13 @@ function AdminPage() {
   const [country, setCountry] = useState<CountryCode>("PT");
   const [adminName, setAdminName] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
-  const [result, setResult] = useState<
-    | { email: string; link: string; companyName: string; emailSent: boolean; emailError?: string }
-    | null
-  >(null);
+  const [result, setResult] = useState<{
+    email: string;
+    link: string;
+    companyName: string;
+    emailSent: boolean;
+    emailError?: string;
+  } | null>(null);
 
   const create = useMutation({
     mutationFn: async () => {
@@ -182,9 +179,7 @@ function AdminPage() {
                       <p className="text-muted-foreground">
                         Use o botão "Reenviar convite" em <b>Empresa</b> ou copie o link abaixo como contingência.
                       </p>
-                      {result.emailError && (
-                        <p className="mt-1 text-xs text-muted-foreground">{result.emailError}</p>
-                      )}
+                      {result.emailError && <p className="mt-1 text-xs text-muted-foreground">{result.emailError}</p>}
                     </div>
                   </div>
                 )}
@@ -193,9 +188,7 @@ function AdminPage() {
                     Envio manual (contingência)
                   </summary>
                   <div className="mt-2 space-y-2">
-                    <div className="break-all rounded-md border border-border bg-background p-2">
-                      {result.link}
-                    </div>
+                    <div className="break-all rounded-md border border-border bg-background p-2">{result.link}</div>
                     <Button
                       size="sm"
                       variant="outline"
@@ -209,7 +202,13 @@ function AdminPage() {
                     </Button>
                   </div>
                 </details>
-                <Button className="w-full" onClick={() => { setResult(null); setOpen(false); }}>
+                <Button
+                  className="w-full"
+                  onClick={() => {
+                    setResult(null);
+                    setOpen(false);
+                  }}
+                >
                   Concluir
                 </Button>
               </div>
@@ -223,12 +222,7 @@ function AdminPage() {
               >
                 <div className="space-y-1.5">
                   <Label>Nome da empresa</Label>
-                  <Input
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    maxLength={120}
-                  />
+                  <Input required value={name} onChange={(e) => setName(e.target.value)} maxLength={120} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
@@ -256,21 +250,11 @@ function AdminPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label>Nome do administrador</Label>
-                  <Input
-                    required
-                    value={adminName}
-                    onChange={(e) => setAdminName(e.target.value)}
-                    maxLength={100}
-                  />
+                  <Input required value={adminName} onChange={(e) => setAdminName(e.target.value)} maxLength={100} />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Email do administrador</Label>
-                  <Input
-                    type="email"
-                    required
-                    value={adminEmail}
-                    onChange={(e) => setAdminEmail(e.target.value)}
-                  />
+                  <Input type="email" required value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} />
                 </div>
                 <DialogFooter>
                   <Button type="submit" disabled={create.isPending} className="w-full">
@@ -322,9 +306,7 @@ function AdminPage() {
             </li>
           ))}
           {(companies ?? []).length === 0 && (
-            <li className="py-8 text-center text-sm text-muted-foreground">
-              Nenhuma empresa criada ainda.
-            </li>
+            <li className="py-8 text-center text-sm text-muted-foreground">Nenhuma empresa criada ainda.</li>
           )}
         </ul>
       </div>
