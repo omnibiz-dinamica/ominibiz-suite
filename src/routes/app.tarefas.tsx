@@ -60,7 +60,15 @@ import { ReassignDialog } from "@/components/tasks/ReassignDialog";
 import { EditRecurrenceDialog } from "@/components/tasks/EditRecurrenceDialog";
 import type { RecurrenceRow } from "@/lib/tasks";
 import { EmployeePicker } from "@/components/common/EmployeePicker";
-import { wallInputToISO, wallISOToInput, formatWallDate, formatWallTime, formatLocalTime } from "@/lib/wall-clock";
+import {
+  wallInputToISO,
+  wallISOToInput,
+  wallISOToDateInput,
+  wallDateToEndOfDayISO,
+  formatWallDate,
+  formatWallTime,
+  formatLocalTime,
+} from "@/lib/wall-clock";
 
 // Filtros aceitos via search-params. `atrasadas` é filtro derivado
 // (não é status persistido) — combina "não concluído" + due_at no passado.
@@ -647,8 +655,9 @@ function TaskCalendar({
   });
 
   const dayKey = (task: TaskRow) => {
-    if (!task.scheduled_for) return "__unscheduled__";
-    const date = new Date(task.scheduled_for);
+    const daySource = task.scheduled_for ?? task.due_at;
+    if (!daySource) return "__unscheduled__";
+    const date = new Date(daySource);
     if (Number.isNaN(date.getTime())) return "__unscheduled__";
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -756,6 +765,7 @@ function CalendarTaskCard({
   const actions = availableActions(task, { userId, isManager });
   const start = formatWallTime(task.scheduled_for);
   const end = formatWallTime(task.scheduled_end);
+  const dateOnly = !task.scheduled_for && !!task.due_at ? formatWallDate(task.due_at) : "";
   const memberName = members.find((m) => m.id === task.assigned_to)?.full_name ?? "Sem responsável";
   const clientName = clients.find((c) => c.id === task.client_id)?.name ?? "Sem cliente";
 
@@ -769,6 +779,8 @@ function CalendarTaskCard({
               <span className="font-mono">
                 {start || "--:--"} → {end || "--:--"}
               </span>
+            ) : dateOnly ? (
+              <span>{dateOnly} · Sem horario definido</span>
             ) : (
               <span className="italic">Sem horário definido</span>
             )}
@@ -894,7 +906,7 @@ function TaskRowItem({
   const actions = availableActions(t, { userId, isManager });
   const archived = !!t.archived_at;
   const archivable = canArchive(t);
-  const date = formatWallDate(t.scheduled_for);
+  const date = formatWallDate(t.scheduled_for ?? t.due_at);
   const start = formatWallTime(t.scheduled_for);
   const end = formatWallTime(t.scheduled_end);
   const updated = formatLocalTime(t.updated_at);
@@ -1025,6 +1037,7 @@ function TaskForm({
   const [priority, setPriority] = useState<"baixa" | "media" | "alta" | "urgente">(initial?.priority ?? "media");
   const [scheduledFor, setScheduledFor] = useState<string>(wallISOToInput(initial?.scheduled_for));
   const [scheduledEnd, setScheduledEnd] = useState<string>(wallISOToInput(initial?.scheduled_end));
+  const [dateOnly, setDateOnly] = useState<string>(initial?.scheduled_for ? "" : wallISOToDateInput(initial?.due_at));
   const [graceMinutes, setGraceMinutes] = useState<number>(initial?.absence_grace_minutes ?? 15);
   const [punchMode, setPunchMode] = useState<PunchMode | "">((initial?.punch_mode_override as PunchMode) ?? "");
   const [recurrence, setRecurrence] = useState<RecurrenceFormValue>(emptyRecurrence());
@@ -1040,6 +1053,7 @@ function TaskForm({
         // Validação defensiva de horários — evita erro "valor inválido" do Postgres.
         const startISO = wallInputToISO(scheduledFor);
         const endISO = wallInputToISO(scheduledEnd);
+        const dateOnlyISO = !startISO ? wallDateToEndOfDayISO(dateOnly) : null;
         if (scheduledFor && !startISO) {
           toast.error("Horário de início inválido.");
           return;
@@ -1065,6 +1079,7 @@ function TaskForm({
           // Wall-clock: preservar o horário exato cadastrado, sem fuso.
           scheduled_for: startISO,
           scheduled_end: endISO,
+          due_at: endISO ?? startISO ?? dateOnlyISO,
           absence_grace_minutes: graceMinutes,
           punch_mode_override: punchMode || null,
         };
@@ -1170,7 +1185,10 @@ function TaskForm({
           <Input
             type="datetime-local"
             value={scheduledFor}
-            onChange={(e) => setScheduledFor(e.target.value)}
+            onChange={(e) => {
+              setScheduledFor(e.target.value);
+              if (e.target.value) setDateOnly("");
+            }}
             placeholder={timingMode === "manual" ? "A definir" : undefined}
           />
         </div>
@@ -1184,6 +1202,13 @@ function TaskForm({
             onChange={(e) => setScheduledEnd(e.target.value)}
             placeholder={timingMode === "manual" ? "A definir" : undefined}
           />
+        </div>
+        <div className="space-y-1.5 col-span-2">
+          <Label>Data sem horario</Label>
+          <Input type="date" value={dateOnly} onChange={(e) => setDateOnly(e.target.value)} disabled={!!scheduledFor} />
+          <p className="text-[11px] text-muted-foreground">
+            Use quando a tarefa tem dia definido, mas ainda nao tem hora de inicio.
+          </p>
         </div>
         {timingMode === "manual" && (
           <div className="col-span-2 rounded-md border border-info/40 bg-info/5 px-3 py-2 text-xs text-info">
