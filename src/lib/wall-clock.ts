@@ -33,6 +33,20 @@ export function wallISOToInput(iso: string | null | undefined): string {
   return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
 }
 
+/** ISO -> "YYYY-MM-DD" para <input type="date">, sem aplicar fuso. */
+export function wallISOToDateInput(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+}
+
+/** "2026-05-20" -> fim do dia em wall-clock, usado para tarefas sem horario. */
+export function wallDateToEndOfDayISO(date: string | null | undefined): string | null {
+  if (!date) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  return `${date}T23:59:59.000Z`;
+}
+
 /** "20/05/2026" (sem fuso). */
 export function formatWallDate(iso: string | null | undefined): string {
   if (!iso) return "";
