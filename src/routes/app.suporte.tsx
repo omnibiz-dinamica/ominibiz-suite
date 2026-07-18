@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,13 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { RoleGuard } from "@/components/RoleGuard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, LifeBuoy, MessageCircle } from "lucide-react";
 import { NewTicketDialog } from "@/components/support/NewTicketDialog";
 import {
@@ -32,7 +26,7 @@ import { invalidateSupportCache } from "@/lib/cache/support";
 export const Route = createFileRoute("/app/suporte")({
   component: () => (
     <RoleGuard allow={["super_admin", "owner", "manager"]}>
-      <SupportListPage />
+      <SupportRouteContent />
     </RoleGuard>
   ),
 });
@@ -48,6 +42,12 @@ type TicketRow = {
   created_at: string;
   updated_at: string;
 };
+
+function SupportRouteContent() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  if (pathname !== "/app/suporte") return <Outlet />;
+  return <SupportListPage />;
+}
 
 function SupportListPage() {
   const { currentCompanyId, isSuperAdmin } = useAuth();
@@ -86,9 +86,7 @@ function SupportListPage() {
     if (!q.trim()) return tickets;
     const lower = q.trim().toLowerCase();
     return tickets.filter(
-      (t) =>
-        t.title.toLowerCase().includes(lower) ||
-        t.ticket_number.toLowerCase().includes(lower),
+      (t) => t.title.toLowerCase().includes(lower) || t.ticket_number.toLowerCase().includes(lower),
     );
   }, [tickets, q]);
 
@@ -96,9 +94,7 @@ function SupportListPage() {
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-semibold tracking-tight">
-            Central de Suporte
-          </h1>
+          <h1 className="font-display text-2xl font-semibold tracking-tight">Central de Suporte</h1>
           <p className="text-sm text-muted-foreground">
             Envie pedidos, dúvidas e problemas diretamente à equipe do OmniBiz.
           </p>
@@ -126,11 +122,15 @@ function SupportListPage() {
           value={statusFilter || "all"}
           onValueChange={(v) => setStatusFilter(v === "all" ? "" : (v as SupportTicketStatus))}
         >
-          <SelectTrigger className="w-56"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectTrigger className="w-56">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos os status</SelectItem>
             {TICKET_STATUS_LIST.map((s) => (
-              <SelectItem key={s} value={s}>{TICKET_STATUS_LABEL[s]}</SelectItem>
+              <SelectItem key={s} value={s}>
+                {TICKET_STATUS_LABEL[s]}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -143,8 +143,7 @@ function SupportListPage() {
           <LifeBuoy className="h-10 w-10 text-muted-foreground" />
           <h2 className="mt-3 font-display text-lg font-semibold">Nenhum ticket</h2>
           <p className="mt-1 max-w-md text-sm text-muted-foreground">
-            Você ainda não abriu nenhum ticket. Use o botão “Novo ticket” para enviar sua
-            primeira solicitação.
+            Você ainda não abriu nenhum ticket. Use o botão “Novo ticket” para enviar sua primeira solicitação.
           </p>
         </div>
       ) : (
@@ -165,9 +164,7 @@ function SupportListPage() {
                     <span className={"rounded px-1.5 py-0.5 " + TICKET_PRIORITY_TONE[t.priority]}>
                       {TICKET_PRIORITY_LABEL[t.priority]}
                     </span>
-                    <span className="text-muted-foreground">
-                      {TICKET_TYPE_LABEL[t.type]}
-                    </span>
+                    <span className="text-muted-foreground">{TICKET_TYPE_LABEL[t.type]}</span>
                   </div>
                   <div className="mt-1 truncate text-sm font-medium">{t.title}</div>
                 </div>
