@@ -14,6 +14,21 @@ import { Building2, CheckCircle2, Copy, Plus, MailCheck, AlertCircle } from "luc
 import { COUNTRIES, countryDefaults, slugify, type CountryCode } from "@/lib/locale";
 import { RoleGuard } from "@/components/RoleGuard";
 import { sendInviteEmail } from "@/lib/invites/send-invite-email";
+import {
+  COUNTRY_CURRENCY,
+  MODULE_CATALOG,
+  PLAN_OPTIONS,
+  billingAnnualTotal,
+  billingMonthlyTotal,
+  formatBillingAmount,
+  moduleAddonsMonthly,
+  normalizeBillingCountry,
+  normalizeModules,
+  planMonthlyPrice,
+  type BillingCycle,
+  type BillingPlan,
+  type ModuleKey,
+} from "@/lib/billing";
 
 export const Route = createFileRoute("/app/admin")({
   component: () => (
@@ -22,6 +37,26 @@ export const Route = createFileRoute("/app/admin")({
     </RoleGuard>
   ),
 });
+
+type AdminCompany = {
+  id: string;
+  name: string;
+  slug: string;
+  country: string;
+  currency: string;
+  language: string;
+  timezone: string;
+  status: string;
+  created_at: string;
+  billing_plan?: BillingPlan | null;
+  billing_cycle?: BillingCycle | null;
+  billing_country?: string | null;
+  billing_currency?: string | null;
+  employee_limit?: number | null;
+  user_limit?: number | null;
+  enabled_modules?: ModuleKey[] | string[] | null;
+  billing_notes?: string | null;
+};
 
 function AdminRouteContent() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
@@ -42,12 +77,14 @@ function AdminPage() {
   const { data: companies } = useQuery({
     queryKey: ["admin-companies"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("companies")
-        .select("id, name, slug, country, currency, language, timezone, status, created_at")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.from("companies" as any) as any)
+        .select(
+          "id, name, slug, country, currency, language, timezone, status, created_at, billing_plan, billing_cycle, billing_country, billing_currency, employee_limit, user_limit, enabled_modules, billing_notes",
+        )
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as AdminCompany[];
     },
     enabled: isSuperAdmin,
   });
@@ -271,44 +308,206 @@ function AdminPage() {
         <h2 className="font-display text-lg font-semibold">Empresas</h2>
         <ul className="mt-4 divide-y divide-border">
           {(companies ?? []).map((c) => (
-            <li key={c.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-              <div className="flex items-center gap-3">
-                <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary">
-                  <Building2 className="h-4 w-4" />
-                </div>
-                <div>
-                  <div className="font-medium">{c.name}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {c.country} · {c.currency} · {c.timezone}
+            <li key={c.id} className="space-y-4 py-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary">
+                    <Building2 className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <div className="font-medium">{c.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {c.country} · {c.currency} · {c.timezone}
+                    </div>
                   </div>
                 </div>
+                <div className="flex items-center gap-2">
+                  {currentCompanyId === c.id && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-xs text-success">
+                      <CheckCircle2 className="h-3 w-3" /> Em operação
+                    </span>
+                  )}
+                  <Button
+                    size="sm"
+                    variant={currentCompanyId === c.id ? "secondary" : "outline"}
+                    onClick={async () => {
+                      await switchCompany(c.id);
+                      await refresh();
+                      qc.invalidateQueries();
+                      toast.success(`Operando ${c.name}`);
+                      nav({ to: "/app" });
+                    }}
+                  >
+                    {currentCompanyId === c.id ? "Selecionada" : "Operar empresa"}
+                  </Button>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                {currentCompanyId === c.id && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-xs text-success">
-                    <CheckCircle2 className="h-3 w-3" /> Em operação
-                  </span>
-                )}
-                <Button
-                  size="sm"
-                  variant={currentCompanyId === c.id ? "secondary" : "outline"}
-                  onClick={async () => {
-                    await switchCompany(c.id);
-                    await refresh();
-                    qc.invalidateQueries();
-                    toast.success(`Operando ${c.name}`);
-                    nav({ to: "/app" });
-                  }}
-                >
-                  {currentCompanyId === c.id ? "Selecionada" : "Operar empresa"}
-                </Button>
-              </div>
+              <BillingControls company={c} />
             </li>
           ))}
           {(companies ?? []).length === 0 && (
             <li className="py-8 text-center text-sm text-muted-foreground">Nenhuma empresa criada ainda.</li>
           )}
         </ul>
+      </div>
+    </div>
+  );
+}
+
+function BillingControls({ company }: { company: AdminCompany }) {
+  const qc = useQueryClient();
+  const initialCountry = normalizeBillingCountry(company.billing_country ?? company.country);
+  const [plan, setPlan] = useState<BillingPlan>(company.billing_plan ?? "professional");
+  const [cycle, setCycle] = useState<BillingCycle>(company.billing_cycle ?? "monthly");
+  const [country, setCountry] = useState<"PT" | "BE" | "ES" | "BR">(initialCountry);
+  const [modules, setModules] = useState<ModuleKey[]>(normalizeModules(company.enabled_modules));
+  const [notes, setNotes] = useState(company.billing_notes ?? "");
+
+  const currency = COUNTRY_CURRENCY[country];
+  const effectiveCompany = {
+    billing_plan: plan,
+    billing_cycle: cycle,
+    billing_country: country,
+    billing_currency: currency,
+    enabled_modules: modules,
+  };
+  const monthly = billingMonthlyTotal(effectiveCompany);
+  const annual = billingAnnualTotal(effectiveCompany);
+  const baseMonthly = planMonthlyPrice(plan, country);
+  const addonsMonthly = moduleAddonsMonthly(modules);
+  const planLimits = PLAN_OPTIONS[plan];
+
+  const toggleModule = (module: ModuleKey) => {
+    if (MODULE_CATALOG[module].included) return;
+    setModules((current) => (current.includes(module) ? current.filter((m) => m !== module) : [...current, module]));
+  };
+
+  const save = useMutation({
+    mutationFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from("companies" as any) as any)
+        .update({
+          billing_plan: plan,
+          billing_cycle: cycle,
+          billing_country: country,
+          billing_currency: currency,
+          employee_limit: planLimits.employeeLimit,
+          user_limit: planLimits.userLimit,
+          enabled_modules: modules,
+          billing_base_monthly: baseMonthly,
+          billing_addons_monthly: addonsMonthly,
+          billing_notes: notes.trim() || null,
+        })
+        .eq("id", company.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Plano e módulos atualizados");
+      qc.invalidateQueries({ queryKey: ["admin-companies"] });
+      qc.invalidateQueries({ queryKey: ["active-company-name"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <div className="rounded-xl border border-border bg-muted/20 p-4">
+      <div className="grid gap-3 md:grid-cols-4">
+        <div className="space-y-1.5">
+          <Label>Plano</Label>
+          <Select value={plan} onValueChange={(v) => setPlan(v as BillingPlan)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(PLAN_OPTIONS) as BillingPlan[]).map((key) => (
+                <SelectItem key={key} value={key}>
+                  {PLAN_OPTIONS[key].label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Ciclo</Label>
+          <Select value={cycle} onValueChange={(v) => setCycle(v as BillingCycle)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="monthly">Mensal</SelectItem>
+              <SelectItem value="annual">Anual</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label>País de faturação</Label>
+          <Select value={country} onValueChange={(v) => setCountry(v as "PT" | "BE" | "ES" | "BR")}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="PT">Portugal</SelectItem>
+              <SelectItem value="BE">Bélgica</SelectItem>
+              <SelectItem value="ES">Espanha</SelectItem>
+              <SelectItem value="BR">Brasil</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="rounded-lg border border-border bg-background px-3 py-2 text-sm">
+          <div className="text-xs text-muted-foreground">Estimativa</div>
+          <div className="font-semibold">
+            {cycle === "annual"
+              ? `${formatBillingAmount(annual, currency)}/ano`
+              : `${formatBillingAmount(monthly, currency)}/mês`}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {planLimits.employeeLimit ?? "Ilimitado"} funcionários · {planLimits.userLimit ?? "Ilimitado"} utilizadores
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+        {(Object.keys(MODULE_CATALOG) as ModuleKey[]).map((module) => {
+          const item = MODULE_CATALOG[module];
+          const checked = modules.includes(module);
+          return (
+            <label key={module} className="flex gap-3 rounded-lg border border-border bg-background p-3 text-sm">
+              <input
+                type="checkbox"
+                className="mt-1 h-4 w-4"
+                checked={checked}
+                disabled={item.included}
+                onChange={() => toggleModule(module)}
+              />
+              <span className="min-w-0">
+                <span className="flex items-center gap-2 font-medium">
+                  {item.label}
+                  {item.addonMonthly > 0 && (
+                    <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">
+                      +{formatBillingAmount(item.addonMonthly, currency)}/mês
+                    </span>
+                  )}
+                </span>
+                <span className="mt-1 block text-xs text-muted-foreground">{item.description}</span>
+              </span>
+            </label>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+        <div className="space-y-1.5">
+          <Label>Notas comerciais</Label>
+          <Input
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Ex.: desconto de lançamento, contrato anual, condição especial..."
+            maxLength={240}
+          />
+        </div>
+        <Button type="button" onClick={() => save.mutate()} disabled={save.isPending}>
+          {save.isPending ? "Salvando..." : "Salvar plano e módulos"}
+        </Button>
       </div>
     </div>
   );
