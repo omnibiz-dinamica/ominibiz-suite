@@ -35,6 +35,13 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { NewTicketDialog } from "@/components/support/NewTicketDialog";
+import {
+  DEFAULT_ENABLED_MODULES,
+  isModuleEnabled,
+  moduleForPath,
+  normalizeModules,
+  type ModuleKey,
+} from "@/lib/billing";
 
 function detectBrowser(): { name: string; version: string } {
   if (typeof navigator === "undefined") return { name: "ssr", version: "" };
@@ -58,11 +65,12 @@ function DeploymentDiagnostics() {
   const build = (import.meta.env.VITE_BUILD_TIME ?? "dev") as string;
   const commit = ((import.meta.env.VITE_COMMIT_SHA ?? "dev") as string).slice(0, 7);
   const host = typeof window !== "undefined" ? window.location.host : "ssr";
-  const env = /(^|\.)id-preview--/.test(host) || /(^|\.)preview--/.test(host)
-    ? "preview"
-    : host.includes("localhost")
-      ? "local"
-      : "prod";
+  const env =
+    /(^|\.)id-preview--/.test(host) || /(^|\.)preview--/.test(host)
+      ? "preview"
+      : host.includes("localhost")
+        ? "local"
+        : "prod";
   const isStandalone =
     typeof window !== "undefined" &&
     (window.matchMedia?.("(display-mode: standalone)").matches ||
@@ -84,9 +92,8 @@ function DeploymentDiagnostics() {
     <div className="flex flex-wrap items-center justify-between gap-2 font-mono">
       <span className="font-sans">OmniBiz · Diagnóstico</span>
       <span>
-        v1 · build {build} · commit {commit} · env {env} · host {host} · {browser}{" "}
-        {browserVersion} · pwa {isStandalone ? "on" : "off"} · sw{" "}
-        {swCount === null ? "?" : swCount === -1 ? "err" : swCount}
+        v1 · build {build} · commit {commit} · env {env} · host {host} · {browser} {browserVersion} · pwa{" "}
+        {isStandalone ? "on" : "off"} · sw {swCount === null ? "?" : swCount === -1 ? "err" : swCount}
       </span>
     </div>
   );
@@ -96,7 +103,9 @@ type Item = {
   to: string;
   label: string;
   icon: typeof LayoutDashboard;
+  module?: ModuleKey;
   soon?: boolean;
+  badge?: number;
 };
 
 type Group = { id: string; label: string; items: Item[] };
@@ -146,14 +155,14 @@ function buildGroups(args: {
   if (role === "employee") {
     const operacao: Item[] = [
       { to: "/app", label: "Minha Operação", icon: LayoutDashboard },
-      { to: "/app/ponto", label: "Folha de Ponto", icon: Clock },
-      { to: "/app/tarefas", label: "Minhas Tarefas", icon: ListChecks },
+      { to: "/app/ponto", label: "Folha de Ponto", icon: Clock, module: "time_clock" },
+      { to: "/app/tarefas", label: "Minhas Tarefas", icon: ListChecks, module: "tasks" },
       { to: "/app/notificacoes", label: "Notificações", icon: Bell },
     ];
     const rh: Item[] = [
-      { to: "/app/meus-recibos", label: "Meus Recibos", icon: Receipt },
-      { to: "/app/ferias", label: "Férias", icon: Plane },
-      { to: "/app/despesas", label: "Despesas", icon: CreditCard },
+      { to: "/app/meus-recibos", label: "Meus Recibos", icon: Receipt, module: "hr" },
+      { to: "/app/ferias", label: "Férias", icon: Plane, module: "hr" },
+      { to: "/app/despesas", label: "Despesas", icon: CreditCard, module: "finance" },
     ];
     const groups: Group[] = [
       { id: "operacao", label: "Operação", items: operacao },
@@ -163,7 +172,7 @@ function buildGroups(args: {
       groups.push({
         id: "frota",
         label: "Frota",
-        items: [{ to: "/app/frota", label: "Frota", icon: Car }],
+        items: [{ to: "/app/frota", label: "Frota", icon: Car, module: "fleet" }],
       });
     }
     groups.push({
@@ -181,9 +190,9 @@ function buildGroups(args: {
       label: "Operação",
       items: [
         { to: "/app", label: "Dashboard", icon: LayoutDashboard },
-        { to: "/app/tarefas", label: "Tarefas", icon: ClipboardList },
-        { to: "/app/ponto", label: "Folha de Ponto", icon: Clock },
-        { to: "/app/ponto/gestao", label: "Ponto · Gestão", icon: ListChecks },
+        { to: "/app/tarefas", label: "Tarefas", icon: ClipboardList, module: "tasks" },
+        { to: "/app/ponto", label: "Folha de Ponto", icon: Clock, module: "time_clock" },
+        { to: "/app/ponto/gestao", label: "Ponto · Gestão", icon: ListChecks, module: "time_clock" },
         { to: "/app/notificacoes", label: "Notificações", icon: Bell },
       ],
     },
@@ -191,19 +200,19 @@ function buildGroups(args: {
       id: "rh",
       label: "RH",
       items: [
-        { to: "/app/rh", label: "Dashboard RH", icon: LayoutDashboard },
-        { to: "/app/equipe", label: "Usuários", icon: Users },
-        { to: "/app/ferias", label: "Férias", icon: Plane },
-        { to: "/app/despesas", label: "Despesas", icon: CreditCard },
-        { to: "/app/rh/recibos", label: "Recibos", icon: Receipt },
+        { to: "/app/rh", label: "Dashboard RH", icon: LayoutDashboard, module: "hr" },
+        { to: "/app/equipe", label: "Usuários", icon: Users, module: "hr" },
+        { to: "/app/ferias", label: "Férias", icon: Plane, module: "hr" },
+        { to: "/app/despesas", label: "Despesas", icon: CreditCard, module: "finance" },
+        { to: "/app/rh/recibos", label: "Recibos", icon: Receipt, module: "hr" },
       ],
     },
     {
       id: "comercial",
       label: "Comercial",
       items: [
-        { to: "/app/clientes", label: "Clientes", icon: Briefcase },
-        { to: "/app/comercial", label: "Contratos", icon: FileSignature },
+        { to: "/app/clientes", label: "Clientes", icon: Briefcase, module: "crm" },
+        { to: "/app/comercial", label: "Contratos", icon: FileSignature, module: "crm" },
       ],
     },
     {
@@ -214,18 +223,18 @@ function buildGroups(args: {
     {
       id: "frota",
       label: "Frota",
-      items: [{ to: "/app/frota", label: "Frota", icon: Car }],
+      items: [{ to: "/app/frota", label: "Frota", icon: Car, module: "fleet" }],
     },
     {
       id: "inteligencia",
       label: "Inteligência",
-      items: [{ to: "/app/assistente", label: "Assistente IA", icon: Sparkles, soon: true }],
+      items: [{ to: "/app/assistente", label: "Assistente IA", icon: Sparkles, module: "whatsapp_ai", soon: true }],
     },
     {
       id: "outros",
       label: "Outros",
       items: [
-        { to: "/app/notas", label: "Notas", icon: FileText, soon: true },
+        { to: "/app/notas", label: "Notas", icon: FileText, module: "notes", soon: true },
         { to: "/app/perfil", label: "Perfil", icon: UserCircle },
       ],
     },
@@ -236,7 +245,7 @@ function buildGroups(args: {
   groups.splice(groups.length - 1, 0, {
     id: "suporte",
     label: "Suporte",
-    items: [{ to: "/app/suporte", label: "Central de Suporte", icon: LifeBuoy }],
+    items: [{ to: "/app/suporte", label: "Central de Suporte", icon: LifeBuoy, module: "support" }],
   });
 
   if (superAdminOperating) {
@@ -274,14 +283,21 @@ export function AppLayout({ children }: { children?: ReactNode }) {
     queryKey: ["active-company-name", currentCompanyId],
     enabled: !!currentCompanyId,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("companies")
-        .select("id, name")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (supabase.from("companies" as any) as any)
+        .select("id, name, enabled_modules")
         .eq("id", currentCompanyId!)
         .maybeSingle();
-      return data;
+      return data as { id: string; name: string; enabled_modules?: string[] | null } | null;
     },
   });
+  const enabledModules = useMemo(
+    () =>
+      normalizeModules(
+        (activeCompany as { enabled_modules?: string[] | null } | null)?.enabled_modules ?? DEFAULT_ENABLED_MODULES,
+      ),
+    [activeCompany],
+  );
 
   const { data: hasVehicle = false } = useQuery({
     queryKey: ["my-vehicle-count", user?.id],
@@ -295,6 +311,20 @@ export function AppLayout({ children }: { children?: ReactNode }) {
     },
   });
 
+  const { data: unreadNotifications = 0 } = useQuery({
+    queryKey: ["notifications-unread-count", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("notifications" as never)
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user!.id)
+        .is("read_at", null);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+
   const groups = useMemo(() => {
     if (!effectiveRole) return [] as Group[];
     const role = effectiveRole === "owner" ? "manager" : effectiveRole;
@@ -302,8 +332,23 @@ export function AppLayout({ children }: { children?: ReactNode }) {
       role: role as "super_admin" | "manager" | "employee",
       superAdminOperating,
       employeeHasVehicle: hasVehicle,
-    });
-  }, [effectiveRole, superAdminOperating, hasVehicle]);
+    })
+      .map((group) => ({
+        ...group,
+        items: group.items
+          .filter((item) => !item.module || isModuleEnabled(enabledModules, item.module))
+          .map((item) => (item.to === "/app/notificacoes" ? { ...item, badge: unreadNotifications } : item)),
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [effectiveRole, superAdminOperating, hasVehicle, unreadNotifications, enabledModules]);
+
+  useEffect(() => {
+    if (!currentCompanyId || path === "/app" || path.startsWith("/app/admin")) return;
+    const module = moduleForPath(path);
+    if (!module || isModuleEnabled(enabledModules, module)) return;
+    toast.error("Módulo desativado para esta empresa.");
+    nav({ to: "/app" });
+  }, [currentCompanyId, enabledModules, nav, path]);
 
   // Collapsible group state, persisted in localStorage.
   // Initialise empty to avoid SSR/client hydration mismatch, then hydrate from storage.
@@ -418,10 +463,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
 
         {/* Scrollable navigation */}
         <div className="relative min-h-0 flex-1">
-          <div
-            ref={scrollRef}
-            className="h-full overflow-y-auto overscroll-contain px-2 py-3"
-          >
+          <div ref={scrollRef} className="h-full overflow-y-auto overscroll-contain px-2 py-3">
             <nav className="space-y-4">
               {groups.map((group) => {
                 const isCollapsed = collapsed[group.id] ?? false;
@@ -432,9 +474,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
                   <div key={group.id}>
                     <button
                       type="button"
-                      onClick={() =>
-                        setCollapsed((prev) => ({ ...prev, [group.id]: !isCollapsed }))
-                      }
+                      onClick={() => setCollapsed((prev) => ({ ...prev, [group.id]: !isCollapsed }))}
                       className={cn(
                         "group flex w-full items-center justify-between rounded px-2 py-1 text-[10px] font-semibold uppercase tracking-wider transition-colors",
                         groupHasActive
@@ -445,17 +485,13 @@ export function AppLayout({ children }: { children?: ReactNode }) {
                     >
                       <span>{group.label}</span>
                       <ChevronDown
-                        className={cn(
-                          "h-3 w-3 transition-transform",
-                          isCollapsed ? "-rotate-90" : "rotate-0",
-                        )}
+                        className={cn("h-3 w-3 transition-transform", isCollapsed ? "-rotate-90" : "rotate-0")}
                       />
                     </button>
                     {!isCollapsed && (
                       <ul className="mt-1 space-y-0.5">
                         {group.items.map((it) => {
-                          const active =
-                            path === it.to || (it.to !== "/app" && path.startsWith(it.to));
+                          const active = path === it.to || (it.to !== "/app" && path.startsWith(it.to));
                           const Icon = it.icon;
                           return (
                             <li key={it.to}>
@@ -476,6 +512,11 @@ export function AppLayout({ children }: { children?: ReactNode }) {
                                     em breve
                                   </span>
                                 )}
+                                {!it.soon && it.badge ? (
+                                  <span className="min-w-5 rounded-full bg-destructive px-1.5 py-0.5 text-center text-[10px] font-semibold leading-none text-destructive-foreground">
+                                    {it.badge > 99 ? "99+" : it.badge}
+                                  </span>
+                                ) : null}
                               </Link>
                             </li>
                           );
@@ -488,8 +529,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
 
               {isSuperAdmin && !currentCompanyId && (
                 <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/60 p-3 text-xs text-sidebar-foreground">
-                  Abra <strong>Empresas</strong>, crie ou selecione uma para operar usuários,
-                  clientes e tarefas.
+                  Abra <strong>Empresas</strong>, crie ou selecione uma para operar usuários, clientes e tarefas.
                 </div>
               )}
             </nav>
@@ -565,8 +605,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
               <div className="flex flex-wrap items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-1.5 text-xs font-medium text-destructive">
                 <Shield className="h-3.5 w-3.5" />
                 <span className="truncate">
-                  MODO SUPER ADMIN — Empresa ativa:{" "}
-                  <strong>{activeCompany?.name ?? "..."}</strong>
+                  MODO SUPER ADMIN — Empresa ativa: <strong>{activeCompany?.name ?? "..."}</strong>
                 </span>
                 <Button
                   size="sm"
@@ -594,11 +633,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
               className="hidden sm:inline-flex"
               onClick={() => setReportDialogOpen(true)}
               disabled={!currentCompanyId}
-              title={
-                !currentCompanyId
-                  ? "Selecione uma empresa antes de reportar"
-                  : "Reportar problema nesta tela"
-              }
+              title={!currentCompanyId ? "Selecione uma empresa antes de reportar" : "Reportar problema nesta tela"}
             >
               <LifeBuoy className="mr-1.5 h-4 w-4" /> Reportar problema
             </Button>
@@ -615,9 +650,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
         onOpenChange={setReportDialogOpen}
         defaultType="erro"
         defaultTitle=""
-        defaultModule={
-          typeof window !== "undefined" ? window.location.pathname.replace(/^\/app\/?/, "") : ""
-        }
+        defaultModule={typeof window !== "undefined" ? window.location.pathname.replace(/^\/app\/?/, "") : ""}
       />
     </div>
   );
