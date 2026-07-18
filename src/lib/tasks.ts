@@ -1,23 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
 
 // Status persistidos (fonte única de verdade no banco)
-export const TASK_STATUSES = [
-  "pendente",
-  "autorizado",
-  "em_andamento",
-  "concluido",
-  "cancelado",
-  "ausente",
-] as const;
+export const TASK_STATUSES = ["pendente", "autorizado", "em_andamento", "concluido", "cancelado", "ausente"] as const;
 export type TaskStatus = (typeof TASK_STATUSES)[number];
 
-export const TASK_ACTIONS = [
-  "autorizar",
-  "iniciar",
-  "concluir",
-  "cancelar",
-  "marcar_ausente",
-] as const;
+export const TASK_ACTIONS = ["autorizar", "iniciar", "concluir", "cancelar", "marcar_ausente"] as const;
 export type TaskAction = (typeof TASK_ACTIONS)[number];
 
 export const STATUS_LABELS: Record<TaskStatus, string> = {
@@ -217,10 +204,7 @@ export async function recurrenceUpdate(
   return (data as number) ?? 0;
 }
 
-export async function recurrenceUpdateOccurrence(
-  taskId: string,
-  payload: EditableOccurrencePayload,
-): Promise<TaskRow> {
+export async function recurrenceUpdateOccurrence(taskId: string, payload: EditableOccurrencePayload): Promise<TaskRow> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase.rpc as any)("recurrence_update_occurrence", {
     _task_id: taskId,
@@ -234,10 +218,11 @@ export async function recurrenceUpdateOccurrence(
  * Indicador puramente visual — "atrasado" NÃO é persistido.
  * Calculado apenas para renderização.
  */
-export function isVisuallyLate(task: Pick<TaskRow, "status" | "scheduled_for">): boolean {
-  if (!task.scheduled_for) return false;
+export function isVisuallyLate(task: Pick<TaskRow, "status" | "scheduled_for" | "due_at">): boolean {
+  const due = task.scheduled_for ?? task.due_at;
+  if (!due) return false;
   if (task.status === "concluido" || task.status === "cancelado" || task.status === "ausente") return false;
-  return new Date(task.scheduled_for).getTime() < Date.now();
+  return new Date(due).getTime() < Date.now();
 }
 
 /**
@@ -256,8 +241,7 @@ export function availableActions(
   if ((task.status === "pendente" || task.status === "autorizado") && (isAssignee || ctx.isManager))
     out.push("iniciar");
   if (task.status === "em_andamento" && (isAssignee || ctx.isManager)) out.push("concluir");
-  if (ctx.isManager && (task.status === "pendente" || task.status === "autorizado"))
-    out.push("marcar_ausente");
+  if (ctx.isManager && (task.status === "pendente" || task.status === "autorizado")) out.push("marcar_ausente");
   if (ctx.isManager) out.push("cancelar");
 
   return out;
@@ -376,7 +360,11 @@ export function effectiveMinutesNow(e: TimeEntryRow): number {
   let pauseMs = 0;
   if (e.paused_at) {
     const p = new Date(e.paused_at).getTime();
-    const r = e.resumed_at ? new Date(e.resumed_at).getTime() : (e.ended_at ? new Date(e.ended_at).getTime() : Date.now());
+    const r = e.resumed_at
+      ? new Date(e.resumed_at).getTime()
+      : e.ended_at
+        ? new Date(e.ended_at).getTime()
+        : Date.now();
     pauseMs = Math.max(0, r - p);
   }
   const seconds = Math.max(0, (end - start - pauseMs) / 1000);
@@ -401,7 +389,9 @@ export function effectiveSecondsNow(e: TimeEntryRow): number {
     const p = new Date(e.paused_at).getTime();
     const r = e.resumed_at
       ? new Date(e.resumed_at).getTime()
-      : (e.ended_at ? new Date(e.ended_at).getTime() : Date.now());
+      : e.ended_at
+        ? new Date(e.ended_at).getTime()
+        : Date.now();
     pauseMs = Math.max(0, r - p);
   }
   return Math.max(0, Math.floor((end - start - pauseMs) / 1000));
