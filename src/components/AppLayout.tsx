@@ -41,7 +41,7 @@ import {
   moduleForPath,
   normalizeModules,
   type ModuleKey,
-} from "@/lib/billing";
+} from "@/lib/locale";
 
 function detectBrowser(): { name: string; version: string } {
   if (typeof navigator === "undefined") return { name: "ssr", version: "" };
