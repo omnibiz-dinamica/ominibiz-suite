@@ -11,24 +11,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Building2, CheckCircle2, Copy, Plus, MailCheck, AlertCircle } from "lucide-react";
-import { COUNTRIES, countryDefaults, slugify, type CountryCode } from "@/lib/locale";
-import { RoleGuard } from "@/components/RoleGuard";
-import { sendInviteEmail } from "@/lib/invites/send-invite-email";
 import {
+  COUNTRIES,
   COUNTRY_CURRENCY,
   MODULE_CATALOG,
   PLAN_OPTIONS,
   billingAnnualTotal,
   billingMonthlyTotal,
+  countryDefaults,
   formatBillingAmount,
   moduleAddonsMonthly,
   normalizeBillingCountry,
   normalizeModules,
   planMonthlyPrice,
+  slugify,
   type BillingCycle,
   type BillingPlan,
+  type CountryCode,
   type ModuleKey,
-} from "@/lib/billing";
+} from "@/lib/locale";
+import { RoleGuard } from "@/components/RoleGuard";
+import { sendInviteEmail } from "@/lib/invites/send-invite-email";
 
 export const Route = createFileRoute("/app/admin")({
   component: () => (
