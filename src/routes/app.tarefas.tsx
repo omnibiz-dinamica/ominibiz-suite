@@ -1190,7 +1190,7 @@ function TaskForm({
         <Textarea maxLength={1000} value={description} onChange={(e) => setDescription(e.target.value)} />
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 col-span-2">
           <Label>Atribuir a</Label>
           <Select value={assignedTo} onValueChange={setAssignedTo}>
             <SelectTrigger>
