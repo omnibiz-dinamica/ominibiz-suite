@@ -45,8 +45,8 @@ type TicketRow = {
 
 function SupportRouteContent() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  if (pathname !== "/app/suporte") return <Outlet />;
-  return <SupportListPage />;
+  const isListRoute = pathname === "/app/suporte" || pathname === "/app/suporte/";
+  return isListRoute ? <SupportListPage /> : <Outlet />;
 }
 
 function SupportListPage() {
