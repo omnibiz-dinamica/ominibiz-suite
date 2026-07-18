@@ -11,6 +11,7 @@ import {
   type TaskRow,
   type ReassignScope,
 } from "@/lib/tasks";
+import { formatWallTime, wallInputToISO, wallISOToInput } from "@/lib/wall-clock";
 import { toast } from "sonner";
 
 type Priority = "baixa" | "media" | "alta" | "urgente";
@@ -39,7 +40,7 @@ export function EditRecurrenceDialog({
   const [assignedTo, setAssignedTo] = useState<string>("");
   const [scheduledTime, setScheduledTime] = useState(""); // HH:MM (series)
   const [scheduledFor, setScheduledFor] = useState(""); // datetime-local (occurrence)
-  const [duration, setDuration] = useState<number>(60);
+  const [duration, setDuration] = useState<number>(0);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -51,16 +52,12 @@ export function EditRecurrenceDialog({
       setAssignedTo(fromTask.assigned_to ?? "");
       const sf = fromTask.scheduled_for;
       if (sf) {
-        const d = new Date(sf);
-        const pad = (n: number) => String(n).padStart(2, "0");
-        setScheduledFor(
-          `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`,
-        );
-        setScheduledTime(`${pad(d.getHours())}:${pad(d.getMinutes())}`);
+        setScheduledFor(wallISOToInput(sf));
+        setScheduledTime(formatWallTime(sf));
       } else if (recurrence) {
         setScheduledTime(recurrence.scheduled_time.slice(0, 5));
       }
-      setDuration(recurrence?.duration_minutes ?? 60);
+      setDuration(recurrence?.duration_minutes ?? 0);
     } else if (recurrence) {
       setTitle(recurrence.title);
       setPriority(recurrence.priority);
@@ -76,9 +73,11 @@ export function EditRecurrenceDialog({
     try {
       if (scope === "this") {
         if (!fromTask) throw new Error("Tarefa não informada para escopo 'esta'");
-        const sfIso = scheduledFor ? new Date(scheduledFor).toISOString() : undefined;
-        const sfStart = scheduledFor ? new Date(scheduledFor) : null;
-        const seIso = sfStart ? new Date(sfStart.getTime() + duration * 60_000).toISOString() : undefined;
+        const sfIso = wallInputToISO(scheduledFor) ?? undefined;
+        const sfStart = sfIso ? new Date(sfIso) : null;
+        const safeDuration = Math.max(0, duration || 0);
+        const seIso =
+          sfStart && safeDuration > 0 ? new Date(sfStart.getTime() + safeDuration * 60_000).toISOString() : undefined;
         await recurrenceUpdateOccurrence(fromTask.id, {
           title: title.trim(),
           priority,
@@ -95,10 +94,10 @@ export function EditRecurrenceDialog({
             priority,
             assigned_to: assignedTo || null,
             scheduled_time: scheduledTime ? `${scheduledTime}:00` : undefined,
-            duration_minutes: duration,
+            duration_minutes: Math.max(0, duration || 0),
           },
           scope === "future" ? "future" : "all",
-          scope === "future" ? fromTask?.id ?? null : null,
+          scope === "future" ? (fromTask?.id ?? null) : null,
         );
         toast.success(`${n} ocorrência(s) atualizada(s)`);
       }
@@ -121,7 +120,9 @@ export function EditRecurrenceDialog({
           <div className="space-y-1.5">
             <Label>Aplicar em</Label>
             <Select value={scope} onValueChange={(v) => setScope(v as ReassignScope)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {allowThis && <SelectItem value="this">Apenas esta ocorrência</SelectItem>}
                 <SelectItem value="future">Esta e todas as futuras</SelectItem>
@@ -138,7 +139,9 @@ export function EditRecurrenceDialog({
             <div className="space-y-1.5">
               <Label>Prioridade</Label>
               <Select value={priority} onValueChange={(v) => setPriority(v as Priority)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="baixa">Baixa</SelectItem>
                   <SelectItem value="media">Média</SelectItem>
@@ -150,10 +153,14 @@ export function EditRecurrenceDialog({
             <div className="space-y-1.5">
               <Label>Responsável</Label>
               <Select value={assignedTo} onValueChange={setAssignedTo}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
                 <SelectContent>
                   {members.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>{m.full_name ?? m.id.slice(0, 8)}</SelectItem>
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.full_name ?? m.id.slice(0, 8)}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -174,10 +181,10 @@ export function EditRecurrenceDialog({
               <Label>Duração (min)</Label>
               <Input
                 type="number"
-                min={1}
+                min={0}
                 max={1440}
                 value={duration}
-                onChange={(e) => setDuration(Number(e.target.value) || 60)}
+                onChange={(e) => setDuration(Number(e.target.value) || 0)}
               />
             </div>
           </div>
