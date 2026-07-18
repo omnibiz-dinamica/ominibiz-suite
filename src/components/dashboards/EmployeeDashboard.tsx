@@ -36,9 +36,7 @@ export function EmployeeDashboard() {
         <h1 className="font-display text-3xl font-semibold tracking-tight">
           Olá, {profile?.full_name ?? "colaborador"}
         </h1>
-        <p className="mt-1 text-muted-foreground">
-          Sua operação do dia. Bata o ponto e foque nas suas tarefas.
-        </p>
+        <p className="mt-1 text-muted-foreground">Sua operação do dia. Bata o ponto e foque nas suas tarefas.</p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -65,9 +63,7 @@ export function EmployeeDashboard() {
       </div>
 
       <section className="rounded-2xl border border-border bg-card">
-        <div className="border-b border-border px-5 py-3 text-sm font-medium">
-          Próximas tarefas
-        </div>
+        <div className="border-b border-border px-5 py-3 text-sm font-medium">Próximas tarefas</div>
         {(tasks ?? []).length === 0 ? (
           <div className="px-5 py-10 text-center text-sm text-muted-foreground">
             Você não tem tarefas pendentes. Aproveite!
@@ -81,7 +77,9 @@ export function EmployeeDashboard() {
                   <div className="text-xs text-muted-foreground">
                     {t.scheduled_for
                       ? `${formatWallDate(t.scheduled_for)} · ${formatWallTime(t.scheduled_for)}`
-                      : "Sem horário definido"}
+                      : t.due_at
+                        ? `${formatWallDate(t.due_at)} · Sem horario definido`
+                        : "Sem horário definido"}
                   </div>
                 </div>
                 <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_TONE[t.status]}`}>
