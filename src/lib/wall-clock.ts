@@ -47,6 +47,14 @@ export function wallDateToEndOfDayISO(date: string | null | undefined): string |
   return `${date}T23:59:59.000Z`;
 }
 
+/** "2026-05-20" + "06:00" -> ISO wall-clock, sem aplicar fuso. */
+export function wallDateTimeToISO(date: string | null | undefined, time: string | null | undefined): string | null {
+  if (!date || !time) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  if (!/^\d{2}:\d{2}$/.test(time)) return null;
+  return wallInputToISO(`${date}T${time}`);
+}
+
 /** "20/05/2026" (sem fuso). */
 export function formatWallDate(iso: string | null | undefined): string {
   if (!iso) return "";
