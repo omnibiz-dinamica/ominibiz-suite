@@ -61,10 +61,9 @@ import { EditRecurrenceDialog } from "@/components/tasks/EditRecurrenceDialog";
 import type { RecurrenceRow } from "@/lib/tasks";
 import { EmployeePicker } from "@/components/common/EmployeePicker";
 import {
-  wallInputToISO,
-  wallISOToInput,
   wallISOToDateInput,
   wallDateToEndOfDayISO,
+  wallDateTimeToISO,
   formatWallDate,
   formatWallTime,
   formatLocalTime,
@@ -139,6 +138,7 @@ function TasksPage() {
       let q = supabase
         .from("tasks")
         .select("*")
+        .order("due_at", { ascending: true, nullsFirst: false })
         .order("scheduled_for", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: false });
       if (!isManager) q = q.eq("assigned_to", user!.id);
@@ -655,7 +655,7 @@ function TaskCalendar({
   });
 
   const dayKey = (task: TaskRow) => {
-    const daySource = task.scheduled_for ?? task.due_at;
+    const daySource = task.scheduled_for ?? task.recurrence_date ?? task.due_at;
     if (!daySource) return "__unscheduled__";
     const date = new Date(daySource);
     if (Number.isNaN(date.getTime())) return "__unscheduled__";
@@ -720,7 +720,11 @@ function TaskCalendar({
                   <ul className="divide-y divide-border">
                     {dayTasks
                       .slice()
-                      .sort((a, b) => (a.scheduled_for ?? "").localeCompare(b.scheduled_for ?? ""))
+                      .sort((a, b) =>
+                        (a.scheduled_for ?? a.recurrence_date ?? a.due_at ?? "").localeCompare(
+                          b.scheduled_for ?? b.recurrence_date ?? b.due_at ?? "",
+                        ),
+                      )
                       .map((task) => (
                         <CalendarTaskCard
                           key={task.id}
@@ -765,7 +769,10 @@ function CalendarTaskCard({
   const actions = availableActions(task, { userId, isManager });
   const start = formatWallTime(task.scheduled_for);
   const end = formatWallTime(task.scheduled_end);
-  const dateOnly = !task.scheduled_for && !!task.due_at ? formatWallDate(task.due_at) : "";
+  const dateOnly =
+    !task.scheduled_for && (task.recurrence_date || task.due_at)
+      ? formatWallDate(task.recurrence_date ?? task.due_at)
+      : "";
   const memberName = members.find((m) => m.id === task.assigned_to)?.full_name ?? "Sem responsável";
   const clientName = clients.find((c) => c.id === task.client_id)?.name ?? "Sem cliente";
 
@@ -906,7 +913,7 @@ function TaskRowItem({
   const actions = availableActions(t, { userId, isManager });
   const archived = !!t.archived_at;
   const archivable = canArchive(t);
-  const date = formatWallDate(t.scheduled_for ?? t.due_at);
+  const date = formatWallDate(t.scheduled_for ?? t.recurrence_date ?? t.due_at);
   const start = formatWallTime(t.scheduled_for);
   const end = formatWallTime(t.scheduled_end);
   const updated = formatLocalTime(t.updated_at);
@@ -1035,9 +1042,16 @@ function TaskForm({
   const [assignedTo, setAssignedTo] = useState<string>(initial?.assigned_to ?? "");
   const [clientId, setClientId] = useState<string>(initial?.client_id ?? "");
   const [priority, setPriority] = useState<"baixa" | "media" | "alta" | "urgente">(initial?.priority ?? "media");
-  const [scheduledFor, setScheduledFor] = useState<string>(wallISOToInput(initial?.scheduled_for));
-  const [scheduledEnd, setScheduledEnd] = useState<string>(wallISOToInput(initial?.scheduled_end));
-  const [dateOnly, setDateOnly] = useState<string>(initial?.scheduled_for ? "" : wallISOToDateInput(initial?.due_at));
+  const [startDate, setStartDate] = useState<string>(
+    wallISOToDateInput(initial?.scheduled_for ?? initial?.recurrence_date ?? initial?.due_at),
+  );
+  const [startTime, setStartTime] = useState<string>(
+    initial?.scheduled_for ? formatWallTime(initial.scheduled_for) : "",
+  );
+  const [endDate, setEndDate] = useState<string>(
+    wallISOToDateInput(initial?.scheduled_end ?? initial?.due_at ?? initial?.scheduled_for),
+  );
+  const [endTime, setEndTime] = useState<string>(initial?.scheduled_end ? formatWallTime(initial.scheduled_end) : "");
   const [graceMinutes, setGraceMinutes] = useState<number>(initial?.absence_grace_minutes ?? 15);
   const [punchMode, setPunchMode] = useState<PunchMode | "">((initial?.punch_mode_override as PunchMode) ?? "");
   const [recurrence, setRecurrence] = useState<RecurrenceFormValue>(emptyRecurrence());
@@ -1050,16 +1064,33 @@ function TaskForm({
       className="space-y-4"
       onSubmit={async (e) => {
         e.preventDefault();
-        // Validação defensiva de horários — evita erro "valor inválido" do Postgres.
-        const startISO = wallInputToISO(scheduledFor);
-        const endISO = wallInputToISO(scheduledEnd);
-        const dateOnlyISO = !startISO ? wallDateToEndOfDayISO(dateOnly) : null;
-        if (scheduledFor && !startISO) {
-          toast.error("Horário de início inválido.");
+        // Datas são obrigatórias; horas são opcionais e não criam horário falso.
+        const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+        if (!startDate || !datePattern.test(startDate)) {
+          toast.error("Data de início obrigatória.");
           return;
         }
-        if (scheduledEnd && !endISO) {
+        if (!endDate || !datePattern.test(endDate)) {
+          toast.error("Data de fim obrigatória.");
+          return;
+        }
+        const startISO = startTime ? wallDateTimeToISO(startDate, startTime) : null;
+        const endISO = endTime ? wallDateTimeToISO(endDate, endTime) : null;
+        const dueISO = endISO ?? wallDateToEndOfDayISO(endDate);
+        if (!dueISO) {
+          toast.error("Data de fim inválida.");
+          return;
+        }
+        if (startTime && !startISO) {
+          toast.error("Hora de início inválida.");
+          return;
+        }
+        if (endTime && !endISO) {
           toast.error("Horário de fim inválido.");
+          return;
+        }
+        if (endDate < startDate) {
+          toast.error("A data de fim deve ser igual ou posterior à data de início.");
           return;
         }
         if (startISO && endISO && endISO < startISO) {
@@ -1079,7 +1110,8 @@ function TaskForm({
           // Wall-clock: preservar o horário exato cadastrado, sem fuso.
           scheduled_for: startISO,
           scheduled_end: endISO,
-          due_at: endISO ?? startISO ?? dateOnlyISO,
+          due_at: dueISO,
+          recurrence_date: startDate,
           absence_grace_minutes: graceMinutes,
           punch_mode_override: punchMode || null,
         };
@@ -1090,11 +1122,7 @@ function TaskForm({
           // Horário e duração da recorrência SEMPRE derivados do topo do formulário.
           // • start_stop: usa scheduledFor (HH:MM) e (end - start) em minutos.
           // • manual:     "00:00" e 0 min — funcionário registra hora no apontamento.
-          const parseHM = (v: string): string => {
-            const m = /T(\d{2}):(\d{2})/.exec(v);
-            return m ? `${m[1]}:${m[2]}` : "00:00";
-          };
-          const derivedTime = timingMode === "manual" ? "00:00" : parseHM(scheduledFor);
+          const derivedTime = timingMode === "manual" || !startTime ? "00:00" : startTime;
           let derivedDuration = 0;
           if (timingMode !== "manual" && startISO && endISO) {
             derivedDuration = Math.max(
@@ -1178,43 +1206,40 @@ function TaskForm({
           </Select>
         </div>
         <div className="space-y-1.5">
+          <Label>Data início</Label>
+          <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
+        </div>
+        <div className="space-y-1.5">
           <Label>
-            Início
-            {timingMode === "manual" ? <span className="ml-1 text-xs text-muted-foreground">(opcional)</span> : null}
+            Hora início <span className="text-xs text-muted-foreground">(opcional)</span>
           </Label>
           <Input
-            type="datetime-local"
-            value={scheduledFor}
-            onChange={(e) => {
-              setScheduledFor(e.target.value);
-              if (e.target.value) setDateOnly("");
-            }}
+            type="time"
+            value={startTime}
+            onChange={(e) => setStartTime(e.target.value)}
             placeholder={timingMode === "manual" ? "A definir" : undefined}
           />
         </div>
         <div className="space-y-1.5">
+          <Label>Data fim</Label>
+          <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required />
+        </div>
+        <div className="space-y-1.5">
           <Label>
-            Fim{timingMode === "manual" ? <span className="ml-1 text-xs text-muted-foreground">(opcional)</span> : null}
+            Hora fim <span className="text-xs text-muted-foreground">(opcional)</span>
           </Label>
           <Input
-            type="datetime-local"
-            value={scheduledEnd}
-            onChange={(e) => setScheduledEnd(e.target.value)}
+            type="time"
+            value={endTime}
+            onChange={(e) => setEndTime(e.target.value)}
             placeholder={timingMode === "manual" ? "A definir" : undefined}
           />
         </div>
-        <div className="space-y-1.5 col-span-2">
-          <Label>Data sem horario</Label>
-          <Input type="date" value={dateOnly} onChange={(e) => setDateOnly(e.target.value)} disabled={!!scheduledFor} />
-          <p className="text-[11px] text-muted-foreground">
-            Use quando a tarefa tem dia definido, mas ainda nao tem hora de inicio.
-          </p>
-        </div>
         {timingMode === "manual" && (
           <div className="col-span-2 rounded-md border border-info/40 bg-info/5 px-3 py-2 text-xs text-info">
-            Cliente em modo <b>Manual</b>: apenas a <b>data</b> é obrigatória. Se deixar Início/Fim em branco, a tarefa
-            será salva como <b>“Sem horário definido”</b> e o funcionário informará hora de entrada e saída na Folha de
-            Ponto.
+            Cliente em modo <b>Manual</b>: as <b>datas</b> são obrigatórias e as horas são opcionais. Se deixar as horas
+            em branco, a tarefa será salva como <b>“Sem horário definido”</b> e o funcionário informará hora de entrada
+            e saída na Folha de Ponto.
           </div>
         )}
         <div className="space-y-1.5">
