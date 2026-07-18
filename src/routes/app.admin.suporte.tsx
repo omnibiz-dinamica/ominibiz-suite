@@ -5,14 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { RoleGuard } from "@/components/RoleGuard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { MessageCircle, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Building2, MessageCircle, X } from "lucide-react";
 import {
   PRIORITY_ORDER,
   TICKET_PRIORITY_LABEL,
@@ -55,6 +49,13 @@ type Row = {
   companies: { name: string } | null;
 };
 
+type CompanyRow = {
+  id: string;
+  name: string;
+  status: string | null;
+  created_at: string;
+};
+
 function SupportAdminPage() {
   const qc = useQueryClient();
   const [status, setStatus] = useState<"" | SupportTicketStatus>("");
@@ -91,6 +92,18 @@ function SupportAdminPage() {
     },
   });
 
+  const { data: companies = [] } = useQuery<CompanyRow[]>({
+    queryKey: ["support-admin-companies"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("companies")
+        .select("id, name, status, created_at")
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as CompanyRow[];
+    },
+  });
+
   useRealtimeInvalidate({
     channel: "support-admin",
     table: "support_tickets",
@@ -98,11 +111,34 @@ function SupportAdminPage() {
     invalidate: invalidateSupportCache,
   });
 
-  const companyOptions = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const r of data) if (r.companies?.name) map.set(r.company_id, r.companies.name);
-    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
-  }, [data]);
+  const companyOptions = useMemo(() => companies.map((c) => [c.id, c.name] as const), [companies]);
+
+  const companySummary = useMemo(() => {
+    const stats = new Map<string, { total: number; open: number; urgent: number; latest: string | null }>();
+    for (const t of data) {
+      const current = stats.get(t.company_id) ?? { total: 0, open: 0, urgent: 0, latest: null };
+      current.total += 1;
+      if (!["fechado", "resolvido", "rejeitado"].includes(t.status)) current.open += 1;
+      if (t.priority === "urgente" && !["fechado", "resolvido", "rejeitado"].includes(t.status)) {
+        current.urgent += 1;
+      }
+      if (!current.latest || new Date(t.updated_at).getTime() > new Date(current.latest).getTime()) {
+        current.latest = t.updated_at;
+      }
+      stats.set(t.company_id, current);
+    }
+
+    return companies
+      .map((company) => ({
+        ...company,
+        ...(stats.get(company.id) ?? { total: 0, open: 0, urgent: 0, latest: null }),
+      }))
+      .sort((a, b) => {
+        if (b.open !== a.open) return b.open - a.open;
+        if (b.urgent !== a.urgent) return b.urgent - a.urgent;
+        return a.name.localeCompare(b.name);
+      });
+  }, [companies, data]);
 
   const filtered = useMemo(() => {
     const arr = q.trim()
@@ -130,17 +166,24 @@ function SupportAdminPage() {
 
   const kpis = useMemo(() => {
     const now = Date.now();
-    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const todayMs = today.getTime();
     const abertos = data.filter((t) => t.status === "aberto").length;
-    const urgentes = data.filter((t) => t.priority === "urgente" && !["fechado", "resolvido", "rejeitado"].includes(t.status)).length;
+    const urgentes = data.filter(
+      (t) => t.priority === "urgente" && !["fechado", "resolvido", "rejeitado"].includes(t.status),
+    ).length;
     const emAnalise = data.filter((t) => t.status === "em_analise").length;
     const aguardando = data.filter((t) => t.status === "aguardando_cliente").length;
     const resolvidosHoje = data.filter((t) => t.resolved_at && new Date(t.resolved_at).getTime() >= todayMs).length;
     // Tempo médio de 1ª resposta (min) e resolução (h)
-    const respArr = data.filter((t) => t.first_response_at).map((t) => (new Date(t.first_response_at!).getTime() - new Date(t.created_at).getTime()) / 60000);
-    const resArr = data.filter((t) => t.resolved_at).map((t) => (new Date(t.resolved_at!).getTime() - new Date(t.created_at).getTime()) / 3600000);
-    const avg = (a: number[]) => a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0;
+    const respArr = data
+      .filter((t) => t.first_response_at)
+      .map((t) => (new Date(t.first_response_at!).getTime() - new Date(t.created_at).getTime()) / 60000);
+    const resArr = data
+      .filter((t) => t.resolved_at)
+      .map((t) => (new Date(t.resolved_at!).getTime() - new Date(t.created_at).getTime()) / 3600000);
+    const avg = (a: number[]) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0);
     // Top empresas / módulos
     const empresas = new Map<string, number>();
     const modulos = new Map<string, number>();
@@ -150,42 +193,67 @@ function SupportAdminPage() {
       const m = t.module ?? "—";
       modulos.set(m, (modulos.get(m) ?? 0) + 1);
     }
-    const topBy = (m: Map<string, number>) => Array.from(m.entries()).sort((a, b) => b[1] - a[1]).slice(0, 3);
+    const topBy = (m: Map<string, number>) =>
+      Array.from(m.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3);
     return {
-      total: data.length, abertos, urgentes, emAnalise, aguardando, resolvidosHoje,
-      avgResp: avg(respArr), avgRes: avg(resArr),
-      topEmpresas: topBy(empresas), topModulos: topBy(modulos), _now: now,
+      total: data.length,
+      abertos,
+      urgentes,
+      emAnalise,
+      aguardando,
+      resolvidosHoje,
+      avgResp: avg(respArr),
+      avgRes: avg(resArr),
+      totalEmpresas: companies.length,
+      empresasComTickets: empresas.size,
+      topEmpresas: topBy(empresas),
+      topModulos: topBy(modulos),
+      _now: now,
     };
-  }, [data]);
+  }, [companies.length, data]);
 
   function clearFilters() {
-    setStatus(""); setPriority(""); setType(""); setCompanyId(""); setDateFrom(""); setDateTo(""); setQ("");
+    setStatus("");
+    setPriority("");
+    setType("");
+    setCompanyId("");
+    setDateFrom("");
+    setDateTo("");
+    setQ("");
   }
 
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-semibold tracking-tight">
-            Central Global de Suporte
-          </h1>
+          <h1 className="font-display text-2xl font-semibold tracking-tight">Central Mestre de Suporte</h1>
           <p className="text-sm text-muted-foreground">
-            Todos os tickets de todas as empresas. Ordenação: urgente → alta → normal → baixa, mais antigos primeiro.
+            Controle global da Dinamica Solucao para tickets de todas as empresas clientes, independente da empresa
+            ativa.
           </p>
         </div>
         <Button asChild variant="outline">
-          <Link to="/app/suporte">Voltar à Central</Link>
+          <Link to="/app/admin">Empresas</Link>
         </Button>
       </header>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
         {[
           { label: "Total", value: kpis.total, filter: () => clearFilters() },
           { label: "Abertos", value: kpis.abertos, filter: () => setStatus("aberto") },
-          { label: "Urgentes", value: kpis.urgentes, tone: "text-red-600 dark:text-red-400", filter: () => setPriority("urgente") },
+          {
+            label: "Urgentes",
+            value: kpis.urgentes,
+            tone: "text-red-600 dark:text-red-400",
+            filter: () => setPriority("urgente"),
+          },
           { label: "Em análise", value: kpis.emAnalise, filter: () => setStatus("em_analise") },
           { label: "Aguardando cliente", value: kpis.aguardando, filter: () => setStatus("aguardando_cliente") },
           { label: "Resolvidos hoje", value: kpis.resolvidosHoje, filter: () => setStatus("resolvido") },
+          { label: "Empresas", value: kpis.totalEmpresas, filter: () => clearFilters() },
+          { label: "Com tickets", value: kpis.empresasComTickets, filter: () => clearFilters() },
         ].map((k) => (
           <button
             key={k.label}
@@ -199,41 +267,98 @@ function SupportAdminPage() {
         ))}
       </div>
 
+      <section className="rounded-xl border border-border bg-card p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="font-display text-base font-semibold">Empresas clientes</h2>
+            <p className="text-xs text-muted-foreground">
+              Todas as empresas cadastradas ficam visiveis aqui, inclusive testes e empresas sem ticket.
+            </p>
+          </div>
+          {companyId && (
+            <Button variant="ghost" size="sm" onClick={() => setCompanyId("")}>
+              <X className="mr-1 h-3 w-3" /> Ver todas
+            </Button>
+          )}
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          {companySummary.map((company) => (
+            <button
+              key={company.id}
+              type="button"
+              onClick={() => setCompanyId(company.id)}
+              className={
+                "flex items-center justify-between gap-3 rounded-lg border p-3 text-left transition-colors " +
+                (companyId === company.id
+                  ? "border-primary bg-primary/5"
+                  : "border-border bg-background hover:border-primary/50")
+              }
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                  <Building2 className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium">{company.name}</div>
+                  <div className="text-xs text-muted-foreground">
+                    Criada em {new Date(company.created_at).toLocaleDateString("pt-PT")}
+                  </div>
+                </div>
+              </div>
+              <div className="shrink-0 text-right text-xs">
+                <div className="font-mono font-semibold">
+                  {company.open} aberto{company.open !== 1 ? "s" : ""}
+                </div>
+                <div className="text-muted-foreground">{company.total} total</div>
+                {company.urgent > 0 && <div className="text-red-600 dark:text-red-400">{company.urgent} urgente</div>}
+              </div>
+            </button>
+          ))}
+          {companySummary.length === 0 && (
+            <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground sm:col-span-2 xl:col-span-3">
+              Nenhuma empresa cadastrada.
+            </div>
+          )}
+        </div>
+      </section>
+
       <div className="grid gap-3 rounded-xl border border-border bg-muted/30 p-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-lg border border-border bg-card p-3 text-xs">
           <div className="text-muted-foreground">1ª resposta (média)</div>
-          <div className="mt-1 text-lg font-semibold">
-            {kpis.avgResp > 0 ? `${kpis.avgResp.toFixed(0)} min` : "—"}
-          </div>
+          <div className="mt-1 text-lg font-semibold">{kpis.avgResp > 0 ? `${kpis.avgResp.toFixed(0)} min` : "—"}</div>
         </div>
         <div className="rounded-lg border border-border bg-card p-3 text-xs">
           <div className="text-muted-foreground">Resolução (média)</div>
-          <div className="mt-1 text-lg font-semibold">
-            {kpis.avgRes > 0 ? `${kpis.avgRes.toFixed(1)} h` : "—"}
-          </div>
+          <div className="mt-1 text-lg font-semibold">{kpis.avgRes > 0 ? `${kpis.avgRes.toFixed(1)} h` : "—"}</div>
         </div>
         <div className="rounded-lg border border-border bg-card p-3 text-xs">
           <div className="text-muted-foreground">Top empresas</div>
           <ul className="mt-1 space-y-0.5">
-            {kpis.topEmpresas.length === 0 ? <li className="text-muted-foreground">—</li> :
+            {kpis.topEmpresas.length === 0 ? (
+              <li className="text-muted-foreground">—</li>
+            ) : (
               kpis.topEmpresas.map(([name, n]) => (
                 <li key={name} className="flex justify-between gap-2">
                   <span className="truncate">{name}</span>
                   <span className="font-mono text-muted-foreground">{n}</span>
                 </li>
-              ))}
+              ))
+            )}
           </ul>
         </div>
         <div className="rounded-lg border border-border bg-card p-3 text-xs">
           <div className="text-muted-foreground">Top módulos</div>
           <ul className="mt-1 space-y-0.5">
-            {kpis.topModulos.length === 0 ? <li className="text-muted-foreground">—</li> :
+            {kpis.topModulos.length === 0 ? (
+              <li className="text-muted-foreground">—</li>
+            ) : (
               kpis.topModulos.map(([name, n]) => (
                 <li key={name} className="flex justify-between gap-2">
                   <span className="truncate">{name}</span>
                   <span className="font-mono text-muted-foreground">{n}</span>
                 </li>
-              ))}
+              ))
+            )}
           </ul>
         </div>
       </div>
@@ -245,15 +370,16 @@ function SupportAdminPage() {
           placeholder="Buscar por número, título, descrição ou empresa"
           className="max-w-md"
         />
-        <Select
-          value={status || "all"}
-          onValueChange={(v) => setStatus(v === "all" ? "" : (v as SupportTicketStatus))}
-        >
-          <SelectTrigger className="w-48"><SelectValue placeholder="Status" /></SelectTrigger>
+        <Select value={status || "all"} onValueChange={(v) => setStatus(v === "all" ? "" : (v as SupportTicketStatus))}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos os status</SelectItem>
             {TICKET_STATUS_LIST.map((s) => (
-              <SelectItem key={s} value={s}>{TICKET_STATUS_LABEL[s]}</SelectItem>
+              <SelectItem key={s} value={s}>
+                {TICKET_STATUS_LABEL[s]}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -261,32 +387,41 @@ function SupportAdminPage() {
           value={priority || "all"}
           onValueChange={(v) => setPriority(v === "all" ? "" : (v as SupportTicketPriority))}
         >
-          <SelectTrigger className="w-48"><SelectValue placeholder="Prioridade" /></SelectTrigger>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Prioridade" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas as prioridades</SelectItem>
             {TICKET_PRIORITY_LIST.map((p) => (
-              <SelectItem key={p} value={p}>{TICKET_PRIORITY_LABEL[p]}</SelectItem>
+              <SelectItem key={p} value={p}>
+                {TICKET_PRIORITY_LABEL[p]}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <Select
-          value={type || "all"}
-          onValueChange={(v) => setType(v === "all" ? "" : (v as SupportTicketType))}
-        >
-          <SelectTrigger className="w-44"><SelectValue placeholder="Tipo" /></SelectTrigger>
+        <Select value={type || "all"} onValueChange={(v) => setType(v === "all" ? "" : (v as SupportTicketType))}>
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="Tipo" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos os tipos</SelectItem>
             {TICKET_TYPE_LIST.map((t) => (
-              <SelectItem key={t} value={t}>{TICKET_TYPE_LABEL[t]}</SelectItem>
+              <SelectItem key={t} value={t}>
+                {TICKET_TYPE_LABEL[t]}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
         <Select value={companyId || "all"} onValueChange={(v) => setCompanyId(v === "all" ? "" : v)}>
-          <SelectTrigger className="w-52"><SelectValue placeholder="Empresa" /></SelectTrigger>
+          <SelectTrigger className="w-52">
+            <SelectValue placeholder="Empresa" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas as empresas</SelectItem>
             {companyOptions.map(([id, name]) => (
-              <SelectItem key={id} value={id}>{name}</SelectItem>
+              <SelectItem key={id} value={id}>
+                {name}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
