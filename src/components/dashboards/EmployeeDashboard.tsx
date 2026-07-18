@@ -19,6 +19,7 @@ export function EmployeeDashboard() {
         .select("*")
         .eq("assigned_to", user!.id)
         .in("status", ["pendente", "autorizado", "em_andamento"])
+        .order("due_at", { ascending: true, nullsFirst: false })
         .order("scheduled_for", { ascending: true, nullsFirst: false })
         .limit(8);
       if (error) throw error;
@@ -77,8 +78,8 @@ export function EmployeeDashboard() {
                   <div className="text-xs text-muted-foreground">
                     {t.scheduled_for
                       ? `${formatWallDate(t.scheduled_for)} · ${formatWallTime(t.scheduled_for)}`
-                      : t.due_at
-                        ? `${formatWallDate(t.due_at)} · Sem horario definido`
+                      : t.recurrence_date || t.due_at
+                        ? `${formatWallDate(t.recurrence_date ?? t.due_at)} · Sem horario definido`
                         : "Sem horário definido"}
                   </div>
                 </div>
