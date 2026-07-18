@@ -5,15 +5,25 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Pause, Play, Square, Coffee, Clock as ClockIcon, AlertCircle, Flame, Plus, Building2, ShieldAlert, Send, LogIn, LogOut, Hand, Zap } from "lucide-react";
-import { TaskDocuments } from "@/components/tasks/TaskDocuments";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Pause,
+  Play,
+  Square,
+  Coffee,
+  Clock as ClockIcon,
+  AlertCircle,
+  Flame,
+  Plus,
+  Building2,
+  ShieldAlert,
+  Send,
+  LogIn,
+  LogOut,
+  Hand,
+  Zap,
+} from "lucide-react";
+import { TaskDocuments } from "@/components/tasks/TaskDocuments";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   type TimeEntryRow,
   type TaskRow,
@@ -75,7 +85,7 @@ function PontoPage() {
         _company_id: currentCompanyId,
       });
       if (error) throw error;
-      return ((data as PunchMode | null) ?? "automatico");
+      return (data as PunchMode | null) ?? "automatico";
     },
     enabled: !!currentCompanyId,
   });
@@ -104,11 +114,7 @@ function PontoPage() {
     queryKey: ["punch-open-task", openEntry?.task_id],
     queryFn: async () => {
       if (!openEntry) return null;
-      const { data, error } = await supabase
-        .from("tasks")
-        .select("*")
-        .eq("id", openEntry.task_id)
-        .maybeSingle();
+      const { data, error } = await supabase.from("tasks").select("*").eq("id", openEntry.task_id).maybeSingle();
       if (error) throw error;
       return (data ?? null) as unknown as TaskRow | null;
     },
@@ -124,6 +130,7 @@ function PontoPage() {
         .from("tasks")
         .select("*")
         .in("status", ["pendente", "autorizado", "ausente", "em_andamento"])
+        .order("due_at", { ascending: true, nullsFirst: false })
         .order("scheduled_for", { ascending: true, nullsFirst: false })
         .limit(12);
       // Gestor/super admin: vê tarefas da empresa (toda a operação).
@@ -180,24 +187,16 @@ function PontoPage() {
     if (!user) return;
     const ch = supabase
       .channel(`user:${user.id}:punch-ui-sync`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "time_entries" },
-        () => {
-          qc.invalidateQueries({ queryKey: ["punch-open"] });
-          qc.invalidateQueries({ queryKey: ["punch-open-task"] });
-          qc.invalidateQueries({ queryKey: ["punch-history"] });
-          qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
-        },
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "tasks" },
-        () => {
-          qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
-          qc.invalidateQueries({ queryKey: ["punch-open-task"] });
-        },
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "time_entries" }, () => {
+        qc.invalidateQueries({ queryKey: ["punch-open"] });
+        qc.invalidateQueries({ queryKey: ["punch-open-task"] });
+        qc.invalidateQueries({ queryKey: ["punch-history"] });
+        qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, () => {
+        qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
+        qc.invalidateQueries({ queryKey: ["punch-open-task"] });
+      })
       .subscribe();
     return () => {
       void supabase.removeChannel(ch);
@@ -277,7 +276,12 @@ function PontoPage() {
       handleV2Toast(res);
       if (!res.success) {
         // Modo manual pode ter regra própria — cai para RPC v1 apenas em erros de estado.
-        if (res.code !== "OUT_OF_RADIUS" && res.code !== "GPS_DENIED" && res.code !== "GPS_TIMEOUT" && res.code !== "NO_GPS") {
+        if (
+          res.code !== "OUT_OF_RADIUS" &&
+          res.code !== "GPS_DENIED" &&
+          res.code !== "GPS_TIMEOUT" &&
+          res.code !== "NO_GPS"
+        ) {
           await punchManualStart(taskId);
           return res;
         }
@@ -398,9 +402,7 @@ function PontoPage() {
           {isManager ? "Histórico recente da equipe" : "Seu histórico recente"}
         </div>
         {(history ?? []).length === 0 ? (
-          <div className="px-5 py-10 text-center text-sm text-muted-foreground">
-            Sem registros encerrados ainda.
-          </div>
+          <div className="px-5 py-10 text-center text-sm text-muted-foreground">Sem registros encerrados ainda.</div>
         ) : (
           <ul className="divide-y divide-border">
             {(history ?? []).map((h) => (
@@ -408,12 +410,11 @@ function PontoPage() {
                 <div className="col-span-7 min-w-0">
                   <div className="truncate font-medium">{h.tasks?.title ?? "Tarefa"}</div>
                   <div className="text-xs text-muted-foreground">
-                    {new Date(h.started_at).toLocaleString()} → {h.ended_at ? new Date(h.ended_at).toLocaleTimeString() : "—"}
+                    {new Date(h.started_at).toLocaleString()} →{" "}
+                    {h.ended_at ? new Date(h.ended_at).toLocaleTimeString() : "—"}
                   </div>
                 </div>
-                <div className="col-span-2 text-xs text-muted-foreground">
-                  {h.paused_at ? "c/ pausa" : "s/ pausa"}
-                </div>
+                <div className="col-span-2 text-xs text-muted-foreground">{h.paused_at ? "c/ pausa" : "s/ pausa"}</div>
                 <div className="col-span-3 text-right font-mono text-sm">
                   {formatDuration(h.effective_minutes ?? 0)}
                 </div>
@@ -468,11 +469,7 @@ function PontoPage() {
         </DialogContent>
       </Dialog>
 
-      <PunchFlowOverlay
-        state={punch.state}
-        onSubmit={punch.submitJustification}
-        onCancel={punch.cancelJustification}
-      />
+      <PunchFlowOverlay state={punch.state} onSubmit={punch.submitJustification} onCancel={punch.cancelJustification} />
     </div>
   );
 }
@@ -513,7 +510,13 @@ function ActiveTaskCard({
       <div className="flex items-center justify-between border-b border-border/60 px-5 py-3 text-xs font-medium uppercase tracking-wide text-primary">
         <span>Tarefa em andamento</span>
         <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] tracking-normal">
-          {mode === "manual" ? <Hand className="h-3 w-3" /> : mode === "ambos" ? <Hand className="h-3 w-3" /> : <Zap className="h-3 w-3" />}
+          {mode === "manual" ? (
+            <Hand className="h-3 w-3" />
+          ) : mode === "ambos" ? (
+            <Hand className="h-3 w-3" />
+          ) : (
+            <Zap className="h-3 w-3" />
+          )}
           {PUNCH_MODE_LABELS[mode]}
         </span>
       </div>
@@ -544,9 +547,7 @@ function ActiveTaskCard({
         {/* Cronômetro */}
         <div className="flex flex-col items-center justify-center rounded-xl bg-background/60 py-6">
           <div className="text-[11px] uppercase tracking-widest text-muted-foreground">Tempo efetivo</div>
-          <div className="font-display text-5xl font-semibold tabular-nums sm:text-6xl">
-            {formatHMS(liveSec)}
-          </div>
+          <div className="font-display text-5xl font-semibold tabular-nums sm:text-6xl">{formatHMS(liveSec)}</div>
           {state === "pausado" && (
             <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-warning/15 px-2.5 py-1 text-xs font-medium text-warning-foreground">
               <Coffee className="h-3 w-3" /> Em pausa
@@ -567,16 +568,17 @@ function ActiveTaskCard({
             </Button>
           )}
           {(mode === "manual" || mode === "ambos") && state !== "encerrado" && (
-            <Button size="lg" variant="outline" className="h-14 text-base" disabled={manualEnding} onClick={onManualEnd}>
+            <Button
+              size="lg"
+              variant="outline"
+              className="h-14 text-base"
+              disabled={manualEnding}
+              onClick={onManualEnd}
+            >
               <LogOut className="mr-2 h-5 w-5" /> Bater saída
             </Button>
           )}
-          <Button
-            size="lg"
-            className="h-14 text-base sm:col-span-2"
-            disabled={ending}
-            onClick={onComplete}
-          >
+          <Button size="lg" className="h-14 text-base sm:col-span-2" disabled={ending} onClick={onComplete}>
             <Square className="mr-2 h-5 w-5" /> Concluir tarefa
           </Button>
         </div>
@@ -659,28 +661,36 @@ function UpcomingTasks({
       {/* HERO — próxima tarefa do funcionário, ação imediata */}
       <section className="overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card shadow-lg">
         <div className="flex items-center justify-between border-b border-border/60 px-5 py-3">
-          <span className="text-xs font-medium uppercase tracking-wide text-primary">
-            Próxima tarefa
-          </span>
-          {nextStartable.scheduled_for && (
+          <span className="text-xs font-medium uppercase tracking-wide text-primary">Próxima tarefa</span>
+          {(nextStartable.scheduled_for || nextStartable.recurrence_date || nextStartable.due_at) && (
             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
               <ClockIcon className="h-3 w-3" />
-              {formatWallDate(nextStartable.scheduled_for)} · {formatWallTime(nextStartable.scheduled_for)}
+              {nextStartable.scheduled_for
+                ? `${formatWallDate(nextStartable.scheduled_for)} · ${formatWallTime(nextStartable.scheduled_for)}`
+                : `${formatWallDate(nextStartable.recurrence_date ?? nextStartable.due_at)} · Sem horario definido`}
             </span>
           )}
         </div>
         <div className="space-y-5 p-5 sm:p-6">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${PRIORITY_TONE[nextStartable.priority] ?? PRIORITY_TONE.media}`}>
+              <span
+                className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${PRIORITY_TONE[nextStartable.priority] ?? PRIORITY_TONE.media}`}
+              >
                 {nextStartable.priority === "urgente" && <Flame className="mr-1 h-3 w-3" />}
                 {nextStartable.priority}
               </span>
-              <span className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${STATUS_TONE[nextStartable.status]}`}>
+              <span
+                className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${STATUS_TONE[nextStartable.status]}`}
+              >
                 {STATUS_LABELS[nextStartable.status]}
               </span>
               <span className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                {effectiveMode(nextStartable) === "automatico" ? <Zap className="h-3 w-3" /> : <Hand className="h-3 w-3" />}
+                {effectiveMode(nextStartable) === "automatico" ? (
+                  <Zap className="h-3 w-3" />
+                ) : (
+                  <Hand className="h-3 w-3" />
+                )}
                 {PUNCH_MODE_LABELS[effectiveMode(nextStartable)]}
               </span>
               {nextLate && (
@@ -698,9 +708,7 @@ function UpcomingTasks({
               </div>
             )}
             {nextStartable.description && (
-              <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                {nextStartable.description}
-              </p>
+              <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{nextStartable.description}</p>
             )}
           </div>
 
@@ -731,11 +739,17 @@ function UpcomingTasks({
               onClick={() => onStart(nextStartable)}
             >
               {effectiveMode(nextStartable) === "manual" ? (
-                <><LogIn className="mr-2 h-6 w-6" /> Bater entrada</>
+                <>
+                  <LogIn className="mr-2 h-6 w-6" /> Bater entrada
+                </>
               ) : nextStartable.status === "em_andamento" ? (
-                <><LogIn className="mr-2 h-6 w-6" /> Bater entrada</>
+                <>
+                  <LogIn className="mr-2 h-6 w-6" /> Bater entrada
+                </>
               ) : (
-                <><Play className="mr-2 h-6 w-6" /> Iniciar tarefa</>
+                <>
+                  <Play className="mr-2 h-6 w-6" /> Iniciar tarefa
+                </>
               )}
             </Button>
           )}
@@ -744,85 +758,92 @@ function UpcomingTasks({
 
       {rest.length > 0 && (
         <section className="rounded-2xl border border-border bg-card">
-      <div className="flex items-center justify-between border-b border-border px-5 py-3">
-        <div className="text-sm font-medium">Depois</div>
-        <div className="text-xs text-muted-foreground">{rest.length} na fila</div>
-      </div>
-      <ul className="divide-y divide-border">
-        {rest.map((t) => {
-          const late = isVisuallyLate(t);
-          const isStarting = starting && startingId === t.id;
-          const clientName = t.client_id ? clientsMap[t.client_id] : undefined;
-          const tMode = effectiveMode(t);
-          const isOwn = !!currentUserId && t.assigned_to === currentUserId;
-          const canStart =
-            (t.status === "pendente" || t.status === "autorizado" || t.status === "em_andamento") && isOwn;
-          return (
-            <li key={t.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${PRIORITY_TONE[t.priority] ?? PRIORITY_TONE.media}`}>
-                    {t.priority}
-                  </span>
-                  {late && (
-                    <span className="inline-flex items-center gap-1 rounded bg-destructive/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-destructive">
-                      <AlertCircle className="h-3 w-3" /> atrasada
-                    </span>
-                  )}
-                  <span className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${STATUS_TONE[t.status]}`}>
-                    {STATUS_LABELS[t.status]}
-                  </span>
-                  <span className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                    {tMode === "automatico" ? <Zap className="h-3 w-3" /> : <Hand className="h-3 w-3" />}
-                    {PUNCH_MODE_LABELS[tMode]}
-                  </span>
-                </div>
-                <div className="mt-1 truncate font-medium">{t.title}</div>
-                {clientName && (
-                  <div className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted-foreground">
-                    <Building2 className="h-3 w-3" /> {clientName}
+          <div className="flex items-center justify-between border-b border-border px-5 py-3">
+            <div className="text-sm font-medium">Depois</div>
+            <div className="text-xs text-muted-foreground">{rest.length} na fila</div>
+          </div>
+          <ul className="divide-y divide-border">
+            {rest.map((t) => {
+              const late = isVisuallyLate(t);
+              const isStarting = starting && startingId === t.id;
+              const clientName = t.client_id ? clientsMap[t.client_id] : undefined;
+              const tMode = effectiveMode(t);
+              const isOwn = !!currentUserId && t.assigned_to === currentUserId;
+              const canStart =
+                (t.status === "pendente" || t.status === "autorizado" || t.status === "em_andamento") && isOwn;
+              return (
+                <li
+                  key={t.id}
+                  className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${PRIORITY_TONE[t.priority] ?? PRIORITY_TONE.media}`}
+                      >
+                        {t.priority}
+                      </span>
+                      {late && (
+                        <span className="inline-flex items-center gap-1 rounded bg-destructive/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-destructive">
+                          <AlertCircle className="h-3 w-3" /> atrasada
+                        </span>
+                      )}
+                      <span
+                        className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${STATUS_TONE[t.status]}`}
+                      >
+                        {STATUS_LABELS[t.status]}
+                      </span>
+                      <span className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        {tMode === "automatico" ? <Zap className="h-3 w-3" /> : <Hand className="h-3 w-3" />}
+                        {PUNCH_MODE_LABELS[tMode]}
+                      </span>
+                    </div>
+                    <div className="mt-1 truncate font-medium">{t.title}</div>
+                    {clientName && (
+                      <div className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                        <Building2 className="h-3 w-3" /> {clientName}
+                      </div>
+                    )}
+                    <div className="mt-0.5 text-xs text-muted-foreground">
+                      {t.scheduled_for
+                        ? `${formatWallDate(t.scheduled_for)} · ${formatWallTime(t.scheduled_for)}`
+                        : t.recurrence_date || t.due_at
+                          ? `${formatWallDate(t.recurrence_date ?? t.due_at)} · Sem horario definido`
+                          : "Sem horário definido"}
+                    </div>
                   </div>
-                )}
-                <div className="mt-0.5 text-xs text-muted-foreground">
-                  {t.scheduled_for
-                    ? `${formatWallDate(t.scheduled_for)} · ${formatWallTime(t.scheduled_for)}`
-                    : "Sem horário definido"}
-                </div>
-              </div>
-              <Button
-                size="lg"
-                className="h-12 w-full sm:w-auto"
-                variant={t.status === "ausente" ? "outline" : "default"}
-                disabled={
-                  isStarting ||
-                  (t.status !== "ausente" && !canStart) ||
-                  (t.status === "ausente" && requestingAuth && requestingAuthId === t.id)
-                }
-                onClick={() =>
-                  t.status === "ausente" ? onRequestAuth(t.id) : onStart(t)
-                }
-              >
-                {t.status === "ausente" ? (
-                  <>
-                    <Send className="mr-2 h-5 w-5" />
-                    Solicitar autorização
-                  </>
-                ) : tMode === "manual" || t.status === "em_andamento" ? (
-                  <>
-                    <LogIn className="mr-2 h-5 w-5" />
-                    Bater entrada
-                  </>
-                ) : (
-                  <>
-                    <Play className="mr-2 h-5 w-5" />
-                    Iniciar
-                  </>
-                )}
-              </Button>
-            </li>
-          );
-        })}
-      </ul>
+                  <Button
+                    size="lg"
+                    className="h-12 w-full sm:w-auto"
+                    variant={t.status === "ausente" ? "outline" : "default"}
+                    disabled={
+                      isStarting ||
+                      (t.status !== "ausente" && !canStart) ||
+                      (t.status === "ausente" && requestingAuth && requestingAuthId === t.id)
+                    }
+                    onClick={() => (t.status === "ausente" ? onRequestAuth(t.id) : onStart(t))}
+                  >
+                    {t.status === "ausente" ? (
+                      <>
+                        <Send className="mr-2 h-5 w-5" />
+                        Solicitar autorização
+                      </>
+                    ) : tMode === "manual" || t.status === "em_andamento" ? (
+                      <>
+                        <LogIn className="mr-2 h-5 w-5" />
+                        Bater entrada
+                      </>
+                    ) : (
+                      <>
+                        <Play className="mr-2 h-5 w-5" />
+                        Iniciar
+                      </>
+                    )}
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
         </section>
       )}
     </div>
