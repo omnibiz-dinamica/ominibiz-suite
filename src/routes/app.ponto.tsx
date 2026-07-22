@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import {
   Pause,
@@ -34,8 +35,8 @@ import {
   formatHMS,
   transitionTask,
   requestTaskAuthorization,
-  punchManualStart,
-  punchManualEnd,
+  punchEmployeeManualStart,
+  punchEmployeeManualEnd,
   PUNCH_MODE_LABELS,
   STATUS_LABELS,
   STATUS_TONE,
@@ -55,18 +56,40 @@ const PRIORITY_TONE: Record<string, string> = {
   urgente: "bg-destructive/15 text-destructive",
 };
 
+function toDatetimeLocalValue(date = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function manualDefaultDateTime(task?: TaskRow | null): string {
+  const now = new Date();
+  const sourceDate = task?.scheduled_for ?? task?.recurrence_date ?? task?.due_at ?? null;
+  if (!sourceDate) return toDatetimeLocalValue(now);
+  const datePart = sourceDate.slice(0, 10);
+  const timePart = toDatetimeLocalValue(now).slice(11, 16);
+  return `${datePart}T${timePart}`;
+}
+
+function localInputToIso(value: string): string {
+  return new Date(value).toISOString();
+}
+
 function PontoPage() {
   const { user, isManager, currentCompanyId } = useAuth();
   const qc = useQueryClient();
   const [, setNow] = useState(() => Date.now());
   const [modeChoice, setModeChoice] = useState<TaskRow | null>(null);
+  const [manualStartTask, setManualStartTask] = useState<TaskRow | null>(null);
+  const [manualStartAt, setManualStartAt] = useState("");
+  const [manualEndOpen, setManualEndOpen] = useState(false);
+  const [manualEndAt, setManualEndAt] = useState("");
   const punch = usePunchFlow();
 
   // Toast único por retorno de RPC v2 — sempre baseado no código do servidor.
   function handleV2Toast(res: PunchV2Response) {
     const msg = res.message ?? res.code;
     if (res.success) toast.success(`${res.code} — ${msg}`);
-    else toast.error(`${res.code} — ${msg}`);
+    else toast.error(msg);
   }
 
   // Tick visual (1s) — apenas para renderização.
@@ -253,14 +276,9 @@ function PontoPage() {
   });
   const startMut = useMutation({
     mutationFn: async (taskId: string) => {
-      // 1) Auditoria de chegada (não bloqueia se GPS falhar).
-      void punch.run({ op: "arrival", taskId, neverBlockOnGps: true });
-      // 2) Registra ponto via v2 (aplica geofencing + cria time_entry).
       const res = await punch.run({ op: "start", taskId });
       handleV2Toast(res);
-      if (!res.success) throw new Error(res.code);
-      // 3) Transiciona a tarefa.
-      await transitionTask(taskId, "iniciar");
+      if (!res.success) throw new Error(res.message ?? res.code);
       return res;
     },
     onSuccess: () => {
@@ -270,45 +288,29 @@ function PontoPage() {
     },
   });
   const manualStartMut = useMutation({
-    mutationFn: async (taskId: string) => {
-      void punch.run({ op: "arrival", taskId, neverBlockOnGps: true });
-      const res = await punch.run({ op: "start", taskId });
-      handleV2Toast(res);
-      if (!res.success) {
-        // Modo manual pode ter regra própria — cai para RPC v1 apenas em erros de estado.
-        if (
-          res.code !== "OUT_OF_RADIUS" &&
-          res.code !== "GPS_DENIED" &&
-          res.code !== "GPS_TIMEOUT" &&
-          res.code !== "NO_GPS"
-        ) {
-          await punchManualStart(taskId);
-          return res;
-        }
-        throw new Error(res.code);
-      }
-      return res;
+    mutationFn: async ({ taskId, startedAt }: { taskId: string; startedAt: string }) => {
+      const entry = await punchEmployeeManualStart(taskId, localInputToIso(startedAt));
+      toast.success("Entrada manual registrada.");
+      return entry;
     },
     onSuccess: () => {
+      setManualStartTask(null);
       qc.invalidateQueries({ queryKey: ["punch-open"] });
       qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
       qc.invalidateQueries({ queryKey: ["tasks"] });
     },
   });
   const manualEndMut = useMutation({
-    mutationFn: async (taskId: string) => {
+    mutationFn: async ({ entryId, endedAt }: { entryId: string; endedAt: string }) => {
       if (!openEntry) {
-        // Fallback: sem entry aberto, aciona RPC v1 manual (comportamento anterior).
-        await punchManualEnd(taskId);
-        return { success: true, code: "PUNCH_STOPPED" } as PunchV2Response;
+        throw new Error("Sem ponto aberto.");
       }
-      const res = await punch.run({ op: "stop", entryId: openEntry.id });
-      handleV2Toast(res);
-      if (!res.success) throw new Error(res.code);
-      void punch.run({ op: "departure", entryId: openEntry.id, neverBlockOnGps: true });
-      return res;
+      const entry = await punchEmployeeManualEnd(entryId, localInputToIso(endedAt), true);
+      toast.success("Saida manual registrada.");
+      return entry;
     },
     onSuccess: () => {
+      setManualEndOpen(false);
       qc.invalidateQueries({ queryKey: ["punch-open"] });
       qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
       qc.invalidateQueries({ queryKey: ["punch-history"] });
@@ -336,13 +338,22 @@ function PontoPage() {
       return;
     }
     if (mode === "manual") {
-      manualStartMut.mutate(t.id);
+      setManualStartTask(t);
+      setManualStartAt(manualDefaultDateTime(t));
       return;
     }
     startMut.mutate(t.id);
   };
 
   const openTaskMode = openTask ? effectiveMode(openTask) : "automatico";
+  const isManualOpenTask = openTaskMode === "manual" || openEntry?.notes === "Apontamento manual pelo funcionario";
+  const manualStartingId = manualStartMut.variables?.taskId ?? null;
+
+  function openManualEndDialog() {
+    if (!openEntry || !openTask) return;
+    setManualEndAt(manualDefaultDateTime(openTask));
+    setManualEndOpen(true);
+  }
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
@@ -373,8 +384,8 @@ function PontoPage() {
           mode={openTaskMode}
           onPause={() => pauseMut.mutate()}
           onResume={() => resumeMut.mutate()}
-          onComplete={() => endMut.mutate()}
-          onManualEnd={() => manualEndMut.mutate(openTask.id)}
+          onComplete={() => (isManualOpenTask ? openManualEndDialog() : endMut.mutate())}
+          onManualEnd={openManualEndDialog}
           pausing={pauseMut.isPending}
           resuming={resumeMut.isPending}
           ending={endMut.isPending}
@@ -389,7 +400,7 @@ function PontoPage() {
           effectiveMode={effectiveMode}
           onStart={handleStart}
           starting={startMut.isPending || manualStartMut.isPending}
-          startingId={startMut.variables ?? manualStartMut.variables ?? null}
+          startingId={startMut.variables ?? manualStartingId}
           onRequestAuth={(id) => requestAuthMut.mutate(id)}
           requestingAuth={requestAuthMut.isPending}
           requestingAuthId={requestAuthMut.variables ?? null}
@@ -455,7 +466,8 @@ function PontoPage() {
               className="h-14 justify-start"
               onClick={() => {
                 if (!modeChoice) return;
-                manualStartMut.mutate(modeChoice.id);
+                setManualStartTask(modeChoice);
+                setManualStartAt(manualDefaultDateTime(modeChoice));
                 setModeChoice(null);
               }}
             >
@@ -466,6 +478,78 @@ function PontoPage() {
               </div>
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!manualStartTask} onOpenChange={(o) => !o && setManualStartTask(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Registrar entrada manual</DialogTitle>
+            <DialogDescription>
+              Informe o horario real de entrada para iniciar esta tarefa manualmente.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!manualStartTask || !manualStartAt) return;
+              manualStartMut.mutate({ taskId: manualStartTask.id, startedAt: manualStartAt });
+            }}
+          >
+            <div className="space-y-2">
+              <label className="text-sm font-medium" htmlFor="manual-start-at">
+                Hora de entrada
+              </label>
+              <Input
+                id="manual-start-at"
+                type="datetime-local"
+                value={manualStartAt}
+                onChange={(e) => setManualStartAt(e.target.value)}
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={manualStartMut.isPending}>
+              <LogIn className="mr-2 h-4 w-4" />
+              {manualStartMut.isPending ? "Registrando..." : "Iniciar manual"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={manualEndOpen} onOpenChange={setManualEndOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Finalizar ponto manual</DialogTitle>
+            <DialogDescription>
+              Informe o horario real de saida. A tarefa sera concluida com este apontamento.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!openEntry || !manualEndAt) return;
+              manualEndMut.mutate({ entryId: openEntry.id, endedAt: manualEndAt });
+            }}
+          >
+            <div className="space-y-2">
+              <label className="text-sm font-medium" htmlFor="manual-end-at">
+                Hora de saida
+              </label>
+              <Input
+                id="manual-end-at"
+                type="datetime-local"
+                value={manualEndAt}
+                onChange={(e) => setManualEndAt(e.target.value)}
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={manualEndMut.isPending}>
+              <LogOut className="mr-2 h-4 w-4" />
+              {manualEndMut.isPending ? "Finalizando..." : "Finalizar manual"}
+            </Button>
+          </form>
         </DialogContent>
       </Dialog>
 
@@ -505,6 +589,8 @@ function ActiveTaskCard({
   ending: boolean;
   manualEnding: boolean;
 }) {
+  const isManualEntry = mode === "manual" || entry.notes === "Apontamento manual pelo funcionario";
+
   return (
     <section className="overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card shadow-lg">
       <div className="flex items-center justify-between border-b border-border/60 px-5 py-3 text-xs font-medium uppercase tracking-wide text-primary">
@@ -545,29 +631,38 @@ function ActiveTaskCard({
         </div>
 
         {/* Cronômetro */}
-        <div className="flex flex-col items-center justify-center rounded-xl bg-background/60 py-6">
-          <div className="text-[11px] uppercase tracking-widest text-muted-foreground">Tempo efetivo</div>
-          <div className="font-display text-5xl font-semibold tabular-nums sm:text-6xl">{formatHMS(liveSec)}</div>
-          {state === "pausado" && (
-            <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-warning/15 px-2.5 py-1 text-xs font-medium text-warning-foreground">
-              <Coffee className="h-3 w-3" /> Em pausa
+        {isManualEntry ? (
+          <div className="rounded-xl bg-background/60 px-4 py-5 text-center">
+            <div className="text-[11px] uppercase tracking-widest text-muted-foreground">Entrada manual registrada</div>
+            <div className="mt-1 font-display text-3xl font-semibold">
+              {new Date(entry.started_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
             </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center rounded-xl bg-background/60 py-6">
+            <div className="text-[11px] uppercase tracking-widest text-muted-foreground">Tempo efetivo</div>
+            <div className="font-display text-5xl font-semibold tabular-nums sm:text-6xl">{formatHMS(liveSec)}</div>
+            {state === "pausado" && (
+              <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-warning/15 px-2.5 py-1 text-xs font-medium text-warning-foreground">
+                <Coffee className="h-3 w-3" /> Em pausa
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Ações grandes */}
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {state === "aberto" && (
+          {!isManualEntry && state === "aberto" && (
             <Button size="lg" variant="outline" className="h-14 text-base" disabled={pausing} onClick={onPause}>
               <Pause className="mr-2 h-5 w-5" /> Pausa almoço
             </Button>
           )}
-          {state === "pausado" && (
+          {!isManualEntry && state === "pausado" && (
             <Button size="lg" variant="outline" className="h-14 text-base" disabled={resuming} onClick={onResume}>
               <Play className="mr-2 h-5 w-5" /> Retorno almoço
             </Button>
           )}
-          {(mode === "manual" || mode === "ambos") && state !== "encerrado" && (
+          {isManualEntry && state !== "encerrado" && (
             <Button
               size="lg"
               variant="outline"
@@ -575,12 +670,14 @@ function ActiveTaskCard({
               disabled={manualEnding}
               onClick={onManualEnd}
             >
-              <LogOut className="mr-2 h-5 w-5" /> Bater saída
+              <LogOut className="mr-2 h-5 w-5" /> Finalizar
             </Button>
           )}
-          <Button size="lg" className="h-14 text-base sm:col-span-2" disabled={ending} onClick={onComplete}>
-            <Square className="mr-2 h-5 w-5" /> Concluir tarefa
-          </Button>
+          {!isManualEntry && (
+            <Button size="lg" className="h-14 text-base sm:col-span-2" disabled={ending} onClick={onComplete}>
+              <Square className="mr-2 h-5 w-5" /> Concluir tarefa
+            </Button>
+          )}
         </div>
 
         <div className="rounded-xl border border-border/60 bg-background/40 p-4">
