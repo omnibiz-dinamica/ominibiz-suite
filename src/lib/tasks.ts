@@ -98,12 +98,14 @@ export async function punchEmployeeManualEnd(
   timeEntryId: string,
   endedAt: string,
   completeTask = true,
+  reason?: string,
 ): Promise<TimeEntryRow> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase.rpc as any)("punch_employee_manual_end", {
     _time_entry_id: timeEntryId,
     _ended_at: endedAt,
     _complete_task: completeTask,
+    _reason: reason ?? null,
   });
   if (error) throw error;
   return data as TimeEntryRow;
