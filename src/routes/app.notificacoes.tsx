@@ -27,7 +27,10 @@ type NotificationEvent =
   | "vacation_cancelled"
   | "vacation_confirmation_required"
   | "vacation_confirmed"
-  | "vacation_declined";
+  | "vacation_declined"
+  | "expense_created"
+  | "expense_approved"
+  | "expense_rejected";
 
 type NotificationPriority = "baixa" | "media" | "alta" | "urgente";
 
@@ -63,6 +66,9 @@ const EVENT_LABEL: Record<NotificationEvent, string> = {
   vacation_confirmation_required: "Férias — confirmar",
   vacation_confirmed: "Férias — confirmadas",
   vacation_declined: "Férias — recusadas",
+  expense_created: "Despesa — solicitação",
+  expense_approved: "Despesa — aprovada",
+  expense_rejected: "Despesa — rejeitada",
 };
 
 const PRIORITY_TONE: Record<NotificationPriority, string> = {
@@ -120,8 +126,7 @@ function NotificationsPage() {
   });
 
   const transition = useMutation({
-    mutationFn: ({ id, action }: { id: string; action: "autorizar" | "cancelar" }) =>
-      transitionTask(id, action),
+    mutationFn: ({ id, action }: { id: string; action: "autorizar" | "cancelar" }) => transitionTask(id, action),
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
       invalidateNotificationsCache(qc);
@@ -132,10 +137,12 @@ function NotificationsPage() {
 
   const unreadCount = useMemo(() => (data ?? []).filter((n) => !n.read_at).length, [data]);
 
-  const openTask = async (n: NotificationRow) => {
+  const openNotification = async (n: NotificationRow) => {
     if (!n.read_at) markRead.mutate(n.id);
     if (n.event.startsWith("vacation_")) {
       nav({ to: "/app/ferias" });
+    } else if (n.event.startsWith("expense_")) {
+      nav({ to: "/app/despesas" });
     } else {
       nav({ to: "/app/tarefas" });
     }
@@ -166,16 +173,12 @@ function NotificationsPage() {
       </div>
 
       {isLoading ? (
-        <div className="rounded-lg border border-border p-8 text-center text-sm text-muted-foreground">
-          Carregando…
-        </div>
+        <div className="rounded-lg border border-border p-8 text-center text-sm text-muted-foreground">Carregando…</div>
       ) : (data ?? []).length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-12 text-center">
           <Bell className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
           <p className="font-medium">Sem notificações por enquanto</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Você será avisado quando uma tarefa exigir sua atenção.
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">Você será avisado quando uma tarefa exigir sua atenção.</p>
         </div>
       ) : (
         <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
@@ -207,14 +210,10 @@ function NotificationsPage() {
                       >
                         {EVENT_LABEL[n.event]}
                       </span>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(n.created_at).toLocaleString()}
-                      </span>
+                      <span className="text-xs text-muted-foreground">{new Date(n.created_at).toLocaleString()}</span>
                     </div>
                     <p className="mt-1 font-medium">{n.title}</p>
-                    {n.body && (
-                      <p className="mt-0.5 truncate text-sm text-muted-foreground">{n.body}</p>
-                    )}
+                    {n.body && <p className="mt-0.5 truncate text-sm text-muted-foreground">{n.body}</p>}
                   </div>
                 </div>
 
@@ -238,8 +237,8 @@ function NotificationsPage() {
                       </Button>
                     </>
                   )}
-                  {(n.task_id || n.event.startsWith("vacation_")) && (
-                    <Button size="sm" variant="ghost" onClick={() => openTask(n)}>
+                  {(n.task_id || n.event.startsWith("vacation_") || n.event.startsWith("expense_")) && (
+                    <Button size="sm" variant="ghost" onClick={() => openNotification(n)}>
                       <ExternalLink className="mr-1.5 h-4 w-4" /> Abrir
                     </Button>
                   )}
