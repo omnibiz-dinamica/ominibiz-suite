@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 export const TASK_STATUSES = ["pendente", "autorizado", "em_andamento", "concluido", "cancelado", "ausente"] as const;
 export type TaskStatus = (typeof TASK_STATUSES)[number];
 
-export const TASK_ACTIONS = ["autorizar", "iniciar", "concluir", "cancelar", "marcar_ausente"] as const;
+export const TASK_ACTIONS = ["autorizar", "iniciar", "concluir", "recusar", "cancelar", "marcar_ausente"] as const;
 export type TaskAction = (typeof TASK_ACTIONS)[number];
 
 export const STATUS_LABELS: Record<TaskStatus, string> = {
@@ -44,6 +44,9 @@ export interface TaskRow {
   completed_at: string | null;
   authorized_at: string | null;
   cancelled_at: string | null;
+  refusal_reason?: string | null;
+  refused_at?: string | null;
+  refused_by?: string | null;
   marked_absent_at: string | null;
   absence_grace_minutes: number;
   created_at: string;
@@ -265,6 +268,7 @@ export function availableActions(
   if (task.status === "pendente" && ctx.isManager) out.push("autorizar");
   if ((task.status === "pendente" || task.status === "autorizado") && (isAssignee || ctx.isManager))
     out.push("iniciar");
+  if ((task.status === "pendente" || task.status === "autorizado") && isAssignee) out.push("recusar");
   if (task.status === "em_andamento" && (isAssignee || ctx.isManager)) out.push("concluir");
   if (ctx.isManager && (task.status === "pendente" || task.status === "autorizado")) out.push("marcar_ausente");
   if (ctx.isManager) out.push("cancelar");
@@ -276,6 +280,7 @@ export const ACTION_LABELS: Record<TaskAction, string> = {
   autorizar: "Autorizar",
   iniciar: "Iniciar",
   concluir: "Concluir",
+  recusar: "Recusar",
   cancelar: "Cancelar",
   marcar_ausente: "Marcar ausente",
 };
@@ -284,11 +289,12 @@ export const ACTION_LABELS: Record<TaskAction, string> = {
  * Executa uma transição via RPC central. Toda regra de negócio
  * (validação, carimbo de tempo, permissões) vive no banco.
  */
-export async function transitionTask(taskId: string, action: TaskAction): Promise<TaskRow> {
+export async function transitionTask(taskId: string, action: TaskAction, reason?: string): Promise<TaskRow> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase.rpc as any)("task_transition", {
     _task_id: taskId,
     _action: action,
+    _reason: reason ?? null,
   });
   if (error) throw error;
   return data as TaskRow;
