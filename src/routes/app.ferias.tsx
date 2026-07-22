@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,16 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Calendar as CalendarIcon, Check, X as XIcon, Plus, Plane, FileSpreadsheet, FileText, Pencil } from "lucide-react";
+import {
+  Calendar as CalendarIcon,
+  Check,
+  X as XIcon,
+  Plus,
+  Plane,
+  FileSpreadsheet,
+  FileText,
+  Pencil,
+} from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EmployeePicker } from "@/components/common/EmployeePicker";
@@ -19,12 +28,7 @@ import { buildAppUrl } from "@/lib/app-url";
 
 export const Route = createFileRoute("/app/ferias")({ component: FeriasPage });
 
-type VacationStatus =
-  | "pendente"
-  | "pendente_confirmacao"
-  | "aprovado"
-  | "rejeitado"
-  | "cancelado";
+type VacationStatus = "pendente" | "pendente_confirmacao" | "aprovado" | "rejeitado" | "cancelado";
 type VacationRow = {
   id: string;
   company_id: string;
@@ -108,10 +112,7 @@ function FeriasPage() {
     queryKey: ["vacations", currentCompanyId, effectiveRole, user?.id],
     enabled: !!user?.id && !!currentCompanyId,
     queryFn: async () => {
-      let q = supabase
-        .from("vacation_requests")
-        .select("*")
-        .order("start_date", { ascending: false });
+      let q = supabase.from("vacation_requests").select("*").order("start_date", { ascending: false });
       if (currentCompanyId) q = q.eq("company_id", currentCompanyId);
       if (isEmployee) q = q.eq("user_id", user!.id);
       const { data, error } = await q;
@@ -122,24 +123,14 @@ function FeriasPage() {
 
   // Names for manager view
   const userIds = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          rows.flatMap((r) =>
-            [r.user_id, r.assigned_approver_id].filter(Boolean) as string[],
-          ),
-        ),
-      ),
+    () => Array.from(new Set(rows.flatMap((r) => [r.user_id, r.assigned_approver_id].filter(Boolean) as string[]))),
     [rows],
   );
   const { data: names = {} } = useQuery({
     queryKey: ["vac-profiles", userIds.join(",")],
     enabled: userIds.length > 0,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, full_name, job_title")
-        .in("id", userIds);
+      const { data, error } = await supabase.from("profiles").select("id, full_name, job_title").in("id", userIds);
       if (error) throw error;
       return Object.fromEntries(
         (data ?? []).map((p: any) => [p.id, { name: p.full_name ?? "Usuário", jobTitle: p.job_title ?? null }]),
@@ -152,16 +143,10 @@ function FeriasPage() {
     queryKey: ["vac-company-members", currentCompanyId],
     enabled: !!currentCompanyId && isManager,
     queryFn: async () => {
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("company_id", currentCompanyId!);
+      const { data: roles } = await supabase.from("user_roles").select("user_id").eq("company_id", currentCompanyId!);
       const ids = Array.from(new Set((roles ?? []).map((r) => r.user_id)));
       if (ids.length === 0) return [] as { id: string; name: string; jobTitle: string | null }[];
-      const { data: profs } = await supabase
-        .from("profiles")
-        .select("id, full_name, job_title")
-        .in("id", ids);
+      const { data: profs } = await supabase.from("profiles").select("id, full_name, job_title").in("id", ids);
       return (profs ?? []).map((p: any) => ({
         id: p.id,
         name: p.full_name ?? "Usuário",
@@ -170,10 +155,8 @@ function FeriasPage() {
     },
   });
 
-  const nameOf = (id: string | null | undefined): string =>
-    id ? names[id]?.name ?? "Usuário" : "—";
-  const jobOf = (id: string | null | undefined): string =>
-    (id ? names[id]?.jobTitle : null) ?? "—";
+  const nameOf = (id: string | null | undefined): string => (id ? (names[id]?.name ?? "Usuário") : "—");
+  const jobOf = (id: string | null | undefined): string => (id ? names[id]?.jobTitle : null) ?? "—";
 
   // ---- Send email helper (best-effort, never block UI) ----
   async function sendVacationEmail(
@@ -243,9 +226,16 @@ function FeriasPage() {
 
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
+  const [workLocation, setWorkLocation] = useState("");
   const [note, setNote] = useState("");
   const [priorValidation, setPriorValidation] = useState<"sim" | "nao">("nao");
   const [validatedBy, setValidatedBy] = useState("");
+
+  useEffect(() => {
+    if (!workLocation && myProfile?.work_location) {
+      setWorkLocation(myProfile.work_location);
+    }
+  }, [myProfile?.work_location, workLocation]);
 
   const create = useMutation({
     mutationFn: async () => {
@@ -255,22 +245,31 @@ function FeriasPage() {
       if (priorValidation === "sim" && !validatedBy.trim()) {
         throw new Error("Informe quem realizou a validação prévia");
       }
-      const { data, error } = await supabase.from("vacation_requests").insert({
-        company_id: currentCompanyId,
-        user_id: user.id,
-        start_date: start,
-        end_date: end,
-        note: note.trim() || null,
-        prior_validation: priorValidation === "sim",
-        validated_by: priorValidation === "sim" ? validatedBy.trim() : null,
-      }).select("id").single();
+      const { data, error } = await supabase
+        .from("vacation_requests")
+        .insert({
+          company_id: currentCompanyId,
+          user_id: user.id,
+          start_date: start,
+          end_date: end,
+          work_location: workLocation.trim() || null,
+          note: note.trim() || null,
+          prior_validation: priorValidation === "sim",
+          validated_by: priorValidation === "sim" ? validatedBy.trim() : null,
+        })
+        .select("id")
+        .single();
       if (error) throw error;
       if (data?.id) await sendVacationEmail(data.id, "vacation_request", "vacation_request", "create");
     },
     onSuccess: () => {
       toast.success("Solicitação enviada");
-      setStart(""); setEnd(""); setNote("");
-      setPriorValidation("nao"); setValidatedBy("");
+      setStart("");
+      setEnd("");
+      setWorkLocation(myProfile?.work_location ?? "");
+      setNote("");
+      setPriorValidation("nao");
+      setValidatedBy("");
       qc.invalidateQueries({ queryKey: ["vacations"] });
     },
     onError: (e: any) => toast.error(e.message ?? "Falha ao solicitar"),
@@ -287,14 +286,18 @@ function FeriasPage() {
       if (!mgrStart || !mgrEnd) throw new Error("Informe início e fim");
       if (mgrEnd < mgrStart) throw new Error("Data final deve ser após o início");
       if (!currentCompanyId) throw new Error("Empresa não selecionada");
-      const { data, error } = await supabase.from("vacation_requests").insert({
-        company_id: currentCompanyId,
-        user_id: mgrTargetUser,
-        start_date: mgrStart,
-        end_date: mgrEnd,
-        note: mgrNote.trim() || null,
-        prior_validation: false,
-      }).select("id").single();
+      const { data, error } = await supabase
+        .from("vacation_requests")
+        .insert({
+          company_id: currentCompanyId,
+          user_id: mgrTargetUser,
+          start_date: mgrStart,
+          end_date: mgrEnd,
+          note: mgrNote.trim() || null,
+          prior_validation: false,
+        })
+        .select("id")
+        .single();
       if (error) throw error;
       if (data?.id) {
         await sendVacationEmail(
@@ -307,7 +310,10 @@ function FeriasPage() {
     },
     onSuccess: () => {
       toast.success("Férias agendadas — aguardando confirmação do funcionário");
-      setMgrTargetUser(""); setMgrStart(""); setMgrEnd(""); setMgrNote("");
+      setMgrTargetUser("");
+      setMgrStart("");
+      setMgrEnd("");
+      setMgrNote("");
       qc.invalidateQueries({ queryKey: ["vacations"] });
     },
     onError: (e: any) => toast.error(e.message ?? "Falha ao agendar"),
@@ -385,9 +391,7 @@ function FeriasPage() {
 
   const filtered = rows.filter(matchesFilters);
   const approved = filtered.filter((r) => r.status === "aprovado");
-  const history = rows.filter(
-    (r) => (r.status === "rejeitado" || r.status === "cancelado") && matchesFilters(r),
-  );
+  const history = rows.filter((r) => (r.status === "rejeitado" || r.status === "cancelado") && matchesFilters(r));
 
   const yearOptions = useMemo(() => {
     const ys = new Set<string>();
@@ -426,7 +430,8 @@ function FeriasPage() {
     if (filterUser !== "all") subtitleParts.push(`Colaborador: ${nameOf(filterUser)}`);
     if (filterMonth) subtitleParts.push(`Mês: ${filterMonth}`);
     if (filterYear !== "all") subtitleParts.push(`Ano: ${filterYear}`);
-    if (filterStatus !== "all") subtitleParts.push(`Estado: ${STATUS_LABEL[filterStatus as VacationStatus] ?? filterStatus}`);
+    if (filterStatus !== "all")
+      subtitleParts.push(`Estado: ${STATUS_LABEL[filterStatus as VacationStatus] ?? filterStatus}`);
     if (filterLocation.trim()) subtitleParts.push(`Local: ${filterLocation.trim()}`);
     const meta = {
       fileName: `ferias-${new Date().toISOString().slice(0, 10)}`,
@@ -447,12 +452,8 @@ function FeriasPage() {
     for (const r of rows) map.set(r.user_id, nameOf(r.user_id));
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
   }, [rows, names]);
-  const awaitingMyConfirm = rows.filter(
-    (r) => r.status === "pendente_confirmacao" && r.user_id === user?.id,
-  );
-  const awaitingTheirConfirm = rows.filter(
-    (r) => r.status === "pendente_confirmacao" && r.user_id !== user?.id,
-  );
+  const awaitingMyConfirm = rows.filter((r) => r.status === "pendente_confirmacao" && r.user_id === user?.id);
+  const awaitingTheirConfirm = rows.filter((r) => r.status === "pendente_confirmacao" && r.user_id !== user?.id);
 
   // Requests this user needs to decide on
   const toApprove = rows.filter(
@@ -466,9 +467,11 @@ function FeriasPage() {
           <Plane className="h-5 w-5" />
         </div>
         <div>
-          <h1 className="font-display text-2xl font-semibold">Férias</h1>
+          <h1 className="font-display text-2xl font-semibold">Férias/Ausência</h1>
           <p className="text-sm text-muted-foreground">
-            {isManager ? "Aprove solicitações e acompanhe o calendário da equipe." : "Solicite e acompanhe suas férias."}
+            {isManager
+              ? "Aprove solicitações e acompanhe o calendário da equipe."
+              : "Solicite e acompanhe férias ou ausências."}
           </p>
         </div>
       </header>
@@ -476,23 +479,42 @@ function FeriasPage() {
       {/* New request form — any member can request */}
       {!!user && !!currentCompanyId && (
         <section className="rounded-2xl border border-border bg-card p-5">
-          <h2 className="mb-3 flex items-center gap-2 font-semibold"><Plus className="h-4 w-4" /> Nova solicitação</h2>
+          <h2 className="mb-3 flex items-center gap-2 font-semibold">
+            <Plus className="h-4 w-4" /> Nova solicitação
+          </h2>
           <div className="grid gap-3 md:grid-cols-3">
             <div>
-              <Label htmlFor="start">Início</Label>
+              <Label htmlFor="start">Data de início</Label>
               <Input id="start" type="date" value={start} onChange={(e) => setStart(e.target.value)} />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Coloque o primeiro dia em que não vai trabalhar, mesmo sendo sábado ou feriado.
+              </p>
             </div>
             <div>
-              <Label htmlFor="end">Fim</Label>
+              <Label htmlFor="end">Data de fim</Label>
               <Input id="end" type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Coloque o último dia de férias/ausência; no dia seguinte assumimos disponibilidade.
+              </p>
             </div>
             <div>
-              <Label>Local de trabalho</Label>
-              <Input value={myProfile?.work_location ?? "Não definido"} readOnly disabled />
+              <Label htmlFor="work-location">Local de trabalho</Label>
+              <Input
+                id="work-location"
+                value={workLocation}
+                onChange={(e) => setWorkLocation(e.target.value)}
+                placeholder="Informe o local de trabalho"
+                maxLength={200}
+              />
             </div>
             <div className="md:col-span-3">
               <Label htmlFor="note">Observação (opcional)</Label>
-              <Textarea id="note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Motivo, contexto..." />
+              <Textarea
+                id="note"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Motivo, contexto..."
+              />
             </div>
             <div className="md:col-span-3 space-y-2 rounded-lg border border-border/60 bg-muted/30 p-3">
               <Label>No local de trabalho já houve validação prévia?</Label>
@@ -568,13 +590,16 @@ function FeriasPage() {
             <div className="md:col-span-2">
               <Label>Colaborador</Label>
               <Select value={mgrTargetUser} onValueChange={setMgrTargetUser}>
-                <SelectTrigger><SelectValue placeholder="Selecionar…" /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecionar…" />
+                </SelectTrigger>
                 <SelectContent>
                   {members
                     .filter((m) => m.id !== user?.id)
                     .map((m) => (
                       <SelectItem key={m.id} value={m.id}>
-                        {m.name}{m.jobTitle ? ` — ${m.jobTitle}` : ""}
+                        {m.name}
+                        {m.jobTitle ? ` — ${m.jobTitle}` : ""}
                       </SelectItem>
                     ))}
                 </SelectContent>
@@ -590,7 +615,11 @@ function FeriasPage() {
             </div>
             <div className="md:col-span-4">
               <Label>Nota (opcional)</Label>
-              <Textarea value={mgrNote} onChange={(e) => setMgrNote(e.target.value)} placeholder="Contexto, motivo, instruções..." />
+              <Textarea
+                value={mgrNote}
+                onChange={(e) => setMgrNote(e.target.value)}
+                placeholder="Contexto, motivo, instruções..."
+              />
             </div>
           </div>
           <div className="mt-3 flex justify-end">
@@ -658,18 +687,10 @@ function FeriasPage() {
           </h2>
           {isManager && approved.length > 0 && (
             <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => exportVacations("xlsx", approved)}
-              >
+              <Button size="sm" variant="outline" onClick={() => exportVacations("xlsx", approved)}>
                 <FileSpreadsheet className="h-4 w-4" /> Excel
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => exportVacations("pdf", approved)}
-              >
+              <Button size="sm" variant="outline" onClick={() => exportVacations("pdf", approved)}>
                 <FileText className="h-4 w-4" /> PDF
               </Button>
             </div>
@@ -694,11 +715,15 @@ function FeriasPage() {
             <div>
               <Label className="text-xs">Ano</Label>
               <Select value={filterYear} onValueChange={setFilterYear}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
                   {yearOptions.map((y) => (
-                    <SelectItem key={y} value={y}>{y}</SelectItem>
+                    <SelectItem key={y} value={y}>
+                      {y}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -706,7 +731,9 @@ function FeriasPage() {
             <div>
               <Label className="text-xs">Estado</Label>
               <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="pendente">Pendente</SelectItem>
@@ -727,7 +754,9 @@ function FeriasPage() {
             </div>
             <div className="flex items-end gap-2">
               <Switch id="biz-only" checked={businessOnly} onCheckedChange={setBusinessOnly} />
-              <Label htmlFor="biz-only" className="text-xs">Contar apenas dias úteis</Label>
+              <Label htmlFor="biz-only" className="text-xs">
+                Contar apenas dias úteis
+              </Label>
             </div>
           </div>
         )}
@@ -741,15 +770,15 @@ function FeriasPage() {
                   <div className="font-medium">
                     {isManager ? nameOf(r.user_id) : "Você"}
                     {isManager && (
-                      <span className="ml-2 text-xs font-normal text-muted-foreground">
-                        · {jobOf(r.user_id)}
-                      </span>
+                      <span className="ml-2 text-xs font-normal text-muted-foreground">· {jobOf(r.user_id)}</span>
                     )}
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {fmt(r.start_date)} → {fmt(r.end_date)}
                     {" · "}
-                    <span className="font-mono">{countDays(r)} {businessOnly ? "dias úteis" : "dias"}</span>
+                    <span className="font-mono">
+                      {countDays(r)} {businessOnly ? "dias úteis" : "dias"}
+                    </span>
                     {r.work_location && <span> · {r.work_location}</span>}
                   </div>
                 </div>
@@ -777,12 +806,11 @@ function FeriasPage() {
               .map((r) => (
                 <li key={r.id} className="flex items-center justify-between py-2">
                   <div>
-                    <div className="font-medium">{fmt(r.start_date)} → {fmt(r.end_date)}</div>
+                    <div className="font-medium">
+                      {fmt(r.start_date)} → {fmt(r.end_date)}
+                    </div>
                     <div className="text-xs text-muted-foreground">
-                      Aprovador:{" "}
-                      {r.assigned_approver_id
-                        ? nameOf(r.assigned_approver_id)
-                        : "Não definido"}
+                      Aprovador: {r.assigned_approver_id ? nameOf(r.assigned_approver_id) : "Não definido"}
                     </div>
                     {r.note && <div className="text-xs text-muted-foreground">{r.note}</div>}
                   </div>
@@ -814,7 +842,9 @@ function FeriasPage() {
                     <div className="text-xs text-muted-foreground">Motivo: {r.decision_reason}</div>
                   )}
                 </div>
-                <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_TONE[r.status]}`}>{STATUS_LABEL[r.status]}</span>
+                <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_TONE[r.status]}`}>
+                  {STATUS_LABEL[r.status]}
+                </span>
               </li>
             ))}
           </ul>
@@ -825,7 +855,9 @@ function FeriasPage() {
 }
 
 function ConfirmRow({
-  row, onAccept, onRequestChange,
+  row,
+  onAccept,
+  onRequestChange,
 }: {
   row: VacationRow;
   onAccept: () => void;
@@ -865,13 +897,24 @@ function ConfirmRow({
             placeholder="Ex.: preferia adiar uma semana, conflito com..."
           />
           <div className="flex justify-end gap-2">
-            <Button size="sm" variant="ghost" onClick={() => { setRequesting(false); setReason(""); }}>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setRequesting(false);
+                setReason("");
+              }}
+            >
               Cancelar
             </Button>
             <Button
               size="sm"
               disabled={!reason.trim()}
-              onClick={() => { onRequestChange(reason.trim()); setRequesting(false); setReason(""); }}
+              onClick={() => {
+                onRequestChange(reason.trim());
+                setRequesting(false);
+                setReason("");
+              }}
             >
               Enviar pedido de alteração
             </Button>
@@ -883,7 +926,10 @@ function ConfirmRow({
 }
 
 function PendingRow({
-  row, name, onApprove, onReject,
+  row,
+  name,
+  onApprove,
+  onReject,
 }: {
   row: VacationRow;
   name: string;
@@ -934,14 +980,25 @@ function PendingRow({
             placeholder="Explique o motivo..."
           />
           <div className="flex justify-end gap-2">
-            <Button size="sm" variant="ghost" onClick={() => { setRejecting(false); setReason(""); }}>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setRejecting(false);
+                setReason("");
+              }}
+            >
               Cancelar
             </Button>
             <Button
               size="sm"
               variant="destructive"
               disabled={!reason.trim()}
-              onClick={() => { onReject(reason.trim()); setRejecting(false); setReason(""); }}
+              onClick={() => {
+                onReject(reason.trim());
+                setRejecting(false);
+                setReason("");
+              }}
             >
               Confirmar rejeição
             </Button>
