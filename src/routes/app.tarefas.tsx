@@ -38,6 +38,10 @@ import {
   ArchiveRestore,
   CalendarDays,
   Building2,
+  ChevronLeft,
+  ChevronRight,
+  Upload,
+  FileText,
 } from "lucide-react";
 import {
   STATUS_LABELS,
@@ -83,6 +87,10 @@ const STATUS_FILTERS = [
 type StatusFilter = (typeof STATUS_FILTERS)[number];
 type TasksSearch = { status?: StatusFilter; employee?: string; client?: string };
 type ClientOption = { id: string; name: string; timing_mode?: "start_stop" | "manual" | null };
+type CalendarMode = "day" | "week" | "month" | "year";
+const TASK_DOC_ACCEPT = "application/pdf,image/png,image/jpeg,image/jpg";
+const TASK_DOC_MAX_SIZE = 10 * 1024 * 1024;
+const TASK_DOC_ALLOWED_MIME = new Set(["application/pdf", "image/png", "image/jpeg", "image/jpg"]);
 
 export const Route = createFileRoute("/app/tarefas")({
   component: TasksPage,
@@ -232,6 +240,33 @@ function TasksPage() {
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
       toast.success(vars.archive ? "Tarefa arquivada" : "Tarefa desarquivada");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const moveTaskDate = useMutation({
+    mutationFn: async ({ id, dateKey }: { id: string; dateKey: string }) => {
+      const task = (tasks ?? []).find((t) => t.id === id);
+      if (!task) throw new Error("Tarefa nao encontrada");
+      const startTime = formatWallTime(task.scheduled_for);
+      const endTime = formatWallTime(task.scheduled_end);
+      const scheduledFor = startTime ? wallDateTimeToISO(dateKey, startTime) : null;
+      const scheduledEnd = endTime ? wallDateTimeToISO(dateKey, endTime) : null;
+      const dueAt = scheduledEnd ?? wallDateToEndOfDayISO(dateKey);
+      const { error } = await supabase
+        .from("tasks")
+        .update({
+          scheduled_for: scheduledFor,
+          scheduled_end: scheduledEnd,
+          due_at: dueAt,
+          recurrence_date: dateKey,
+        })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      toast.success("Tarefa reagendada");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -534,13 +569,14 @@ function TasksPage() {
           onDelete={handleDeleteRequest}
           onTransition={(id, action) => transition.mutate({ id, action })}
           onArchive={(id, archive) => archiveMut.mutate({ id, archive })}
+          onMoveDate={(id, dateKey) => moveTaskDate.mutate({ id, dateKey })}
           transitionPending={transition.isPending}
           archivePending={archiveMut.isPending}
         />
       )}
 
       {!isLoading && filteredTasks.length > 0 && isManager && taskView === "calendar" && (
-        <TaskCalendar
+        <TaskPlanningCalendar
           tasks={filteredTasks}
           members={members ?? []}
           clients={clientsList ?? []}
@@ -553,6 +589,7 @@ function TasksPage() {
           onDelete={handleDeleteRequest}
           onTransition={(id, action) => transition.mutate({ id, action })}
           onArchive={(id, archive) => archiveMut.mutate({ id, archive })}
+          onMoveDate={(id, dateKey) => moveTaskDate.mutate({ id, dateKey })}
           transitionPending={transition.isPending}
           archivePending={archiveMut.isPending}
         />
@@ -573,6 +610,7 @@ function TasksPage() {
                 onDelete={handleDeleteRequest}
                 onTransition={(id, action) => transition.mutate({ id, action })}
                 onArchive={(id, archive) => archiveMut.mutate({ id, archive })}
+                onMoveDate={(id, dateKey) => moveTaskDate.mutate({ id, dateKey })}
                 transitionPending={transition.isPending}
                 archivePending={archiveMut.isPending}
               />
@@ -613,8 +651,338 @@ interface RowHandlers {
   onDelete: (t: TaskRow) => void;
   onTransition: (id: string, action: TaskAction) => void;
   onArchive: (id: string, archive: boolean) => void;
+  onMoveDate: (id: string, dateKey: string) => void;
   transitionPending: boolean;
   archivePending: boolean;
+}
+
+function TaskPlanningCalendar({
+  tasks,
+  members,
+  clients,
+  groupBy,
+  ...handlers
+}: RowHandlers & {
+  tasks: TaskRow[];
+  members: { id: string; full_name: string | null }[];
+  clients: ClientOption[];
+  groupBy: "assignee" | "client";
+}) {
+  const [mode, setMode] = useState<CalendarMode>("week");
+  const [cursor, setCursor] = useState(() => new Date());
+  const memberName = (id: string | null) =>
+    members.find((m) => m.id === id)?.full_name ?? (id ? id.slice(0, 8) : "Sem responsavel");
+  const clientName = (id: string | null) =>
+    clients.find((c) => c.id === id)?.name ?? (id ? id.slice(0, 8) : "Sem cliente");
+  const taskDate = (task: TaskRow) => {
+    const source = task.scheduled_for ?? task.recurrence_date ?? task.due_at;
+    if (!source) return null;
+    const date = new Date(source);
+    return Number.isNaN(date.getTime()) ? null : date;
+  };
+  const dateKey = (date: Date) =>
+    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  const startOfWeek = (date: Date) => {
+    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const offset = (d.getDay() + 6) % 7;
+    d.setDate(d.getDate() - offset);
+    return d;
+  };
+  const addDays = (date: Date, days: number) => {
+    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    d.setDate(d.getDate() + days);
+    return d;
+  };
+  const sortTasks = (list: TaskRow[]) =>
+    list
+      .slice()
+      .sort((a, b) =>
+        (a.scheduled_for ?? a.recurrence_date ?? a.due_at ?? "").localeCompare(
+          b.scheduled_for ?? b.recurrence_date ?? b.due_at ?? "",
+        ),
+      );
+  const tasksForKey = (list: TaskRow[], key: string) =>
+    sortTasks(list).filter((task) => {
+      const date = taskDate(task);
+      return date ? dateKey(date) === key : false;
+    });
+  const addPeriod = (direction: -1 | 1) => {
+    setCursor((current) => {
+      const next = new Date(current);
+      if (mode === "day") next.setDate(next.getDate() + direction);
+      if (mode === "week") next.setDate(next.getDate() + direction * 7);
+      if (mode === "month") next.setMonth(next.getMonth() + direction);
+      if (mode === "year") next.setFullYear(next.getFullYear() + direction);
+      return next;
+    });
+  };
+  const periodLabel = useMemo(() => {
+    if (mode === "day") {
+      return cursor.toLocaleDateString("pt-PT", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
+    }
+    if (mode === "week") {
+      const start = startOfWeek(cursor);
+      const end = addDays(start, 6);
+      return `${start.toLocaleDateString("pt-PT", { day: "2-digit", month: "short" })} - ${end.toLocaleDateString("pt-PT", { day: "2-digit", month: "short", year: "numeric" })}`;
+    }
+    if (mode === "month") {
+      return cursor.toLocaleDateString("pt-PT", { month: "long", year: "numeric" });
+    }
+    return cursor.toLocaleDateString("pt-PT", { year: "numeric" });
+  }, [cursor, mode]);
+  const weekDays = Array.from({ length: 7 }, (_, index) => addDays(startOfWeek(cursor), index));
+  const monthDays = useMemo(() => {
+    const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+    const gridStart = startOfWeek(first);
+    return Array.from({ length: 42 }, (_, index) => addDays(gridStart, index));
+  }, [cursor]);
+  const yearMonths = useMemo(
+    () => Array.from({ length: 12 }, (_, month) => new Date(cursor.getFullYear(), month, 1)),
+    [cursor],
+  );
+
+  const groups = new Map<string, TaskRow[]>();
+  for (const task of tasks) {
+    const key = groupBy === "assignee" ? (task.assigned_to ?? "__unassigned__") : (task.client_id ?? "__no_client__");
+    const list = groups.get(key) ?? [];
+    list.push(task);
+    groups.set(key, list);
+  }
+  const groupEntries = Array.from(groups.entries()).sort(([a], [b]) => {
+    const labelA =
+      groupBy === "assignee"
+        ? memberName(a === "__unassigned__" ? null : a)
+        : clientName(a === "__no_client__" ? null : a);
+    const labelB =
+      groupBy === "assignee"
+        ? memberName(b === "__unassigned__" ? null : b)
+        : clientName(b === "__no_client__" ? null : b);
+    return labelA.localeCompare(labelB);
+  });
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card px-3 py-3">
+        <div className="inline-flex overflow-hidden rounded-md border border-border">
+          <Button type="button" variant="ghost" size="sm" title="Periodo anterior" onClick={() => addPeriod(-1)}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => setCursor(new Date())}>
+            Hoje
+          </Button>
+          <Button type="button" variant="ghost" size="sm" title="Proximo periodo" onClick={() => addPeriod(1)}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+        <div className="min-w-48 flex-1 text-sm font-semibold capitalize">{periodLabel}</div>
+        <div className="flex flex-wrap items-center gap-1">
+          {(
+            [
+              ["day", "Dia"],
+              ["week", "Semana"],
+              ["month", "Mes"],
+              ["year", "Ano"],
+            ] as const
+          ).map(([key, label]) => (
+            <FilterChip key={key} label={label} active={mode === key} onClick={() => setMode(key)} />
+          ))}
+        </div>
+      </div>
+
+      {groupEntries.map(([key, groupTasks]) => {
+        const title =
+          groupBy === "assignee"
+            ? memberName(key === "__unassigned__" ? null : key)
+            : clientName(key === "__no_client__" ? null : key);
+
+        return (
+          <section key={key} className="rounded-2xl border border-border bg-card">
+            <div className="flex items-center gap-3 border-b border-border px-5 py-4">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+                {groupBy === "assignee" ? <Users className="h-4 w-4" /> : <Building2 className="h-4 w-4" />}
+              </span>
+              <div>
+                <h2 className="font-display text-base font-semibold">{title}</h2>
+                <p className="text-xs text-muted-foreground">
+                  {groupTasks.length} {groupTasks.length === 1 ? "tarefa" : "tarefas"}
+                </p>
+              </div>
+            </div>
+
+            {mode === "day" && (
+              <div className="p-4">
+                <CalendarDayColumn
+                  label={cursor.toLocaleDateString("pt-PT", { weekday: "long", day: "2-digit", month: "2-digit" })}
+                  dateKeyValue={dateKey(cursor)}
+                  tasks={tasksForKey(groupTasks, dateKey(cursor))}
+                  members={members}
+                  clients={clients}
+                  groupBy={groupBy}
+                  handlers={handlers}
+                />
+              </div>
+            )}
+
+            {mode === "week" && (
+              <div className="grid gap-3 p-4 lg:grid-cols-7">
+                {weekDays.map((day) => (
+                  <CalendarDayColumn
+                    key={dateKey(day)}
+                    label={day.toLocaleDateString("pt-PT", { weekday: "short", day: "2-digit", month: "2-digit" })}
+                    dateKeyValue={dateKey(day)}
+                    tasks={tasksForKey(groupTasks, dateKey(day))}
+                    members={members}
+                    clients={clients}
+                    groupBy={groupBy}
+                    handlers={handlers}
+                  />
+                ))}
+              </div>
+            )}
+
+            {mode === "month" && (
+              <div className="grid grid-cols-1 gap-2 p-4 sm:grid-cols-2 lg:grid-cols-7">
+                {monthDays.map((day) => {
+                  const dayTasks = tasksForKey(groupTasks, dateKey(day));
+                  const muted = day.getMonth() !== cursor.getMonth();
+                  return (
+                    <div
+                      key={dateKey(day)}
+                      className={`min-h-28 rounded-lg border border-border bg-background p-2 transition hover:border-primary/40 ${muted ? "opacity-50" : ""}`}
+                      onDragOver={(event) => event.preventDefault()}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        const taskId = event.dataTransfer.getData("text/task-id");
+                        if (taskId) handlers.onMoveDate(taskId, dateKey(day));
+                      }}
+                    >
+                      <div className="mb-2 flex items-center justify-between text-xs">
+                        <span className="font-medium">
+                          {day.toLocaleDateString("pt-PT", { day: "2-digit", weekday: "short" })}
+                        </span>
+                        {dayTasks.length > 0 && (
+                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-primary">{dayTasks.length}</span>
+                        )}
+                      </div>
+                      <ul className="space-y-1">
+                        {dayTasks.slice(0, 4).map((task) => (
+                          <MiniTaskChip key={task.id} task={task} onClick={() => handlers.onEdit(task)} />
+                        ))}
+                      </ul>
+                      {dayTasks.length > 4 && (
+                        <p className="mt-1 text-[11px] text-muted-foreground">+{dayTasks.length - 4} tarefas</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {mode === "year" && (
+              <div className="grid gap-3 p-4 md:grid-cols-3 xl:grid-cols-4">
+                {yearMonths.map((month) => {
+                  const monthTasks = sortTasks(groupTasks).filter((task) => {
+                    const date = taskDate(task);
+                    return date && date.getFullYear() === month.getFullYear() && date.getMonth() === month.getMonth();
+                  });
+                  return (
+                    <div key={month.getMonth()} className="min-h-36 rounded-lg border border-border bg-background p-3">
+                      <div className="mb-3 flex items-center justify-between">
+                        <h3 className="text-sm font-semibold capitalize">
+                          {month.toLocaleDateString("pt-PT", { month: "long" })}
+                        </h3>
+                        <span className="text-xs text-muted-foreground">{monthTasks.length}</span>
+                      </div>
+                      <ul className="space-y-1">
+                        {monthTasks.slice(0, 5).map((task) => (
+                          <MiniTaskChip key={task.id} task={task} onClick={() => handlers.onEdit(task)} />
+                        ))}
+                      </ul>
+                      {monthTasks.length === 0 && <p className="text-xs text-muted-foreground">Sem tarefas</p>}
+                      {monthTasks.length > 5 && (
+                        <p className="mt-1 text-[11px] text-muted-foreground">+{monthTasks.length - 5} tarefas</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+function CalendarDayColumn({
+  label,
+  dateKeyValue,
+  tasks,
+  members,
+  clients,
+  groupBy,
+  handlers,
+}: {
+  label: string;
+  dateKeyValue: string;
+  tasks: TaskRow[];
+  members: { id: string; full_name: string | null }[];
+  clients: ClientOption[];
+  groupBy: "assignee" | "client";
+  handlers: RowHandlers;
+}) {
+  return (
+    <div
+      className="min-h-40 rounded-lg border border-border bg-background transition hover:border-primary/40"
+      onDragOver={(event) => event.preventDefault()}
+      onDrop={(event) => {
+        event.preventDefault();
+        const taskId = event.dataTransfer.getData("text/task-id");
+        if (taskId) handlers.onMoveDate(taskId, dateKeyValue);
+      }}
+    >
+      <div className="flex items-center justify-between border-b border-border px-3 py-2">
+        <div className="flex items-center gap-2 text-sm font-medium capitalize">
+          <CalendarDays className="h-4 w-4 text-muted-foreground" />
+          {label}
+        </div>
+        <span className="text-xs text-muted-foreground">{tasks.length}</span>
+      </div>
+      {tasks.length === 0 ? (
+        <p className="px-3 py-4 text-xs text-muted-foreground">Sem tarefas</p>
+      ) : (
+        <ul className="divide-y divide-border">
+          {tasks.map((task) => (
+            <CalendarTaskCard
+              key={task.id}
+              task={task}
+              members={members}
+              clients={clients}
+              groupBy={groupBy}
+              {...handlers}
+            />
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function MiniTaskChip({ task, onClick }: { task: TaskRow; onClick: () => void }) {
+  const start = formatWallTime(task.scheduled_for);
+  return (
+    <button
+      type="button"
+      draggable
+      onDragStart={(event) => event.dataTransfer.setData("text/task-id", task.id)}
+      onClick={onClick}
+      className="block w-full truncate rounded-md bg-primary/10 px-2 py-1 text-left text-[11px] font-medium text-primary hover:bg-primary/15"
+      title={task.title}
+    >
+      {start ? `${start} ` : ""}
+      {task.title}
+    </button>
+  );
 }
 
 function TaskCalendar({
@@ -777,7 +1145,11 @@ function CalendarTaskCard({
   const clientName = clients.find((c) => c.id === task.client_id)?.name ?? "Sem cliente";
 
   return (
-    <li className="space-y-2 px-3 py-3">
+    <li
+      className="space-y-2 px-3 py-3"
+      draggable
+      onDragStart={(event) => event.dataTransfer.setData("text/task-id", task.id)}
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="truncate text-sm font-medium">{task.title}</div>
@@ -1055,9 +1427,39 @@ function TaskForm({
   const [graceMinutes, setGraceMinutes] = useState<number>(initial?.absence_grace_minutes ?? 15);
   const [punchMode, setPunchMode] = useState<PunchMode | "">((initial?.punch_mode_override as PunchMode) ?? "");
   const [recurrence, setRecurrence] = useState<RecurrenceFormValue>(emptyRecurrence());
+  const [pendingDocs, setPendingDocs] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const selectedClient = clients.find((c) => c.id === clientId);
   const timingMode: "start_stop" | "manual" = selectedClient?.timing_mode === "manual" ? "manual" : "start_stop";
+  const uploadCreationDocs = async (taskId: string) => {
+    for (const file of pendingDocs) {
+      if (file.size > TASK_DOC_MAX_SIZE) {
+        throw new Error(`${file.name}: arquivo maior que 10 MB`);
+      }
+      if (!TASK_DOC_ALLOWED_MIME.has(file.type)) {
+        throw new Error(`${file.name}: tipo de arquivo nao permitido. Use PDF, PNG ou JPG.`);
+      }
+      const kind = file.type === "application/pdf" ? "pdf" : "image";
+      const safe = file.name.replace(/[^\w.\-]+/g, "_");
+      const path = `${companyId}/${taskId}/${Date.now()}_${safe}`;
+      const up = await supabase.storage.from("task-docs").upload(path, file, {
+        contentType: file.type,
+        upsert: false,
+      });
+      if (up.error) throw up.error;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from("task_documents" as any) as any).insert({
+        task_id: taskId,
+        company_id: companyId,
+        kind,
+        title: file.name,
+        storage_path: path,
+        mime_type: file.type,
+        size_bytes: file.size,
+      });
+      if (error) throw error;
+    }
+  };
 
   return (
     <form
@@ -1116,6 +1518,7 @@ function TaskForm({
           punch_mode_override: punchMode || null,
         };
         let error: { message: string } | null = null;
+        let createdTaskId: string | null = null;
         if (initial) {
           ({ error } = await supabase.from("tasks").update(payload).eq("id", initial.id));
         } else if (recurrence.enabled) {
@@ -1159,13 +1562,29 @@ function TaskForm({
             });
           }
         } else {
-          ({ error } = await supabase.from("tasks").insert({ ...payload, company_id: companyId, created_by: userId }));
+          const inserted = await supabase
+            .from("tasks")
+            .insert({ ...payload, company_id: companyId, created_by: userId })
+            .select("id")
+            .single();
+          error = inserted.error;
+          createdTaskId = inserted.data?.id ?? null;
         }
-        setLoading(false);
         if (error) {
+          setLoading(false);
           toast.error(error.message);
           return;
         }
+        if (!initial && createdTaskId && pendingDocs.length > 0) {
+          try {
+            await uploadCreationDocs(createdTaskId);
+          } catch (e) {
+            setLoading(false);
+            toast.error((e as Error).message);
+            return;
+          }
+        }
+        setLoading(false);
         toast.success(initial ? "Tarefa atualizada" : "Tarefa criada");
         onDone();
       }}
@@ -1189,6 +1608,43 @@ function TaskForm({
         <Label>Descrição</Label>
         <Textarea maxLength={1000} value={description} onChange={(e) => setDescription(e.target.value)} />
       </div>
+      {!initial && (
+        <div className="space-y-2 rounded-lg border border-border bg-muted/20 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <Label htmlFor="task-docs-create">Documentos da tarefa</Label>
+              <p className="text-xs text-muted-foreground">PDF, JPG ou PNG ate 10 MB.</p>
+            </div>
+            <Button type="button" variant="outline" size="sm" asChild>
+              <label htmlFor="task-docs-create" className="cursor-pointer">
+                <Upload className="mr-1 h-3.5 w-3.5" />
+                Anexar
+              </label>
+            </Button>
+          </div>
+          <Input
+            id="task-docs-create"
+            type="file"
+            accept={TASK_DOC_ACCEPT}
+            multiple
+            className="hidden"
+            onChange={(e) => setPendingDocs(Array.from(e.target.files ?? []))}
+          />
+          {pendingDocs.length > 0 && (
+            <ul className="space-y-1">
+              {pendingDocs.map((file) => (
+                <li
+                  key={`${file.name}-${file.lastModified}`}
+                  className="flex items-center gap-2 text-xs text-muted-foreground"
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  <span className="truncate">{file.name}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5 col-span-2">
           <Label>Atribuir a</Label>
