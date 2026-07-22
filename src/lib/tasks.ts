@@ -81,6 +81,31 @@ export async function punchManualEnd(taskId: string): Promise<TimeEntryRow> {
   return data as TimeEntryRow;
 }
 
+export async function punchEmployeeManualStart(taskId: string, startedAt: string): Promise<TimeEntryRow> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("punch_employee_manual_start", {
+    _task_id: taskId,
+    _started_at: startedAt,
+  });
+  if (error) throw error;
+  return data as TimeEntryRow;
+}
+
+export async function punchEmployeeManualEnd(
+  timeEntryId: string,
+  endedAt: string,
+  completeTask = true,
+): Promise<TimeEntryRow> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("punch_employee_manual_end", {
+    _time_entry_id: timeEntryId,
+    _ended_at: endedAt,
+    _complete_task: completeTask,
+  });
+  if (error) throw error;
+  return data as TimeEntryRow;
+}
+
 export async function taskEffectivePunchMode(taskId: string): Promise<PunchMode> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase.rpc as any)("task_effective_punch_mode", { _task_id: taskId });
