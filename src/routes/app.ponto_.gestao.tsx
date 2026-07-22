@@ -8,28 +8,27 @@ import { RoleGuard } from "@/components/RoleGuard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Filter, MoreHorizontal, Pencil, History, ChevronLeft, ChevronRight, X, FileSpreadsheet, FileDown, MapPin } from "lucide-react";
+import {
+  Plus,
+  Filter,
+  MoreHorizontal,
+  Pencil,
+  History,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  FileSpreadsheet,
+  FileDown,
+  MapPin,
+} from "lucide-react";
 import { PunchEditorDrawer } from "@/components/ponto/PunchEditorDrawer";
 import { PunchAuditDrawer } from "@/components/ponto/PunchAuditDrawer";
 import { PunchGeoDrawer } from "@/components/ponto/PunchGeoDrawer";
@@ -99,7 +98,11 @@ function GestaoPonto() {
       const seen = new Set<string>();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return ((data ?? []) as any[])
-        .filter((r) => { if (seen.has(r.user_id)) return false; seen.add(r.user_id); return true; })
+        .filter((r) => {
+          if (seen.has(r.user_id)) return false;
+          seen.add(r.user_id);
+          return true;
+        })
         .map((r) => ({ id: r.user_id as string, name: (r.profiles?.full_name as string) ?? r.user_id }));
     },
   });
@@ -155,16 +158,33 @@ function GestaoPonto() {
     return m;
   }, [clients]);
 
-  const resetFilters = () => { setFilters(emptyFilters); setPage(0); };
+  const resetFilters = () => {
+    setFilters(emptyFilters);
+    setPage(0);
+  };
   const onFilterChange = <K extends keyof Filters>(k: K, v: Filters[K]) => {
     setFilters((f) => ({ ...f, [k]: v }));
     setPage(0);
   };
 
-  const openCreate = () => { setEditorMode("create"); setActiveEntry(null); setEditorOpen(true); };
-  const openEdit = (r: Row) => { setEditorMode("edit"); setActiveEntry(r); setEditorOpen(true); };
-  const openAudit = (r: Row) => { setAuditEntryId(r.id); setAuditOpen(true); };
-  const openGeo = (r: Row) => { setGeoEntry(r); setGeoOpen(true); };
+  const openCreate = () => {
+    setEditorMode("create");
+    setActiveEntry(null);
+    setEditorOpen(true);
+  };
+  const openEdit = (r: Row) => {
+    setEditorMode("edit");
+    setActiveEntry(r);
+    setEditorOpen(true);
+  };
+  const openAudit = (r: Row) => {
+    setAuditEntryId(r.id);
+    setAuditOpen(true);
+  };
+  const openGeo = (r: Row) => {
+    setGeoEntry(r);
+    setGeoOpen(true);
+  };
 
   const { data: company } = useQuery({
     queryKey: ["company-branding", currentCompanyId],
@@ -184,7 +204,7 @@ function GestaoPonto() {
   const exportColumns = (): ExportColumn<Row>[] => [
     { header: "Funcionário", accessor: (r) => r.profiles?.full_name ?? "" },
     { header: "Tarefa", accessor: (r) => r.tasks?.title ?? "" },
-    { header: "Cliente", accessor: (r) => (r.tasks?.client_id ? clientsMap[r.tasks.client_id] ?? "" : "") },
+    { header: "Cliente", accessor: (r) => (r.tasks?.client_id ? (clientsMap[r.tasks.client_id] ?? "") : "") },
     { header: "Início", accessor: (r) => fmtDT(r.started_at) },
     { header: "Fim", accessor: (r) => fmtDT(r.ended_at) },
     { header: "Efetivo", accessor: (r) => (r.effective_minutes != null ? formatDuration(r.effective_minutes) : "") },
@@ -275,7 +295,12 @@ function GestaoPonto() {
       <section className="rounded-2xl border border-border bg-card p-4">
         <div className="mb-3 flex items-center gap-2 text-sm font-medium">
           <Filter className="h-4 w-4" /> Filtros
-          {(filters.userId !== "all" || filters.clientId !== "all" || filters.taskSearch || filters.status !== "all" || filters.from || filters.to) && (
+          {(filters.userId !== "all" ||
+            filters.clientId !== "all" ||
+            filters.taskSearch ||
+            filters.status !== "all" ||
+            filters.from ||
+            filters.to) && (
             <Button variant="ghost" size="sm" className="ml-auto h-7" onClick={resetFilters}>
               <X className="mr-1 h-3 w-3" /> Limpar
             </Button>
@@ -295,17 +320,25 @@ function GestaoPonto() {
           <div>
             <Label className="text-xs">Cliente</Label>
             <Select value={filters.clientId} onValueChange={(v) => onFilterChange("clientId", v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
-                {(clients ?? []).map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                {(clients ?? []).map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div>
             <Label className="text-xs">Status</Label>
             <Select value={filters.status} onValueChange={(v) => onFilterChange("status", v as StatusFilter)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="open">Em aberto</SelectItem>
@@ -323,7 +356,11 @@ function GestaoPonto() {
           </div>
           <div>
             <Label className="text-xs">Buscar tarefa</Label>
-            <Input placeholder="Título da tarefa" value={filters.taskSearch} onChange={(e) => onFilterChange("taskSearch", e.target.value)} />
+            <Input
+              placeholder="Título da tarefa"
+              value={filters.taskSearch}
+              onChange={(e) => onFilterChange("taskSearch", e.target.value)}
+            />
           </div>
         </div>
       </section>
@@ -350,23 +387,41 @@ function GestaoPonto() {
             </TableHeader>
             <TableBody>
               {isLoading && (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-sm text-muted-foreground">Carregando...</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-8 text-sm text-muted-foreground">
+                    Carregando...
+                  </TableCell>
+                </TableRow>
               )}
               {!isLoading && (result?.rows ?? []).length === 0 && (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-sm text-muted-foreground">Nenhum registro encontrado.</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-8 text-sm text-muted-foreground">
+                    Nenhum registro encontrado.
+                  </TableCell>
+                </TableRow>
               )}
               {(result?.rows ?? []).map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="font-medium">{r.profiles?.full_name ?? r.user_id.slice(0, 8)}</TableCell>
                   <TableCell className="max-w-[260px] truncate">{r.tasks?.title ?? "—"}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{r.tasks?.client_id ? clientsMap[r.tasks.client_id] ?? "—" : "—"}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {r.tasks?.client_id ? (clientsMap[r.tasks.client_id] ?? "—") : "—"}
+                  </TableCell>
                   <TableCell className="text-sm">{new Date(r.started_at).toLocaleString()}</TableCell>
                   <TableCell className="text-sm">
-                    {r.ended_at ? new Date(r.ended_at).toLocaleString() : <span className="text-warning">em aberto</span>}
+                    {r.ended_at ? (
+                      new Date(r.ended_at).toLocaleString()
+                    ) : (
+                      <span className="text-warning">em aberto</span>
+                    )}
                   </TableCell>
-                  <TableCell className="text-right font-mono">{r.effective_minutes != null ? formatDuration(r.effective_minutes) : "—"}</TableCell>
+                  <TableCell className="text-right font-mono">
+                    {r.effective_minutes != null ? formatDuration(r.effective_minutes) : "—"}
+                  </TableCell>
                   <TableCell>
-                    <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${ORIGIN_TONE[r.origin]}`}>
+                    <span
+                      className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${ORIGIN_TONE[r.origin]}`}
+                    >
                       {ORIGIN_LABEL[r.origin]}
                     </span>
                   </TableCell>
@@ -399,7 +454,9 @@ function GestaoPonto() {
           <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>
             <ChevronLeft className="mr-1 h-4 w-4" /> Anterior
           </Button>
-          <span className="text-xs text-muted-foreground">Página {page + 1} de {totalPages}</span>
+          <span className="text-xs text-muted-foreground">
+            Página {page + 1} de {totalPages}
+          </span>
           <Button variant="outline" size="sm" disabled={page + 1 >= totalPages} onClick={() => setPage((p) => p + 1)}>
             Próxima <ChevronRight className="ml-1 h-4 w-4" />
           </Button>
@@ -414,12 +471,11 @@ function GestaoPonto() {
         entry={activeEntry}
         entryTaskTitle={activeEntry?.tasks?.title ?? undefined}
         entryUserName={activeEntry?.profiles?.full_name ?? undefined}
+        entryClientName={
+          activeEntry?.tasks?.client_id ? (clientsMap[activeEntry.tasks.client_id] ?? undefined) : undefined
+        }
       />
-      <PunchAuditDrawer
-        open={auditOpen}
-        onOpenChange={setAuditOpen}
-        timeEntryId={auditEntryId}
-      />
+      <PunchAuditDrawer open={auditOpen} onOpenChange={setAuditOpen} timeEntryId={auditEntryId} />
       <PunchGeoDrawer
         open={geoOpen}
         onOpenChange={setGeoOpen}
@@ -427,7 +483,7 @@ function GestaoPonto() {
         entryLabel={{
           user: geoEntry?.profiles?.full_name ?? null,
           task: geoEntry?.tasks?.title ?? null,
-          client: geoEntry?.tasks?.client_id ? clientsMap[geoEntry.tasks.client_id] ?? null : null,
+          client: geoEntry?.tasks?.client_id ? (clientsMap[geoEntry.tasks.client_id] ?? null) : null,
         }}
       />
     </div>
