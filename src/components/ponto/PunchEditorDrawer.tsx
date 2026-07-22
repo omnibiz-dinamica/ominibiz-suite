@@ -1,24 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import {
   punchAdminCreate,
@@ -40,6 +28,7 @@ interface Props {
   entry?: AdminTimeEntry | null;
   entryTaskTitle?: string;
   entryUserName?: string;
+  entryClientName?: string;
 }
 
 interface FormState {
@@ -86,6 +75,7 @@ export function PunchEditorDrawer({
   entry,
   entryTaskTitle,
   entryUserName,
+  entryClientName,
 }: Props) {
   const qc = useQueryClient();
   const [form, setForm] = useState<FormState>(emptyForm());
@@ -240,19 +230,29 @@ export function PunchEditorDrawer({
         <SheetHeader>
           <SheetTitle>{mode === "create" ? "Adicionar ponto" : "Corrigir ponto"}</SheetTitle>
           <SheetDescription>
-            {mode === "create"
-              ? "Registro manual. Toda criação é auditada."
-              : "Toda alteração é gravada no histórico."}
+            {mode === "create" ? "Registro manual. Toda criação é auditada." : "Toda alteração é gravada no histórico."}
           </SheetDescription>
         </SheetHeader>
 
         {mode === "edit" && entry && (
           <div className="mt-4 rounded-lg border border-border bg-muted/40 p-3 text-xs space-y-1">
-            <div><span className="text-muted-foreground">Funcionário:</span> {entryUserName ?? entry.user_id}</div>
-            <div><span className="text-muted-foreground">Tarefa:</span> {entryTaskTitle ?? entry.task_id}</div>
-            <div><span className="text-muted-foreground">Origem:</span> {ORIGIN_LABEL[entry.origin]}</div>
+            <div>
+              <span className="text-muted-foreground">Funcionário:</span> {entryUserName ?? entry.user_id}
+            </div>
+            <div>
+              <span className="text-muted-foreground">Tarefa:</span> {entryTaskTitle ?? entry.task_id}
+            </div>
+            <div>
+              <span className="text-muted-foreground">Cliente:</span> {entryClientName ?? "Sem cliente"}
+            </div>
+            <div>
+              <span className="text-muted-foreground">Origem:</span> {ORIGIN_LABEL[entry.origin]}
+            </div>
             {entry.last_edited_at && (
-              <div><span className="text-muted-foreground">Última edição:</span> {new Date(entry.last_edited_at).toLocaleString()}</div>
+              <div>
+                <span className="text-muted-foreground">Última edição:</span>{" "}
+                {new Date(entry.last_edited_at).toLocaleString()}
+              </div>
             )}
           </div>
         )}
@@ -263,22 +263,33 @@ export function PunchEditorDrawer({
               <div>
                 <Label>Funcionário</Label>
                 <Select value={form.user_id} onValueChange={(v) => setForm({ ...form, user_id: v, task_id: "" })}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
                   <SelectContent>
                     {(members ?? []).map((m) => (
-                      <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <Label>Tarefa</Label>
-                <Select value={form.task_id} onValueChange={(v) => setForm({ ...form, task_id: v })} disabled={!form.user_id}>
-                  <SelectTrigger><SelectValue placeholder={form.user_id ? "Selecione" : "Escolha o funcionário primeiro"} /></SelectTrigger>
+                <Select
+                  value={form.task_id}
+                  onValueChange={(v) => setForm({ ...form, task_id: v })}
+                  disabled={!form.user_id}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={form.user_id ? "Selecione" : "Escolha o funcionário primeiro"} />
+                  </SelectTrigger>
                   <SelectContent>
                     {(userTasks ?? []).map((t) => (
                       <SelectItem key={t.id} value={t.id}>
-                        {t.title}{t.scheduled_for ? ` · ${new Date(t.scheduled_for).toLocaleDateString()}` : ""}
+                        {t.title}
+                        {t.scheduled_for ? ` · ${new Date(t.scheduled_for).toLocaleDateString()}` : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -290,19 +301,35 @@ export function PunchEditorDrawer({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Início *</Label>
-              <Input type="datetime-local" value={form.started_at} onChange={(e) => setForm({ ...form, started_at: e.target.value })} />
+              <Input
+                type="datetime-local"
+                value={form.started_at}
+                onChange={(e) => setForm({ ...form, started_at: e.target.value })}
+              />
             </div>
             <div>
               <Label>Fim</Label>
-              <Input type="datetime-local" value={form.ended_at} onChange={(e) => setForm({ ...form, ended_at: e.target.value })} />
+              <Input
+                type="datetime-local"
+                value={form.ended_at}
+                onChange={(e) => setForm({ ...form, ended_at: e.target.value })}
+              />
             </div>
             <div>
               <Label>Pausa</Label>
-              <Input type="datetime-local" value={form.paused_at} onChange={(e) => setForm({ ...form, paused_at: e.target.value })} />
+              <Input
+                type="datetime-local"
+                value={form.paused_at}
+                onChange={(e) => setForm({ ...form, paused_at: e.target.value })}
+              />
             </div>
             <div>
               <Label>Retorno</Label>
-              <Input type="datetime-local" value={form.resumed_at} onChange={(e) => setForm({ ...form, resumed_at: e.target.value })} />
+              <Input
+                type="datetime-local"
+                value={form.resumed_at}
+                onChange={(e) => setForm({ ...form, resumed_at: e.target.value })}
+              />
             </div>
           </div>
 
@@ -320,12 +347,19 @@ export function PunchEditorDrawer({
           {mode === "edit" && diffPreview.length > 0 && (
             <div className="rounded-lg border border-info/40 bg-info/5 p-3 text-xs space-y-1">
               <div className="font-medium text-info">Alterações a aplicar:</div>
-              {diffPreview.map((l, i) => <div key={i}>{l}</div>)}
+              {diffPreview.map((l, i) => (
+                <div key={i}>{l}</div>
+              ))}
             </div>
           )}
 
           <div>
-            <Label>Motivo <span className="text-xs text-muted-foreground">(opcional — quando informado, fica registrado no histórico)</span></Label>
+            <Label>
+              Motivo{" "}
+              <span className="text-xs text-muted-foreground">
+                (opcional — quando informado, fica registrado no histórico)
+              </span>
+            </Label>
             <Textarea
               rows={2}
               value={form.reason}
