@@ -293,6 +293,14 @@ export type Database = {
       }
       companies: {
         Row: {
+          billing_addons_monthly: number
+          billing_base_monthly: number
+          billing_country: string
+          billing_currency: string
+          billing_cycle: string
+          billing_notes: string | null
+          billing_plan: string
+          billing_trial_ends_at: string | null
           country: string
           created_at: string
           created_by: string | null
@@ -301,6 +309,8 @@ export type Database = {
           default_hourly_rate: number | null
           default_monthly_rate: number | null
           email_from_name: string | null
+          employee_limit: number | null
+          enabled_modules: string[]
           id: string
           language: string
           logo_url: string | null
@@ -310,8 +320,17 @@ export type Database = {
           status: Database["public"]["Enums"]["company_status"]
           timezone: string
           updated_at: string
+          user_limit: number | null
         }
         Insert: {
+          billing_addons_monthly?: number
+          billing_base_monthly?: number
+          billing_country?: string
+          billing_currency?: string
+          billing_cycle?: string
+          billing_notes?: string | null
+          billing_plan?: string
+          billing_trial_ends_at?: string | null
           country?: string
           created_at?: string
           created_by?: string | null
@@ -320,6 +339,8 @@ export type Database = {
           default_hourly_rate?: number | null
           default_monthly_rate?: number | null
           email_from_name?: string | null
+          employee_limit?: number | null
+          enabled_modules?: string[]
           id?: string
           language?: string
           logo_url?: string | null
@@ -329,8 +350,17 @@ export type Database = {
           status?: Database["public"]["Enums"]["company_status"]
           timezone?: string
           updated_at?: string
+          user_limit?: number | null
         }
         Update: {
+          billing_addons_monthly?: number
+          billing_base_monthly?: number
+          billing_country?: string
+          billing_currency?: string
+          billing_cycle?: string
+          billing_notes?: string | null
+          billing_plan?: string
+          billing_trial_ends_at?: string | null
           country?: string
           created_at?: string
           created_by?: string | null
@@ -339,6 +369,8 @@ export type Database = {
           default_hourly_rate?: number | null
           default_monthly_rate?: number | null
           email_from_name?: string | null
+          employee_limit?: number | null
+          enabled_modules?: string[]
           id?: string
           language?: string
           logo_url?: string | null
@@ -348,6 +380,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["company_status"]
           timezone?: string
           updated_at?: string
+          user_limit?: number | null
         }
         Relationships: []
       }
@@ -3448,6 +3481,88 @@ export type Database = {
         }
       }
       punch_departure_v2: { Args: { p_input: Json }; Returns: Json }
+      punch_employee_manual_end: {
+        Args: {
+          _complete_task?: boolean
+          _ended_at: string
+          _time_entry_id: string
+        }
+        Returns: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          effective_minutes: number | null
+          end_geo_reason_code:
+            | Database["public"]["Enums"]["geo_reason_code"]
+            | null
+          end_geo_reason_text: string | null
+          end_geo_status: Database["public"]["Enums"]["geo_status"] | null
+          ended_at: string | null
+          geo_policy_version: number | null
+          id: string
+          last_edit_reason: string | null
+          last_edited_at: string | null
+          last_edited_by: string | null
+          notes: string | null
+          origin: string
+          paused_at: string | null
+          resumed_at: string | null
+          start_geo_reason_code:
+            | Database["public"]["Enums"]["geo_reason_code"]
+            | null
+          start_geo_reason_text: string | null
+          start_geo_status: Database["public"]["Enums"]["geo_status"] | null
+          started_at: string
+          task_id: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "time_entries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      punch_employee_manual_start: {
+        Args: { _started_at: string; _task_id: string }
+        Returns: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          effective_minutes: number | null
+          end_geo_reason_code:
+            | Database["public"]["Enums"]["geo_reason_code"]
+            | null
+          end_geo_reason_text: string | null
+          end_geo_status: Database["public"]["Enums"]["geo_status"] | null
+          ended_at: string | null
+          geo_policy_version: number | null
+          id: string
+          last_edit_reason: string | null
+          last_edited_at: string | null
+          last_edited_by: string | null
+          notes: string | null
+          origin: string
+          paused_at: string | null
+          resumed_at: string | null
+          start_geo_reason_code:
+            | Database["public"]["Enums"]["geo_reason_code"]
+            | null
+          start_geo_reason_text: string | null
+          start_geo_status: Database["public"]["Enums"]["geo_status"] | null
+          started_at: string
+          task_id: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "time_entries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       punch_manual_end: {
         Args: { _task_id: string }
         Returns: {
