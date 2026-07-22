@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
   Pause,
@@ -83,6 +84,8 @@ function PontoPage() {
   const [manualStartAt, setManualStartAt] = useState("");
   const [manualEndOpen, setManualEndOpen] = useState(false);
   const [manualEndAt, setManualEndAt] = useState("");
+  const [manualEndReason, setManualEndReason] = useState("");
+  const [manualEndRequiresReason, setManualEndRequiresReason] = useState(false);
   const punch = usePunchFlow();
 
   // Toast único por retorno de RPC v2 — sempre baseado no código do servidor.
@@ -301,16 +304,18 @@ function PontoPage() {
     },
   });
   const manualEndMut = useMutation({
-    mutationFn: async ({ entryId, endedAt }: { entryId: string; endedAt: string }) => {
+    mutationFn: async ({ entryId, endedAt, reason }: { entryId: string; endedAt: string; reason?: string }) => {
       if (!openEntry) {
         throw new Error("Sem ponto aberto.");
       }
-      const entry = await punchEmployeeManualEnd(entryId, localInputToIso(endedAt), true);
+      const entry = await punchEmployeeManualEnd(entryId, localInputToIso(endedAt), true, reason);
       toast.success("Saida manual registrada.");
       return entry;
     },
     onSuccess: () => {
       setManualEndOpen(false);
+      setManualEndReason("");
+      setManualEndRequiresReason(false);
       qc.invalidateQueries({ queryKey: ["punch-open"] });
       qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
       qc.invalidateQueries({ queryKey: ["punch-history"] });
@@ -347,11 +352,14 @@ function PontoPage() {
 
   const openTaskMode = openTask ? effectiveMode(openTask) : "automatico";
   const isManualOpenTask = openTaskMode === "manual" || openEntry?.notes === "Apontamento manual pelo funcionario";
+  const isLateOpenEntry = !!openEntry && new Date(openEntry.started_at).toDateString() !== new Date().toDateString();
   const manualStartingId = manualStartMut.variables?.taskId ?? null;
 
-  function openManualEndDialog() {
+  function openManualEndDialog(requiresReason = false) {
     if (!openEntry || !openTask) return;
     setManualEndAt(manualDefaultDateTime(openTask));
+    setManualEndReason("");
+    setManualEndRequiresReason(requiresReason);
     setManualEndOpen(true);
   }
 
@@ -384,8 +392,11 @@ function PontoPage() {
           mode={openTaskMode}
           onPause={() => pauseMut.mutate()}
           onResume={() => resumeMut.mutate()}
-          onComplete={() => (isManualOpenTask ? openManualEndDialog() : endMut.mutate())}
-          onManualEnd={openManualEndDialog}
+          requiresManualEnd={isLateOpenEntry}
+          onComplete={() =>
+            isManualOpenTask || isLateOpenEntry ? openManualEndDialog(isLateOpenEntry) : endMut.mutate()
+          }
+          onManualEnd={() => openManualEndDialog(isLateOpenEntry)}
           pausing={pauseMut.isPending}
           resuming={resumeMut.isPending}
           ending={endMut.isPending}
@@ -530,7 +541,12 @@ function PontoPage() {
             onSubmit={(e) => {
               e.preventDefault();
               if (!openEntry || !manualEndAt) return;
-              manualEndMut.mutate({ entryId: openEntry.id, endedAt: manualEndAt });
+              const reason = manualEndReason.trim();
+              if (manualEndRequiresReason && reason.length < 3) {
+                toast.error("Informe a justificativa do fechamento tardio.");
+                return;
+              }
+              manualEndMut.mutate({ entryId: openEntry.id, endedAt: manualEndAt, reason: reason || undefined });
             }}
           >
             <div className="space-y-2">
@@ -543,6 +559,19 @@ function PontoPage() {
                 value={manualEndAt}
                 onChange={(e) => setManualEndAt(e.target.value)}
                 required
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium" htmlFor="manual-end-reason">
+                Justificativa {manualEndRequiresReason ? "*" : "(opcional)"}
+              </label>
+              <Textarea
+                id="manual-end-reason"
+                value={manualEndReason}
+                onChange={(e) => setManualEndReason(e.target.value)}
+                rows={3}
+                maxLength={500}
+                placeholder="Ex.: esqueci de bater saída ontem; horário correto confirmado com o gestor."
               />
             </div>
             <Button type="submit" className="w-full" disabled={manualEndMut.isPending}>
@@ -569,6 +598,7 @@ function ActiveTaskCard({
   onResume,
   onComplete,
   onManualEnd,
+  requiresManualEnd,
   pausing,
   resuming,
   ending,
@@ -584,12 +614,14 @@ function ActiveTaskCard({
   onResume: () => void;
   onComplete: () => void;
   onManualEnd: () => void;
+  requiresManualEnd: boolean;
   pausing: boolean;
   resuming: boolean;
   ending: boolean;
   manualEnding: boolean;
 }) {
   const isManualEntry = mode === "manual" || entry.notes === "Apontamento manual pelo funcionario";
+  const useManualExit = isManualEntry || requiresManualEnd;
 
   return (
     <section className="overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card shadow-lg">
@@ -652,17 +684,17 @@ function ActiveTaskCard({
 
         {/* Ações grandes */}
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {!isManualEntry && state === "aberto" && (
+          {!useManualExit && state === "aberto" && (
             <Button size="lg" variant="outline" className="h-14 text-base" disabled={pausing} onClick={onPause}>
               <Pause className="mr-2 h-5 w-5" /> Pausa almoço
             </Button>
           )}
-          {!isManualEntry && state === "pausado" && (
+          {!useManualExit && state === "pausado" && (
             <Button size="lg" variant="outline" className="h-14 text-base" disabled={resuming} onClick={onResume}>
               <Play className="mr-2 h-5 w-5" /> Retorno almoço
             </Button>
           )}
-          {isManualEntry && state !== "encerrado" && (
+          {useManualExit && state !== "encerrado" && (
             <Button
               size="lg"
               variant="outline"
@@ -670,10 +702,10 @@ function ActiveTaskCard({
               disabled={manualEnding}
               onClick={onManualEnd}
             >
-              <LogOut className="mr-2 h-5 w-5" /> Finalizar
+              <LogOut className="mr-2 h-5 w-5" /> {requiresManualEnd ? "Finalizar com hora correta" : "Finalizar"}
             </Button>
           )}
-          {!isManualEntry && (
+          {!useManualExit && (
             <Button size="lg" className="h-14 text-base sm:col-span-2" disabled={ending} onClick={onComplete}>
               <Square className="mr-2 h-5 w-5" /> Concluir tarefa
             </Button>
