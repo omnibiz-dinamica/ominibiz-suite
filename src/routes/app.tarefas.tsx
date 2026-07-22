@@ -289,13 +289,15 @@ function TasksPage() {
   // Filtros derivados (status + funcionário) — Fase F.
   const filteredTasks = useMemo(() => {
     const all = tasks ?? [];
-    const now = Date.now();
     return all.filter((t) => {
       if (search.employee && t.assigned_to !== search.employee) return false;
       if (search.client && t.client_id !== search.client) return false;
       if (!search.status) return true;
       if (search.status === "atrasadas") {
-        return t.status !== "concluido" && t.due_at != null && new Date(t.due_at).getTime() < now;
+        return isVisuallyLate(t);
+      }
+      if (search.status === "pendente") {
+        return t.status === "pendente" && !isVisuallyLate(t);
       }
       return t.status === search.status;
     });
