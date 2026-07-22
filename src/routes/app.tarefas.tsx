@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,6 +42,7 @@ import {
   ChevronRight,
   Upload,
   FileText,
+  Ban,
 } from "lucide-react";
 import {
   STATUS_LABELS,
@@ -117,6 +118,8 @@ function TasksPage() {
   const [editingSeries, setEditingSeries] = useState<TaskRow | null>(null);
   const [seriesRow, setSeriesRow] = useState<RecurrenceRow | null>(null);
   const [deleting, setDeleting] = useState<TaskRow | null>(null);
+  const [refusing, setRefusing] = useState<TaskRow | null>(null);
+  const [refusalReason, setRefusalReason] = useState("");
   const [view, setView] = useState<"active" | "archived">("active");
   const [taskView, setTaskView] = useState<"list" | "calendar">("list");
   const [calendarGroup, setCalendarGroup] = useState<"assignee" | "client">("assignee");
@@ -212,10 +215,13 @@ function TasksPage() {
   }, [user?.id, qc]);
 
   const transition = useMutation({
-    mutationFn: ({ id, action }: { id: string; action: TaskAction }) => transitionTask(id, action),
+    mutationFn: ({ id, action, reason }: { id: string; action: TaskAction; reason?: string }) =>
+      transitionTask(id, action, reason),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
       toast.success("Tarefa atualizada");
+      setRefusing(null);
+      setRefusalReason("");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -284,6 +290,23 @@ function TasksPage() {
       return;
     }
     setDeleting(t);
+  };
+  const handleTransition = (task: TaskRow, action: TaskAction) => {
+    if (action === "recusar") {
+      setRefusing(task);
+      setRefusalReason("");
+      return;
+    }
+    transition.mutate({ id: task.id, action });
+  };
+  const submitRefusal = () => {
+    const reason = refusalReason.trim();
+    if (!refusing) return;
+    if (reason.length < 3) {
+      toast.error("Informe o motivo da recusa.");
+      return;
+    }
+    transition.mutate({ id: refusing.id, action: "recusar", reason });
   };
 
   // Filtros derivados (status + funcionário) — Fase F.
@@ -451,6 +474,43 @@ function TasksPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      <Dialog open={!!refusing} onOpenChange={(v) => !v && !transition.isPending && setRefusing(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Recusar tarefa?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Confirme a recusa e informe o motivo. A tarefa ficarÃ¡ cancelada e o gestor poderÃ¡ reatribuir se
+              necessÃ¡rio.
+            </p>
+            {refusing?.title && (
+              <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm font-medium">
+                {refusing.title}
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="task-refusal-reason">Motivo *</Label>
+              <Textarea
+                id="task-refusal-reason"
+                value={refusalReason}
+                onChange={(event) => setRefusalReason(event.target.value)}
+                rows={3}
+                placeholder="Ex.: vou faltar, cliente desistiu, nÃ£o posso fazer, transferir para outra pessoa..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" disabled={transition.isPending} onClick={() => setRefusing(null)}>
+              Cancelar
+            </Button>
+            <Button type="button" variant="destructive" disabled={transition.isPending} onClick={submitRefusal}>
+              {transition.isPending ? "Recusando..." : "Confirmar recusa"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {!currentCompanyId && isManager && (
         <div className="rounded-2xl border border-warning/40 bg-warning/10 p-4 text-sm text-warning-foreground">
           Sua empresa ainda está aguardando aprovação. Você poderá criar tarefas assim que for liberada.
@@ -569,7 +629,7 @@ function TasksPage() {
           onEditSeries={setEditingSeries}
           onReassign={setReassigning}
           onDelete={handleDeleteRequest}
-          onTransition={(id, action) => transition.mutate({ id, action })}
+          onTransition={handleTransition}
           onArchive={(id, archive) => archiveMut.mutate({ id, archive })}
           onMoveDate={(id, dateKey) => moveTaskDate.mutate({ id, dateKey })}
           transitionPending={transition.isPending}
@@ -589,7 +649,7 @@ function TasksPage() {
           onEditSeries={setEditingSeries}
           onReassign={setReassigning}
           onDelete={handleDeleteRequest}
-          onTransition={(id, action) => transition.mutate({ id, action })}
+          onTransition={handleTransition}
           onArchive={(id, archive) => archiveMut.mutate({ id, archive })}
           onMoveDate={(id, dateKey) => moveTaskDate.mutate({ id, dateKey })}
           transitionPending={transition.isPending}
@@ -610,7 +670,7 @@ function TasksPage() {
                 onEditSeries={setEditingSeries}
                 onReassign={setReassigning}
                 onDelete={handleDeleteRequest}
-                onTransition={(id, action) => transition.mutate({ id, action })}
+                onTransition={handleTransition}
                 onArchive={(id, archive) => archiveMut.mutate({ id, archive })}
                 onMoveDate={(id, dateKey) => moveTaskDate.mutate({ id, dateKey })}
                 transitionPending={transition.isPending}
@@ -651,7 +711,7 @@ interface RowHandlers {
   onEditSeries: (t: TaskRow) => void;
   onReassign: (t: TaskRow) => void;
   onDelete: (t: TaskRow) => void;
-  onTransition: (id: string, action: TaskAction) => void;
+  onTransition: (task: TaskRow, action: TaskAction) => void;
   onArchive: (id: string, archive: boolean) => void;
   onMoveDate: (id: string, dateKey: string) => void;
   transitionPending: boolean;
@@ -1207,7 +1267,7 @@ function CalendarTaskCard({
             key={action}
             action={action}
             disabled={transitionPending}
-            onClick={() => onTransition(task.id, action)}
+            onClick={() => onTransition(task, action)}
           />
         ))}
       </div>
@@ -1372,7 +1432,7 @@ function TaskRowItem({
           </>
         )}
         {actions.map((a) => (
-          <ActionButton key={a} action={a} disabled={transitionPending} onClick={() => onTransition(t.id, a)} />
+          <ActionButton key={a} action={a} disabled={transitionPending} onClick={() => onTransition(t, a)} />
         ))}
       </div>
     </li>
@@ -1384,6 +1444,7 @@ function ActionButton({ action, onClick, disabled }: { action: TaskAction; onCli
     autorizar: { Icon: ShieldCheck, variant: "outline" as const },
     iniciar: { Icon: Play, variant: "outline" as const },
     concluir: { Icon: Check, variant: "default" as const },
+    recusar: { Icon: Ban, variant: "ghost" as const },
     marcar_ausente: { Icon: UserX, variant: "ghost" as const },
     cancelar: { Icon: X, variant: "ghost" as const },
   }[action];
