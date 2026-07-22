@@ -15,6 +15,7 @@ import { CreditCard, Check, X as XIcon, Upload, Download, Plus, Trash2 } from "l
 export const Route = createFileRoute("/app/despesas")({ component: DespesasPage });
 
 type ExpenseStatus = "pendente" | "aprovada" | "rejeitada";
+type PaymentStatus = "aguardando_pagamento" | "paga";
 type ExpenseRow = {
   id: string;
   company_id: string;
@@ -26,6 +27,9 @@ type ExpenseRow = {
   attachment_path: string | null;
   attachment_mime: string | null;
   status: ExpenseStatus;
+  payment_status: PaymentStatus | null;
+  paid_by: string | null;
+  paid_at: string | null;
   decided_by: string | null;
   decided_at: string | null;
   decision_reason: string | null;
@@ -41,6 +45,14 @@ const STATUS_LABEL: Record<ExpenseStatus, string> = {
   pendente: "pendente",
   aprovada: "aprovada",
   rejeitada: "rejeitada",
+};
+const PAYMENT_TONE: Record<PaymentStatus, string> = {
+  aguardando_pagamento: "bg-warning/15 text-warning-foreground",
+  paga: "bg-success/15 text-success",
+};
+const PAYMENT_LABEL: Record<PaymentStatus, string> = {
+  aguardando_pagamento: "aguarda pagamento",
+  paga: "paga",
 };
 
 const fmtDate = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("pt-PT");
@@ -64,19 +76,16 @@ function DespesasPage() {
     },
   });
 
-  const userIds = useMemo(
-    () => Array.from(new Set(rows.map((r) => r.user_id))),
-    [rows],
-  );
+  const userIds = useMemo(() => Array.from(new Set(rows.map((r) => r.user_id))), [rows]);
   const { data: names = {} } = useQuery({
     queryKey: ["exp-names", userIds.join(",")],
     enabled: userIds.length > 0,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("id, full_name")
-        .in("id", userIds);
-      return Object.fromEntries((data ?? []).map((p: any) => [p.id, p.full_name ?? "Colaborador"])) as Record<string, string>;
+      const { data } = await supabase.from("profiles").select("id, full_name").in("id", userIds);
+      return Object.fromEntries((data ?? []).map((p: any) => [p.id, p.full_name ?? "Colaborador"])) as Record<
+        string,
+        string
+      >;
     },
   });
 
@@ -119,7 +128,10 @@ function DespesasPage() {
     },
     onSuccess: () => {
       toast.success("Despesa enviada para aprovação");
-      setAmount(""); setReason(""); setNotes(""); setFile(null);
+      setAmount("");
+      setReason("");
+      setNotes("");
+      setFile(null);
       qc.invalidateQueries({ queryKey: ["expenses"] });
     },
     onError: (e: any) => toast.error(e.message ?? "Falha ao enviar"),
@@ -128,7 +140,9 @@ function DespesasPage() {
   const decide = useMutation({
     mutationFn: async (vars: { id: string; action: "aprovar" | "rejeitar"; reason?: string }) => {
       const { error } = await (supabase as any).rpc("expense_decide", {
-        _id: vars.id, _action: vars.action, _reason: vars.reason ?? null,
+        _id: vars.id,
+        _action: vars.action,
+        _reason: vars.reason ?? null,
       });
       if (error) throw error;
     },
@@ -139,13 +153,29 @@ function DespesasPage() {
     onError: (e: any) => toast.error(e.message ?? "Falha"),
   });
 
+  const markPayment = useMutation({
+    mutationFn: async (vars: { id: string; paymentStatus: PaymentStatus }) => {
+      const { error } = await (supabase as any).rpc("expense_mark_payment", {
+        _id: vars.id,
+        _payment_status: vars.paymentStatus,
+      });
+      if (error) throw error;
+    },
+    onSuccess: (_d, v) => {
+      toast.success(
+        v.paymentStatus === "paga" ? "Despesa marcada como paga" : "Despesa marcada como aguardando pagamento",
+      );
+      qc.invalidateQueries({ queryKey: ["expenses"] });
+    },
+    onError: (e: any) => toast.error(e.message ?? "Falha ao atualizar pagamento"),
+  });
+
   const remove = useMutation({
     mutationFn: async (row: ExpenseRow) => {
       if (row.attachment_path) {
         await supabase.storage.from("employee-expenses").remove([row.attachment_path]);
       }
-      const { error } = await (supabase as any)
-        .from("employee_expenses").delete().eq("id", row.id);
+      const { error } = await (supabase as any).from("employee_expenses").delete().eq("id", row.id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -156,10 +186,12 @@ function DespesasPage() {
   });
 
   const [filterStatus, setFilterStatus] = useState<"all" | ExpenseStatus>("all");
+  const [filterPayment, setFilterPayment] = useState<"all" | PaymentStatus>("all");
   const [filterUser, setFilterUser] = useState<string>("all");
 
   const filtered = rows.filter((r) => {
     if (filterStatus !== "all" && r.status !== filterStatus) return false;
+    if (filterPayment !== "all" && r.payment_status !== filterPayment) return false;
     if (filterUser !== "all" && r.user_id !== filterUser) return false;
     return true;
   });
@@ -180,13 +212,17 @@ function DespesasPage() {
         <div>
           <h1 className="font-display text-2xl font-semibold">Despesas</h1>
           <p className="text-sm text-muted-foreground">
-            {isManager ? "Aprove ou rejeite as despesas dos colaboradores." : "Registe despesas para serem aprovadas pelo gestor."}
+            {isManager
+              ? "Aprove ou rejeite as despesas dos colaboradores."
+              : "Registe despesas para serem aprovadas pelo gestor."}
           </p>
         </div>
       </header>
 
       <section className="rounded-2xl border border-border bg-card p-5">
-        <h2 className="mb-3 flex items-center gap-2 font-semibold"><Plus className="h-4 w-4" /> Nova despesa</h2>
+        <h2 className="mb-3 flex items-center gap-2 font-semibold">
+          <Plus className="h-4 w-4" /> Nova despesa
+        </h2>
         <div className="grid gap-3 md:grid-cols-3">
           <div>
             <Label htmlFor="exp-date">Data</Label>
@@ -194,11 +230,25 @@ function DespesasPage() {
           </div>
           <div>
             <Label htmlFor="exp-amount">Valor (€)</Label>
-            <Input id="exp-amount" type="number" step="0.01" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0,00" />
+            <Input
+              id="exp-amount"
+              type="number"
+              step="0.01"
+              min="0"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="0,00"
+            />
           </div>
           <div>
             <Label htmlFor="exp-reason">Motivo</Label>
-            <Input id="exp-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Ex.: combustível obra X" maxLength={200} />
+            <Input
+              id="exp-reason"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Ex.: combustível obra X"
+              maxLength={200}
+            />
           </div>
           <div className="md:col-span-3">
             <Label htmlFor="exp-notes">Observações</Label>
@@ -209,7 +259,9 @@ function DespesasPage() {
               <Upload className="h-4 w-4" />
               {file ? file.name : "Anexar foto/PDF"}
               <input
-                type="file" hidden accept="image/*,application/pdf"
+                type="file"
+                hidden
+                accept="image/*,application/pdf"
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
               />
             </label>
@@ -250,12 +302,24 @@ function DespesasPage() {
           <h2 className="font-semibold">Histórico</h2>
           <div className="flex flex-wrap gap-2">
             <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as any)}>
-              <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os estados</SelectItem>
                 <SelectItem value="pendente">Pendente</SelectItem>
                 <SelectItem value="aprovada">Aprovada</SelectItem>
                 <SelectItem value="rejeitada">Rejeitada</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterPayment} onValueChange={(v) => setFilterPayment(v as any)}>
+              <SelectTrigger className="w-[210px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os pagamentos</SelectItem>
+                <SelectItem value="aguardando_pagamento">Aguarda pagamento</SelectItem>
+                <SelectItem value="paga">Paga</SelectItem>
               </SelectContent>
             </Select>
             {isManager && (
@@ -284,7 +348,7 @@ function DespesasPage() {
               <li key={r.id} className="flex items-center justify-between gap-3 py-3">
                 <div className="min-w-0">
                   <div className="font-medium">
-                    {isManager ? names[r.user_id] ?? "Colaborador" : "Você"} · {fmtEur(r.amount)}
+                    {isManager ? (names[r.user_id] ?? "Colaborador") : "Você"} · {fmtEur(r.amount)}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {fmtDate(r.expense_date)} · {r.reason}
@@ -293,13 +357,45 @@ function DespesasPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   {r.attachment_path && (
-                    <Button size="icon" variant="ghost" onClick={() => openAttachment(r.attachment_path!)} title="Abrir anexo">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => openAttachment(r.attachment_path!)}
+                      title="Abrir anexo"
+                    >
                       <Download className="h-4 w-4" />
                     </Button>
                   )}
                   <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_TONE[r.status]}`}>
                     {STATUS_LABEL[r.status]}
                   </span>
+                  {r.status === "aprovada" && (
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs ${PAYMENT_TONE[r.payment_status ?? "aguardando_pagamento"]}`}
+                    >
+                      {PAYMENT_LABEL[r.payment_status ?? "aguardando_pagamento"]}
+                    </span>
+                  )}
+                  {isManager && r.status === "aprovada" && (r.payment_status ?? "aguardando_pagamento") !== "paga" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={markPayment.isPending}
+                      onClick={() => markPayment.mutate({ id: r.id, paymentStatus: "paga" })}
+                    >
+                      Marcar paga
+                    </Button>
+                  )}
+                  {isManager && r.status === "aprovada" && r.payment_status === "paga" && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={markPayment.isPending}
+                      onClick={() => markPayment.mutate({ id: r.id, paymentStatus: "aguardando_pagamento" })}
+                    >
+                      Aguardar pagamento
+                    </Button>
+                  )}
                   {r.status === "pendente" && r.user_id === user?.id && (
                     <Button size="icon" variant="ghost" onClick={() => remove.mutate(r)} title="Apagar">
                       <Trash2 className="h-4 w-4" />
@@ -316,7 +412,11 @@ function DespesasPage() {
 }
 
 function PendingRow({
-  row, name, onApprove, onReject, onOpen,
+  row,
+  name,
+  onApprove,
+  onReject,
+  onOpen,
 }: {
   row: ExpenseRow;
   name: string;
@@ -330,7 +430,9 @@ function PendingRow({
     <li className="rounded-lg border border-border bg-card p-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <div className="font-medium">{name} · {fmtEur(row.amount)}</div>
+          <div className="font-medium">
+            {name} · {fmtEur(row.amount)}
+          </div>
           <div className="text-xs text-muted-foreground">
             {fmtDate(row.expense_date)} · {row.reason}
             {row.notes ? ` · ${row.notes}` : ""}
@@ -344,7 +446,9 @@ function PendingRow({
           )}
           {!rejecting && (
             <>
-              <Button size="sm" onClick={onApprove}><Check className="h-4 w-4" /> Aprovar</Button>
+              <Button size="sm" onClick={onApprove}>
+                <Check className="h-4 w-4" /> Aprovar
+              </Button>
               <Button size="sm" variant="outline" onClick={() => setRejecting(true)}>
                 <XIcon className="h-4 w-4" /> Rejeitar
               </Button>
@@ -357,8 +461,19 @@ function PendingRow({
           <Label htmlFor={`rj-${row.id}`}>Motivo da rejeição</Label>
           <Textarea id={`rj-${row.id}`} value={reason} onChange={(e) => setReason(e.target.value)} rows={2} />
           <div className="flex justify-end gap-2">
-            <Button size="sm" variant="ghost" onClick={() => { setRejecting(false); setReason(""); }}>Cancelar</Button>
-            <Button size="sm" variant="destructive" disabled={!reason.trim()} onClick={() => onReject(reason.trim())}>Confirmar rejeição</Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setRejecting(false);
+                setReason("");
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button size="sm" variant="destructive" disabled={!reason.trim()} onClick={() => onReject(reason.trim())}>
+              Confirmar rejeição
+            </Button>
           </div>
         </div>
       )}
