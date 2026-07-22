@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EmployeePicker } from "@/components/common/EmployeePicker";
 import { toast } from "sonner";
-import { CreditCard, Check, X as XIcon, Upload, Download, Plus, Trash2 } from "lucide-react";
+import { exportToExcel, exportToPdf, type ExportColumn } from "@/lib/exports";
+import { CreditCard, Check, X as XIcon, Upload, Download, Plus, Trash2, FileSpreadsheet, FileText } from "lucide-react";
 
 export const Route = createFileRoute("/app/despesas")({ component: DespesasPage });
 
@@ -56,6 +57,8 @@ const PAYMENT_LABEL: Record<PaymentStatus, string> = {
 };
 
 const fmtDate = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("pt-PT");
+const fmtDateTime = (d: string | null | undefined) =>
+  d ? new Date(d).toLocaleString("pt-PT", { dateStyle: "short", timeStyle: "short" }) : "-";
 const fmtEur = (n: number) => n.toLocaleString("pt-PT", { style: "currency", currency: "EUR" });
 
 function DespesasPage() {
@@ -86,6 +89,19 @@ function DespesasPage() {
         string,
         string
       >;
+    },
+  });
+
+  const { data: companyMeta } = useQuery({
+    queryKey: ["company-meta-expenses", currentCompanyId],
+    enabled: !!currentCompanyId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("companies")
+        .select("name, primary_color")
+        .eq("id", currentCompanyId!)
+        .maybeSingle();
+      return data ?? null;
     },
   });
 
@@ -188,15 +204,61 @@ function DespesasPage() {
   const [filterStatus, setFilterStatus] = useState<"all" | ExpenseStatus>("all");
   const [filterPayment, setFilterPayment] = useState<"all" | PaymentStatus>("all");
   const [filterUser, setFilterUser] = useState<string>("all");
+  const [filterDateBy, setFilterDateBy] = useState<"expense_date" | "created_at">("expense_date");
+  const [filterStartDate, setFilterStartDate] = useState("");
+  const [filterEndDate, setFilterEndDate] = useState("");
 
   const filtered = rows.filter((r) => {
     if (filterStatus !== "all" && r.status !== filterStatus) return false;
     if (filterPayment !== "all" && r.payment_status !== filterPayment) return false;
     if (filterUser !== "all" && r.user_id !== filterUser) return false;
+    const comparableDate =
+      filterDateBy === "expense_date" ? r.expense_date : new Date(r.created_at).toISOString().slice(0, 10);
+    if (filterStartDate && comparableDate < filterStartDate) return false;
+    if (filterEndDate && comparableDate > filterEndDate) return false;
     return true;
   });
   const pending = filtered.filter((r) => r.status === "pendente");
   const decided = filtered.filter((r) => r.status !== "pendente");
+
+  const exportExpenses = (kind: "xlsx" | "pdf") => {
+    if (filtered.length === 0) {
+      toast.info("Não há despesas para exportar com os filtros atuais.");
+      return;
+    }
+    const columns: ExportColumn<ExpenseRow>[] = [
+      { header: "Colaborador", accessor: (r) => names[r.user_id] ?? "Colaborador", width: 120 },
+      { header: "Data despesa", accessor: (r) => fmtDate(r.expense_date), width: 72 },
+      { header: "Data envio", accessor: (r) => fmtDateTime(r.created_at), width: 92 },
+      { header: "Valor", accessor: (r) => fmtEur(r.amount), width: 64 },
+      { header: "Motivo", accessor: (r) => r.reason, width: 140 },
+      { header: "Estado", accessor: (r) => STATUS_LABEL[r.status], width: 72 },
+      {
+        header: "Pagamento",
+        accessor: (r) => (r.status === "aprovada" ? PAYMENT_LABEL[r.payment_status ?? "aguardando_pagamento"] : "-"),
+        width: 88,
+      },
+      { header: "Pago em", accessor: (r) => fmtDateTime(r.paid_at), width: 92 },
+      { header: "Observações", accessor: (r) => r.notes ?? "", width: 170 },
+    ];
+    const subtitleParts = [
+      filterDateBy === "expense_date" ? "Período por data da despesa" : "Período por data de envio",
+      filterStartDate ? `De ${fmtDate(filterStartDate)}` : null,
+      filterEndDate ? `Até ${fmtDate(filterEndDate)}` : null,
+      filterStatus !== "all" ? `Estado: ${STATUS_LABEL[filterStatus]}` : null,
+      filterPayment !== "all" ? `Pagamento: ${PAYMENT_LABEL[filterPayment]}` : null,
+      filterUser !== "all" ? `Colaborador: ${names[filterUser] ?? "Colaborador"}` : null,
+    ].filter(Boolean);
+    const meta = {
+      fileName: `despesas-${new Date().toISOString().slice(0, 10)}`,
+      title: "Despesas",
+      companyName: companyMeta?.name ?? null,
+      primaryColor: companyMeta?.primary_color ?? null,
+      subtitle: subtitleParts.join(" · ") || null,
+    };
+    if (kind === "xlsx") exportToExcel(filtered, columns, meta);
+    else exportToPdf(filtered, columns, meta);
+  };
 
   const openAttachment = async (path: string) => {
     const { data } = await supabase.storage.from("employee-expenses").createSignedUrl(path, 60);
@@ -301,6 +363,16 @@ function DespesasPage() {
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-semibold">Histórico</h2>
           <div className="flex flex-wrap gap-2">
+            {isManager && (
+              <>
+                <Button size="sm" variant="outline" onClick={() => exportExpenses("xlsx")}>
+                  <FileSpreadsheet className="h-4 w-4" /> Excel
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => exportExpenses("pdf")}>
+                  <FileText className="h-4 w-4" /> PDF
+                </Button>
+              </>
+            )}
             <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as any)}>
               <SelectTrigger className="w-[160px]">
                 <SelectValue />
@@ -338,6 +410,57 @@ function DespesasPage() {
             )}
           </div>
         </div>
+        {isManager && (
+          <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <Label className="text-xs">Extrair por</Label>
+              <Select value={filterDateBy} onValueChange={(v) => setFilterDateBy(v as typeof filterDateBy)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="expense_date">Data da despesa</SelectItem>
+                  <SelectItem value="created_at">Data de envio</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="expense-export-start" className="text-xs">
+                Data inicial
+              </Label>
+              <Input
+                id="expense-export-start"
+                type="date"
+                value={filterStartDate}
+                onChange={(e) => setFilterStartDate(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="expense-export-end" className="text-xs">
+                Data final
+              </Label>
+              <Input
+                id="expense-export-end"
+                type="date"
+                value={filterEndDate}
+                onChange={(e) => setFilterEndDate(e.target.value)}
+              />
+            </div>
+            <div className="flex items-end">
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full"
+                onClick={() => {
+                  setFilterStartDate("");
+                  setFilterEndDate("");
+                }}
+              >
+                Limpar datas
+              </Button>
+            </div>
+          </div>
+        )}
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Carregando…</p>
         ) : decided.length === 0 && pending.length === 0 ? (
