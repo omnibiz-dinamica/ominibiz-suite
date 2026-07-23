@@ -243,3 +243,29 @@ Recomendações arquiteturais identificadas durante o desenvolvimento das Atuali
 8. **Testes E2E em Playwright para os fluxos V1.0** — cobrir dashboard clicável, filtros persistentes, hierarquia de valores e recorrência condicional.
 9. **Índice `tasks (assigned_to, status, due_at)`** — o filtro derivado atrasadas + `EmployeePicker` combinados serão os queries mais frequentes; um índice composto acelera o dashboard.
 10. **Wiring de `functionMiddleware` em `src/start.ts`** — atualmente o projeto não expõe `start.ts`. Sem esse wiring, `createServerFn` protegido por `requireSupabaseAuth` não recebe bearer no cliente. Pré-requisito para o item 4.
+
+## ADR-021 — Central de Suporte em 2 Níveis (2026-07-23)
+
+**Contexto.** O fluxo original enviava tickets diretamente ao Super Admin,
+misturando dúvidas operacionais (que o Gestor resolveria) com pedidos
+técnicos reais, sobrecarregando o SA e retirando autonomia do Gestor.
+
+**Decisão.**
+1. **Nível 1 (Empresa · Gestor)** — funcionário abre ticket; Gestor tem
+   propriedade inicial (`current_owner_role='manager'`,
+   `support_level='company'`) e pode: solicitar informação, resolver
+   internamente (`resolved_by_manager`) ou escalar
+   (`escalated → under_technical_review`).
+2. **Nível 2 (Técnico · Super Admin)** — recebido via escalonamento ou
+   criado diretamente pelo SA. SA pode devolver a triagem
+   (`returned_to_manager`).
+3. **Propriedade explícita** — todas as transições passam por RPC
+   `SECURITY DEFINER`; UI apenas expõe as ações válidas para o
+   `effectiveRole` × `current_owner_role`.
+4. **Isolamento do funcionário** — RLS restringe SELECT/UPDATE aos
+   próprios tickets; notas internas nunca são retornadas; trigger bloqueia
+   alteração de status/prioridade/nível pelo funcionário.
+
+**Consequências.** Gestor ganha autonomia operacional; SA foca em
+desenvolvimento técnico; auditoria completa via `support_ticket_events`
+append-only; base preparada para SLAs distintos por nível (roadmap).
