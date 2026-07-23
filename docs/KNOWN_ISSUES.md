@@ -1,5 +1,18 @@
 # OmniBiz — Known Issues
 
+## KI-025 — Suporte N1/N2: ações via `window.prompt` (2026-07-23)
+
+**Sintoma.** Ações de escalonamento, resolução interna, solicitação de
+informação e devolução usam `window.prompt` para captar motivo/resumo.
+Funcional e auditável, mas estilo inconsistente com o restante do app.
+
+**Impacto.** Baixo — UX. Não afeta segurança nem auditoria (RPCs
+registram todos os campos em `support_ticket_events`).
+
+**Mitigação planejada.** Substituir por diálogos dedicados
+(`EscalateTicketDialog`, `ResolveByManagerDialog`, `ReturnToManagerDialog`)
+em iteração de UI subsequente.
+
 ## KI-028 — [RESOLVIDO] RLS cross-tenant em anexos/mensagens de suporte
 
 - **Severidade:** 🔴 Crítica · **Status:** ✅ Resolvido (2026-07-16) · **Módulo:** Suporte · Segurança
