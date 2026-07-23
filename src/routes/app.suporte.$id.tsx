@@ -49,6 +49,10 @@ import {
   updatePriority,
   updateStatus,
   uploadAttachment,
+  escalateTicket,
+  resolveTicketByManager,
+  managerRequestInformation,
+  returnTicketToManager,
 } from "@/lib/support/tickets";
 import { invalidateSupportTicket } from "@/lib/cache/support";
 import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
@@ -80,6 +84,15 @@ type TicketDetail = {
   closed_at: string | null;
   created_at: string;
   updated_at: string;
+  support_level?: "company" | "technical" | null;
+  current_owner_role?: "manager" | "super_admin" | null;
+  created_by_role?: "employee" | "manager" | "super_admin" | null;
+  escalated_to_super_admin?: boolean | null;
+  escalated_at?: string | null;
+  escalation_reason?: string | null;
+  escalation_technical_summary?: string | null;
+  returned_to_manager_at?: string | null;
+  return_reason?: string | null;
 };
 
 type MessageRow = {
@@ -178,7 +191,8 @@ function AttachmentThumb({ att, onOpen }: { att: AttachmentRow; onOpen: (a: Atta
 
 function SupportDetailPage() {
   const { id } = useParams({ from: "/app/suporte/$id" });
-  const { user, isSuperAdmin } = useAuth();
+  const { user, isSuperAdmin, isEmployee, effectiveRole } = useAuth();
+  const isManagerLevel = effectiveRole === "manager" || effectiveRole === "owner";
   const qc = useQueryClient();
   const [reply, setReply] = useState("");
   const [isInternal, setIsInternal] = useState(false);
