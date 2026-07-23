@@ -55,7 +55,7 @@ import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
 
 export const Route = createFileRoute("/app/suporte/$id")({
   component: () => (
-    <RoleGuard allow={["super_admin", "owner", "manager"]}>
+    <RoleGuard allow={["super_admin", "owner", "manager", "employee"]}>
       <SupportDetailPage />
     </RoleGuard>
   ),
