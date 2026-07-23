@@ -76,6 +76,8 @@ function SupportAdminPage() {
         )
         .order("created_at", { ascending: false })
         .limit(1000);
+      // Nível 2: Super Admin só vê tickets técnicos (escalados) ou criados por SA.
+      query = query.or("support_level.eq.technical,created_by_role.eq.super_admin");
       if (status) query = query.eq("status", status);
       if (priority) query = query.eq("priority", priority);
       if (type) query = query.eq("type", type);
