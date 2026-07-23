@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Building2, MessageCircle, X } from "lucide-react";
 import {
-  PRIORITY_ORDER,
   TICKET_PRIORITY_LABEL,
   TICKET_PRIORITY_LIST,
   TICKET_PRIORITY_TONE,
@@ -155,15 +154,8 @@ function SupportAdminPage() {
         })
       : data;
 
-    // Ordenação: urgente → alta → normal → baixa; dentro, mais antigas primeiro (FIFO operacional).
-    return [...arr].sort((a, b) => {
-      const p = PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
-      if (p !== 0) return p;
-      const openA = ["aberto", "em_analise", "em_desenvolvimento", "em_validacao"].includes(a.status) ? 0 : 1;
-      const openB = ["aberto", "em_analise", "em_desenvolvimento", "em_validacao"].includes(b.status) ? 0 : 1;
-      if (openA !== openB) return openA - openB;
-      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-    });
+    // Ordenação: tickets mais recentes primeiro (por data de abertura).
+    return [...arr].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [data, q]);
 
   const kpis = useMemo(() => {
@@ -457,7 +449,7 @@ function SupportAdminPage() {
       ) : (
         <ul className="space-y-2">
           <li className="px-1 text-xs text-muted-foreground">
-            {filtered.length} ticket{filtered.length !== 1 ? "s" : ""} · ordenados por prioridade e antiguidade
+            {filtered.length} ticket{filtered.length !== 1 ? "s" : ""} - ordenados por data de abertura
           </li>
           {filtered.map((t) => (
             <li key={t.id}>
@@ -486,11 +478,12 @@ function SupportAdminPage() {
                   </div>
                   <div className="mt-1 truncate text-sm font-medium">{t.title}</div>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <MessageCircle className="h-3.5 w-3.5" />
-                  <span title={`Criado ${new Date(t.created_at).toLocaleString("pt-PT")}`}>
-                    {new Date(t.updated_at).toLocaleString("pt-PT")}
-                  </span>
+                <div className="flex flex-col items-start gap-0.5 text-xs text-muted-foreground sm:items-end">
+                  <div className="flex items-center gap-1.5">
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    <span>Aberto em {new Date(t.created_at).toLocaleString("pt-PT")}</span>
+                  </div>
+                  <span>Atualizado em {new Date(t.updated_at).toLocaleString("pt-PT")}</span>
                 </div>
               </Link>
             </li>
