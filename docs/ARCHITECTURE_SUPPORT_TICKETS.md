@@ -181,3 +181,48 @@ Urgente = vermelho, Alta = laranja, Normal = azul, Baixa = cinza
 - Widget de suporte no Dashboard do Gestor.
 - Manuais e release notes em PDF.
 - Bateria de homologação E2E (16 testes).
+## Atualização 2026-07-23 — Suporte em 2 Níveis
+
+O módulo passou de fila única (SA-only) para **triagem em 2 níveis**:
+
+```
+Funcionário/Gestor → cria ticket
+  └─ support_level='company', current_owner_role='manager'
+       ├─ manager_request_information → waiting_employee
+       ├─ resolve_support_ticket_by_manager → resolved_by_manager
+       └─ escalate_support_ticket
+             └─ support_level='technical', current_owner_role='super_admin', status='under_technical_review'
+                  ├─ SA responde / desenvolve / resolve (fluxo prévio)
+                  └─ return_support_ticket_to_manager → current_owner_role='manager', status='returned_to_manager'
+
+Super Admin → cria ticket técnico direto
+  └─ support_level='technical', current_owner_role='super_admin', created_by_role='super_admin'
+```
+
+### Colunas de controle (support_tickets)
+
+| Coluna | Tipo | Uso |
+|---|---|---|
+| `support_level` | `'company' \| 'technical'` | Nível corrente |
+| `current_owner_role` | `'manager' \| 'super_admin'` | Quem responde agora |
+| `created_by_role` | `'employee' \| 'manager' \| 'super_admin'` | Origem |
+| `escalated_to_super_admin` | `bool` | Já foi escalado |
+| `escalated_at`, `escalation_reason`, `escalation_technical_summary` | — | Escalonamento |
+| `manager_resolved_at`, `manager_resolution_summary` | — | Resolução N1 |
+| `returned_to_manager_at`, `return_reason` | — | Devolução N2→N1 |
+
+### RPCs (SECURITY DEFINER)
+
+- `create_support_ticket` — v2 autodetecta papel; SA cria técnico direto.
+- `escalate_support_ticket(_ticket_id, _reason, _technical_summary)`.
+- `resolve_support_ticket_by_manager(_ticket_id, _resolution_summary)`.
+- `manager_request_information(_ticket_id, _message)`.
+- `return_support_ticket_to_manager(_ticket_id, _reason)`.
+
+### RLS
+
+- `employee`: SELECT/INSERT/UPDATE apenas nos próprios tickets/mensagens/anexos.
+- Trigger `prevent_forbidden_updates` bloqueia alteração de `status`,
+  `priority`, `support_level` pelo funcionário.
+- Notas internas (`is_internal=true`) permanecem ocultas para não-admins.
+- Central Global (SA) filtra por `support_level='technical' OR created_by_role='super_admin'`.

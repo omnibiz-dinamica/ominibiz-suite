@@ -30,7 +30,18 @@ export type SupportTicketStatus =
   | "em_validacao"
   | "resolvido"
   | "rejeitado"
-  | "fechado";
+  | "fechado"
+  | "under_manager_review"
+  | "waiting_employee"
+  | "resolved_by_manager"
+  | "escalated"
+  | "under_technical_review"
+  | "waiting_manager"
+  | "returned_to_manager";
+
+export type SupportLevel = "company" | "technical";
+export type SupportOwnerRole = "manager" | "super_admin";
+export type SupportCreatedByRole = "employee" | "manager" | "super_admin";
 
 export const TICKET_TYPE_LABEL: Record<SupportTicketType, string> = {
   erro: "Erro",
@@ -93,6 +104,17 @@ export const EVENT_TYPE_LABEL: Record<string, string> = {
   assignee_changed: "Responsável alterado",
   attachment_added: "Anexo enviado",
   ticket_reopened: "Ticket reaberto",
+  employee_ticket_created: "Ticket aberto pelo funcionário",
+  manager_ticket_opened: "Ticket aberto pelo gestor",
+  manager_requested_information: "Gestor solicitou mais informações",
+  manager_resolved_ticket: "Resolvido internamente pelo gestor",
+  manager_escalated_ticket: "Encaminhado ao Desenvolvimento",
+  super_admin_opened_ticket: "Ticket técnico criado pelo Super Admin",
+  super_admin_replied: "Super Admin respondeu",
+  super_admin_returned_ticket: "Super Admin devolveu ao Gestor",
+  super_admin_started_development: "Super Admin iniciou desenvolvimento",
+  super_admin_resolved_ticket: "Super Admin resolveu",
+  ticket_closed: "Ticket fechado",
 };
 
 export const TICKET_STATUS_LABEL: Record<SupportTicketStatus, string> = {
@@ -104,6 +126,13 @@ export const TICKET_STATUS_LABEL: Record<SupportTicketStatus, string> = {
   resolvido: "Resolvido",
   rejeitado: "Rejeitado",
   fechado: "Fechado",
+  under_manager_review: "Em análise pelo gestor",
+  waiting_employee: "Aguardando funcionário",
+  resolved_by_manager: "Resolvido pelo gestor",
+  escalated: "Encaminhado ao Desenvolvimento",
+  under_technical_review: "Em análise técnica",
+  waiting_manager: "Aguardando gestor",
+  returned_to_manager: "Devolvido ao gestor",
 };
 
 export const TICKET_STATUS_TONE: Record<SupportTicketStatus, string> = {
@@ -115,14 +144,28 @@ export const TICKET_STATUS_TONE: Record<SupportTicketStatus, string> = {
   resolvido: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
   rejeitado: "bg-destructive/15 text-destructive",
   fechado: "bg-muted text-muted-foreground",
+  under_manager_review: "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300",
+  waiting_employee: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+  resolved_by_manager: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
+  escalated: "bg-orange-500/15 text-orange-700 dark:text-orange-300",
+  under_technical_review: "bg-purple-500/15 text-purple-700 dark:text-purple-300",
+  waiting_manager: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+  returned_to_manager: "bg-orange-500/15 text-orange-700 dark:text-orange-300",
 };
 
 export const TICKET_STATUS_LIST: SupportTicketStatus[] = [
   "aberto",
   "em_analise",
+  "under_manager_review",
+  "waiting_employee",
+  "escalated",
+  "under_technical_review",
+  "waiting_manager",
   "aguardando_cliente",
   "em_desenvolvimento",
   "em_validacao",
+  "resolved_by_manager",
+  "returned_to_manager",
   "resolvido",
   "rejeitado",
   "fechado",

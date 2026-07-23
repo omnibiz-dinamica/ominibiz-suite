@@ -25,7 +25,7 @@ import { invalidateSupportCache } from "@/lib/cache/support";
 
 export const Route = createFileRoute("/app/suporte")({
   component: () => (
-    <RoleGuard allow={["super_admin", "owner", "manager"]}>
+    <RoleGuard allow={["super_admin", "owner", "manager", "employee"]}>
       <SupportRouteContent />
     </RoleGuard>
   ),

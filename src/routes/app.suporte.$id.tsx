@@ -49,13 +49,17 @@ import {
   updatePriority,
   updateStatus,
   uploadAttachment,
+  escalateTicket,
+  resolveTicketByManager,
+  managerRequestInformation,
+  returnTicketToManager,
 } from "@/lib/support/tickets";
 import { invalidateSupportTicket } from "@/lib/cache/support";
 import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
 
 export const Route = createFileRoute("/app/suporte/$id")({
   component: () => (
-    <RoleGuard allow={["super_admin", "owner", "manager"]}>
+    <RoleGuard allow={["super_admin", "owner", "manager", "employee"]}>
       <SupportDetailPage />
     </RoleGuard>
   ),
@@ -80,6 +84,15 @@ type TicketDetail = {
   closed_at: string | null;
   created_at: string;
   updated_at: string;
+  support_level?: "company" | "technical" | null;
+  current_owner_role?: "manager" | "super_admin" | null;
+  created_by_role?: "employee" | "manager" | "super_admin" | null;
+  escalated_to_super_admin?: boolean | null;
+  escalated_at?: string | null;
+  escalation_reason?: string | null;
+  escalation_technical_summary?: string | null;
+  returned_to_manager_at?: string | null;
+  return_reason?: string | null;
 };
 
 type MessageRow = {
@@ -178,7 +191,8 @@ function AttachmentThumb({ att, onOpen }: { att: AttachmentRow; onOpen: (a: Atta
 
 function SupportDetailPage() {
   const { id } = useParams({ from: "/app/suporte/$id" });
-  const { user, isSuperAdmin } = useAuth();
+  const { user, isSuperAdmin, effectiveRole } = useAuth();
+  const isManagerLevel = effectiveRole === "manager" || effectiveRole === "owner";
   const qc = useQueryClient();
   const [reply, setReply] = useState("");
   const [isInternal, setIsInternal] = useState(false);
@@ -310,6 +324,62 @@ function SupportDetailPage() {
     onSuccess: () => {
       invalidateSupportTicket(qc, id);
       toast.success("Ticket reaberto.");
+    },
+    onError: (e) => toast.error("Erro: " + (e as Error).message),
+  });
+
+  const escalateMut = useMutation({
+    mutationFn: async () => {
+      const reason = window.prompt("Motivo do encaminhamento ao Desenvolvimento?") ?? "";
+      if (!reason.trim()) throw new Error("Motivo obrigatório");
+      const summary =
+        window.prompt("Resumo técnico para o Super Admin (passos, hipótese, impacto):") ?? "";
+      if (!summary.trim()) throw new Error("Resumo técnico obrigatório");
+      await escalateTicket(id, reason, summary);
+    },
+    onSuccess: () => {
+      invalidateSupportTicket(qc, id);
+      toast.success("Ticket encaminhado ao Desenvolvimento.");
+    },
+    onError: (e) => toast.error("Erro: " + (e as Error).message),
+  });
+
+  const resolveByManagerMut = useMutation({
+    mutationFn: async () => {
+      const summary = window.prompt("Resumo da resolução (visível ao funcionário):") ?? "";
+      if (!summary.trim()) throw new Error("Resumo obrigatório");
+      await resolveTicketByManager(id, summary);
+    },
+    onSuccess: () => {
+      invalidateSupportTicket(qc, id);
+      toast.success("Ticket resolvido internamente.");
+    },
+    onError: (e) => toast.error("Erro: " + (e as Error).message),
+  });
+
+  const requestInfoMut = useMutation({
+    mutationFn: async () => {
+      const msg =
+        window.prompt("Que informação precisa do funcionário? (será enviado como mensagem)") ?? "";
+      if (!msg.trim()) throw new Error("Mensagem obrigatória");
+      await managerRequestInformation(id, msg);
+    },
+    onSuccess: () => {
+      invalidateSupportTicket(qc, id);
+      toast.success("Informação solicitada.");
+    },
+    onError: (e) => toast.error("Erro: " + (e as Error).message),
+  });
+
+  const returnToManagerMut = useMutation({
+    mutationFn: async () => {
+      const reason = window.prompt("Motivo para devolver ao Gestor?") ?? "";
+      if (!reason.trim()) throw new Error("Motivo obrigatório");
+      await returnTicketToManager(id, reason);
+    },
+    onSuccess: () => {
+      invalidateSupportTicket(qc, id);
+      toast.success("Ticket devolvido ao Gestor.");
     },
     onError: (e) => toast.error("Erro: " + (e as Error).message),
   });
@@ -657,6 +727,93 @@ function SupportDetailPage() {
       </div>
 
       <aside className="space-y-4">
+        <div className="space-y-2 rounded-2xl border border-border bg-card p-4 text-xs">
+          <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Nível do ticket
+          </h3>
+          <Row label="Nível">
+            {t.support_level === "technical" ? "Técnico (Desenvolvimento)" : "Empresa (Gestor)"}
+          </Row>
+          <Row label="Responsável atual">
+            {t.current_owner_role === "super_admin" ? "Super Admin" : "Gestor"}
+          </Row>
+          {t.escalated_at && (
+            <Row label="Encaminhado em">{new Date(t.escalated_at).toLocaleString("pt-PT")}</Row>
+          )}
+          {t.escalation_reason && (
+            <div>
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Motivo do encaminhamento</div>
+              <p className="whitespace-pre-wrap text-foreground">{t.escalation_reason}</p>
+            </div>
+          )}
+          {t.escalation_technical_summary && isSuperAdmin && (
+            <div>
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Resumo técnico (SA)</div>
+              <p className="whitespace-pre-wrap text-foreground">{t.escalation_technical_summary}</p>
+            </div>
+          )}
+          {t.returned_to_manager_at && (
+            <>
+              <Row label="Devolvido em">
+                {new Date(t.returned_to_manager_at).toLocaleString("pt-PT")}
+              </Row>
+              {t.return_reason && (
+                <div>
+                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Motivo da devolução</div>
+                  <p className="whitespace-pre-wrap text-foreground">{t.return_reason}</p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {isManagerLevel && !isSuperAdmin && t.current_owner_role === "manager" && (
+          <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
+            <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Ações do Gestor
+            </h3>
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              onClick={() => requestInfoMut.mutate()}
+              disabled={requestInfoMut.isPending}
+            >
+              Solicitar informação ao funcionário
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              onClick={() => resolveByManagerMut.mutate()}
+              disabled={resolveByManagerMut.isPending}
+            >
+              Resolver internamente
+            </Button>
+            <Button
+              className="w-full justify-start"
+              onClick={() => escalateMut.mutate()}
+              disabled={escalateMut.isPending}
+            >
+              Encaminhar ao Desenvolvimento
+            </Button>
+          </div>
+        )}
+
+        {isSuperAdmin && t.support_level === "technical" && t.current_owner_role === "super_admin" && (
+          <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
+            <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Triagem técnica
+            </h3>
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              onClick={() => returnToManagerMut.mutate()}
+              disabled={returnToManagerMut.isPending}
+            >
+              Devolver ao Gestor
+            </Button>
+          </div>
+        )}
+
         {isSuperAdmin && (
           <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
             <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">

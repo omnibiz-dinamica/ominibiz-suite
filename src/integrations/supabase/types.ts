@@ -1921,17 +1921,28 @@ export type Database = {
           closed_at: string | null
           company_id: string
           created_at: string
+          created_by_role: string | null
+          current_owner_role: string
           description: string
+          escalated_at: string | null
+          escalated_by: string | null
+          escalated_to_super_admin: boolean
+          escalation_reason: string | null
           first_response_at: string | null
           id: string
+          internal_resolution: string | null
           module: string | null
           page_url: string | null
           priority: Database["public"]["Enums"]["support_ticket_priority"]
           requester_user_id: string
           resolved_at: string | null
+          returned_to_manager_at: string | null
+          returned_to_manager_by: string | null
           route: string | null
           status: Database["public"]["Enums"]["support_ticket_status"]
+          support_level: string
           technical_context: Json
+          technical_summary: string | null
           ticket_number: string
           title: string
           type: Database["public"]["Enums"]["support_ticket_type"]
@@ -1943,17 +1954,28 @@ export type Database = {
           closed_at?: string | null
           company_id: string
           created_at?: string
+          created_by_role?: string | null
+          current_owner_role?: string
           description: string
+          escalated_at?: string | null
+          escalated_by?: string | null
+          escalated_to_super_admin?: boolean
+          escalation_reason?: string | null
           first_response_at?: string | null
           id?: string
+          internal_resolution?: string | null
           module?: string | null
           page_url?: string | null
           priority?: Database["public"]["Enums"]["support_ticket_priority"]
           requester_user_id: string
           resolved_at?: string | null
+          returned_to_manager_at?: string | null
+          returned_to_manager_by?: string | null
           route?: string | null
           status?: Database["public"]["Enums"]["support_ticket_status"]
+          support_level?: string
           technical_context?: Json
+          technical_summary?: string | null
           ticket_number?: string
           title: string
           type?: Database["public"]["Enums"]["support_ticket_type"]
@@ -1965,17 +1987,28 @@ export type Database = {
           closed_at?: string | null
           company_id?: string
           created_at?: string
+          created_by_role?: string | null
+          current_owner_role?: string
           description?: string
+          escalated_at?: string | null
+          escalated_by?: string | null
+          escalated_to_super_admin?: boolean
+          escalation_reason?: string | null
           first_response_at?: string | null
           id?: string
+          internal_resolution?: string | null
           module?: string | null
           page_url?: string | null
           priority?: Database["public"]["Enums"]["support_ticket_priority"]
           requester_user_id?: string
           resolved_at?: string | null
+          returned_to_manager_at?: string | null
+          returned_to_manager_by?: string | null
           route?: string | null
           status?: Database["public"]["Enums"]["support_ticket_status"]
+          support_level?: string
           technical_context?: Json
+          technical_summary?: string | null
           ticket_number?: string
           title?: string
           type?: Database["public"]["Enums"]["support_ticket_type"]
@@ -1997,8 +2030,22 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "support_tickets_escalated_by_fkey"
+            columns: ["escalated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "support_tickets_requester_user_id_fkey"
             columns: ["requester_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_returned_to_manager_by_fkey"
+            columns: ["returned_to_manager_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -3197,6 +3244,16 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      escalate_support_ticket: {
+        Args: {
+          _impact?: string
+          _reason: string
+          _suggested_priority?: Database["public"]["Enums"]["support_ticket_priority"]
+          _technical_summary?: string
+          _ticket_id: string
+        }
+        Returns: undefined
+      }
       expense_decide: {
         Args: { _action: string; _id: string; _reason?: string }
         Returns: {
@@ -3363,6 +3420,10 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      manager_request_information: {
+        Args: { _message: string; _ticket_id: string }
+        Returns: undefined
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -3925,9 +3986,17 @@ export type Database = {
         }[]
       }
       resolve_billing_rule: { Args: { _time_entry_id: string }; Returns: Json }
+      resolve_support_ticket_by_manager: {
+        Args: { _resolution: string; _ticket_id: string }
+        Returns: undefined
+      }
       resolve_vacation_approver: {
         Args: { _company_id: string; _user_id: string }
         Returns: string
+      }
+      return_support_ticket_to_manager: {
+        Args: { _reason: string; _ticket_id: string }
+        Returns: undefined
       }
       set_current_company: { Args: { _company_id: string }; Returns: string }
       set_member_role: {
@@ -3937,6 +4006,17 @@ export type Database = {
           _user_id: string
         }
         Returns: undefined
+      }
+      support_notify_managers: {
+        Args: {
+          _body: string
+          _company_id: string
+          _event: Database["public"]["Enums"]["notification_event"]
+          _priority?: Database["public"]["Enums"]["notification_priority"]
+          _ticket_id: string
+          _title: string
+        }
+        Returns: number
       }
       support_notify_super_admins: {
         Args: {
@@ -4491,6 +4571,13 @@ export type Database = {
         | "resolvido"
         | "rejeitado"
         | "fechado"
+        | "under_manager_review"
+        | "waiting_employee"
+        | "resolved_by_manager"
+        | "escalated"
+        | "under_technical_review"
+        | "waiting_manager"
+        | "returned_to_manager"
       support_ticket_type:
         | "erro"
         | "alteracao"
@@ -4783,6 +4870,13 @@ export const Constants = {
         "resolvido",
         "rejeitado",
         "fechado",
+        "under_manager_review",
+        "waiting_employee",
+        "resolved_by_manager",
+        "escalated",
+        "under_technical_review",
+        "waiting_manager",
+        "returned_to_manager",
       ],
       support_ticket_type: [
         "erro",

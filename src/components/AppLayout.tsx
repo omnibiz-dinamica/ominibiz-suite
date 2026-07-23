@@ -167,6 +167,11 @@ function buildGroups(args: {
     const groups: Group[] = [
       { id: "operacao", label: "Operação", items: operacao },
       { id: "rh", label: "RH", items: rh },
+      {
+        id: "suporte",
+        label: "Suporte",
+        items: [{ to: "/app/suporte", label: "Meu Suporte", icon: LifeBuoy }],
+      },
     ];
     if (employeeHasVehicle) {
       groups.push({
@@ -626,7 +631,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
           <Button variant="ghost" size="icon" onClick={toggle} aria-label="Alternar tema">
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
-          {effectiveRole !== "employee" && effectiveRole !== null && (
+          {effectiveRole !== null && (
             <Button
               variant="outline"
               size="sm"

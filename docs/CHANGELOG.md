@@ -7,6 +7,42 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### 🧭 Suporte em 2 Níveis — Triagem do Gestor (2026-07-23)
+
+#### Adicionado
+- **Fluxo oficial de 2 níveis** na Central de Suporte:
+  - **Nível 1 (Empresa · Gestor):** funcionário abre ticket → gestor triagena,
+    solicita informação, resolve internamente ou encaminha ao Desenvolvimento.
+  - **Nível 2 (Técnico · Super Admin):** SA atua apenas em tickets escalados
+    ou criados diretamente por SA; pode devolver a triagem ao Gestor.
+- Colunas em `support_tickets`: `support_level`, `current_owner_role`,
+  `created_by_role`, `escalated_to_super_admin`, `escalated_at`,
+  `escalation_reason`, `escalation_technical_summary`,
+  `manager_resolution_summary`, `manager_resolved_at`,
+  `returned_to_manager_at`, `return_reason`.
+- Enum `support_ticket_status` estendido com `under_manager_review`,
+  `waiting_employee`, `resolved_by_manager`, `escalated`,
+  `under_technical_review`, `waiting_manager`, `returned_to_manager`.
+- Novas RPCs `SECURITY DEFINER`: `escalate_support_ticket`,
+  `resolve_support_ticket_by_manager`, `manager_request_information`,
+  `return_support_ticket_to_manager`, `support_notify_managers` +
+  `create_support_ticket` v2 com autodetecção de papel.
+- UI: rota `/app/suporte` liberada para `employee` ("Meu Suporte"),
+  botão global **Reportar problema** disponível para funcionários,
+  painéis de ação role-conditional no detalhe (Gestor: solicitar info,
+  resolver internamente, encaminhar; SA: devolver ao Gestor),
+  bloco "Nível do ticket" com histórico de escalonamento/devolução.
+- Central Global do SA (`/app/admin/suporte`) agora filtra por
+  `support_level=technical OR created_by_role=super_admin`.
+
+#### Segurança
+- RLS reforçada: `employee` só vê os próprios tickets/mensagens/anexos;
+  notas internas continuam ocultas para não-admins. Trigger
+  `prevent_forbidden_updates` impede funcionário de alterar status,
+  prioridade ou nível.
+- Backfill: tickets pré-existentes marcados como `technical` +
+  `current_owner_role=super_admin` para preservar carga operacional atual.
+
 ### 🛠️ Correções Operacionais — Tarefas & Horário-Parede (2026-07-17)
 
 #### Corrigido

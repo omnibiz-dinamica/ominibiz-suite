@@ -128,6 +128,55 @@ export async function reopenTicket(ticketId: string, reason: string): Promise<vo
   if (error) throw error;
 }
 
+/**
+ * Fase 2 — Fluxo de dois níveis.
+ */
+export async function escalateTicket(
+  ticketId: string,
+  reason: string,
+  technicalSummary: string,
+): Promise<void> {
+  const { error } = await (supabase as any).rpc("escalate_support_ticket", {
+    _ticket_id: ticketId,
+    _reason: reason,
+    _technical_summary: technicalSummary,
+  });
+  if (error) throw error;
+}
+
+export async function resolveTicketByManager(
+  ticketId: string,
+  resolutionSummary: string,
+): Promise<void> {
+  const { error } = await (supabase as any).rpc("resolve_support_ticket_by_manager", {
+    _ticket_id: ticketId,
+    _resolution_summary: resolutionSummary,
+  });
+  if (error) throw error;
+}
+
+export async function managerRequestInformation(
+  ticketId: string,
+  message: string,
+): Promise<void> {
+  const { error } = await (supabase as any).rpc("manager_request_information", {
+    _ticket_id: ticketId,
+    _message: message,
+  });
+  if (error) throw error;
+}
+
+export async function returnTicketToManager(
+  ticketId: string,
+  reason: string,
+): Promise<void> {
+  const { error } = await (supabase as any).rpc("return_support_ticket_to_manager", {
+    _ticket_id: ticketId,
+    _reason: reason,
+  });
+  if (error) throw error;
+}
+
 export interface UploadAttachmentResult {
   attachmentId: string;
   storagePath: string;
