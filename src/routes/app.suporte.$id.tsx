@@ -191,7 +191,7 @@ function AttachmentThumb({ att, onOpen }: { att: AttachmentRow; onOpen: (a: Atta
 
 function SupportDetailPage() {
   const { id } = useParams({ from: "/app/suporte/$id" });
-  const { user, isSuperAdmin, isEmployee, effectiveRole } = useAuth();
+  const { user, isSuperAdmin, effectiveRole } = useAuth();
   const isManagerLevel = effectiveRole === "manager" || effectiveRole === "owner";
   const qc = useQueryClient();
   const [reply, setReply] = useState("");
