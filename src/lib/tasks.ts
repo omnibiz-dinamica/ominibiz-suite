@@ -255,6 +255,111 @@ export function isVisuallyLate(task: Pick<TaskRow, "status" | "scheduled_for" | 
   return new Date(due).getTime() < Date.now();
 }
 
+// =========================================================
+// Ordenação canônica de tarefas (SUP-2026-000040)
+// ---------------------------------------------------------
+// PONTO ÚNICO de ordenação. Nenhuma tela (Desktop, Mobile,
+// Gestor, Funcionário, Super Admin) reimplementa `sort()`.
+// Regras oficiais:
+//   1. Em andamento  → iniciadas mais recentemente primeiro.
+//   2. Atrasadas     → mais antigas (mais críticas) primeiro.
+//   3. Pendentes     → mais próximas do agora primeiro.
+//   4. Ausentes      → marcação mais recente primeiro.
+//   5. Concluídas    → concluídas mais recentemente primeiro.
+//   6. Canceladas    → canceladas mais recentemente primeiro.
+// Dentro do mesmo dia, tarefas SEM horário definido vêm depois
+// das tarefas com horário. Recorrências são ordenadas por
+// ocorrência (nunca pela série-mãe).
+// =========================================================
+
+type SortableTask = Pick<
+  TaskRow,
+  | "id"
+  | "title"
+  | "status"
+  | "scheduled_for"
+  | "due_at"
+  | "started_at"
+  | "completed_at"
+  | "cancelled_at"
+  | "marked_absent_at"
+  | "updated_at"
+> & { recurrence_date?: string | null };
+
+const FAR_FUTURE = "9999-12-31T23:59";
+
+/** Chave cronológica wall-clock da OCORRÊNCIA (data + horário, sem fuso). */
+function chronoKey(t: SortableTask): string {
+  if (t.scheduled_for) {
+    const d = new Date(t.scheduled_for);
+    if (!Number.isNaN(d.getTime())) {
+      const pad = (n: number) => String(n).padStart(2, "0");
+      // `0` = com horário definido (vem antes no mesmo dia)
+      return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}|0|${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+    }
+  }
+  const fallback = t.recurrence_date ?? t.due_at;
+  if (fallback) {
+    const d = new Date(fallback);
+    if (!Number.isNaN(d.getTime())) {
+      const pad = (n: number) => String(n).padStart(2, "0");
+      // `1` = sem horário definido → final do próprio dia
+      return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}|1|`;
+    }
+  }
+  return `${FAR_FUTURE}|2|`;
+}
+
+function ts(value: string | null | undefined): number {
+  if (!value) return 0;
+  const t = new Date(value).getTime();
+  return Number.isNaN(t) ? 0 : t;
+}
+
+/** Bucket operacional (menor = mais relevante para a operação atual). */
+export function taskSortBucket(t: SortableTask): number {
+  if (t.status === "em_andamento") return 0;
+  if (t.status === "pendente" || t.status === "autorizado") {
+    return isVisuallyLate(t) ? 1 : 2;
+  }
+  if (t.status === "ausente") return 3;
+  if (t.status === "concluido") return 4;
+  return 5; // cancelado
+}
+
+/** Comparador canônico. Use sempre via `sortTasksForDisplay`. */
+export function compareTasksForDisplay(a: SortableTask, b: SortableTask): number {
+  const ba = taskSortBucket(a);
+  const bb = taskSortBucket(b);
+  if (ba !== bb) return ba - bb;
+
+  switch (ba) {
+    case 0:
+      // Em andamento: iniciadas mais recentemente primeiro.
+      return ts(b.started_at) - ts(a.started_at) || chronoKey(a).localeCompare(chronoKey(b));
+    case 3:
+      return ts(b.marked_absent_at) - ts(a.marked_absent_at) || chronoKey(b).localeCompare(chronoKey(a));
+    case 4:
+      // Concluídas: conclusão oficial (`completed_at`) mais recente primeiro.
+      return ts(b.completed_at) - ts(a.completed_at) || chronoKey(b).localeCompare(chronoKey(a));
+    case 5:
+      return ts(b.cancelled_at) - ts(a.cancelled_at) || chronoKey(b).localeCompare(chronoKey(a));
+    default:
+      // Atrasadas e pendentes: cronológico ascendente.
+      return chronoKey(a).localeCompare(chronoKey(b)) || a.title.localeCompare(b.title);
+  }
+}
+
+/** Ordena qualquer lista de tarefas pela regra oficial (não muta a original). */
+export function sortTasksForDisplay<T extends SortableTask>(list: readonly T[]): T[] {
+  return list.slice().sort(compareTasksForDisplay);
+}
+
+/** Ordenação estritamente cronológica da ocorrência — usada dentro de um mesmo dia (calendário). */
+export function compareTasksChronologically(a: SortableTask, b: SortableTask): number {
+  return chronoKey(a).localeCompare(chronoKey(b)) || compareTasksForDisplay(a, b);
+}
+
 /**
  * Ações permitidas para um usuário sobre uma tarefa.
  * Mantém UI espelhada às regras do banco (a regra final está em task_transition).
