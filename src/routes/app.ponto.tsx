@@ -23,6 +23,7 @@ import {
   LogOut,
   Hand,
   Zap,
+  History,
 } from "lucide-react";
 import { TaskDocuments } from "@/components/tasks/TaskDocuments";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -38,6 +39,8 @@ import {
   requestTaskAuthorization,
   punchEmployeeManualStart,
   punchEmployeeManualEnd,
+  punchEmployeeRegularize,
+  sortTasksForDisplay,
   PUNCH_MODE_LABELS,
   STATUS_LABELS,
   STATUS_TONE,
@@ -86,6 +89,10 @@ function PontoPage() {
   const [manualEndAt, setManualEndAt] = useState("");
   const [manualEndReason, setManualEndReason] = useState("");
   const [manualEndRequiresReason, setManualEndRequiresReason] = useState(false);
+  const [regularizing, setRegularizing] = useState<TaskRow | null>(null);
+  const [regStartAt, setRegStartAt] = useState("");
+  const [regEndAt, setRegEndAt] = useState("");
+  const [regReason, setRegReason] = useState("");
   const punch = usePunchFlow();
 
   // Toast único por retorno de RPC v2 — sempre baseado no código do servidor.
@@ -156,9 +163,7 @@ function PontoPage() {
         .from("tasks")
         .select("*")
         .in("status", ["pendente", "autorizado", "ausente", "em_andamento"])
-        .order("due_at", { ascending: true, nullsFirst: false })
-        .order("scheduled_for", { ascending: true, nullsFirst: false })
-        .limit(12);
+        .limit(40);
       // Gestor/super admin: vê tarefas da empresa (toda a operação).
       // Funcionário: vê apenas as suas.
       if (isManager) {
@@ -168,9 +173,10 @@ function PontoPage() {
       }
       const { data, error } = await q;
       if (error) throw error;
-      return (data ?? []) as unknown as TaskRow[];
+      // Ordenação canônica única (SUP-2026-000040).
+      return sortTasksForDisplay((data ?? []) as unknown as TaskRow[]);
     },
-    enabled: !!user && !openEntry,
+    enabled: !!user,
   });
 
   // Mapa de clientes da empresa para exibir nome
