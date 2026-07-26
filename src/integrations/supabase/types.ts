@@ -3025,12 +3025,18 @@ export type Database = {
           attempts: number
           company_id: string | null
           created_at: string
+          dedupe_key: string | null
           event: string
+          http_status: number | null
           id: string
           last_error: string | null
+          locked_at: string | null
+          max_attempts: number
+          next_attempt_at: string
           payload: Json
           recipient_phone: string | null
           recipient_user_id: string | null
+          response_body: string | null
           sent_at: string | null
           status: string
           ticket_id: string | null
@@ -3040,12 +3046,18 @@ export type Database = {
           attempts?: number
           company_id?: string | null
           created_at?: string
+          dedupe_key?: string | null
           event: string
+          http_status?: number | null
           id?: string
           last_error?: string | null
+          locked_at?: string | null
+          max_attempts?: number
+          next_attempt_at?: string
           payload?: Json
           recipient_phone?: string | null
           recipient_user_id?: string | null
+          response_body?: string | null
           sent_at?: string | null
           status?: string
           ticket_id?: string | null
@@ -3055,12 +3067,18 @@ export type Database = {
           attempts?: number
           company_id?: string | null
           created_at?: string
+          dedupe_key?: string | null
           event?: string
+          http_status?: number | null
           id?: string
           last_error?: string | null
+          locked_at?: string | null
+          max_attempts?: number
+          next_attempt_at?: string
           payload?: Json
           recipient_phone?: string | null
           recipient_user_id?: string | null
+          response_body?: string | null
           sent_at?: string | null
           status?: string
           ticket_id?: string | null
@@ -4609,6 +4627,50 @@ export type Database = {
         }
       }
       vacation_notify_payload: { Args: { _vacation_id: string }; Returns: Json }
+      whatsapp_claim_batch: {
+        Args: { _limit?: number }
+        Returns: {
+          attempts: number
+          company_id: string | null
+          created_at: string
+          dedupe_key: string | null
+          event: string
+          http_status: number | null
+          id: string
+          last_error: string | null
+          locked_at: string | null
+          max_attempts: number
+          next_attempt_at: string
+          payload: Json
+          recipient_phone: string | null
+          recipient_user_id: string | null
+          response_body: string | null
+          sent_at: string | null
+          status: string
+          ticket_id: string | null
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "whatsapp_notifications"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      whatsapp_mark_failed: {
+        Args: {
+          _error: string
+          _http_status?: number
+          _id: string
+          _response?: string
+        }
+        Returns: undefined
+      }
+      whatsapp_mark_sent: {
+        Args: { _http_status?: number; _id: string; _response?: string }
+        Returns: undefined
+      }
+      whatsapp_requeue: { Args: { _id: string }; Returns: undefined }
     }
     Enums: {
       app_role: "super_admin" | "manager" | "employee" | "owner"
