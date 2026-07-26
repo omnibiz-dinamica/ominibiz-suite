@@ -23,6 +23,7 @@ import {
 import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
 import { invalidateSupportCache } from "@/lib/cache/support";
 import { PlatformSupportSettingsCard } from "@/components/support/PlatformSupportSettingsCard";
+import { WhatsappQueuePanel } from "@/components/support/WhatsappQueuePanel";
 
 export const Route = createFileRoute("/app/admin/suporte")({
   component: () => (
@@ -235,6 +236,7 @@ function SupportAdminPage() {
       </header>
 
       <PlatformSupportSettingsCard />
+      <WhatsappQueuePanel />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
         {[
