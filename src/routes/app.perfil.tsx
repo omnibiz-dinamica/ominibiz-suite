@@ -15,6 +15,7 @@ function ProfilePage() {
   const qc = useQueryClient();
   const [fullName, setFullName] = useState(profile?.full_name ?? "");
   const [phone, setPhone] = useState("");
+  const [whatsapp, setWhatsapp] = useState<string | null>(null);
 
   const { data: opData } = useQuery({
     queryKey: ["profile-operational", user?.id],
@@ -22,7 +23,7 @@ function ProfilePage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("job_title, work_location, team, supervisor_id")
+        .select("job_title, work_location, team, supervisor_id, whatsapp")
         .eq("id", user!.id)
         .maybeSingle();
       if (error) throw error;
@@ -39,11 +40,21 @@ function ProfilePage() {
     },
   });
 
+  const whatsappValue = whatsapp ?? ((opData as { whatsapp?: string | null } | undefined)?.whatsapp ?? "");
+  const whatsappValid = whatsappValue.trim() === "" || /^\+[1-9]\d{7,14}$/.test(whatsappValue.trim());
+
   const save = useMutation({
     mutationFn: async () => {
+      if (!whatsappValid) {
+        throw new Error("WhatsApp deve estar no formato internacional, ex.: +351912345678");
+      }
       const { error } = await supabase
         .from("profiles")
-        .update({ full_name: fullName.trim() || null, phone: phone.trim() || null })
+        .update({
+          full_name: fullName.trim() || null,
+          phone: phone.trim() || null,
+          whatsapp: whatsappValue.trim() || null,
+        })
         .eq("id", user!.id);
       if (error) throw error;
     },
@@ -126,7 +137,20 @@ function ProfilePage() {
           <Label>Telefone</Label>
           <Input value={phone} onChange={(e) => setPhone(e.target.value)} maxLength={40} />
         </div>
-        <Button type="submit" disabled={save.isPending}>
+        <div className="space-y-1.5">
+          <Label>WhatsApp</Label>
+          <Input
+            value={whatsappValue}
+            onChange={(e) => setWhatsapp(e.target.value)}
+            placeholder="+351912345678"
+            maxLength={20}
+          />
+          <p className={`text-xs ${whatsappValid ? "text-muted-foreground" : "text-destructive"}`}>
+            Formato internacional obrigatório (E.164), ex.: +351912345678. Usado nas
+            notificações de tickets.
+          </p>
+        </div>
+        <Button type="submit" disabled={save.isPending || !whatsappValid}>
           {save.isPending ? "Salvando..." : "Salvar"}
         </Button>
       </form>
