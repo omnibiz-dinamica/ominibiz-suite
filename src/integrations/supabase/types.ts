@@ -394,6 +394,7 @@ export type Database = {
           default_mixed_extra_hour_rate: number
           default_mixed_included_minutes: number
           default_punch_mode: Database["public"]["Enums"]["punch_mode"]
+          default_support_manager_id: string | null
           employee_approver_kind: Database["public"]["Enums"]["employee_approver_kind"]
           employee_approver_user_id: string | null
           geo_default_radius_m: number
@@ -421,6 +422,7 @@ export type Database = {
           default_mixed_extra_hour_rate?: number
           default_mixed_included_minutes?: number
           default_punch_mode?: Database["public"]["Enums"]["punch_mode"]
+          default_support_manager_id?: string | null
           employee_approver_kind?: Database["public"]["Enums"]["employee_approver_kind"]
           employee_approver_user_id?: string | null
           geo_default_radius_m?: number
@@ -448,6 +450,7 @@ export type Database = {
           default_mixed_extra_hour_rate?: number
           default_mixed_included_minutes?: number
           default_punch_mode?: Database["public"]["Enums"]["punch_mode"]
+          default_support_manager_id?: string | null
           employee_approver_kind?: Database["public"]["Enums"]["employee_approver_kind"]
           employee_approver_user_id?: string | null
           geo_default_radius_m?: number
@@ -1530,6 +1533,27 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_settings: {
+        Row: {
+          created_at: string
+          default_support_super_admin_id: string | null
+          id: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_support_super_admin_id?: string | null
+          id: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_support_super_admin_id?: string | null
+          id?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           a1_expires_at: string | null
@@ -1594,6 +1618,7 @@ export type Database = {
           termination_date: string | null
           updated_at: string
           weekly_contracted_hours: number | null
+          whatsapp: string | null
           work_location: string | null
         }
         Insert: {
@@ -1659,6 +1684,7 @@ export type Database = {
           termination_date?: string | null
           updated_at?: string
           weekly_contracted_hours?: number | null
+          whatsapp?: string | null
           work_location?: string | null
         }
         Update: {
@@ -1724,6 +1750,7 @@ export type Database = {
           termination_date?: string | null
           updated_at?: string
           weekly_contracted_hours?: number | null
+          whatsapp?: string | null
           work_location?: string | null
         }
         Relationships: [
@@ -2993,6 +3020,62 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_notifications: {
+        Row: {
+          attempts: number
+          company_id: string | null
+          created_at: string
+          event: string
+          id: string
+          last_error: string | null
+          payload: Json
+          recipient_phone: string | null
+          recipient_user_id: string | null
+          sent_at: string | null
+          status: string
+          ticket_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          company_id?: string | null
+          created_at?: string
+          event: string
+          id?: string
+          last_error?: string | null
+          payload?: Json
+          recipient_phone?: string | null
+          recipient_user_id?: string | null
+          sent_at?: string | null
+          status?: string
+          ticket_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          company_id?: string | null
+          created_at?: string
+          event?: string
+          id?: string
+          last_error?: string | null
+          payload?: Json
+          recipient_phone?: string | null
+          recipient_user_id?: string | null
+          sent_at?: string | null
+          status?: string
+          ticket_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_notifications_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -3247,6 +3330,10 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      enqueue_ticket_whatsapp: {
+        Args: { _event: string; _payload?: Json; _ticket_id: string }
+        Returns: string
+      }
       escalate_support_ticket: {
         Args: {
           _impact?: string
@@ -3346,6 +3433,7 @@ export type Database = {
           default_mixed_extra_hour_rate: number
           default_mixed_included_minutes: number
           default_punch_mode: Database["public"]["Enums"]["punch_mode"]
+          default_support_manager_id: string | null
           employee_approver_kind: Database["public"]["Enums"]["employee_approver_kind"]
           employee_approver_user_id: string | null
           geo_default_radius_m: number
@@ -4037,6 +4125,14 @@ export type Database = {
         Args: { _resolution: string; _ticket_id: string }
         Returns: undefined
       }
+      resolve_ticket_whatsapp_recipient: {
+        Args: { _ticket_id: string }
+        Returns: {
+          phone: string
+          reason: string
+          user_id: string
+        }[]
+      }
       resolve_vacation_approver: {
         Args: { _company_id: string; _user_id: string }
         Returns: string
@@ -4333,6 +4429,7 @@ export type Database = {
           default_mixed_extra_hour_rate: number
           default_mixed_included_minutes: number
           default_punch_mode: Database["public"]["Enums"]["punch_mode"]
+          default_support_manager_id: string | null
           employee_approver_kind: Database["public"]["Enums"]["employee_approver_kind"]
           employee_approver_user_id: string | null
           geo_default_radius_m: number
@@ -4428,6 +4525,7 @@ export type Database = {
           termination_date: string | null
           updated_at: string
           weekly_contracted_hours: number | null
+          whatsapp: string | null
           work_location: string | null
         }
         SetofOptions: {
