@@ -83,3 +83,29 @@ homologação. O Super Admin consegue agora visualizar integralmente
 título, descrição, anexos, respostas, timeline e informações técnicas
 de cada chamado, com tickets separados corretamente por prioridade e
 antiguidade.
+
+## Homologação — Notificações WhatsApp (2026-07-26)
+
+| # | Cenário | Resultado |
+|---|---|---|
+| 1 | Ticket criado por Gestor | `ticket_created` → gestor `+3519111…` ✅ |
+| 2 | Atribuição de responsável | `ticket_assigned` ✅ |
+| 3 | Mudança de estado | `ticket_status_changed` com estado anterior ✅ |
+| 4 | Mudança de prioridade | `ticket_priority_changed` ✅ |
+| 5 | Encaminhamento ao suporte técnico | `ticket_escalated` → Super Admin ✅ |
+| 6 | Devolução ao Gestor | `ticket_returned_to_manager` → gestor ✅ |
+| 7 | Resolução / reabertura | `ticket_resolved` + `ticket_reopened` ✅ |
+| 8 | Mensagem pública | `ticket_message` ✅ |
+| 9 | Nota interna | nenhum aviso gerado ✅ |
+| 10 | Responsável padrão não configurado | `skipped` + motivo ✅ |
+| 11 | Responsável sem permissão na empresa | `skipped` + motivo ✅ |
+| 12 | WhatsApp ausente/ inválido | `skipped` + motivo ✅ |
+| 13 | Perfil inativo | `skipped` + motivo ✅ |
+| 14 | Perfil inexistente | `skipped` + motivo ✅ |
+| 15 | Super Admin padrão não configurado | `skipped` + motivo ✅ |
+| 16 | Ticket inexistente | nenhuma linha criada ✅ |
+| 17 | Duplicidade (3 chamadas idênticas) | 1 única linha ✅ |
+| 18 | Multiempresa | destinatário sempre ligado à empresa do ticket ✅ |
+| 19 | Endpoint sem `apikey` válida | HTTP 401 ✅ |
+| 20 | Envio real ao ActivePieces | HTTP 200, `sent`, `attempts = 1` ✅ |
+| 21 | Falhas sucessivas | backoff 30/60/120/240 s, `failed` no limite ✅ |

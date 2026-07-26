@@ -226,3 +226,27 @@ Super Admin → cria ticket técnico direto
   `priority`, `support_level` pelo funcionário.
 - Notas internas (`is_internal=true`) permanecem ocultas para não-admins.
 - Central Global (SA) filtra por `support_level='technical' OR created_by_role='super_admin'`.
+
+## Atualização 2026-07-26 — Notificações WhatsApp (outbox + worker)
+
+Ver ADR-024 (destinatário único) e ADR-025 (idempotência e worker).
+
+```
+RPC/UPDATE em support_tickets ─ trigger ─▶ enqueue_ticket_whatsapp
+   └─ resolve_ticket_whatsapp_recipient
+        assigned_user → default_support_manager_id (empresa)
+                      → default_support_super_admin_id (plataforma)
+   └─ INSERT whatsapp_notifications (dedupe_key único) | status='skipped'+motivo
+
+pg_cron (1/min) ─▶ POST /api/public/whatsapp/dispatch (apikey)
+   └─ whatsapp_claim_batch → POST ActivePieces → mark_sent | mark_failed(backoff)
+```
+
+Eventos: `ticket_created`, `ticket_assigned`, `ticket_status_changed`,
+`ticket_priority_changed`, `ticket_escalated`, `ticket_returned_to_manager`,
+`ticket_resolved`, `ticket_reopened`, `ticket_message`.
+Notas internas (`is_internal = true`) nunca notificam.
+
+Homologação executada em 2026-07-26 (dry-run, cenários negativos, duplicidade,
+multiempresa, retry/backoff, envio real HTTP 200) — ver
+`docs/HOMOLOGACAO_SUPORTE_V1.md`.

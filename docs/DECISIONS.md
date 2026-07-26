@@ -371,3 +371,44 @@ existentes e futuras sem duplicar lógica em cada função. Eventos:
 **Consequências.** Notificações previsíveis e auditáveis; nenhum broadcast por
 papel; o disparo HTTP para o ActivePieces fica desacoplado (worker lê apenas
 linhas `pending`).
+
+---
+
+## ADR-025 — Idempotência e máquina de estados do outbox WhatsApp (2026-07-26)
+
+**Estado.** Aceite.
+
+**Contexto.** A ADR-024 definiu o outbox e o destinatário único, mas sem
+garantias contra duplicados e sem processo de envio. Retry de RPC, dupla
+execução ou dois UPDATEs concorrentes produziam linhas repetidas, e não
+existia transição `pending → sending → sent | failed`.
+
+**Decisão.**
+1. **Idempotência por `dedupe_key`** = `ticket_id : evento : md5(payload)`,
+   com índice único parcial limitado a `pending | sending | sent`. Registos
+   `skipped` e `failed` não bloqueiam um reenvio legítimo posterior.
+   `enqueue_ticket_whatsapp` usa `ON CONFLICT DO NOTHING`.
+2. **Eventos independentes** no trigger de `support_tickets` (sem `ELSIF`):
+   escalonamento, devolução, atribuição, prioridade e estado são avaliados
+   separadamente, para que uma transação que muda vários campos gere todos os
+   avisos. Transições de/para estados terminais produzem `ticket_resolved` e
+   `ticket_reopened`.
+3. **Máquina de estados** `pending → sending → sent | pending (retry) | failed`,
+   com reserva de lote via `FOR UPDATE SKIP LOCKED` (seguro sob concorrência) e
+   recuperação de linhas presas em `sending` há mais de 10 minutos.
+4. **Backoff exponencial** 30 s × 2^(tentativa−1), teto de 3600 s, até
+   `max_attempts` (5). Esgotadas as tentativas, o registo fica `failed` e só
+   volta à fila por ação explícita do Super Admin (`whatsapp_requeue`).
+5. **Worker HTTP** em `/api/public/whatsapp/dispatch`, autenticado por `apikey`,
+   com timeout de 10 s. A URL do ActivePieces vive no secret de servidor
+   `ACTIVEPIECES_WEBHOOK_URL` e nunca é exposta ao browser. Agendado por
+   `pg_cron` a cada minuto.
+
+**Alternativas rejeitadas.** Disparo HTTP dentro da RPC do ticket (tornaria a
+ação do utilizador dependente de um serviço externo) e `pg_net` a chamar
+diretamente o ActivePieces (sem controlo de tentativas nem auditoria do corpo
+da resposta).
+
+**Consequências.** As RPCs de ticket continuam não bloqueantes (apenas um
+INSERT); o envio é assíncrono e auditável; duplicados deixam de ser possíveis
+dentro da janela ativa da fila.
