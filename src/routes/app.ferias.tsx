@@ -49,6 +49,8 @@ type VacationRow = {
   status: VacationStatus;
   decision_reason: string | null;
   decided_at: string | null;
+  decided_by: string | null;
+  created_by: string | null;
   created_at: string;
   work_location: string | null;
   prior_validation: boolean;
