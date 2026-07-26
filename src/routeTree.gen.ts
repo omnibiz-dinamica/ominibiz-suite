@@ -54,6 +54,7 @@ import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/em
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as AppComercialContratosNovoRouteImport } from './routes/app.comercial.contratos.novo'
 import { Route as AppComercialContratosIdRouteImport } from './routes/app.comercial.contratos.$id'
+import { Route as ApiPublicWhatsappDispatchRouteImport } from './routes/api/public/whatsapp/dispatch'
 
 const UnsubscribeRoute = UnsubscribeRouteImport.update({
   id: '/unsubscribe',
@@ -284,6 +285,12 @@ const AppComercialContratosIdRoute = AppComercialContratosIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AppComercialContratosRoute,
 } as any)
+const ApiPublicWhatsappDispatchRoute =
+  ApiPublicWhatsappDispatchRouteImport.update({
+    id: '/api/public/whatsapp/dispatch',
+    path: '/api/public/whatsapp/dispatch',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -324,6 +331,7 @@ export interface FileRoutesByFullPath {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/app/comercial/': typeof AppComercialIndexRoute
   '/app/rh/': typeof AppRhIndexRoute
+  '/api/public/whatsapp/dispatch': typeof ApiPublicWhatsappDispatchRoute
   '/app/comercial/contratos/$id': typeof AppComercialContratosIdRoute
   '/app/comercial/contratos/novo': typeof AppComercialContratosNovoRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -368,6 +376,7 @@ export interface FileRoutesByTo {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/app/comercial': typeof AppComercialIndexRoute
   '/app/rh': typeof AppRhIndexRoute
+  '/api/public/whatsapp/dispatch': typeof ApiPublicWhatsappDispatchRoute
   '/app/comercial/contratos/$id': typeof AppComercialContratosIdRoute
   '/app/comercial/contratos/novo': typeof AppComercialContratosNovoRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -416,6 +425,7 @@ export interface FileRoutesById {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/app/comercial/': typeof AppComercialIndexRoute
   '/app/rh/': typeof AppRhIndexRoute
+  '/api/public/whatsapp/dispatch': typeof ApiPublicWhatsappDispatchRoute
   '/app/comercial/contratos/$id': typeof AppComercialContratosIdRoute
   '/app/comercial/contratos/novo': typeof AppComercialContratosNovoRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -465,6 +475,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/app/comercial/'
     | '/app/rh/'
+    | '/api/public/whatsapp/dispatch'
     | '/app/comercial/contratos/$id'
     | '/app/comercial/contratos/novo'
     | '/lovable/email/auth/preview'
@@ -509,6 +520,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/app/comercial'
     | '/app/rh'
+    | '/api/public/whatsapp/dispatch'
     | '/app/comercial/contratos/$id'
     | '/app/comercial/contratos/novo'
     | '/lovable/email/auth/preview'
@@ -556,6 +568,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/app/comercial/'
     | '/app/rh/'
+    | '/api/public/whatsapp/dispatch'
     | '/app/comercial/contratos/$id'
     | '/app/comercial/contratos/novo'
     | '/lovable/email/auth/preview'
@@ -575,6 +588,7 @@ export interface RootRouteChildren {
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   SignTokenRoute: typeof SignTokenRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
+  ApiPublicWhatsappDispatchRoute: typeof ApiPublicWhatsappDispatchRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
@@ -899,6 +913,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppComercialContratosIdRouteImport
       parentRoute: typeof AppComercialContratosRoute
     }
+    '/api/public/whatsapp/dispatch': {
+      id: '/api/public/whatsapp/dispatch'
+      path: '/api/public/whatsapp/dispatch'
+      fullPath: '/api/public/whatsapp/dispatch'
+      preLoaderRoute: typeof ApiPublicWhatsappDispatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1051,6 +1072,7 @@ const rootRouteChildren: RootRouteChildren = {
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   SignTokenRoute: SignTokenRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
+  ApiPublicWhatsappDispatchRoute: ApiPublicWhatsappDispatchRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
