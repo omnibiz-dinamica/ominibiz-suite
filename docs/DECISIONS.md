@@ -323,3 +323,51 @@ o aprovador era diferente do solicitante. Como o fluxo padrão é
 **Consequências.** Fim das confirmações duplicadas; estado da notificação
 coerente com o estado do pedido; o fluxo de confirmação continua íntegro
 para férias agendadas pelo gestor.
+
+---
+
+## ADR-024 — Destinatário único para notificações WhatsApp de tickets (2026-07-26)
+
+**Contexto.** A integração de notificações de tickets (ActivePieces/WhatsApp)
+precisa de um destinatário determinístico. Enviar para "todos os gestores" ou
+"todos os super admins" gera ruído, custo e risco de fuga de contexto entre
+empresas.
+
+**Decisão.**
+1. **Nunca** notificar um papel inteiro. A resolução devolve no máximo **um**
+   utilizador, via `public.resolve_ticket_whatsapp_recipient(_ticket_id)`
+   (`SECURITY DEFINER`, `SET search_path = public`).
+2. Ordem de resolução:
+   - `assigned_user_id` preenchido → esse responsável;
+   - vazio e `current_owner_role = 'manager'` →
+     `company_hr_settings.default_support_manager_id`;
+   - vazio e `current_owner_role = 'super_admin'` →
+     `platform_settings.default_support_super_admin_id`.
+3. Validação obrigatória do candidato: perfil existente, `is_active = true`,
+   papel compatível (gestor da empresa / `super_admin`) e `profiles.whatsapp`
+   em E.164 (`^\+[1-9]\d{7,14}$`).
+4. Sem destinatário válido → registo em `whatsapp_notifications` com
+   `status = 'skipped'` e `last_error` com o motivo específico. Nada é enviado,
+   mas o evento fica auditável e reprocessável após configurar o responsável.
+
+**Armazenamento das configurações.**
+- Por empresa: `company_hr_settings.default_support_manager_id` — a tabela já
+  é o repositório de definições por empresa e de responsáveis (aprovadores).
+  Rejeitado `companies.default_support_manager_id` (tabela de faturação/limites,
+  gerida por outro perfil).
+- Global: nova tabela singleton `public.platform_settings` (`id = 1`), destinada
+  a configurações globais de produto em geral. Rejeitado reaproveitar
+  `email_send_state`, que é específico do módulo de e-mail.
+  Leitura/escrita apenas para Super Admin; `service_role` com acesso total.
+
+**Instrumentação.** O enfileiramento é feito por *outbox transacional*, através
+de triggers `AFTER INSERT/UPDATE` em `support_tickets` e `AFTER INSERT` em
+`support_ticket_messages` (mensagens internas são ignoradas), chamando
+`public.enqueue_ticket_whatsapp`. Isto cobre todas as RPCs de suporte
+existentes e futuras sem duplicar lógica em cada função. Eventos:
+`ticket_created`, `ticket_escalated`, `ticket_returned_to_manager`,
+`ticket_assigned`, `ticket_status_changed`, `ticket_message`.
+
+**Consequências.** Notificações previsíveis e auditáveis; nenhum broadcast por
+papel; o disparo HTTP para o ActivePieces fica desacoplado (worker lê apenas
+linhas `pending`).

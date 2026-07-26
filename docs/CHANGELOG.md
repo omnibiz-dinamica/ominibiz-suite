@@ -7,6 +7,24 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### 📲 Notificações WhatsApp de tickets — base e destinatário único (2026-07-26)
+
+#### Adicionado
+- `profiles.whatsapp` com validação E.164 e campo no ecrã **Meu Perfil**.
+- `company_hr_settings.default_support_manager_id` — **Responsável padrão do
+  Suporte** por empresa, configurável em `/app/empresa`.
+- `public.platform_settings` (tabela singleton `id = 1`, RLS só Super Admin)
+  com `default_support_super_admin_id`, configurável em `/app/admin/suporte`.
+- `public.whatsapp_notifications` (outbox) com estados
+  `pending | sent | failed | skipped`, `last_error`, RLS por empresa para
+  gestores e global para Super Admin.
+- `public.resolve_ticket_whatsapp_recipient` — devolve **no máximo um**
+  destinatário válido (perfil ativo, papel compatível, WhatsApp E.164).
+- `public.enqueue_ticket_whatsapp` + triggers em `support_tickets` e
+  `support_ticket_messages` (outbox transacional). Sem destinatário válido,
+  o registo é criado com `status = 'skipped'` e motivo específico.
+- ADR-024.
+
 ### 🛠 SUP-2026-000040 + SUP-2026-000045 — Ordenação de tarefas e fluxo de férias (2026-07-26)
 
 #### Adicionado
