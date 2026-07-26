@@ -7,6 +7,33 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### 📲 Notificações WhatsApp — worker, idempotência e auditoria (2026-07-26)
+
+#### Adicionado
+- `whatsapp_notifications.dedupe_key` com índice único parcial
+  (`pending | sending | sent`) — a mesma alteração nunca gera dois avisos,
+  mesmo com retry de RPC, dupla execução ou concorrência.
+- Estado `sending` e colunas `next_attempt_at`, `max_attempts`, `locked_at`,
+  `http_status`, `response_body`.
+- RPCs de worker: `whatsapp_claim_batch` (`FOR UPDATE SKIP LOCKED`),
+  `whatsapp_mark_sent`, `whatsapp_mark_failed` (backoff exponencial
+  30 s → 3600 s, `max_attempts` 5) e `whatsapp_requeue` (Super Admin).
+- Rota `POST /api/public/whatsapp/dispatch` — worker de envio ao ActivePieces,
+  autenticado por `apikey`, timeout de 10 s, URL do webhook em secret de
+  servidor (`ACTIVEPIECES_WEBHOOK_URL`).
+- Agendamento `pg_cron` `whatsapp-dispatch-minute` (a cada minuto).
+- Painel **Fila de notificações WhatsApp** em `/app/admin/suporte`
+  (`WhatsappQueuePanel`) com estado, tentativas, erro e reenfileiramento.
+
+#### Alterado
+- Trigger de tickets deixou de usar cadeia `ELSIF`: várias alterações na mesma
+  transação geram todos os eventos correspondentes.
+- Novos eventos `ticket_priority_changed`, `ticket_resolved`, `ticket_reopened`.
+
+#### Corrigido
+- `search_path = public` fixado em `delete_email`, `enqueue_email`,
+  `move_to_dlq` e `read_email_batch` (dívida pré-existente).
+
 ### 📲 Notificações WhatsApp de tickets — base e destinatário único (2026-07-26)
 
 #### Adicionado
