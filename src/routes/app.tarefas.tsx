@@ -755,14 +755,8 @@ function TaskPlanningCalendar({
     d.setDate(d.getDate() + days);
     return d;
   };
-  const sortTasks = (list: TaskRow[]) =>
-    list
-      .slice()
-      .sort((a, b) =>
-        (a.scheduled_for ?? a.recurrence_date ?? a.due_at ?? "").localeCompare(
-          b.scheduled_for ?? b.recurrence_date ?? b.due_at ?? "",
-        ),
-      );
+  // Ordenação por ocorrência (nunca pela série-mãe) — helper central.
+  const sortTasks = (list: TaskRow[]) => list.slice().sort(compareTasksChronologically);
   const tasksForKey = (list: TaskRow[], key: string) =>
     sortTasks(list).filter((task) => {
       const date = taskDate(task);
@@ -1150,11 +1144,7 @@ function TaskCalendar({
                   <ul className="divide-y divide-border">
                     {dayTasks
                       .slice()
-                      .sort((a, b) =>
-                        (a.scheduled_for ?? a.recurrence_date ?? a.due_at ?? "").localeCompare(
-                          b.scheduled_for ?? b.recurrence_date ?? b.due_at ?? "",
-                        ),
-                      )
+                      .sort(compareTasksChronologically)
                       .map((task) => (
                         <CalendarTaskCard
                           key={task.id}
