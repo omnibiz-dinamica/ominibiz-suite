@@ -22,6 +22,7 @@ import {
 } from "@/lib/support/constants";
 import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
 import { invalidateSupportCache } from "@/lib/cache/support";
+import { PlatformSupportSettingsCard } from "@/components/support/PlatformSupportSettingsCard";
 
 export const Route = createFileRoute("/app/admin/suporte")({
   component: () => (
@@ -232,6 +233,8 @@ function SupportAdminPage() {
           <Link to="/app/admin">Empresas</Link>
         </Button>
       </header>
+
+      <PlatformSupportSettingsCard />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
         {[
