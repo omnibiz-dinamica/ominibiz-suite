@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,7 +27,16 @@ import { sendTransactionalEmail } from "@/lib/email/send";
 import { exportToExcel, exportToPdf } from "@/lib/exports";
 import { buildAppUrl } from "@/lib/app-url";
 
-export const Route = createFileRoute("/app/ferias")({ component: FeriasPage });
+type FeriasSearch = { request?: string };
+
+export const Route = createFileRoute("/app/ferias")({
+  component: FeriasPage,
+  // Deep-link da notificação: /app/ferias?request=<id> (SUP-2026-000045)
+  validateSearch: (raw): FeriasSearch => {
+    const s = raw as Record<string, unknown>;
+    return { request: typeof s.request === "string" && s.request ? s.request : undefined };
+  },
+});
 
 type VacationStatus = "pendente" | "pendente_confirmacao" | "aprovado" | "rejeitado" | "cancelado";
 type VacationRow = {
@@ -94,6 +104,8 @@ function FeriasPage() {
   const { user, currentCompanyId, effectiveRole, isManager } = useAuth();
   const qc = useQueryClient();
   const isEmployee = effectiveRole === "employee";
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
 
   const { data: myProfile } = useQuery({
     queryKey: ["my-op-profile", user?.id],
