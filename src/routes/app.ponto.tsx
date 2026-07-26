@@ -669,6 +669,83 @@ function PontoPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Regularização manual de tarefa anterior (SUP-2026-000040) */}
+      <Dialog open={!!regularizing} onOpenChange={(o) => !o && setRegularizing(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Regularizar ponto</DialogTitle>
+            <DialogDescription>
+              Informe o horário real trabalhado e o motivo. O registo é guardado como ajuste manual auditado e não altera
+              o modo de apontamento das próximas tarefas.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!regularizing || !regStartAt) return;
+              if (regReason.trim().length < 3) {
+                toast.error("Informe o motivo do atraso ou da ausência de registo.");
+                return;
+              }
+              regularizeMut.mutate({
+                taskId: regularizing.id,
+                startedAt: regStartAt,
+                endedAt: regEndAt || null,
+                reason: regReason.trim(),
+              });
+            }}
+          >
+            <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm font-medium">
+              {regularizing?.title}
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium" htmlFor="reg-start-at">
+                Hora real de início *
+              </label>
+              <Input
+                id="reg-start-at"
+                type="datetime-local"
+                value={regStartAt}
+                onChange={(e) => setRegStartAt(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium" htmlFor="reg-end-at">
+                Hora real de fim (opcional)
+              </label>
+              <Input
+                id="reg-end-at"
+                type="datetime-local"
+                value={regEndAt}
+                onChange={(e) => setRegEndAt(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Sem hora de fim, a tarefa fica em andamento para você finalizar depois.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium" htmlFor="reg-reason">
+                Motivo *
+              </label>
+              <Textarea
+                id="reg-reason"
+                value={regReason}
+                onChange={(e) => setRegReason(e.target.value)}
+                rows={3}
+                maxLength={500}
+                placeholder="Ex.: esqueci de bater a entrada; cheguei às 09:20 no cliente."
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={regularizeMut.isPending}>
+              <History className="mr-2 h-4 w-4" />
+              {regularizeMut.isPending ? "Regularizando..." : "Regularizar ponto"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       <PunchFlowOverlay state={punch.state} onSubmit={punch.submitJustification} onCancel={punch.cancelJustification} />
     </div>
   );
