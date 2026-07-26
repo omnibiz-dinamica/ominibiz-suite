@@ -214,7 +214,7 @@ function HRSettingsCard({ companyId }: { companyId: string }) {
       const { data, error } = await (supabase as any)
         .from("company_hr_settings")
         .select(
-          "company_id, default_punch_mode, employee_approver_kind, employee_approver_user_id, manager_approver_kind, manager_approver_user_id",
+          "company_id, default_punch_mode, employee_approver_kind, employee_approver_user_id, manager_approver_kind, manager_approver_user_id, default_support_manager_id",
         )
         .eq("company_id", companyId)
         .maybeSingle();
@@ -225,6 +225,7 @@ function HRSettingsCard({ companyId }: { companyId: string }) {
         employee_approver_user_id: string | null;
         manager_approver_kind: ManagerApproverKind;
         manager_approver_user_id: string | null;
+        default_support_manager_id: string | null;
       } | null;
     },
   });
@@ -247,6 +248,7 @@ function HRSettingsCard({ companyId }: { companyId: string }) {
   const [empUser, setEmpUser] = useState<string>("");
   const [mgrKind, setMgrKind] = useState<ManagerApproverKind>("owner");
   const [mgrUser, setMgrUser] = useState<string>("");
+  const [supportUser, setSupportUser] = useState<string>("");
 
   useEffect(() => {
     if (settings) {
@@ -254,6 +256,7 @@ function HRSettingsCard({ companyId }: { companyId: string }) {
       setEmpUser(settings.employee_approver_user_id ?? "");
       setMgrKind(settings.manager_approver_kind);
       setMgrUser(settings.manager_approver_user_id ?? "");
+      setSupportUser(settings.default_support_manager_id ?? "");
     }
   }, [settings]);
 
@@ -265,6 +268,7 @@ function HRSettingsCard({ companyId }: { companyId: string }) {
         employee_approver_user_id: empKind === "specific_user" ? empUser || null : null,
         manager_approver_kind: mgrKind,
         manager_approver_user_id: mgrKind === "specific_user" ? mgrUser || null : null,
+        default_support_manager_id: supportUser || null,
       };
       const { error } = await (supabase as any)
         .from("company_hr_settings")
@@ -335,6 +339,26 @@ function HRSettingsCard({ companyId }: { companyId: string }) {
                 </SelectContent>
               </Select>
             )}
+          </div>
+
+          <div className="space-y-2 md:col-span-2">
+            <Label>Responsável padrão do Suporte</Label>
+            <Select
+              value={supportUser || "none"}
+              onValueChange={(v) => setSupportUser(v === "none" ? "" : v)}
+            >
+              <SelectTrigger><SelectValue placeholder="Não definido" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Não definido</SelectItem>
+                {members.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>{m.full_name ?? m.id.slice(0, 8)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Recebe as notificações de tickets da empresa quando o ticket ainda não tem
+              responsável atribuído. É sempre um único destinatário.
+            </p>
           </div>
         </div>
       )}
