@@ -465,6 +465,46 @@ function PontoPage() {
         />
       )}
 
+      {/* === REGULARIZAÇÃO DE TAREFAS ANTERIORES === */}
+      {pendingRegularization.length > 0 && (
+        <section className="rounded-2xl border border-warning/40 bg-warning/5">
+          <div className="flex items-center gap-2 border-b border-warning/30 px-5 py-3 text-sm font-medium">
+            <History className="h-4 w-4 text-warning-foreground" />
+            Pendentes de regularização ({pendingRegularization.length})
+          </div>
+          <p className="px-5 pt-3 text-xs text-muted-foreground">
+            Estas tarefas ficaram sem registo de ponto. Elas não impedem o início das tarefas seguintes — informe o
+            horário real trabalhado e o motivo para regularizar.
+          </p>
+          <ul className="divide-y divide-warning/20">
+            {pendingRegularization.map((t) => (
+              <li key={t.id} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                <div className="min-w-0">
+                  <div className="truncate font-medium">{t.title}</div>
+                  <div className="mt-0.5 text-xs text-muted-foreground">
+                    {t.scheduled_for
+                      ? `${formatWallDate(t.scheduled_for)} · ${formatWallTime(t.scheduled_for)}`
+                      : t.recurrence_date || t.due_at
+                        ? `${formatWallDate(t.recurrence_date ?? t.due_at)} · Sem horário definido`
+                        : "Sem horário definido"}
+                    {" · "}
+                    {STATUS_LABELS[t.status]}
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  onClick={() => openRegularize(t)}
+                  disabled={regularizeMut.isPending}
+                >
+                  <History className="mr-2 h-4 w-4" /> Regularizar ponto
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {/* === HISTÓRICO === */}
       <section className="rounded-2xl border border-border bg-card">
         <div className="border-b border-border px-5 py-3 text-sm font-medium">
