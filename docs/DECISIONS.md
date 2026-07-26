@@ -269,3 +269,57 @@ técnicos reais, sobrecarregando o SA e retirando autonomia do Gestor.
 **Consequências.** Gestor ganha autonomia operacional; SA foca em
 desenvolvimento técnico; auditoria completa via `support_ticket_events`
 append-only; base preparada para SLAs distintos por nível (roadmap).
+
+---
+
+## ADR-022 — Ordenação canônica de tarefas e regularização de ponto (2026-07-26)
+
+**Contexto.** Cada tela (lista desktop, lista mobile, calendário, folha de
+ponto, dashboard) aplicava o seu próprio `sort()` com critérios diferentes
+(`due_at`, `scheduled_for`, `created_at`), produzindo ordens divergentes entre
+Gestor e Funcionário (SUP-2026-000040). Além disso, tarefas passadas ausentes
+ou atrasadas apareciam no topo da operação e davam a impressão de bloquear a
+tarefa seguinte.
+
+**Decisão.**
+1. **Ponto único de ordenação** em `src/lib/tasks.ts`. Nenhuma tela pode
+   reimplementar comparadores; `sortTasksForDisplay` é obrigatório e é
+   reaplicado após qualquer filtro.
+2. **Buckets operacionais**: em andamento → atrasadas → pendentes → ausentes →
+   concluídas → canceladas. Atrasadas ordenam da mais antiga (mais crítica);
+   pendentes, da mais próxima do agora; terminais, pela data oficial do estado.
+3. **Wall-clock**: chaves de ordenação derivam do horário-parede da ocorrência,
+   sem influência do fuso do dispositivo; ausência de horário ordena no fim do
+   próprio dia e é rotulada "Sem horário definido".
+4. **Sem bloqueio em cascata**: tarefa anterior ausente/atrasada nunca impede
+   iniciar a próxima. O funcionário regulariza o registo perdido via
+   `punch_employee_regularize` (`origin='manual_adjustment'`), com motivo
+   obrigatório, validação de sobreposição e auditoria before/after.
+
+**Consequências.** Ordem idêntica em todos os papéis e dispositivos; correções
+futuras de prioridade são feitas num único comparador; ajustes manuais do
+funcionário são rastreáveis e distinguíveis dos apontamentos automáticos.
+
+---
+
+## ADR-023 — Confirmação de férias baseada na autoria do pedido (2026-07-26)
+
+**Contexto.** `vacation_decide` exigia confirmação do colaborador sempre que
+o aprovador era diferente do solicitante. Como o fluxo padrão é
+"funcionário pede → gestor aprova", pedidos aprovados caíam indevidamente em
+`pendente_confirmacao`, gerando notificação de ação requerida sem necessidade
+(SUP-2026-000045).
+
+**Decisão.**
+1. `vacation_requests.created_by` passa a registar a autoria (trigger).
+2. A aprovação exige confirmação **apenas** quando `created_by <> user_id`,
+   isto é, quando o gestor agenda férias em nome do colaborador.
+3. Pedido criado pelo próprio colaborador: aprovação do gestor é **final** →
+   estado `aprovado`, e-mail de aprovação e notificação informativa.
+4. Notificações de férias carregam `vacation_id` e `action_required`, com
+   deep-link `/app/ferias?request=<id>`; o botão de abertura permanece
+   disponível após a notificação ser lida.
+
+**Consequências.** Fim das confirmações duplicadas; estado da notificação
+coerente com o estado do pedido; o fluxo de confirmação continua íntegro
+para férias agendadas pelo gestor.

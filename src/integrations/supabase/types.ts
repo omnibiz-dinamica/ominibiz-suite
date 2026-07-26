@@ -2820,6 +2820,7 @@ export type Database = {
           cancelled_at: string | null
           company_id: string
           created_at: string
+          created_by: string | null
           decided_at: string | null
           decided_by: string | null
           decision_reason: string | null
@@ -2839,6 +2840,7 @@ export type Database = {
           cancelled_at?: string | null
           company_id: string
           created_at?: string
+          created_by?: string | null
           decided_at?: string | null
           decided_by?: string | null
           decision_reason?: string | null
@@ -2858,6 +2860,7 @@ export type Database = {
           cancelled_at?: string | null
           company_id?: string
           created_at?: string
+          created_by?: string | null
           decided_at?: string | null
           decided_by?: string | null
           decision_reason?: string | null
@@ -3676,6 +3679,50 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      punch_employee_regularize: {
+        Args: {
+          _ended_at?: string
+          _reason?: string
+          _started_at: string
+          _task_id: string
+        }
+        Returns: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          effective_minutes: number | null
+          end_geo_reason_code:
+            | Database["public"]["Enums"]["geo_reason_code"]
+            | null
+          end_geo_reason_text: string | null
+          end_geo_status: Database["public"]["Enums"]["geo_status"] | null
+          ended_at: string | null
+          geo_policy_version: number | null
+          id: string
+          last_edit_reason: string | null
+          last_edited_at: string | null
+          last_edited_by: string | null
+          notes: string | null
+          origin: string
+          paused_at: string | null
+          resumed_at: string | null
+          start_geo_reason_code:
+            | Database["public"]["Enums"]["geo_reason_code"]
+            | null
+          start_geo_reason_text: string | null
+          start_geo_status: Database["public"]["Enums"]["geo_status"] | null
+          started_at: string
+          task_id: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "time_entries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       punch_manual_end: {
         Args: { _task_id: string }
         Returns: {
@@ -4412,6 +4459,7 @@ export type Database = {
           cancelled_at: string | null
           company_id: string
           created_at: string
+          created_by: string | null
           decided_at: string | null
           decided_by: string | null
           decision_reason: string | null
@@ -4440,6 +4488,7 @@ export type Database = {
           cancelled_at: string | null
           company_id: string
           created_at: string
+          created_by: string | null
           decided_at: string | null
           decided_by: string | null
           decision_reason: string | null

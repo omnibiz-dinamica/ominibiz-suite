@@ -7,6 +7,32 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### 🛠 SUP-2026-000040 + SUP-2026-000045 — Ordenação de tarefas e fluxo de férias (2026-07-26)
+
+#### Adicionado
+- **Ordenação canônica única** de tarefas em `src/lib/tasks.ts`
+  (`sortTasksForDisplay`, `compareTasksForDisplay`, `compareTasksChronologically`):
+  em andamento → atrasadas (mais antigas primeiro) → pendentes (mais próximas
+  primeiro) → ausentes → concluídas → canceladas. No mesmo dia, tarefas sem
+  horário definido vêm após as com horário; recorrências ordenam pela
+  ocorrência, nunca pela série-mãe.
+- **Regularização manual de ponto** pelo funcionário (`punch_employee_regularize`,
+  `origin='manual_adjustment'`): nova secção "Pendentes de regularização" em
+  `/app/ponto` com hora real de início/fim e motivo obrigatório, com auditoria.
+- **Detalhe de pedido de férias por deep-link** (`/app/ferias?request=<id>`),
+  abrindo estado, período, aprovador e decisão registada.
+
+#### Corrigido
+- Aprovação de férias solicitadas pelo próprio funcionário deixa de exigir
+  nova confirmação: `vacation_decide` só entra em `pendente_confirmacao`
+  quando o pedido foi **criado por outra pessoa** (`created_by <> user_id`).
+- Notificações de férias passam a incluir `vacation_id` e levam ao pedido
+  correto; o botão de ação permanece disponível após a leitura.
+- Tarefas anteriores atrasadas, não iniciadas ou ausentes deixam de ocupar o
+  destaque da operação e **não bloqueiam** o início da tarefa seguinte.
+- Removidas ordenações locais dispersas em `/app/tarefas`, `/app/ponto` e no
+  dashboard do funcionário (ponto único de ordenação).
+
 ### 🧭 Suporte em 2 Níveis — Triagem do Gestor (2026-07-23)
 
 #### Adicionado

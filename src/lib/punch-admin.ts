@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { TimeEntryRow } from "@/lib/tasks";
 
-export type PunchOrigin = "employee_punch" | "manager_manual" | "manager_correction";
+export type PunchOrigin = "employee_punch" | "manager_manual" | "manager_correction" | "manual_adjustment";
 
 export interface AdminTimeEntry extends TimeEntryRow {
   origin: PunchOrigin;
@@ -88,10 +88,12 @@ export const ORIGIN_LABEL: Record<PunchOrigin, string> = {
   employee_punch: "Funcionário",
   manager_manual: "Manual (gestor)",
   manager_correction: "Corrigido",
+  manual_adjustment: "Regularizado (funcionário)",
 };
 
 export const ORIGIN_TONE: Record<PunchOrigin, string> = {
   employee_punch: "bg-muted text-muted-foreground",
   manager_manual: "bg-warning/15 text-warning-foreground",
   manager_correction: "bg-info/15 text-info",
+  manual_adjustment: "bg-warning/15 text-warning-foreground",
 };

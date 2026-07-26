@@ -23,6 +23,7 @@ import {
   LogOut,
   Hand,
   Zap,
+  History,
 } from "lucide-react";
 import { TaskDocuments } from "@/components/tasks/TaskDocuments";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -38,6 +39,8 @@ import {
   requestTaskAuthorization,
   punchEmployeeManualStart,
   punchEmployeeManualEnd,
+  punchEmployeeRegularize,
+  sortTasksForDisplay,
   PUNCH_MODE_LABELS,
   STATUS_LABELS,
   STATUS_TONE,
@@ -86,6 +89,10 @@ function PontoPage() {
   const [manualEndAt, setManualEndAt] = useState("");
   const [manualEndReason, setManualEndReason] = useState("");
   const [manualEndRequiresReason, setManualEndRequiresReason] = useState(false);
+  const [regularizing, setRegularizing] = useState<TaskRow | null>(null);
+  const [regStartAt, setRegStartAt] = useState("");
+  const [regEndAt, setRegEndAt] = useState("");
+  const [regReason, setRegReason] = useState("");
   const punch = usePunchFlow();
 
   // Toast único por retorno de RPC v2 — sempre baseado no código do servidor.
@@ -156,9 +163,7 @@ function PontoPage() {
         .from("tasks")
         .select("*")
         .in("status", ["pendente", "autorizado", "ausente", "em_andamento"])
-        .order("due_at", { ascending: true, nullsFirst: false })
-        .order("scheduled_for", { ascending: true, nullsFirst: false })
-        .limit(12);
+        .limit(40);
       // Gestor/super admin: vê tarefas da empresa (toda a operação).
       // Funcionário: vê apenas as suas.
       if (isManager) {
@@ -168,9 +173,10 @@ function PontoPage() {
       }
       const { data, error } = await q;
       if (error) throw error;
-      return (data ?? []) as unknown as TaskRow[];
+      // Ordenação canônica única (SUP-2026-000040).
+      return sortTasksForDisplay((data ?? []) as unknown as TaskRow[]);
     },
-    enabled: !!user && !openEntry,
+    enabled: !!user,
   });
 
   // Mapa de clientes da empresa para exibir nome
@@ -332,6 +338,47 @@ function PontoPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // Regularização manual de tarefa anterior (SUP-2026-000040).
+  const regularizeMut = useMutation({
+    mutationFn: ({
+      taskId,
+      startedAt,
+      endedAt,
+      reason,
+    }: {
+      taskId: string;
+      startedAt: string;
+      endedAt: string | null;
+      reason: string;
+    }) => punchEmployeeRegularize(taskId, localInputToIso(startedAt), endedAt ? localInputToIso(endedAt) : null, reason),
+    onSuccess: () => {
+      toast.success("Ponto regularizado como ajuste manual.");
+      setRegularizing(null);
+      setRegReason("");
+      qc.invalidateQueries({ queryKey: ["punch-open"] });
+      qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
+      qc.invalidateQueries({ queryKey: ["punch-history"] });
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const openRegularize = (t: TaskRow) => {
+    setRegularizing(t);
+    setRegStartAt(manualDefaultDateTime(t));
+    setRegEndAt("");
+    setRegReason("");
+  };
+
+  // Tarefas anteriores que ficaram sem registo: atrasadas/não iniciadas/ausentes.
+  // NÃO bloqueiam o início da tarefa seguinte — ficam aqui para regularização.
+  const pendingRegularization = (upcoming ?? []).filter(
+    (t) =>
+      t.assigned_to === user?.id &&
+      t.id !== openEntry?.task_id &&
+      (t.status === "ausente" || ((t.status === "pendente" || t.status === "autorizado") && isVisuallyLate(t))),
+  );
+
   const state = openEntry ? punchState(openEntry) : "encerrado";
   const liveSec = openEntry ? effectiveSecondsNow(openEntry) : 0;
 
@@ -416,6 +463,46 @@ function PontoPage() {
           requestingAuth={requestAuthMut.isPending}
           requestingAuthId={requestAuthMut.variables ?? null}
         />
+      )}
+
+      {/* === REGULARIZAÇÃO DE TAREFAS ANTERIORES === */}
+      {pendingRegularization.length > 0 && (
+        <section className="rounded-2xl border border-warning/40 bg-warning/5">
+          <div className="flex items-center gap-2 border-b border-warning/30 px-5 py-3 text-sm font-medium">
+            <History className="h-4 w-4 text-warning-foreground" />
+            Pendentes de regularização ({pendingRegularization.length})
+          </div>
+          <p className="px-5 pt-3 text-xs text-muted-foreground">
+            Estas tarefas ficaram sem registo de ponto. Elas não impedem o início das tarefas seguintes — informe o
+            horário real trabalhado e o motivo para regularizar.
+          </p>
+          <ul className="divide-y divide-warning/20">
+            {pendingRegularization.map((t) => (
+              <li key={t.id} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                <div className="min-w-0">
+                  <div className="truncate font-medium">{t.title}</div>
+                  <div className="mt-0.5 text-xs text-muted-foreground">
+                    {t.scheduled_for
+                      ? `${formatWallDate(t.scheduled_for)} · ${formatWallTime(t.scheduled_for)}`
+                      : t.recurrence_date || t.due_at
+                        ? `${formatWallDate(t.recurrence_date ?? t.due_at)} · Sem horário definido`
+                        : "Sem horário definido"}
+                    {" · "}
+                    {STATUS_LABELS[t.status]}
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  onClick={() => openRegularize(t)}
+                  disabled={regularizeMut.isPending}
+                >
+                  <History className="mr-2 h-4 w-4" /> Regularizar ponto
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       {/* === HISTÓRICO === */}
@@ -577,6 +664,83 @@ function PontoPage() {
             <Button type="submit" className="w-full" disabled={manualEndMut.isPending}>
               <LogOut className="mr-2 h-4 w-4" />
               {manualEndMut.isPending ? "Finalizando..." : "Finalizar manual"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Regularização manual de tarefa anterior (SUP-2026-000040) */}
+      <Dialog open={!!regularizing} onOpenChange={(o) => !o && setRegularizing(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Regularizar ponto</DialogTitle>
+            <DialogDescription>
+              Informe o horário real trabalhado e o motivo. O registo é guardado como ajuste manual auditado e não altera
+              o modo de apontamento das próximas tarefas.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!regularizing || !regStartAt) return;
+              if (regReason.trim().length < 3) {
+                toast.error("Informe o motivo do atraso ou da ausência de registo.");
+                return;
+              }
+              regularizeMut.mutate({
+                taskId: regularizing.id,
+                startedAt: regStartAt,
+                endedAt: regEndAt || null,
+                reason: regReason.trim(),
+              });
+            }}
+          >
+            <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm font-medium">
+              {regularizing?.title}
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium" htmlFor="reg-start-at">
+                Hora real de início *
+              </label>
+              <Input
+                id="reg-start-at"
+                type="datetime-local"
+                value={regStartAt}
+                onChange={(e) => setRegStartAt(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium" htmlFor="reg-end-at">
+                Hora real de fim (opcional)
+              </label>
+              <Input
+                id="reg-end-at"
+                type="datetime-local"
+                value={regEndAt}
+                onChange={(e) => setRegEndAt(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Sem hora de fim, a tarefa fica em andamento para você finalizar depois.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium" htmlFor="reg-reason">
+                Motivo *
+              </label>
+              <Textarea
+                id="reg-reason"
+                value={regReason}
+                onChange={(e) => setRegReason(e.target.value)}
+                rows={3}
+                maxLength={500}
+                placeholder="Ex.: esqueci de bater a entrada; cheguei às 09:20 no cliente."
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={regularizeMut.isPending}>
+              <History className="mr-2 h-4 w-4" />
+              {regularizeMut.isPending ? "Regularizando..." : "Regularizar ponto"}
             </Button>
           </form>
         </DialogContent>

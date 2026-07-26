@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,7 +27,16 @@ import { sendTransactionalEmail } from "@/lib/email/send";
 import { exportToExcel, exportToPdf } from "@/lib/exports";
 import { buildAppUrl } from "@/lib/app-url";
 
-export const Route = createFileRoute("/app/ferias")({ component: FeriasPage });
+type FeriasSearch = { request?: string };
+
+export const Route = createFileRoute("/app/ferias")({
+  component: FeriasPage,
+  // Deep-link da notificação: /app/ferias?request=<id> (SUP-2026-000045)
+  validateSearch: (raw): FeriasSearch => {
+    const s = raw as Record<string, unknown>;
+    return { request: typeof s.request === "string" && s.request ? s.request : undefined };
+  },
+});
 
 type VacationStatus = "pendente" | "pendente_confirmacao" | "aprovado" | "rejeitado" | "cancelado";
 type VacationRow = {
@@ -39,6 +49,8 @@ type VacationRow = {
   status: VacationStatus;
   decision_reason: string | null;
   decided_at: string | null;
+  decided_by: string | null;
+  created_by: string | null;
   created_at: string;
   work_location: string | null;
   prior_validation: boolean;
@@ -94,6 +106,8 @@ function FeriasPage() {
   const { user, currentCompanyId, effectiveRole, isManager } = useAuth();
   const qc = useQueryClient();
   const isEmployee = effectiveRole === "employee";
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
 
   const { data: myProfile } = useQuery({
     queryKey: ["my-op-profile", user?.id],
@@ -460,8 +474,79 @@ function FeriasPage() {
     (r) => r.status === "pendente" && r.assigned_approver_id === user?.id && r.user_id !== user?.id,
   );
 
+  // Pedido aberto por deep-link da notificação (SUP-2026-000045).
+  const focused = search.request ? rows.find((r) => r.id === search.request) : undefined;
+  const closeFocused = () => navigate({ search: {}, replace: true });
+  const focusedNeedsConfirm = !!focused && focused.status === "pendente_confirmacao" && focused.user_id === user?.id;
+
   return (
     <div className="space-y-6">
+      <Dialog open={!!search.request} onOpenChange={(o) => !o && closeFocused()}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Detalhe do pedido de férias</DialogTitle>
+            <DialogDescription>
+              {focused
+                ? "Estado atual e decisão registada para este pedido."
+                : "Este pedido já não está disponível na sua lista."}
+            </DialogDescription>
+          </DialogHeader>
+          {focused ? (
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">Estado</span>
+                <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_TONE[focused.status]}`}>
+                  {STATUS_LABEL[focused.status]}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">Colaborador</span>
+                <span className="font-medium">{nameOf(focused.user_id)}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">Período</span>
+                <span className="font-medium">
+                  {focused.start_date} → {focused.end_date}
+                </span>
+              </div>
+              {focused.decided_by ? (
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground">Decidido por</span>
+                  <span className="font-medium">{nameOf(focused.decided_by)}</span>
+                </div>
+              ) : null}
+              {focused.decision_reason ? (
+                <p className="rounded-md border border-border bg-muted/40 p-3 text-xs">{focused.decision_reason}</p>
+              ) : null}
+              {focused.status === "aprovado" ? (
+                <p className="text-xs text-muted-foreground">
+                  Pedido aprovado. Não é necessária qualquer confirmação adicional.
+                </p>
+              ) : null}
+              {focusedNeedsConfirm ? (
+                <div className="flex flex-col gap-2 pt-1 sm:flex-row">
+                  <Button
+                    className="flex-1"
+                    disabled={confirmMutation.isPending}
+                    onClick={() => confirmMutation.mutate({ id: focused.id, action: "confirmar" })}
+                  >
+                    <Check className="mr-2 h-4 w-4" /> Confirmar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    disabled={confirmMutation.isPending}
+                    onClick={() => confirmMutation.mutate({ id: focused.id, action: "solicitar_alteracao" })}
+                  >
+                    Solicitar alteração
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
       <header className="flex items-center gap-3">
         <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary/15 text-primary">
           <Plane className="h-5 w-5" />
