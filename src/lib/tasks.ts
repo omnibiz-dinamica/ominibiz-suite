@@ -118,6 +118,31 @@ export async function taskEffectivePunchMode(taskId: string): Promise<PunchMode>
   return (data as PunchMode) ?? "automatico";
 }
 
+/**
+ * Regularização manual de uma tarefa anterior (SUP-2026-000040).
+ *
+ * Cria o ponto perdido como ajuste manual (`origin = 'manual_adjustment'`),
+ * com motivo obrigatório e auditoria before/after no banco. Não altera o
+ * modo de apontamento das tarefas seguintes e nunca sobrescreve registos
+ * existentes (sobreposição é bloqueada com mensagem clara).
+ */
+export async function punchEmployeeRegularize(
+  taskId: string,
+  startedAt: string,
+  endedAt: string | null,
+  reason: string,
+): Promise<TimeEntryRow> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("punch_employee_regularize", {
+    _task_id: taskId,
+    _started_at: startedAt,
+    _ended_at: endedAt,
+    _reason: reason,
+  });
+  if (error) throw error;
+  return data as TimeEntryRow;
+}
+
 // =========================================================
 // Recorrência
 // =========================================================
