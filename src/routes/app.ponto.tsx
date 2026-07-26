@@ -338,6 +338,47 @@ function PontoPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // Regularização manual de tarefa anterior (SUP-2026-000040).
+  const regularizeMut = useMutation({
+    mutationFn: ({
+      taskId,
+      startedAt,
+      endedAt,
+      reason,
+    }: {
+      taskId: string;
+      startedAt: string;
+      endedAt: string | null;
+      reason: string;
+    }) => punchEmployeeRegularize(taskId, localInputToIso(startedAt), endedAt ? localInputToIso(endedAt) : null, reason),
+    onSuccess: () => {
+      toast.success("Ponto regularizado como ajuste manual.");
+      setRegularizing(null);
+      setRegReason("");
+      qc.invalidateQueries({ queryKey: ["punch-open"] });
+      qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
+      qc.invalidateQueries({ queryKey: ["punch-history"] });
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const openRegularize = (t: TaskRow) => {
+    setRegularizing(t);
+    setRegStartAt(manualDefaultDateTime(t));
+    setRegEndAt("");
+    setRegReason("");
+  };
+
+  // Tarefas anteriores que ficaram sem registo: atrasadas/não iniciadas/ausentes.
+  // NÃO bloqueiam o início da tarefa seguinte — ficam aqui para regularização.
+  const pendingRegularization = (upcoming ?? []).filter(
+    (t) =>
+      t.assigned_to === user?.id &&
+      t.id !== openEntry?.task_id &&
+      (t.status === "ausente" || ((t.status === "pendente" || t.status === "autorizado") && isVisuallyLate(t))),
+  );
+
   const state = openEntry ? punchState(openEntry) : "encerrado";
   const liveSec = openEntry ? effectiveSecondsNow(openEntry) : 0;
 
