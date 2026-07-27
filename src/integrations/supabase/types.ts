@@ -4213,6 +4213,14 @@ export type Database = {
         }
         Returns: string
       }
+      task_absence_allowed_at: {
+        Args: {
+          _due_at: string
+          _recurrence_date: string
+          _scheduled_for: string
+        }
+        Returns: string
+      }
       task_archive: {
         Args: { _archive?: boolean; _task_id: string }
         Returns: {
