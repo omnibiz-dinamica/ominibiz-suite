@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { TimeEntryRow } from "@/lib/tasks";
 
-export type PunchOrigin = "employee_punch" | "manager_manual" | "manager_correction" | "manual_adjustment";
+export type PunchOrigin = "employee_punch" | "manager_manual" | "manager_correction" | "manager_voided" | "paid_leave";
 
 export interface AdminTimeEntry extends TimeEntryRow {
   origin: PunchOrigin;
@@ -9,6 +9,11 @@ export interface AdminTimeEntry extends TimeEntryRow {
   last_edited_by: string | null;
   last_edited_at: string | null;
   last_edit_reason: string | null;
+  voided_at?: string | null;
+  voided_by?: string | null;
+  void_reason?: string | null;
+  entry_kind?: "work" | "paid_leave";
+  paid_leave_minutes?: number | null;
 }
 
 export interface PunchAuditRow {
@@ -23,7 +28,7 @@ export interface PunchAuditRow {
 }
 
 export interface PunchCreatePayload {
-  task_id: string;
+  task_id?: string | null;
   user_id: string;
   started_at: string;
   ended_at?: string | null;
@@ -51,10 +56,37 @@ export async function punchAdminCreate(payload: PunchCreatePayload, reason: stri
   return data as AdminTimeEntry;
 }
 
-export async function punchAdminUpdate(id: string, payload: PunchUpdatePayload, reason: string): Promise<AdminTimeEntry> {
+export async function punchAdminUpdate(
+  id: string,
+  payload: PunchUpdatePayload,
+  reason: string,
+): Promise<AdminTimeEntry> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase.rpc as any)("punch_admin_update", {
     _id: id,
+    _payload: payload,
+    _reason: reason,
+  });
+  if (error) throw error;
+  return data as AdminTimeEntry;
+}
+
+export async function punchAdminVoidForRedo(id: string, reason: string): Promise<AdminTimeEntry> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("punch_admin_void_for_redo", {
+    _id: id,
+    _reason: reason,
+  });
+  if (error) throw error;
+  return data as AdminTimeEntry;
+}
+
+export async function punchPaidLeaveCreate(
+  payload: { company_id: string; user_id: string; date: string; minutes: number; notes?: string | null },
+  reason: string,
+): Promise<AdminTimeEntry> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("punch_paid_leave_create", {
     _payload: payload,
     _reason: reason,
   });
@@ -88,12 +120,14 @@ export const ORIGIN_LABEL: Record<PunchOrigin, string> = {
   employee_punch: "Funcionário",
   manager_manual: "Manual (gestor)",
   manager_correction: "Corrigido",
-  manual_adjustment: "Regularizado (funcionário)",
+  manager_voided: "Anulado",
+  paid_leave: "Folga remunerada",
 };
 
 export const ORIGIN_TONE: Record<PunchOrigin, string> = {
   employee_punch: "bg-muted text-muted-foreground",
   manager_manual: "bg-warning/15 text-warning-foreground",
   manager_correction: "bg-info/15 text-info",
-  manual_adjustment: "bg-warning/15 text-warning-foreground",
+  manager_voided: "bg-destructive/15 text-destructive",
+  paid_leave: "bg-success/15 text-success",
 };
