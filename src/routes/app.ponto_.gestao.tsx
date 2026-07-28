@@ -73,7 +73,28 @@ const emptyFilters: Filters = {
 type Row = AdminTimeEntry & {
   tasks: { title: string; client_id: string | null } | null;
   profiles: { full_name: string | null } | null;
+  geo?: GeoSummary | null;
 };
+
+type GeoPoint = {
+  time_entry_id: string;
+  event_kind: string;
+  lat: number | null;
+  lng: number | null;
+  accuracy_m: number | null;
+  distance_m: number | null;
+  geo_status: string;
+  reason_text: string | null;
+  captured_at: string;
+};
+
+type GeoSummary = {
+  start?: GeoPoint;
+  end?: GeoPoint;
+};
+
+const fmtCoord = (p?: GeoPoint) => (p?.lat != null && p.lng != null ? `${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}` : "");
+const fmtMeters = (n: number | null | undefined) => (n != null ? `${Math.round(n)} m` : "");
 
 function GestaoPonto() {
   const { currentCompanyId } = useAuth();
@@ -244,6 +265,14 @@ function GestaoPonto() {
     { header: "Efetivo", accessor: (r) => (r.effective_minutes != null ? formatDuration(r.effective_minutes) : "") },
     { header: "Origem", accessor: (r) => ORIGIN_LABEL[r.origin] ?? r.origin },
     { header: "Notas", accessor: (r) => r.notes ?? "" },
+    { header: "Geo entrada", accessor: (r) => fmtCoord(r.geo?.start) },
+    { header: "Geo saída", accessor: (r) => fmtCoord(r.geo?.end) },
+    { header: "Distância entrada", accessor: (r) => fmtMeters(r.geo?.start?.distance_m) },
+    { header: "Distância saída", accessor: (r) => fmtMeters(r.geo?.end?.distance_m) },
+    {
+      header: "Justificativa geo",
+      accessor: (r) => [r.geo?.start?.reason_text, r.geo?.end?.reason_text].filter(Boolean).join(" | "),
+    },
   ];
 
   const fetchAllForExport = async (): Promise<Row[]> => {
@@ -265,7 +294,26 @@ function GestaoPonto() {
     if (filters.taskSearch.trim()) q = q.ilike("tasks.title", `%${filters.taskSearch.trim()}%`);
     const { data, error } = await q;
     if (error) throw error;
-    return (data ?? []) as unknown as Row[];
+    const rows = (data ?? []) as unknown as Row[];
+    const ids = rows.map((r) => r.id);
+    if (ids.length === 0) return rows;
+
+    const { data: geoRows, error: geoError } = await supabase
+      .from("time_entry_geopoints")
+      .select("time_entry_id, event_kind, lat, lng, accuracy_m, distance_m, geo_status, reason_text, captured_at")
+      .in("time_entry_id", ids)
+      .order("captured_at", { ascending: true });
+    if (geoError) throw geoError;
+
+    const geoByEntry = new Map<string, GeoSummary>();
+    for (const p of (geoRows ?? []) as unknown as GeoPoint[]) {
+      const summary = geoByEntry.get(p.time_entry_id) ?? {};
+      if (p.event_kind === "start") summary.start = p;
+      if (p.event_kind === "end") summary.end = p;
+      geoByEntry.set(p.time_entry_id, summary);
+    }
+
+    return rows.map((r) => ({ ...r, geo: geoByEntry.get(r.id) ?? null }));
   };
 
   const handleExport = async (kind: "xlsx" | "pdf") => {
@@ -420,20 +468,21 @@ function GestaoPonto() {
                 <TableHead>Fim</TableHead>
                 <TableHead className="text-right">Efetivo</TableHead>
                 <TableHead>Origem</TableHead>
+                <TableHead>Notas</TableHead>
                 <TableHead className="w-10"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-sm text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center py-8 text-sm text-muted-foreground">
                     Carregando...
                   </TableCell>
                 </TableRow>
               )}
               {!isLoading && (result?.rows ?? []).length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-sm text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center py-8 text-sm text-muted-foreground">
                     Nenhum registro encontrado.
                   </TableCell>
                 </TableRow>
@@ -462,6 +511,9 @@ function GestaoPonto() {
                     >
                       {ORIGIN_LABEL[r.origin]}
                     </span>
+                  </TableCell>
+                  <TableCell className="max-w-[240px] truncate text-sm text-muted-foreground">
+                    {r.notes ?? "—"}
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
