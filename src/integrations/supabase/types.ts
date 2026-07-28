@@ -2400,6 +2400,7 @@ export type Database = {
           end_geo_reason_text: string | null
           end_geo_status: Database["public"]["Enums"]["geo_status"] | null
           ended_at: string | null
+          entry_kind: string
           geo_policy_version: number | null
           id: string
           last_edit_reason: string | null
@@ -2407,6 +2408,7 @@ export type Database = {
           last_edited_by: string | null
           notes: string | null
           origin: string
+          paid_leave_minutes: number | null
           paused_at: string | null
           resumed_at: string | null
           start_geo_reason_code:
@@ -2415,9 +2417,12 @@ export type Database = {
           start_geo_reason_text: string | null
           start_geo_status: Database["public"]["Enums"]["geo_status"] | null
           started_at: string
-          task_id: string
+          task_id: string | null
           updated_at: string
           user_id: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
         }
         Insert: {
           company_id: string
@@ -2430,6 +2435,7 @@ export type Database = {
           end_geo_reason_text?: string | null
           end_geo_status?: Database["public"]["Enums"]["geo_status"] | null
           ended_at?: string | null
+          entry_kind?: string
           geo_policy_version?: number | null
           id?: string
           last_edit_reason?: string | null
@@ -2437,6 +2443,7 @@ export type Database = {
           last_edited_by?: string | null
           notes?: string | null
           origin?: string
+          paid_leave_minutes?: number | null
           paused_at?: string | null
           resumed_at?: string | null
           start_geo_reason_code?:
@@ -2445,9 +2452,12 @@ export type Database = {
           start_geo_reason_text?: string | null
           start_geo_status?: Database["public"]["Enums"]["geo_status"] | null
           started_at?: string
-          task_id: string
+          task_id?: string | null
           updated_at?: string
           user_id: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
         }
         Update: {
           company_id?: string
@@ -2460,6 +2470,7 @@ export type Database = {
           end_geo_reason_text?: string | null
           end_geo_status?: Database["public"]["Enums"]["geo_status"] | null
           ended_at?: string | null
+          entry_kind?: string
           geo_policy_version?: number | null
           id?: string
           last_edit_reason?: string | null
@@ -2467,6 +2478,7 @@ export type Database = {
           last_edited_by?: string | null
           notes?: string | null
           origin?: string
+          paid_leave_minutes?: number | null
           paused_at?: string | null
           resumed_at?: string | null
           start_geo_reason_code?:
@@ -2475,9 +2487,12 @@ export type Database = {
           start_geo_reason_text?: string | null
           start_geo_status?: Database["public"]["Enums"]["geo_status"] | null
           started_at?: string
-          task_id?: string
+          task_id?: string | null
           updated_at?: string
           user_id?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
         }
         Relationships: [
           {
@@ -3616,6 +3631,7 @@ export type Database = {
           end_geo_reason_text: string | null
           end_geo_status: Database["public"]["Enums"]["geo_status"] | null
           ended_at: string | null
+          entry_kind: string
           geo_policy_version: number | null
           id: string
           last_edit_reason: string | null
@@ -3623,6 +3639,7 @@ export type Database = {
           last_edited_by: string | null
           notes: string | null
           origin: string
+          paid_leave_minutes: number | null
           paused_at: string | null
           resumed_at: string | null
           start_geo_reason_code:
@@ -3631,9 +3648,12 @@ export type Database = {
           start_geo_reason_text: string | null
           start_geo_status: Database["public"]["Enums"]["geo_status"] | null
           started_at: string
-          task_id: string
+          task_id: string | null
           updated_at: string
           user_id: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
         }
         SetofOptions: {
           from: "*"
@@ -3655,6 +3675,7 @@ export type Database = {
           end_geo_reason_text: string | null
           end_geo_status: Database["public"]["Enums"]["geo_status"] | null
           ended_at: string | null
+          entry_kind: string
           geo_policy_version: number | null
           id: string
           last_edit_reason: string | null
@@ -3662,6 +3683,7 @@ export type Database = {
           last_edited_by: string | null
           notes: string | null
           origin: string
+          paid_leave_minutes: number | null
           paused_at: string | null
           resumed_at: string | null
           start_geo_reason_code:
@@ -3670,9 +3692,56 @@ export type Database = {
           start_geo_reason_text: string | null
           start_geo_status: Database["public"]["Enums"]["geo_status"] | null
           started_at: string
-          task_id: string
+          task_id: string | null
           updated_at: string
           user_id: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "time_entries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      punch_admin_void_for_redo: {
+        Args: { _id: string; _reason: string }
+        Returns: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          effective_minutes: number | null
+          end_geo_reason_code:
+            | Database["public"]["Enums"]["geo_reason_code"]
+            | null
+          end_geo_reason_text: string | null
+          end_geo_status: Database["public"]["Enums"]["geo_status"] | null
+          ended_at: string | null
+          entry_kind: string
+          geo_policy_version: number | null
+          id: string
+          last_edit_reason: string | null
+          last_edited_at: string | null
+          last_edited_by: string | null
+          notes: string | null
+          origin: string
+          paid_leave_minutes: number | null
+          paused_at: string | null
+          resumed_at: string | null
+          start_geo_reason_code:
+            | Database["public"]["Enums"]["geo_reason_code"]
+            | null
+          start_geo_reason_text: string | null
+          start_geo_status: Database["public"]["Enums"]["geo_status"] | null
+          started_at: string
+          task_id: string | null
+          updated_at: string
+          user_id: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
         }
         SetofOptions: {
           from: "*"
@@ -3720,6 +3789,7 @@ export type Database = {
           end_geo_reason_text: string | null
           end_geo_status: Database["public"]["Enums"]["geo_status"] | null
           ended_at: string | null
+          entry_kind: string
           geo_policy_version: number | null
           id: string
           last_edit_reason: string | null
@@ -3727,6 +3797,7 @@ export type Database = {
           last_edited_by: string | null
           notes: string | null
           origin: string
+          paid_leave_minutes: number | null
           paused_at: string | null
           resumed_at: string | null
           start_geo_reason_code:
@@ -3735,9 +3806,12 @@ export type Database = {
           start_geo_reason_text: string | null
           start_geo_status: Database["public"]["Enums"]["geo_status"] | null
           started_at: string
-          task_id: string
+          task_id: string | null
           updated_at: string
           user_id: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
         }
         SetofOptions: {
           from: "*"
@@ -3759,6 +3833,7 @@ export type Database = {
           end_geo_reason_text: string | null
           end_geo_status: Database["public"]["Enums"]["geo_status"] | null
           ended_at: string | null
+          entry_kind: string
           geo_policy_version: number | null
           id: string
           last_edit_reason: string | null
@@ -3766,6 +3841,7 @@ export type Database = {
           last_edited_by: string | null
           notes: string | null
           origin: string
+          paid_leave_minutes: number | null
           paused_at: string | null
           resumed_at: string | null
           start_geo_reason_code:
@@ -3774,9 +3850,12 @@ export type Database = {
           start_geo_reason_text: string | null
           start_geo_status: Database["public"]["Enums"]["geo_status"] | null
           started_at: string
-          task_id: string
+          task_id: string | null
           updated_at: string
           user_id: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
         }
         SetofOptions: {
           from: "*"
@@ -3803,6 +3882,7 @@ export type Database = {
           end_geo_reason_text: string | null
           end_geo_status: Database["public"]["Enums"]["geo_status"] | null
           ended_at: string | null
+          entry_kind: string
           geo_policy_version: number | null
           id: string
           last_edit_reason: string | null
@@ -3810,6 +3890,7 @@ export type Database = {
           last_edited_by: string | null
           notes: string | null
           origin: string
+          paid_leave_minutes: number | null
           paused_at: string | null
           resumed_at: string | null
           start_geo_reason_code:
@@ -3818,9 +3899,12 @@ export type Database = {
           start_geo_reason_text: string | null
           start_geo_status: Database["public"]["Enums"]["geo_status"] | null
           started_at: string
-          task_id: string
+          task_id: string | null
           updated_at: string
           user_id: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
         }
         SetofOptions: {
           from: "*"
@@ -3842,6 +3926,7 @@ export type Database = {
           end_geo_reason_text: string | null
           end_geo_status: Database["public"]["Enums"]["geo_status"] | null
           ended_at: string | null
+          entry_kind: string
           geo_policy_version: number | null
           id: string
           last_edit_reason: string | null
@@ -3849,6 +3934,7 @@ export type Database = {
           last_edited_by: string | null
           notes: string | null
           origin: string
+          paid_leave_minutes: number | null
           paused_at: string | null
           resumed_at: string | null
           start_geo_reason_code:
@@ -3857,9 +3943,12 @@ export type Database = {
           start_geo_reason_text: string | null
           start_geo_status: Database["public"]["Enums"]["geo_status"] | null
           started_at: string
-          task_id: string
+          task_id: string | null
           updated_at: string
           user_id: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
         }
         SetofOptions: {
           from: "*"
@@ -3881,6 +3970,7 @@ export type Database = {
           end_geo_reason_text: string | null
           end_geo_status: Database["public"]["Enums"]["geo_status"] | null
           ended_at: string | null
+          entry_kind: string
           geo_policy_version: number | null
           id: string
           last_edit_reason: string | null
@@ -3888,6 +3978,7 @@ export type Database = {
           last_edited_by: string | null
           notes: string | null
           origin: string
+          paid_leave_minutes: number | null
           paused_at: string | null
           resumed_at: string | null
           start_geo_reason_code:
@@ -3896,9 +3987,56 @@ export type Database = {
           start_geo_reason_text: string | null
           start_geo_status: Database["public"]["Enums"]["geo_status"] | null
           started_at: string
-          task_id: string
+          task_id: string | null
           updated_at: string
           user_id: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "time_entries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      punch_paid_leave_create: {
+        Args: { _payload: Json; _reason: string }
+        Returns: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          effective_minutes: number | null
+          end_geo_reason_code:
+            | Database["public"]["Enums"]["geo_reason_code"]
+            | null
+          end_geo_reason_text: string | null
+          end_geo_status: Database["public"]["Enums"]["geo_status"] | null
+          ended_at: string | null
+          entry_kind: string
+          geo_policy_version: number | null
+          id: string
+          last_edit_reason: string | null
+          last_edited_at: string | null
+          last_edited_by: string | null
+          notes: string | null
+          origin: string
+          paid_leave_minutes: number | null
+          paused_at: string | null
+          resumed_at: string | null
+          start_geo_reason_code:
+            | Database["public"]["Enums"]["geo_reason_code"]
+            | null
+          start_geo_reason_text: string | null
+          start_geo_status: Database["public"]["Enums"]["geo_status"] | null
+          started_at: string
+          task_id: string | null
+          updated_at: string
+          user_id: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
         }
         SetofOptions: {
           from: "*"
@@ -3920,6 +4058,7 @@ export type Database = {
           end_geo_reason_text: string | null
           end_geo_status: Database["public"]["Enums"]["geo_status"] | null
           ended_at: string | null
+          entry_kind: string
           geo_policy_version: number | null
           id: string
           last_edit_reason: string | null
@@ -3927,6 +4066,7 @@ export type Database = {
           last_edited_by: string | null
           notes: string | null
           origin: string
+          paid_leave_minutes: number | null
           paused_at: string | null
           resumed_at: string | null
           start_geo_reason_code:
@@ -3935,9 +4075,12 @@ export type Database = {
           start_geo_reason_text: string | null
           start_geo_status: Database["public"]["Enums"]["geo_status"] | null
           started_at: string
-          task_id: string
+          task_id: string | null
           updated_at: string
           user_id: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
         }
         SetofOptions: {
           from: "*"
@@ -3960,6 +4103,7 @@ export type Database = {
           end_geo_reason_text: string | null
           end_geo_status: Database["public"]["Enums"]["geo_status"] | null
           ended_at: string | null
+          entry_kind: string
           geo_policy_version: number | null
           id: string
           last_edit_reason: string | null
@@ -3967,6 +4111,7 @@ export type Database = {
           last_edited_by: string | null
           notes: string | null
           origin: string
+          paid_leave_minutes: number | null
           paused_at: string | null
           resumed_at: string | null
           start_geo_reason_code:
@@ -3975,9 +4120,12 @@ export type Database = {
           start_geo_reason_text: string | null
           start_geo_status: Database["public"]["Enums"]["geo_status"] | null
           started_at: string
-          task_id: string
+          task_id: string | null
           updated_at: string
           user_id: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
         }
         SetofOptions: {
           from: "*"

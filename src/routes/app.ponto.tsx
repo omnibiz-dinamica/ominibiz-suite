@@ -139,7 +139,7 @@ function PontoPage() {
   const { data: openTask } = useQuery({
     queryKey: ["punch-open-task", openEntry?.task_id],
     queryFn: async () => {
-      if (!openEntry) return null;
+      if (!openEntry?.task_id) return null;
       const { data, error } = await supabase.from("tasks").select("*").eq("id", openEntry.task_id).maybeSingle();
       if (error) throw error;
       return (data ?? null) as unknown as TaskRow | null;
