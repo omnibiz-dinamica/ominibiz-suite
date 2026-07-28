@@ -22,8 +22,6 @@ import {
 } from "@/lib/support/constants";
 import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
 import { invalidateSupportCache } from "@/lib/cache/support";
-import { PlatformSupportSettingsCard } from "@/components/support/PlatformSupportSettingsCard";
-import { WhatsappQueuePanel } from "@/components/support/WhatsappQueuePanel";
 
 export const Route = createFileRoute("/app/admin/suporte")({
   component: () => (
@@ -77,8 +75,6 @@ function SupportAdminPage() {
         )
         .order("created_at", { ascending: false })
         .limit(1000);
-      // Nível 2: Super Admin só vê tickets técnicos (escalados) ou criados por SA.
-      query = query.or("support_level.eq.technical,created_by_role.eq.super_admin");
       if (status) query = query.eq("status", status);
       if (priority) query = query.eq("priority", priority);
       if (type) query = query.eq("type", type);
@@ -156,8 +152,10 @@ function SupportAdminPage() {
         })
       : data;
 
-    // Ordenação: tickets mais recentes primeiro (por data de abertura).
-    return [...arr].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    // Ordenação: urgente → alta → normal → baixa; dentro, mais antigas primeiro (FIFO operacional).
+    return [...arr].sort((a, b) => {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
   }, [data, q]);
 
   const kpis = useMemo(() => {
@@ -234,9 +232,6 @@ function SupportAdminPage() {
           <Link to="/app/admin">Empresas</Link>
         </Button>
       </header>
-
-      <PlatformSupportSettingsCard />
-      <WhatsappQueuePanel />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
         {[
@@ -483,12 +478,16 @@ function SupportAdminPage() {
                   </div>
                   <div className="mt-1 truncate text-sm font-medium">{t.title}</div>
                 </div>
-                <div className="flex flex-col items-start gap-0.5 text-xs text-muted-foreground sm:items-end">
-                  <div className="flex items-center gap-1.5">
-                    <MessageCircle className="h-3.5 w-3.5" />
-                    <span>Aberto em {new Date(t.created_at).toLocaleString("pt-PT")}</span>
+                <div className="flex shrink-0 items-start gap-2 text-xs text-muted-foreground sm:text-right">
+                  <MessageCircle className="mt-0.5 h-3.5 w-3.5" />
+                  <div className="space-y-0.5">
+                    <div title={`Aberto ${new Date(t.created_at).toLocaleString("pt-PT")}`}>
+                      Aberto em {new Date(t.created_at).toLocaleString("pt-PT")}
+                    </div>
+                    <div title={`Atualizado ${new Date(t.updated_at).toLocaleString("pt-PT")}`}>
+                      Atualizado em {new Date(t.updated_at).toLocaleString("pt-PT")}
+                    </div>
                   </div>
-                  <span>Atualizado em {new Date(t.updated_at).toLocaleString("pt-PT")}</span>
                 </div>
               </Link>
             </li>

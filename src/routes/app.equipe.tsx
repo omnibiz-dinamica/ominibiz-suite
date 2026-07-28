@@ -21,6 +21,7 @@ interface MemberRow {
   profile?: {
     id: string;
     full_name: string | null;
+    email: string | null;
     phone: string | null;
     is_active: boolean;
     job_title: string | null;
@@ -42,8 +43,11 @@ function TeamPage() {
   const { isManager, currentCompanyId, user } = useAuth();
   const qc = useQueryClient();
   const [email, setEmail] = useState("");
+  const [accessEmail, setAccessEmail] = useState("");
   const [role, setRole] = useState<"manager" | "employee">("employee");
-  const [inviteFilter, setInviteFilter] = useState<"open" | "all" | "pending" | "expired" | "accepted" | "revoked">("open");
+  const [inviteFilter, setInviteFilter] = useState<"open" | "all" | "pending" | "expired" | "accepted" | "revoked">(
+    "open",
+  );
 
   const { data: invites } = useQuery({
     queryKey: ["invites", currentCompanyId],
@@ -68,13 +72,15 @@ function TeamPage() {
         .eq("company_id", currentCompanyId!);
       const ids = (roles ?? []).map((r) => r.user_id);
       if (ids.length === 0) return [];
-      const { data: profs } = await supabase
-        .from("profiles")
-        .select("id, full_name, phone, is_active, job_title, work_location, supervisor_id, team")
+      // `email` is added by migration 20260724090000; generated Supabase
+      // types may lag behind until Lovable refreshes them.
+      const { data: profs } = await (supabase.from("profiles" as never) as any)
+        .select("id, full_name, email, phone, is_active, job_title, work_location, supervisor_id, team")
         .in("id", ids);
+      const profileRows = (profs ?? []) as NonNullable<MemberRow["profile"]>[];
       return (roles ?? []).map((r) => ({
         ...r,
-        profile: profs?.find((p) => p.id === r.user_id) ?? null,
+        profile: profileRows.find((p) => p.id === r.user_id) ?? null,
       })) as MemberRow[];
     },
     enabled: !!currentCompanyId && isManager,
@@ -201,6 +207,24 @@ function TeamPage() {
     onError: (e: Error) => toast.error(e.message || "Falha ao reenviar convite"),
   });
 
+  const sendAccessLink = useMutation({
+    mutationFn: async () => {
+      const recipient = accessEmail.trim().toLowerCase();
+      const { error } = await supabase.auth.resetPasswordForEmail(recipient, {
+        redirectTo: buildAppUrl("/reset-password"),
+      });
+      if (error) throw error;
+      return recipient;
+    },
+    onSuccess: (recipient) => {
+      toast.success("Link de acesso enviado.", {
+        description: `O funcionÃ¡rio receberÃ¡ instruÃ§Ãµes em ${recipient}.`,
+      });
+      setAccessEmail("");
+    },
+    onError: (e: Error) => toast.error(e.message || "Falha ao enviar link de acesso"),
+  });
+
   if (!isManager) {
     return <div className="text-muted-foreground">Acesso restrito a gestores.</div>;
   }
@@ -236,14 +260,41 @@ function TeamPage() {
           <div className="space-y-1.5">
             <Label>Papel</Label>
             <Select value={role} onValueChange={(v) => setRole(v as typeof role)}>
-              <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="employee">Funcionário</SelectItem>
                 <SelectItem value="manager">Gestor</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <Button type="submit" disabled={createInvite.isPending}>Enviar convite</Button>
+          <Button type="submit" disabled={createInvite.isPending}>
+            Enviar convite
+          </Button>
+        </form>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card p-6">
+        <h2 className="font-display text-lg font-semibold">Reenviar acesso</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Use para funcionÃ¡rio que jÃ¡ existe, perdeu a senha ou precisa entrar em outro aparelho.
+        </p>
+        <form
+          className="mt-4 flex flex-wrap items-end gap-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            sendAccessLink.mutate();
+          }}
+        >
+          <div className="flex-1 min-w-[220px] space-y-1.5">
+            <Label>Email do funcionÃ¡rio</Label>
+            <Input type="email" required value={accessEmail} onChange={(e) => setAccessEmail(e.target.value)} />
+          </div>
+          <Button type="submit" variant="outline" disabled={sendAccessLink.isPending}>
+            <Send className="mr-2 h-4 w-4" />
+            {sendAccessLink.isPending ? "Enviando..." : "Enviar acesso"}
+          </Button>
         </form>
       </div>
 
@@ -252,10 +303,13 @@ function TeamPage() {
           invites={(invites ?? []) as unknown as InviteRow[]}
           filter={inviteFilter}
           setFilter={setInviteFilter}
-          onCopy={(token) => { navigator.clipboard.writeText(buildAppUrl(`/aceitar-convite?token=${token}`)); toast.success("Link copiado"); }}
+          onCopy={(token) => {
+            navigator.clipboard.writeText(buildAppUrl(`/aceitar-convite?token=${token}`));
+            toast.success("Link copiado");
+          }}
           onResend={(id) => resendInvite.mutate(id)}
           onRevoke={(id) => revoke.mutate(id)}
-          resendingId={resendInvite.isPending ? resendInvite.variables ?? null : null}
+          resendingId={resendInvite.isPending ? (resendInvite.variables ?? null) : null}
         />
       </div>
 
@@ -268,8 +322,11 @@ function TeamPage() {
             return (
               <li key={m.user_id + m.role} className="flex flex-wrap items-center justify-between gap-3 py-3">
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2 font-medium">
+                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 font-medium">
                     <span className="truncate">{m.profile?.full_name ?? m.user_id.slice(0, 8)}</span>
+                    {m.profile?.email && (
+                      <span className="break-all text-sm font-normal text-muted-foreground">{m.profile.email}</span>
+                    )}
                     {!active && (
                       <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase text-muted-foreground">
                         inativo
@@ -281,9 +338,7 @@ function TeamPage() {
                   </div>
                   {(m.profile?.job_title || m.profile?.work_location || m.profile?.team) && (
                     <div className="mt-0.5 text-xs text-muted-foreground">
-                      {[m.profile?.job_title, m.profile?.work_location, m.profile?.team]
-                        .filter(Boolean)
-                        .join(" · ")}
+                      {[m.profile?.job_title, m.profile?.work_location, m.profile?.team].filter(Boolean).join(" · ")}
                     </div>
                   )}
                 </div>
@@ -381,7 +436,11 @@ function StatusBadge({ status }: { status: "pending" | "accepted" | "revoked" | 
 
 function fmtDate(d: string | null): string {
   if (!d) return "—";
-  try { return new Date(d).toLocaleDateString("pt-PT"); } catch { return "—"; }
+  try {
+    return new Date(d).toLocaleDateString("pt-PT");
+  } catch {
+    return "—";
+  }
 }
 
 function InvitesSection({
@@ -476,9 +535,15 @@ function InvitesSection({
               return (
                 <tr key={i.id} className="border-b border-border/60">
                   <td className="py-2 pr-3 font-medium break-all">{i.email}</td>
-                  <td className="py-2 pr-3 text-muted-foreground hidden sm:table-cell">{i.role === "manager" ? "Gestor" : i.role === "employee" ? "Funcionário" : i.role}</td>
-                  <td className="py-2 pr-3"><StatusBadge status={s} /></td>
-                  <td className="py-2 pr-3 text-xs text-muted-foreground hidden md:table-cell">{fmtDate(i.created_at)}</td>
+                  <td className="py-2 pr-3 text-muted-foreground hidden sm:table-cell">
+                    {i.role === "manager" ? "Gestor" : i.role === "employee" ? "Funcionário" : i.role}
+                  </td>
+                  <td className="py-2 pr-3">
+                    <StatusBadge status={s} />
+                  </td>
+                  <td className="py-2 pr-3 text-xs text-muted-foreground hidden md:table-cell">
+                    {fmtDate(i.created_at)}
+                  </td>
                   <td className="py-2 pr-3 text-xs text-muted-foreground hidden md:table-cell">
                     {fmtDate(i.last_sent_at)} <span className="ml-1 opacity-70">({sendCount}x)</span>
                   </td>
@@ -509,7 +574,11 @@ function InvitesSection({
               );
             })}
             {filtered.length === 0 && (
-              <tr><td colSpan={6} className="py-6 text-center text-sm text-muted-foreground">Nenhum convite neste filtro.</td></tr>
+              <tr>
+                <td colSpan={6} className="py-6 text-center text-sm text-muted-foreground">
+                  Nenhum convite neste filtro.
+                </td>
+              </tr>
             )}
           </tbody>
         </table>
@@ -517,4 +586,3 @@ function InvitesSection({
     </div>
   );
 }
-

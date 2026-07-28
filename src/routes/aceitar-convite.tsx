@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -18,10 +18,22 @@ function AcceptInvite() {
   const { user, loading, refresh } = useAuth();
   const nav = useNavigate();
   const [busy, setBusy] = useState(false);
-  const [invite, setInvite] = useState<{ email: string; company_name: string } | null>(null);
+  const [invite, setInvite] = useState<{
+    email: string;
+    company_name: string;
+    status: "pending" | "accepted" | "revoked" | "expired";
+  } | null>(null);
+  const [message, setMessage] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<"loading" | "new" | "existing" | "logged">("loading");
+  const acceptingRef = useRef(false);
+
+  const markNextAppLayoutClean = () => {
+    if (typeof window === "undefined") return;
+    window.sessionStorage.setItem("omnibiz:force-mobile-menu-closed", "1");
+    document.body.style.overflow = "";
+  };
 
   // Look up invite metadata (public via RPC-less direct query is restricted; we infer minimally)
   useEffect(() => {
@@ -32,11 +44,22 @@ function AcceptInvite() {
       const { data } = await supabase.rpc("get_invite_preview", { _token: token });
       if (!active) return;
       const row = Array.isArray(data) ? data[0] : data;
-      if (row && row.status === "pending") {
-        setInvite({ email: row.email, company_name: row.company_name });
+      if (row) {
+        setInvite({ email: row.email, company_name: row.company_name, status: row.status });
+        if (row.status === "accepted") {
+          setMessage("Este convite ja foi confirmado. Entre usando a tela de login.");
+        } else if (row.status === "expired") {
+          setMessage("Este convite expirou. Peca ao gestor para reenviar o acesso.");
+        } else if (row.status === "revoked") {
+          setMessage("Este convite foi revogado. Peca um novo convite ao gestor.");
+        }
+      } else {
+        setMessage("Convite nao encontrado.");
       }
     })();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [token]);
 
   useEffect(() => {
@@ -53,7 +76,7 @@ function AcceptInvite() {
 
   const setupAndAccept = async (e: FormEvent) => {
     e.preventDefault();
-    if (!invite) {
+    if (!invite || invite.status !== "pending") {
       toast.error("Convite inválido ou expirado");
       return;
     }
@@ -82,14 +105,34 @@ function AcceptInvite() {
   };
 
   const accept = async () => {
+    if (acceptingRef.current) return;
+    acceptingRef.current = true;
     setBusy(true);
+    if (invite?.status === "accepted") {
+      await refresh();
+      markNextAppLayoutClean();
+      setBusy(false);
+      toast.success("Acesso ja confirmado.");
+      nav({ to: "/app" });
+      return;
+    }
     const { error } = await supabase.rpc("accept_invite", { _token: token });
     setBusy(false);
     if (error) {
+      if (error.message.includes("utilizado")) {
+        await refresh();
+        markNextAppLayoutClean();
+        toast.success("Acesso ja confirmado.");
+        nav({ to: "/app" });
+        return;
+      }
+      acceptingRef.current = false;
+      setMessage(error.message);
       toast.error(error.message);
       return;
     }
     await refresh();
+    markNextAppLayoutClean();
     toast.success(`Bem-vindo${invite?.company_name ? ` à ${invite.company_name}` : ""}!`);
     nav({ to: "/app" });
   };
@@ -98,7 +141,9 @@ function AcceptInvite() {
     <div className="grid min-h-screen place-items-center bg-background p-4">
       <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-lg">
         <div className="mb-6 inline-flex items-center gap-2">
-          <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground font-display font-bold">O</div>
+          <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground font-display font-bold">
+            O
+          </div>
           <span className="font-display text-xl font-semibold">OmniBiz</span>
         </div>
         <h1 className="font-display text-2xl font-semibold">
@@ -107,10 +152,12 @@ function AcceptInvite() {
         <p className="mt-1 text-sm text-muted-foreground">
           {mode === "logged"
             ? "Confirmando seu acesso..."
-            : "Defina sua senha para acessar o painel operacional."}
+            : invite?.status === "pending"
+              ? "Defina sua senha para acessar o painel operacional."
+              : message || "Verifique seu convite para continuar."}
         </p>
 
-        {mode !== "logged" && (
+        {mode !== "logged" && invite?.status === "pending" && (
           <form onSubmit={setupAndAccept} className="mt-6 space-y-4">
             <div className="space-y-1.5">
               <Label>Email</Label>
@@ -122,17 +169,37 @@ function AcceptInvite() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="password">Senha</Label>
-              <Input id="password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
+              <Input
+                id="password"
+                type="password"
+                required
+                minLength={6}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
             </div>
             <Button type="submit" className="w-full" disabled={busy || !token || !invite}>
               {busy ? "Processando..." : "Entrar no OmniBiz"}
             </Button>
             {!invite && token && (
-              <p className="text-center text-xs text-muted-foreground">
-                Convite não encontrado ou já utilizado.
-              </p>
+              <p className="text-center text-xs text-muted-foreground">Convite não encontrado ou já utilizado.</p>
             )}
           </form>
+        )}
+        {mode !== "logged" && invite?.status !== "pending" && (
+          <div className="mt-6 space-y-3">
+            <Button type="button" className="w-full" onClick={() => nav({ to: "/login" })}>
+              Ir para login
+            </Button>
+          </div>
+        )}
+        {mode === "logged" && message && (
+          <div className="mt-6 space-y-3">
+            <p className="text-sm text-muted-foreground">{message}</p>
+            <Button type="button" className="w-full" onClick={() => nav({ to: "/app" })}>
+              Ir para o sistema
+            </Button>
+          </div>
         )}
       </div>
     </div>

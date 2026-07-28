@@ -140,9 +140,7 @@ function NotificationsPage() {
   const openNotification = async (n: NotificationRow) => {
     if (!n.read_at) markRead.mutate(n.id);
     if (n.event.startsWith("vacation_")) {
-      // Deep-link para o pedido exacto quando o metadata o traz (SUP-2026-000045).
-      const vacationId = typeof n.metadata?.vacation_id === "string" ? n.metadata.vacation_id : undefined;
-      nav({ to: "/app/ferias", search: vacationId ? { request: vacationId } : {} });
+      nav({ to: "/app/ferias" });
     } else if (n.event.startsWith("expense_")) {
       nav({ to: "/app/despesas" });
     } else {

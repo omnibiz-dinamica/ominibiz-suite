@@ -111,6 +111,8 @@ type Item = {
 type Group = { id: string; label: string; items: Item[] };
 
 const GROUPS_STORAGE_KEY = "omnibiz:sidebar:groups:v1";
+const FORCE_MENU_CLOSED_KEY = "omnibiz:force-mobile-menu-closed";
+const MOBILE_QUERY = "(max-width: 767px)";
 
 function buildGroups(args: {
   role: "super_admin" | "manager" | "employee";
@@ -167,11 +169,6 @@ function buildGroups(args: {
     const groups: Group[] = [
       { id: "operacao", label: "Operação", items: operacao },
       { id: "rh", label: "RH", items: rh },
-      {
-        id: "suporte",
-        label: "Suporte",
-        items: [{ to: "/app/suporte", label: "Meu Suporte", icon: LifeBuoy }],
-      },
     ];
     if (employeeHasVehicle) {
       groups.push({
@@ -279,10 +276,49 @@ export function AppLayout({ children }: { children?: ReactNode }) {
   const nav = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [breakpointReady, setBreakpointReady] = useState(false);
   const qc = useQueryClient();
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
 
   const superAdminOperating = isSuperAdmin && !!currentCompanyId;
+
+  useEffect(() => {
+    const mq = window.matchMedia(MOBILE_QUERY);
+    const sync = () => {
+      const nextIsMobile = mq.matches;
+      setIsMobile(nextIsMobile);
+      setBreakpointReady(true);
+      if (nextIsMobile) setOpen(false);
+    };
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
+  useEffect(() => {
+    setOpen(false);
+  }, [path, effectiveRole, currentCompanyId, user?.id]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const shouldForceClosed = window.sessionStorage.getItem(FORCE_MENU_CLOSED_KEY) === "1";
+    if (!shouldForceClosed) return;
+    window.sessionStorage.removeItem(FORCE_MENU_CLOSED_KEY);
+    setOpen(false);
+    document.body.style.overflow = "";
+  }, []);
+
+  useEffect(() => {
+    if (!breakpointReady || !isMobile) {
+      document.body.style.overflow = "";
+      return;
+    }
+    document.body.style.overflow = open ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [breakpointReady, isMobile, open]);
 
   const { data: activeCompany } = useQuery({
     queryKey: ["active-company-name", currentCompanyId],
@@ -423,11 +459,12 @@ export function AppLayout({ children }: { children?: ReactNode }) {
           : null;
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
+    <div className="flex min-h-screen overflow-x-hidden bg-background text-foreground">
       {/* Sidebar */}
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-40 flex h-screen w-64 flex-col border-r border-sidebar-border bg-sidebar transition-transform md:sticky md:top-0 md:translate-x-0",
+          "max-w-[85vw] md:max-w-none",
           open ? "translate-x-0" : "-translate-x-full",
         )}
       >
@@ -590,7 +627,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
       </aside>
 
       {/* Mobile overlay */}
-      {open && (
+      {open && isMobile && (
         <button
           type="button"
           aria-label="Fechar menu"
@@ -601,8 +638,13 @@ export function AppLayout({ children }: { children?: ReactNode }) {
 
       {/* Main */}
       <div className="flex min-h-screen flex-1 flex-col md:pl-0">
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur md:px-8">
-          <button className="md:hidden" onClick={() => setOpen(true)} aria-label="Abrir menu">
+        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur md:px-8">
+          <button
+            className="md:hidden"
+            onClick={() => setOpen(true)}
+            aria-label="Abrir menu"
+            disabled={!breakpointReady}
+          >
             <Menu className="h-5 w-5" />
           </button>
           <div className="flex-1">
@@ -631,7 +673,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
           <Button variant="ghost" size="icon" onClick={toggle} aria-label="Alternar tema">
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
-          {effectiveRole !== null && (
+          {effectiveRole !== "employee" && effectiveRole !== null && (
             <Button
               variant="outline"
               size="sm"

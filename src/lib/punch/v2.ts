@@ -10,13 +10,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { PunchGeoReading, PunchGeoErrorCode } from "@/hooks/use-punch-geolocation";
 
-export type PunchV2Op =
-  | "start"
-  | "stop"
-  | "pause"
-  | "resume"
-  | "arrival"
-  | "departure";
+export type PunchV2Op = "start" | "stop" | "pause" | "resume" | "arrival" | "departure";
 
 export type GpsStatus = "ok" | "denied" | "timeout" | "no_location";
 
@@ -48,6 +42,15 @@ const RPC_NAME: Record<PunchV2Op, string> = {
   departure: "punch_departure_v2",
 };
 
+const GENERIC_PUNCH_ERROR = "Nao foi possivel registrar o ponto. Tente novamente.";
+
+function makeCorrelationId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `punch-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 export const PUNCH_V2_ERROR_CODES = new Set([
   "UNAUTHENTICATED",
   "INVALID_INPUT",
@@ -73,10 +76,9 @@ export function gpsStatusFromError(code: PunchGeoErrorCode): GpsStatus {
   }
 }
 
-export function payloadFromReading(reading: PunchGeoReading | null): Pick<
-  PunchV2Payload,
-  "lat" | "lng" | "accuracy_m" | "gps_status" | "captured_at"
-> {
+export function payloadFromReading(
+  reading: PunchGeoReading | null,
+): Pick<PunchV2Payload, "lat" | "lng" | "accuracy_m" | "gps_status" | "captured_at"> {
   if (!reading) return { gps_status: "no_location" };
   return {
     lat: reading.lat,
@@ -105,10 +107,19 @@ export async function callPunchV2<T = Record<string, unknown>>(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase.rpc as any)(rpc, { p_input: payload });
   if (error) {
+    const correlationId = makeCorrelationId();
+    console.error("[punch-v2] RPC error", {
+      correlationId,
+      rpc,
+      code: (error as { code?: string }).code ?? null,
+      message: error.message,
+      details: (error as { details?: string }).details ?? null,
+      hint: (error as { hint?: string }).hint ?? null,
+    });
     return {
       success: false,
       code: (error as { code?: string }).code ?? "RPC_ERROR",
-      message: error.message,
+      message: `${GENERIC_PUNCH_ERROR} Codigo: ${correlationId}`,
       data: null,
     };
   }

@@ -58,8 +58,6 @@ import {
   transitionTask,
   archiveTask,
   canArchive,
-  sortTasksForDisplay,
-  compareTasksChronologically,
 } from "@/lib/tasks";
 import { RecurrenceForm, emptyRecurrence, type RecurrenceFormValue } from "@/components/tasks/RecurrenceForm";
 import { TaskDocuments } from "@/components/tasks/TaskDocuments";
@@ -148,15 +146,19 @@ function TasksPage() {
   const { data: tasks, isLoading } = useQuery({
     queryKey: ["tasks", currentCompanyId, user?.id, isManager, view],
     queryFn: async () => {
-      let q = supabase.from("tasks").select("*");
+      let q = supabase
+        .from("tasks")
+        .select("*")
+        .order("due_at", { ascending: true, nullsFirst: false })
+        .order("scheduled_for", { ascending: true, nullsFirst: false })
+        .order("created_at", { ascending: false });
       if (!isManager) q = q.eq("assigned_to", user!.id);
       else if (currentCompanyId) q = q.eq("company_id", currentCompanyId);
       if (view === "archived") q = q.not("archived_at", "is", null);
       else q = q.is("archived_at", null);
       const { data, error } = await q;
       if (error) throw error;
-      // Ordenação canônica única (SUP-2026-000040) — ver `sortTasksForDisplay`.
-      return sortTasksForDisplay((data ?? []) as unknown as TaskRow[]);
+      return (data ?? []) as unknown as TaskRow[];
     },
     enabled: !!user,
   });
@@ -310,7 +312,7 @@ function TasksPage() {
   // Filtros derivados (status + funcionário) — Fase F.
   const filteredTasks = useMemo(() => {
     const all = tasks ?? [];
-    const out = all.filter((t) => {
+    return all.filter((t) => {
       if (search.employee && t.assigned_to !== search.employee) return false;
       if (search.client && t.client_id !== search.client) return false;
       if (!search.status) return true;
@@ -322,8 +324,6 @@ function TasksPage() {
       }
       return t.status === search.status;
     });
-    // A ordenação oficial é reaplicada após o filtro (Desktop e Mobile).
-    return sortTasksForDisplay(out);
   }, [tasks, search.status, search.employee, search.client]);
 
   const setStatusFilter = (next: StatusFilter | undefined) => {
@@ -755,8 +755,14 @@ function TaskPlanningCalendar({
     d.setDate(d.getDate() + days);
     return d;
   };
-  // Ordenação por ocorrência (nunca pela série-mãe) — helper central.
-  const sortTasks = (list: TaskRow[]) => list.slice().sort(compareTasksChronologically);
+  const sortTasks = (list: TaskRow[]) =>
+    list
+      .slice()
+      .sort((a, b) =>
+        (a.scheduled_for ?? a.recurrence_date ?? a.due_at ?? "").localeCompare(
+          b.scheduled_for ?? b.recurrence_date ?? b.due_at ?? "",
+        ),
+      );
   const tasksForKey = (list: TaskRow[], key: string) =>
     sortTasks(list).filter((task) => {
       const date = taskDate(task);
@@ -1144,7 +1150,11 @@ function TaskCalendar({
                   <ul className="divide-y divide-border">
                     {dayTasks
                       .slice()
-                      .sort(compareTasksChronologically)
+                      .sort((a, b) =>
+                        (a.scheduled_for ?? a.recurrence_date ?? a.due_at ?? "").localeCompare(
+                          b.scheduled_for ?? b.recurrence_date ?? b.due_at ?? "",
+                        ),
+                      )
                       .map((task) => (
                         <CalendarTaskCard
                           key={task.id}
