@@ -51,9 +51,7 @@ async function sha256Hex(file: File): Promise<string | null> {
   }
 }
 
-export async function createTicket(
-  input: CreateTicketInput,
-): Promise<{ id: string; ticket_number: string }> {
+export async function createTicket(input: CreateTicketInput): Promise<{ id: string; ticket_number: string }> {
   const { data, error } = await (supabase as any).rpc("create_support_ticket", {
     _company_id: input.companyId,
     _type: input.type,
@@ -71,11 +69,7 @@ export async function createTicket(
   return { id: row.id as string, ticket_number: row.ticket_number as string };
 }
 
-export async function postMessage(
-  ticketId: string,
-  message: string,
-  isInternal = false,
-): Promise<string> {
+export async function postMessage(ticketId: string, message: string, isInternal = false): Promise<string> {
   const { data, error } = await (supabase as any).rpc("post_support_ticket_message", {
     _ticket_id: ticketId,
     _message: message.trim(),
@@ -98,10 +92,7 @@ export async function updateStatus(
   if (error) throw error;
 }
 
-export async function updatePriority(
-  ticketId: string,
-  newPriority: SupportTicketPriority,
-): Promise<void> {
+export async function updatePriority(ticketId: string, newPriority: SupportTicketPriority): Promise<void> {
   const { error } = await (supabase as any).rpc("update_support_ticket_priority", {
     _ticket_id: ticketId,
     _new_priority: newPriority,
@@ -109,10 +100,7 @@ export async function updatePriority(
   if (error) throw error;
 }
 
-export async function assignTicket(
-  ticketId: string,
-  assigneeUserId: string | null,
-): Promise<void> {
+export async function assignTicket(ticketId: string, assigneeUserId: string | null): Promise<void> {
   const { error } = await (supabase as any).rpc("assign_support_ticket", {
     _ticket_id: ticketId,
     _assignee_user_id: assigneeUserId,
@@ -128,49 +116,8 @@ export async function reopenTicket(ticketId: string, reason: string): Promise<vo
   if (error) throw error;
 }
 
-/**
- * Fase 2 — Fluxo de dois níveis.
- */
-export async function escalateTicket(
-  ticketId: string,
-  reason: string,
-  technicalSummary: string,
-): Promise<void> {
-  const { error } = await (supabase as any).rpc("escalate_support_ticket", {
-    _ticket_id: ticketId,
-    _reason: reason,
-    _technical_summary: technicalSummary,
-  });
-  if (error) throw error;
-}
-
-export async function resolveTicketByManager(
-  ticketId: string,
-  resolutionSummary: string,
-): Promise<void> {
-  const { error } = await (supabase as any).rpc("resolve_support_ticket_by_manager", {
-    _ticket_id: ticketId,
-    _resolution_summary: resolutionSummary,
-  });
-  if (error) throw error;
-}
-
-export async function managerRequestInformation(
-  ticketId: string,
-  message: string,
-): Promise<void> {
-  const { error } = await (supabase as any).rpc("manager_request_information", {
-    _ticket_id: ticketId,
-    _message: message,
-  });
-  if (error) throw error;
-}
-
-export async function returnTicketToManager(
-  ticketId: string,
-  reason: string,
-): Promise<void> {
-  const { error } = await (supabase as any).rpc("return_support_ticket_to_manager", {
+export async function closeTicket(ticketId: string, reason: string | null = null): Promise<void> {
+  const { error } = await (supabase as any).rpc("close_support_ticket", {
     _ticket_id: ticketId,
     _reason: reason,
   });
@@ -204,12 +151,10 @@ export async function uploadAttachment(
 
   const hash = await sha256Hex(file);
 
-  const { error: upErr } = await supabase.storage
-    .from(SUPPORT_BUCKET)
-    .upload(path, file, {
-      contentType: file.type,
-      upsert: false,
-    });
+  const { error: upErr } = await supabase.storage.from(SUPPORT_BUCKET).upload(path, file, {
+    contentType: file.type,
+    upsert: false,
+  });
   if (upErr) throw upErr;
 
   const { data, error } = await (supabase as any).rpc("register_support_attachment", {
@@ -222,20 +167,18 @@ export async function uploadAttachment(
   });
   if (error) {
     // Best-effort cleanup
-    await supabase.storage.from(SUPPORT_BUCKET).remove([path]).catch(() => {});
+    await supabase.storage
+      .from(SUPPORT_BUCKET)
+      .remove([path])
+      .catch(() => {});
     throw error;
   }
 
   return { attachmentId: data as string, storagePath: path, fileName: file.name };
 }
 
-export async function signedAttachmentUrl(
-  storagePath: string,
-  expiresInSec = 600,
-): Promise<string> {
-  const { data, error } = await supabase.storage
-    .from(SUPPORT_BUCKET)
-    .createSignedUrl(storagePath, expiresInSec);
+export async function signedAttachmentUrl(storagePath: string, expiresInSec = 600): Promise<string> {
+  const { data, error } = await supabase.storage.from(SUPPORT_BUCKET).createSignedUrl(storagePath, expiresInSec);
   if (error || !data?.signedUrl) throw error ?? new Error("Falha ao gerar URL");
   return data.signedUrl;
 }

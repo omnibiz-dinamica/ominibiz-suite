@@ -25,7 +25,7 @@ import { invalidateSupportCache } from "@/lib/cache/support";
 
 export const Route = createFileRoute("/app/suporte")({
   component: () => (
-    <RoleGuard allow={["super_admin", "owner", "manager", "employee"]}>
+    <RoleGuard allow={["super_admin", "owner", "manager"]}>
       <SupportRouteContent />
     </RoleGuard>
   ),
@@ -68,6 +68,7 @@ function SupportListPage() {
       // RLS já filtra por empresa para managers; para super admin operando dentro de empresa, filtramos manualmente
       if (currentCompanyId) query = query.eq("company_id", currentCompanyId);
       if (statusFilter) query = query.eq("status", statusFilter);
+      else query = query.not("status", "in", "(fechado,rejeitado)");
       const { data, error } = await query;
       if (error) throw error;
       return (data ?? []) as TicketRow[];

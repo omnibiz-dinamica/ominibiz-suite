@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import {
   punchAdminCreate,
   punchAdminUpdate,
+  punchPaidLeaveCreate,
   toLocalInput,
   fromLocalInput,
   type AdminTimeEntry,
@@ -29,11 +30,15 @@ interface Props {
   entryTaskTitle?: string;
   entryUserName?: string;
   entryClientName?: string;
+  initialEntryKind?: "work" | "paid_leave";
 }
 
 interface FormState {
+  entry_kind: "work" | "paid_leave";
   user_id: string;
   task_id: string;
+  leave_date: string;
+  leave_minutes: string;
   started_at: string;
   ended_at: string;
   paused_at: string;
@@ -42,9 +47,12 @@ interface FormState {
   reason: string;
 }
 
-const emptyForm = (): FormState => ({
+const emptyForm = (entryKind: "work" | "paid_leave" = "work"): FormState => ({
+  entry_kind: entryKind,
   user_id: "",
   task_id: "",
+  leave_date: "",
+  leave_minutes: "480",
   started_at: "",
   ended_at: "",
   paused_at: "",
@@ -76,6 +84,7 @@ export function PunchEditorDrawer({
   entryTaskTitle,
   entryUserName,
   entryClientName,
+  initialEntryKind = "work",
 }: Props) {
   const qc = useQueryClient();
   const [form, setForm] = useState<FormState>(emptyForm());
@@ -84,8 +93,11 @@ export function PunchEditorDrawer({
     if (!open) return;
     if (mode === "edit" && entry) {
       setForm({
+        entry_kind: entry.entry_kind ?? "work",
         user_id: entry.user_id,
-        task_id: entry.task_id,
+        task_id: entry.task_id ?? "",
+        leave_date: entry.started_at ? new Date(entry.started_at).toISOString().slice(0, 10) : "",
+        leave_minutes: String(entry.paid_leave_minutes ?? entry.effective_minutes ?? 480),
         started_at: toLocalInput(entry.started_at),
         ended_at: toLocalInput(entry.ended_at),
         paused_at: toLocalInput(entry.paused_at),
@@ -94,9 +106,9 @@ export function PunchEditorDrawer({
         reason: "",
       });
     } else if (mode === "create") {
-      setForm(emptyForm());
+      setForm(emptyForm(initialEntryKind));
     }
-  }, [open, mode, entry]);
+  }, [open, mode, entry, initialEntryKind]);
 
   // Membros da empresa para o select de usuário (somente modo create)
   const { data: members } = useQuery({
@@ -123,7 +135,7 @@ export function PunchEditorDrawer({
   // Tarefas do usuário escolhido (para modo create)
   const { data: userTasks } = useQuery({
     queryKey: ["punch-admin-user-tasks", companyId, form.user_id],
-    enabled: open && mode === "create" && !!companyId && !!form.user_id,
+    enabled: open && mode === "create" && form.entry_kind === "work" && !!companyId && !!form.user_id,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tasks")
@@ -165,8 +177,21 @@ export function PunchEditorDrawer({
   };
 
   const createMut = useMutation({
-    mutationFn: () =>
-      punchAdminCreate(
+    mutationFn: () => {
+      if (form.entry_kind === "paid_leave") {
+        return punchPaidLeaveCreate(
+          {
+            company_id: companyId,
+            user_id: form.user_id,
+            date: form.leave_date,
+            minutes: Number(form.leave_minutes || 480),
+            notes: form.notes || null,
+          },
+          form.reason,
+        );
+      }
+
+      return punchAdminCreate(
         {
           task_id: form.task_id,
           user_id: form.user_id,
@@ -177,7 +202,8 @@ export function PunchEditorDrawer({
           notes: form.notes || null,
         },
         form.reason,
-      ),
+      );
+    },
     onSuccess: () => {
       toast.success("Ponto criado");
       invalidate();
@@ -212,6 +238,19 @@ export function PunchEditorDrawer({
 
   const submit = () => {
     if (mode === "create") {
+      if (form.entry_kind === "paid_leave") {
+        if (!form.user_id || !form.leave_date || !form.leave_minutes) {
+          toast.error("Funcionario, data e horas remuneradas sao obrigatorios");
+          return;
+        }
+        if (form.reason.trim().length < 5) {
+          toast.error("Informe o motivo da folga remunerada");
+          return;
+        }
+        createMut.mutate();
+        return;
+      }
+
       if (!form.user_id || !form.task_id || !form.started_at) {
         toast.error("Funcionário, tarefa e início são obrigatórios");
         return;
@@ -261,6 +300,21 @@ export function PunchEditorDrawer({
           {mode === "create" && (
             <>
               <div>
+                <Label>Tipo de registro</Label>
+                <Select
+                  value={form.entry_kind}
+                  onValueChange={(v) => setForm({ ...form, entry_kind: v as "work" | "paid_leave", task_id: "" })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="work">Ponto trabalhado</SelectItem>
+                    <SelectItem value="paid_leave">Folga remunerada</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
                 <Label>Funcionário</Label>
                 <Select value={form.user_id} onValueChange={(v) => setForm({ ...form, user_id: v, task_id: "" })}>
                   <SelectTrigger>
@@ -275,63 +329,91 @@ export function PunchEditorDrawer({
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label>Tarefa</Label>
-                <Select
-                  value={form.task_id}
-                  onValueChange={(v) => setForm({ ...form, task_id: v })}
-                  disabled={!form.user_id}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={form.user_id ? "Selecione" : "Escolha o funcionário primeiro"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(userTasks ?? []).map((t) => (
-                      <SelectItem key={t.id} value={t.id}>
-                        {t.title}
-                        {t.scheduled_for ? ` · ${new Date(t.scheduled_for).toLocaleDateString()}` : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {form.entry_kind === "work" && (
+                <div>
+                  <Label>Tarefa</Label>
+                  <Select
+                    value={form.task_id}
+                    onValueChange={(v) => setForm({ ...form, task_id: v })}
+                    disabled={!form.user_id}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={form.user_id ? "Selecione" : "Escolha o funcionário primeiro"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(userTasks ?? []).map((t) => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.title}
+                          {t.scheduled_for ? ` · ${new Date(t.scheduled_for).toLocaleDateString()}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Início *</Label>
-              <Input
-                type="datetime-local"
-                value={form.started_at}
-                onChange={(e) => setForm({ ...form, started_at: e.target.value })}
-              />
+          {mode === "create" && form.entry_kind === "paid_leave" ? (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Data da folga *</Label>
+                <Input
+                  type="date"
+                  value={form.leave_date}
+                  onChange={(e) => setForm({ ...form, leave_date: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Horas remuneradas *</Label>
+                <Input
+                  type="number"
+                  min="0.25"
+                  max="24"
+                  step="0.25"
+                  value={Number(form.leave_minutes || 0) / 60}
+                  onChange={(e) =>
+                    setForm({ ...form, leave_minutes: String(Math.round(Number(e.target.value || 0) * 60)) })
+                  }
+                />
+              </div>
             </div>
-            <div>
-              <Label>Fim</Label>
-              <Input
-                type="datetime-local"
-                value={form.ended_at}
-                onChange={(e) => setForm({ ...form, ended_at: e.target.value })}
-              />
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Início *</Label>
+                <Input
+                  type="datetime-local"
+                  value={form.started_at}
+                  onChange={(e) => setForm({ ...form, started_at: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Fim</Label>
+                <Input
+                  type="datetime-local"
+                  value={form.ended_at}
+                  onChange={(e) => setForm({ ...form, ended_at: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Pausa</Label>
+                <Input
+                  type="datetime-local"
+                  value={form.paused_at}
+                  onChange={(e) => setForm({ ...form, paused_at: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Retorno</Label>
+                <Input
+                  type="datetime-local"
+                  value={form.resumed_at}
+                  onChange={(e) => setForm({ ...form, resumed_at: e.target.value })}
+                />
+              </div>
             </div>
-            <div>
-              <Label>Pausa</Label>
-              <Input
-                type="datetime-local"
-                value={form.paused_at}
-                onChange={(e) => setForm({ ...form, paused_at: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label>Retorno</Label>
-              <Input
-                type="datetime-local"
-                value={form.resumed_at}
-                onChange={(e) => setForm({ ...form, resumed_at: e.target.value })}
-              />
-            </div>
-          </div>
+          )}
 
           <div>
             <Label>Notas</Label>

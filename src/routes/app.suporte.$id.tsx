@@ -6,13 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { RoleGuard } from "@/components/RoleGuard";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import {
@@ -27,6 +21,7 @@ import {
   FileText,
   ImageIcon,
   Zap,
+  Archive,
 } from "lucide-react";
 import {
   EVENT_TYPE_LABEL,
@@ -44,22 +39,19 @@ import {
 } from "@/lib/support/constants";
 import {
   postMessage,
+  closeTicket,
   reopenTicket,
   signedAttachmentUrl,
   updatePriority,
   updateStatus,
   uploadAttachment,
-  escalateTicket,
-  resolveTicketByManager,
-  managerRequestInformation,
-  returnTicketToManager,
 } from "@/lib/support/tickets";
 import { invalidateSupportTicket } from "@/lib/cache/support";
 import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
 
 export const Route = createFileRoute("/app/suporte/$id")({
   component: () => (
-    <RoleGuard allow={["super_admin", "owner", "manager", "employee"]}>
+    <RoleGuard allow={["super_admin", "owner", "manager"]}>
       <SupportDetailPage />
     </RoleGuard>
   ),
@@ -84,15 +76,6 @@ type TicketDetail = {
   closed_at: string | null;
   created_at: string;
   updated_at: string;
-  support_level?: "company" | "technical" | null;
-  current_owner_role?: "manager" | "super_admin" | null;
-  created_by_role?: "employee" | "manager" | "super_admin" | null;
-  escalated_to_super_admin?: boolean | null;
-  escalated_at?: string | null;
-  escalation_reason?: string | null;
-  escalation_technical_summary?: string | null;
-  returned_to_manager_at?: string | null;
-  return_reason?: string | null;
 };
 
 type MessageRow = {
@@ -143,17 +126,16 @@ function AttachmentThumb({ att, onOpen }: { att: AttachmentRow; onOpen: (a: Atta
   useEffect(() => {
     if (!isImage && !isPdf) return;
     let alive = true;
-    signedAttachmentUrl(att.storage_path, 900).then((u) => alive && setUrl(u)).catch(() => {});
-    return () => { alive = false; };
+    signedAttachmentUrl(att.storage_path, 900)
+      .then((u) => alive && setUrl(u))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
   }, [att.storage_path, isImage, isPdf]);
   return (
     <div className="group relative overflow-hidden rounded-lg border border-border bg-background">
-      <button
-        type="button"
-        onClick={() => onOpen(att)}
-        className="block w-full"
-        title="Abrir em nova aba"
-      >
+      <button type="button" onClick={() => onOpen(att)} className="block w-full" title="Abrir em nova aba">
         {isImage && url ? (
           <img src={url} alt={att.file_name} className="h-32 w-full object-cover" />
         ) : isPdf ? (
@@ -167,23 +149,26 @@ function AttachmentThumb({ att, onOpen }: { att: AttachmentRow; onOpen: (a: Atta
         )}
       </button>
       <div className="flex items-center justify-between gap-1 border-t border-border p-2 text-[11px]">
-        <span className="min-w-0 flex-1 truncate" title={att.file_name}>{att.file_name}</span>
+        <span className="min-w-0 flex-1 truncate" title={att.file_name}>
+          {att.file_name}
+        </span>
         <span className="text-muted-foreground">{formatBytes(att.size_bytes)}</span>
       </div>
       <div className="absolute right-1 top-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-        <button
-          type="button"
-          onClick={() => onOpen(att)}
-          className="rounded bg-background/90 p-1 shadow"
-          title="Abrir"
-        ><ExternalLink className="h-3 w-3" /></button>
+        <button type="button" onClick={() => onOpen(att)} className="rounded bg-background/90 p-1 shadow" title="Abrir">
+          <ExternalLink className="h-3 w-3" />
+        </button>
         <a
           href={url ?? "#"}
           download={att.file_name}
-          onClick={(e) => { if (!url) e.preventDefault(); }}
+          onClick={(e) => {
+            if (!url) e.preventDefault();
+          }}
           className="rounded bg-background/90 p-1 shadow"
           title="Download"
-        ><Download className="h-3 w-3" /></a>
+        >
+          <Download className="h-3 w-3" />
+        </a>
       </div>
     </div>
   );
@@ -191,8 +176,7 @@ function AttachmentThumb({ att, onOpen }: { att: AttachmentRow; onOpen: (a: Atta
 
 function SupportDetailPage() {
   const { id } = useParams({ from: "/app/suporte/$id" });
-  const { user, isSuperAdmin, effectiveRole } = useAuth();
-  const isManagerLevel = effectiveRole === "manager" || effectiveRole === "owner";
+  const { user, isSuperAdmin } = useAuth();
   const qc = useQueryClient();
   const [reply, setReply] = useState("");
   const [isInternal, setIsInternal] = useState(false);
@@ -200,11 +184,7 @@ function SupportDetailPage() {
   const ticketQ = useQuery<TicketDetail | null>({
     queryKey: ["support-ticket", id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("support_tickets")
-        .select("*")
-        .eq("id", id)
-        .maybeSingle();
+      const { data, error } = await supabase.from("support_tickets").select("*").eq("id", id).maybeSingle();
       if (error) throw error;
       return data as TicketDetail | null;
     },
@@ -328,58 +308,15 @@ function SupportDetailPage() {
     onError: (e) => toast.error("Erro: " + (e as Error).message),
   });
 
-  const escalateMut = useMutation({
+  const closeMut = useMutation({
     mutationFn: async () => {
-      const reason = window.prompt("Motivo do encaminhamento ao Desenvolvimento?") ?? "";
-      if (!reason.trim()) throw new Error("Motivo obrigatório");
-      const summary =
-        window.prompt("Resumo técnico para o Super Admin (passos, hipótese, impacto):") ?? "";
-      if (!summary.trim()) throw new Error("Resumo técnico obrigatório");
-      await escalateTicket(id, reason, summary);
+      const reason = window.prompt("Confirme o motivo do arquivamento:", "Validado como resolvido") ?? "";
+      if (!reason.trim()) throw new Error("Motivo obrigatorio");
+      await closeTicket(id, reason);
     },
     onSuccess: () => {
       invalidateSupportTicket(qc, id);
-      toast.success("Ticket encaminhado ao Desenvolvimento.");
-    },
-    onError: (e) => toast.error("Erro: " + (e as Error).message),
-  });
-
-  const resolveByManagerMut = useMutation({
-    mutationFn: async () => {
-      const summary = window.prompt("Resumo da resolução (visível ao funcionário):") ?? "";
-      if (!summary.trim()) throw new Error("Resumo obrigatório");
-      await resolveTicketByManager(id, summary);
-    },
-    onSuccess: () => {
-      invalidateSupportTicket(qc, id);
-      toast.success("Ticket resolvido internamente.");
-    },
-    onError: (e) => toast.error("Erro: " + (e as Error).message),
-  });
-
-  const requestInfoMut = useMutation({
-    mutationFn: async () => {
-      const msg =
-        window.prompt("Que informação precisa do funcionário? (será enviado como mensagem)") ?? "";
-      if (!msg.trim()) throw new Error("Mensagem obrigatória");
-      await managerRequestInformation(id, msg);
-    },
-    onSuccess: () => {
-      invalidateSupportTicket(qc, id);
-      toast.success("Informação solicitada.");
-    },
-    onError: (e) => toast.error("Erro: " + (e as Error).message),
-  });
-
-  const returnToManagerMut = useMutation({
-    mutationFn: async () => {
-      const reason = window.prompt("Motivo para devolver ao Gestor?") ?? "";
-      if (!reason.trim()) throw new Error("Motivo obrigatório");
-      await returnTicketToManager(id, reason);
-    },
-    onSuccess: () => {
-      invalidateSupportTicket(qc, id);
-      toast.success("Ticket devolvido ao Gestor.");
+      toast.success("Ticket arquivado.");
     },
     onError: (e) => toast.error("Erro: " + (e as Error).message),
   });
@@ -436,11 +373,11 @@ function SupportDetailPage() {
     return (
       <div className="rounded-2xl border border-border bg-card p-8 text-center">
         <h2 className="font-display text-xl font-semibold">Ticket não encontrado</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Ele pode ter sido movido ou pertence a outra empresa.
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground">Ele pode ter sido movido ou pertence a outra empresa.</p>
         <Button asChild variant="outline" className="mt-4">
-          <Link to="/app/suporte"><ArrowLeft className="mr-1 h-4 w-4" /> Voltar</Link>
+          <Link to="/app/suporte">
+            <ArrowLeft className="mr-1 h-4 w-4" /> Voltar
+          </Link>
         </Button>
       </div>
     );
@@ -492,7 +429,9 @@ function SupportDetailPage() {
       <div className="space-y-4 lg:col-span-2">
         <div className="flex items-center gap-2 text-sm">
           <Button asChild variant="ghost" size="sm">
-            <Link to="/app/suporte"><ArrowLeft className="mr-1 h-4 w-4" /> Voltar</Link>
+            <Link to="/app/suporte">
+              <ArrowLeft className="mr-1 h-4 w-4" /> Voltar
+            </Link>
           </Button>
           {isSuperAdmin && (
             <Button asChild variant="ghost" size="sm">
@@ -518,7 +457,9 @@ function SupportDetailPage() {
               onClick={() => copyText(t.ticket_number, "Número copiado")}
               className="ml-auto inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
               title="Copiar número"
-            ><Copy className="h-3 w-3" /> copiar nº</button>
+            >
+              <Copy className="h-3 w-3" /> copiar nº
+            </button>
           </div>
           <div className="mt-3 flex items-start justify-between gap-2">
             <h1 className="font-display text-xl font-semibold">{t.title}</h1>
@@ -527,16 +468,16 @@ function SupportDetailPage() {
               onClick={() => copyText(`${t.title}\n\n${t.description}`, "Título e descrição copiados")}
               className="shrink-0 rounded border border-border p-1.5 text-muted-foreground hover:text-foreground"
               title="Copiar título + descrição"
-            ><Copy className="h-3.5 w-3.5" /></button>
+            >
+              <Copy className="h-3.5 w-3.5" />
+            </button>
           </div>
           <p className="mt-2 whitespace-pre-wrap break-words text-sm text-foreground/90 selection:bg-primary/20">
             {t.description}
           </p>
 
           <div className="mt-4 grid gap-3 rounded-xl border border-border bg-muted/30 p-3 text-xs sm:grid-cols-2">
-            <Row label="Empresa">
-              {requester?.company_name ?? <span className="text-muted-foreground">—</span>}
-            </Row>
+            <Row label="Empresa">{requester?.company_name ?? <span className="text-muted-foreground">—</span>}</Row>
             <Row label="Solicitante">
               {requester?.requester_full_name ?? <span className="text-muted-foreground">—</span>}
             </Row>
@@ -550,7 +491,9 @@ function SupportDetailPage() {
                     <Copy className="h-3 w-3 text-muted-foreground hover:text-foreground" />
                   </button>
                 </span>
-              ) : <span className="text-muted-foreground">—</span>}
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              )}
             </Row>
             <Row label="Aberto em">{new Date(t.created_at).toLocaleString("pt-PT")}</Row>
             <Row label="Última atualização">{new Date(t.updated_at).toLocaleString("pt-PT")}</Row>
@@ -563,11 +506,20 @@ function SupportDetailPage() {
               Local do erro
             </div>
             {t.module && <Row label="Módulo">{t.module}</Row>}
-            {t.route && <Row label="Rota"><code className="rounded bg-background px-1">{t.route}</code></Row>}
+            {t.route && (
+              <Row label="Rota">
+                <code className="rounded bg-background px-1">{t.route}</code>
+              </Row>
+            )}
             {t.page_url && (
               <Row label="URL">
                 <span className="inline-flex min-w-0 items-center gap-1">
-                  <a href={t.page_url} target="_blank" rel="noreferrer noopener" className="min-w-0 truncate hover:underline">
+                  <a
+                    href={t.page_url}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="min-w-0 truncate hover:underline"
+                  >
                     {t.page_url}
                   </a>
                   <button type="button" onClick={() => copyText(t.page_url!, "URL copiada")}>
@@ -593,7 +545,9 @@ function SupportDetailPage() {
               type="button"
               onClick={() => copyText(JSON.stringify(tech, null, 2), "Contexto técnico copiado")}
               className="mt-3 inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
-            ><Copy className="h-3 w-3" /> copiar JSON</button>
+            >
+              <Copy className="h-3 w-3" /> copiar JSON
+            </button>
           </details>
         </header>
 
@@ -624,7 +578,13 @@ function SupportDetailPage() {
                       <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
                         <span>{new Date(m.created_at).toLocaleString("pt-PT")}</span>
                         <span>·</span>
-                        <span>{isMe ? "Você" : m.author_user_id === requester?.requester_user_id ? (requester?.requester_full_name ?? "Solicitante") : "Suporte"}</span>
+                        <span>
+                          {isMe
+                            ? "Você"
+                            : m.author_user_id === requester?.requester_user_id
+                              ? (requester?.requester_full_name ?? "Solicitante")
+                              : "Suporte"}
+                        </span>
                         {m.is_internal && (
                           <span className="inline-flex items-center gap-1 rounded bg-amber-500/20 px-1.5 py-0.5 text-amber-700 dark:text-amber-300">
                             <Shield className="h-3 w-3" /> Nota interna
@@ -651,7 +611,9 @@ function SupportDetailPage() {
                       type="button"
                       onClick={() => setReply((r) => (r ? `${r}\n\n${q.text}` : q.text))}
                       className="rounded border border-border bg-background px-2 py-0.5 text-[11px] hover:border-primary/50"
-                    >{q.label}</button>
+                    >
+                      {q.label}
+                    </button>
                   ))}
                 </div>
               )}
@@ -670,12 +632,11 @@ function SupportDetailPage() {
                 ) : (
                   <span />
                 )}
-                <Button
-                  onClick={() => replyMut.mutate()}
-                  disabled={replyMut.isPending || !reply.trim()}
-                >
+                <Button onClick={() => replyMut.mutate()} disabled={replyMut.isPending || !reply.trim()}>
                   {replyMut.isPending ? (
-                    <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Enviando</>
+                    <>
+                      <Loader2 className="mr-1 h-4 w-4 animate-spin" /> Enviando
+                    </>
                   ) : (
                     "Enviar"
                   )}
@@ -699,121 +660,26 @@ function SupportDetailPage() {
         )}
 
         <section className="space-y-3">
-          <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Timeline
-          </h2>
+          <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Timeline</h2>
           <ol className="relative space-y-2 border-l border-border pl-4 text-xs">
             {timeline.map((it) => (
               <li key={it.id} className="relative">
                 <span className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-primary" />
                 <div className="flex flex-wrap items-baseline gap-2">
-                  <time className="font-mono text-muted-foreground">
-                    {new Date(it.at).toLocaleString("pt-PT")}
-                  </time>
+                  <time className="font-mono text-muted-foreground">{new Date(it.at).toLocaleString("pt-PT")}</time>
                   <span className="font-medium">{it.label}</span>
                 </div>
                 {it.kind === "message" && (
-                  <p className="mt-0.5 line-clamp-2 text-muted-foreground">
-                    {(it.meta as MessageRow).message}
-                  </p>
+                  <p className="mt-0.5 line-clamp-2 text-muted-foreground">{(it.meta as MessageRow).message}</p>
                 )}
               </li>
             ))}
-            {timeline.length === 0 && (
-              <li className="text-muted-foreground">Sem eventos ainda.</li>
-            )}
+            {timeline.length === 0 && <li className="text-muted-foreground">Sem eventos ainda.</li>}
           </ol>
         </section>
       </div>
 
       <aside className="space-y-4">
-        <div className="space-y-2 rounded-2xl border border-border bg-card p-4 text-xs">
-          <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Nível do ticket
-          </h3>
-          <Row label="Nível">
-            {t.support_level === "technical" ? "Técnico (Desenvolvimento)" : "Empresa (Gestor)"}
-          </Row>
-          <Row label="Responsável atual">
-            {t.current_owner_role === "super_admin" ? "Super Admin" : "Gestor"}
-          </Row>
-          {t.escalated_at && (
-            <Row label="Encaminhado em">{new Date(t.escalated_at).toLocaleString("pt-PT")}</Row>
-          )}
-          {t.escalation_reason && (
-            <div>
-              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Motivo do encaminhamento</div>
-              <p className="whitespace-pre-wrap text-foreground">{t.escalation_reason}</p>
-            </div>
-          )}
-          {t.escalation_technical_summary && isSuperAdmin && (
-            <div>
-              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Resumo técnico (SA)</div>
-              <p className="whitespace-pre-wrap text-foreground">{t.escalation_technical_summary}</p>
-            </div>
-          )}
-          {t.returned_to_manager_at && (
-            <>
-              <Row label="Devolvido em">
-                {new Date(t.returned_to_manager_at).toLocaleString("pt-PT")}
-              </Row>
-              {t.return_reason && (
-                <div>
-                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Motivo da devolução</div>
-                  <p className="whitespace-pre-wrap text-foreground">{t.return_reason}</p>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-
-        {isManagerLevel && !isSuperAdmin && t.current_owner_role === "manager" && (
-          <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
-            <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Ações do Gestor
-            </h3>
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              onClick={() => requestInfoMut.mutate()}
-              disabled={requestInfoMut.isPending}
-            >
-              Solicitar informação ao funcionário
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              onClick={() => resolveByManagerMut.mutate()}
-              disabled={resolveByManagerMut.isPending}
-            >
-              Resolver internamente
-            </Button>
-            <Button
-              className="w-full justify-start"
-              onClick={() => escalateMut.mutate()}
-              disabled={escalateMut.isPending}
-            >
-              Encaminhar ao Desenvolvimento
-            </Button>
-          </div>
-        )}
-
-        {isSuperAdmin && t.support_level === "technical" && t.current_owner_role === "super_admin" && (
-          <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
-            <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Triagem técnica
-            </h3>
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              onClick={() => returnToManagerMut.mutate()}
-              disabled={returnToManagerMut.isPending}
-            >
-              Devolver ao Gestor
-            </Button>
-          </div>
-        )}
-
         {isSuperAdmin && (
           <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
             <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
@@ -821,28 +687,30 @@ function SupportDetailPage() {
             </h3>
             <div className="space-y-1.5">
               <label className="text-xs text-muted-foreground">Status</label>
-              <Select
-                value={t.status}
-                onValueChange={(v) => statusMut.mutate(v as SupportTicketStatus)}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select value={t.status} onValueChange={(v) => statusMut.mutate(v as SupportTicketStatus)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   {TICKET_STATUS_LIST.map((s) => (
-                    <SelectItem key={s} value={s}>{TICKET_STATUS_LABEL[s]}</SelectItem>
+                    <SelectItem key={s} value={s}>
+                      {TICKET_STATUS_LABEL[s]}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
               <label className="text-xs text-muted-foreground">Prioridade</label>
-              <Select
-                value={t.priority}
-                onValueChange={(v) => priorityMut.mutate(v as SupportTicketPriority)}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select value={t.priority} onValueChange={(v) => priorityMut.mutate(v as SupportTicketPriority)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   {TICKET_PRIORITY_LIST.map((p) => (
-                    <SelectItem key={p} value={p}>{TICKET_PRIORITY_LABEL[p]}</SelectItem>
+                    <SelectItem key={p} value={p}>
+                      {TICKET_PRIORITY_LABEL[p]}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -852,9 +720,7 @@ function SupportDetailPage() {
 
         <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
           <div className="flex items-center justify-between">
-            <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Anexos
-            </h3>
+            <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Anexos</h3>
             <label className="cursor-pointer text-xs text-primary hover:underline">
               + Adicionar
               <input
@@ -873,21 +739,32 @@ function SupportDetailPage() {
           ) : (
             <ul className="space-y-1">
               {attachments.map((a) => (
-                <li key={a.id} className="flex items-center gap-1 rounded border border-border bg-background px-2 py-1 text-xs">
-                  {a.mime_type.startsWith("image/") ? <ImageIcon className="h-3 w-3 shrink-0" /> : <Paperclip className="h-3 w-3 shrink-0" />}
+                <li
+                  key={a.id}
+                  className="flex items-center gap-1 rounded border border-border bg-background px-2 py-1 text-xs"
+                >
+                  {a.mime_type.startsWith("image/") ? (
+                    <ImageIcon className="h-3 w-3 shrink-0" />
+                  ) : (
+                    <Paperclip className="h-3 w-3 shrink-0" />
+                  )}
                   <button
                     type="button"
                     onClick={() => openAttachment(a.storage_path)}
                     className="min-w-0 flex-1 truncate text-left hover:underline"
                     title={a.file_name}
-                  >{a.file_name}</button>
+                  >
+                    {a.file_name}
+                  </button>
                   <span className="text-muted-foreground">{formatBytes(a.size_bytes)}</span>
                   <button
                     type="button"
                     onClick={() => downloadAttachment(a)}
                     className="rounded p-0.5 text-muted-foreground hover:text-foreground"
                     title="Download"
-                  ><Download className="h-3 w-3" /></button>
+                  >
+                    <Download className="h-3 w-3" />
+                  </button>
                 </li>
               ))}
             </ul>
@@ -897,6 +774,12 @@ function SupportDetailPage() {
         {canReopen && ["fechado", "resolvido", "rejeitado"].includes(t.status) && (
           <Button variant="outline" className="w-full" onClick={() => reopenMut.mutate()}>
             <RotateCcw className="mr-1 h-4 w-4" /> Reabrir ticket
+          </Button>
+        )}
+
+        {t.status === "resolvido" && (
+          <Button className="w-full" onClick={() => closeMut.mutate()} disabled={closeMut.isPending}>
+            <Archive className="mr-1 h-4 w-4" /> Arquivar como resolvido
           </Button>
         )}
       </aside>

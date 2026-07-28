@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { EmployeePicker } from "@/components/common/EmployeePicker";
@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  CalendarCheck,
   Plus,
   Filter,
   MoreHorizontal,
@@ -28,11 +29,12 @@ import {
   FileSpreadsheet,
   FileDown,
   MapPin,
+  RotateCcw,
 } from "lucide-react";
 import { PunchEditorDrawer } from "@/components/ponto/PunchEditorDrawer";
 import { PunchAuditDrawer } from "@/components/ponto/PunchAuditDrawer";
 import { PunchGeoDrawer } from "@/components/ponto/PunchGeoDrawer";
-import { ORIGIN_LABEL, ORIGIN_TONE, type AdminTimeEntry } from "@/lib/punch-admin";
+import { ORIGIN_LABEL, ORIGIN_TONE, punchAdminVoidForRedo, type AdminTimeEntry } from "@/lib/punch-admin";
 import { formatDuration } from "@/lib/tasks";
 import { exportToExcel, exportToPdf, type ExportColumn } from "@/lib/exports";
 import { toast } from "sonner";
@@ -75,10 +77,12 @@ type Row = AdminTimeEntry & {
 
 function GestaoPonto() {
   const { currentCompanyId } = useAuth();
+  const qc = useQueryClient();
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [page, setPage] = useState(0);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorMode, setEditorMode] = useState<"create" | "edit">("create");
+  const [initialEntryKind, setInitialEntryKind] = useState<"work" | "paid_leave">("work");
   const [activeEntry, setActiveEntry] = useState<Row | null>(null);
   const [auditOpen, setAuditOpen] = useState(false);
   const [auditEntryId, setAuditEntryId] = useState<string | null>(null);
@@ -130,11 +134,11 @@ function GestaoPonto() {
       let q = supabase
         .from("time_entries")
         .select(
-          "id, company_id, task_id, user_id, started_at, ended_at, paused_at, resumed_at, effective_minutes, notes, created_at, updated_at, origin, created_by, last_edited_by, last_edited_at, last_edit_reason, tasks!inner(title, client_id), profiles!inner(full_name)",
+          "id, company_id, task_id, user_id, started_at, ended_at, paused_at, resumed_at, effective_minutes, notes, created_at, updated_at, origin, created_by, last_edited_by, last_edited_at, last_edit_reason, voided_at, voided_by, void_reason, entry_kind, paid_leave_minutes, tasks(title, client_id), profiles!inner(full_name)",
           { count: "exact" },
         )
         .eq("company_id", currentCompanyId!)
-        .neq("origin", "manager_voided")
+        .is("voided_at", null)
         .order("started_at", { ascending: false })
         .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
 
@@ -168,13 +172,15 @@ function GestaoPonto() {
     setPage(0);
   };
 
-  const openCreate = () => {
+  const openCreate = (entryKind: "work" | "paid_leave" = "work") => {
     setEditorMode("create");
+    setInitialEntryKind(entryKind);
     setActiveEntry(null);
     setEditorOpen(true);
   };
   const openEdit = (r: Row) => {
     setEditorMode("edit");
+    setInitialEntryKind("work");
     setActiveEntry(r);
     setEditorOpen(true);
   };
@@ -185,6 +191,30 @@ function GestaoPonto() {
   const openGeo = (r: Row) => {
     setGeoEntry(r);
     setGeoOpen(true);
+  };
+
+  const voidMut = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => punchAdminVoidForRedo(id, reason),
+    onSuccess: () => {
+      toast.success("Ponto devolvido para refazer");
+      qc.invalidateQueries({ queryKey: ["punch-admin-list"] });
+      qc.invalidateQueries({ queryKey: ["punch-audit"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const requestVoid = (r: Row) => {
+    if (r.voided_at) {
+      toast.info("Este ponto ja foi anulado.");
+      return;
+    }
+    const reason = window.prompt("Informe o motivo para devolver este ponto ao funcionario refazer:");
+    if (!reason) return;
+    if (reason.trim().length < 5) {
+      toast.error("Informe um motivo com pelo menos 5 caracteres.");
+      return;
+    }
+    voidMut.mutate({ id: r.id, reason: reason.trim() });
   };
 
   const { data: company } = useQuery({
@@ -204,7 +234,10 @@ function GestaoPonto() {
 
   const exportColumns = (): ExportColumn<Row>[] => [
     { header: "Funcionário", accessor: (r) => r.profiles?.full_name ?? "" },
-    { header: "Tarefa", accessor: (r) => r.tasks?.title ?? "" },
+    {
+      header: "Tarefa",
+      accessor: (r) => (r.entry_kind === "paid_leave" ? "Folga remunerada" : (r.tasks?.title ?? "")),
+    },
     { header: "Cliente", accessor: (r) => (r.tasks?.client_id ? (clientsMap[r.tasks.client_id] ?? "") : "") },
     { header: "Início", accessor: (r) => fmtDT(r.started_at) },
     { header: "Fim", accessor: (r) => fmtDT(r.ended_at) },
@@ -217,10 +250,10 @@ function GestaoPonto() {
     let q = supabase
       .from("time_entries")
       .select(
-        "id, company_id, task_id, user_id, started_at, ended_at, paused_at, resumed_at, effective_minutes, notes, created_at, updated_at, origin, created_by, last_edited_by, last_edited_at, last_edit_reason, tasks!inner(title, client_id), profiles!inner(full_name)",
+        "id, company_id, task_id, user_id, started_at, ended_at, paused_at, resumed_at, effective_minutes, notes, created_at, updated_at, origin, created_by, last_edited_by, last_edited_at, last_edit_reason, voided_at, voided_by, void_reason, entry_kind, paid_leave_minutes, tasks(title, client_id), profiles!inner(full_name)",
       )
       .eq("company_id", currentCompanyId!)
-      .neq("origin", "manager_voided")
+      .is("voided_at", null)
       .order("started_at", { ascending: false })
       .limit(5000);
     if (filters.userId !== "all") q = q.eq("user_id", filters.userId);
@@ -287,7 +320,10 @@ function GestaoPonto() {
           <Button variant="outline" size="sm" onClick={() => handleExport("pdf")}>
             <FileDown className="mr-2 h-4 w-4" /> PDF
           </Button>
-          <Button onClick={openCreate}>
+          <Button variant="outline" onClick={() => openCreate("paid_leave")}>
+            <CalendarCheck className="mr-1 h-4 w-4" /> Folga remunerada
+          </Button>
+          <Button onClick={() => openCreate("work")}>
             <Plus className="mr-1 h-4 w-4" /> Adicionar ponto
           </Button>
         </div>
@@ -438,6 +474,11 @@ function GestaoPonto() {
                         <DropdownMenuItem onClick={() => openEdit(r)}>
                           <Pencil className="mr-2 h-4 w-4" /> Editar
                         </DropdownMenuItem>
+                        {!r.voided_at && r.entry_kind !== "paid_leave" && (
+                          <DropdownMenuItem onClick={() => requestVoid(r)} disabled={voidMut.isPending}>
+                            <RotateCcw className="mr-2 h-4 w-4" /> Devolver para refazer
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem onClick={() => openAudit(r)}>
                           <History className="mr-2 h-4 w-4" /> Histórico
                         </DropdownMenuItem>
@@ -476,6 +517,7 @@ function GestaoPonto() {
         entryClientName={
           activeEntry?.tasks?.client_id ? (clientsMap[activeEntry.tasks.client_id] ?? undefined) : undefined
         }
+        initialEntryKind={initialEntryKind}
       />
       <PunchAuditDrawer open={auditOpen} onOpenChange={setAuditOpen} timeEntryId={auditEntryId} />
       <PunchGeoDrawer
