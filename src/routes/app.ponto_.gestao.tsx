@@ -134,6 +134,7 @@ function GestaoPonto() {
           { count: "exact" },
         )
         .eq("company_id", currentCompanyId!)
+        .neq("origin", "manager_voided")
         .order("started_at", { ascending: false })
         .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
 
@@ -219,6 +220,7 @@ function GestaoPonto() {
         "id, company_id, task_id, user_id, started_at, ended_at, paused_at, resumed_at, effective_minutes, notes, created_at, updated_at, origin, created_by, last_edited_by, last_edited_at, last_edit_reason, tasks!inner(title, client_id), profiles!inner(full_name)",
       )
       .eq("company_id", currentCompanyId!)
+      .neq("origin", "manager_voided")
       .order("started_at", { ascending: false })
       .limit(5000);
     if (filters.userId !== "all") q = q.eq("user_id", filters.userId);
