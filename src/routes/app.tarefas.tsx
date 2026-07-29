@@ -158,7 +158,9 @@ function TasksPage() {
       else q = q.is("archived_at", null);
       const { data, error } = await q;
       if (error) throw error;
-      return (data ?? []) as unknown as TaskRow[];
+      return (await attachClientTimingModes(
+        (data ?? []) as unknown as TaskRow[],
+      )) as unknown as TaskRow[];
     },
     enabled: !!user,
   });
