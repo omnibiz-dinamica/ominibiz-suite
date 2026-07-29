@@ -3280,6 +3280,48 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      close_support_ticket: {
+        Args: { _reason?: string; _ticket_id: string }
+        Returns: {
+          archived_at: string | null
+          assigned_user_id: string | null
+          closed_at: string | null
+          company_id: string
+          created_at: string
+          created_by_role: string | null
+          current_owner_role: string
+          description: string
+          escalated_at: string | null
+          escalated_by: string | null
+          escalated_to_super_admin: boolean
+          escalation_reason: string | null
+          first_response_at: string | null
+          id: string
+          internal_resolution: string | null
+          module: string | null
+          page_url: string | null
+          priority: Database["public"]["Enums"]["support_ticket_priority"]
+          requester_user_id: string
+          resolved_at: string | null
+          returned_to_manager_at: string | null
+          returned_to_manager_by: string | null
+          route: string | null
+          status: Database["public"]["Enums"]["support_ticket_status"]
+          support_level: string
+          technical_context: Json
+          technical_summary: string | null
+          ticket_number: string
+          title: string
+          type: Database["public"]["Enums"]["support_ticket_type"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "support_tickets"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       contract_sign_get: {
         Args: { _token: string }
         Returns: {
