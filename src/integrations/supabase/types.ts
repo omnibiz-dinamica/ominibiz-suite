@@ -4601,6 +4601,13 @@ export type Database = {
         }
       }
       tasks_sweep_absent: { Args: { _company_id?: string }; Returns: number }
+      tasks_timing_modes: {
+        Args: { _task_ids: string[] }
+        Returns: {
+          task_id: string
+          timing_mode: string
+        }[]
+      }
       update_client_billing: {
         Args: { _client_id: string; _patch: Json; _reason: string }
         Returns: {
