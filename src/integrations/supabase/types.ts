@@ -4553,6 +4553,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      task_timing_is_manual: { Args: { _client_id: string }; Returns: boolean }
       task_transition: {
         Args: { _action: string; _reason?: string; _task_id: string }
         Returns: {
