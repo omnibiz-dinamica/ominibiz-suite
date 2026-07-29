@@ -67,6 +67,8 @@ export interface TaskRow {
   archived_at?: string | null;
   archived_by?: string | null;
   deleted_at?: string | null;
+  /** Preenchido pela UI a partir do cliente vinculado (não é coluna de `tasks`). */
+  client_timing_mode?: ClientTimingMode | null;
 }
 
 // =========================================================
