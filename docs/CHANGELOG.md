@@ -555,3 +555,26 @@ documentados em KI-022 e no item 4 do "Roadmap Técnico Futuro".
 ## [v1.0] — Geolocalização (Produção Aprovada)
 
 Consulte `docs/RELEASE_NOTES_GEOFENCING_v1.0.md` e `docs/RELEASE_HISTORY.md`.
+---
+
+## [Correção] Cliente Manual não pode ser marcado como ausente
+
+#### Banco (fonte única de verdade)
+- Novo helper `public.task_timing_is_manual(uuid)`.
+- `tasks_sweep_absent` e `notifications_sweep_late` passam a ignorar tarefas de
+  clientes com `timing_mode = 'manual'`.
+- `task_transition` recusa `marcar_ausente` para tarefas de clientes manuais.
+- Nova RPC `public.tasks_timing_modes(uuid[])` para a UI resolver o modo mesmo
+  quando a RLS de `clients` não permite leitura ao funcionário.
+- Registos `ausente` de clientes manuais revertidos para `pendente`, com nota de
+  auditoria acrescentada à descrição (nenhum histórico removido).
+
+#### Frontend
+- `src/lib/tasks.ts`: `isVisuallyLate` e `canBecomeAbsent` devolvem `false` para
+  clientes manuais; novo `attachClientTimingModes`.
+- `src/routes/app.tarefas.tsx` e `src/routes/app.ponto.tsx`: tarefas enriquecidas
+  com `client_timing_mode`.
+
+#### Compatibilidade
+- Clientes `start_stop` mantêm exatamente o comportamento anterior.
+- Ver ADR-025 em `docs/DECISIONS.md`.

@@ -42,6 +42,7 @@ import {
   STATUS_LABELS,
   STATUS_TONE,
   isVisuallyLate,
+  attachClientTimingModes,
 } from "@/lib/tasks";
 import { usePunchFlow } from "@/hooks/use-punch-flow";
 import { PunchFlowOverlay } from "@/components/ponto/PunchFlowOverlay";
@@ -142,7 +143,9 @@ function PontoPage() {
       if (!openEntry?.task_id) return null;
       const { data, error } = await supabase.from("tasks").select("*").eq("id", openEntry.task_id).maybeSingle();
       if (error) throw error;
-      return (data ?? null) as unknown as TaskRow | null;
+      if (!data) return null;
+      const [enriched] = await attachClientTimingModes([data as unknown as TaskRow]);
+      return enriched as unknown as TaskRow;
     },
     enabled: !!openEntry,
   });
@@ -168,7 +171,7 @@ function PontoPage() {
       }
       const { data, error } = await q;
       if (error) throw error;
-      return (data ?? []) as unknown as TaskRow[];
+      return (await attachClientTimingModes((data ?? []) as unknown as TaskRow[])) as unknown as TaskRow[];
     },
     enabled: !!user && !openEntry,
   });

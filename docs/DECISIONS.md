@@ -412,3 +412,33 @@ da resposta).
 **Consequências.** As RPCs de ticket continuam não bloqueantes (apenas um
 INSERT); o envio é assíncrono e auditável; duplicados deixam de ser possíveis
 dentro da janela ativa da fila.
+
+---
+
+## ADR-025 — Clientes com apontamento Manual não geram ausência nem atraso
+
+**Data.** 2026-07-29 · **Estado.** Aceite
+
+**Contexto.** Clientes com `clients.timing_mode = 'manual'` não exigem que o
+funcionário registe entrada no horário previsto: o tempo é lançado manualmente
+após a execução. Ainda assim, as rotinas automáticas marcavam essas tarefas
+como `ausente` e emitiam notificação de atraso, bloqueando a operação.
+
+**Decisão.** O modo de apontamento do cliente passa a ser regra de negócio
+central, aplicada no banco (fonte única de verdade):
+
+1. `public.task_timing_is_manual(uuid)` — helper `SECURITY DEFINER` que resolve
+   o modo do cliente da tarefa.
+2. `tasks_sweep_absent` e `notifications_sweep_late` ignoram tarefas de clientes
+   manuais.
+3. `task_transition` recusa a ação `marcar_ausente` nessas tarefas, mesmo para
+   gestor — a proibição não é apenas de UI.
+4. Registos históricos incorretos são revertidos para `pendente`, com nota de
+   auditoria na descrição (o histórico não é apagado).
+5. `public.tasks_timing_modes(uuid[])` expõe o modo à UI de forma segura, pois
+   a RLS de `clients` não permite ao funcionário ler a ficha do cliente.
+
+**Consequências.** No frontend, `isVisuallyLate` e `canBecomeAbsent`
+(`src/lib/tasks.ts`) devolvem `false` para tarefas manuais; as listagens de
+`/app/tarefas` e `/app/ponto` enriquecem as tarefas via `attachClientTimingModes`.
+Iniciar e concluir a tarefa continua livre — nunca bloqueado por horário.

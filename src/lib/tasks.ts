@@ -27,6 +27,39 @@ export const STATUS_TONE: Record<TaskStatus, string> = {
 
 export const TERMINAL_STATUSES: TaskStatus[] = ["concluido", "cancelado", "ausente"];
 
+/**
+ * Modo de apontamento do cliente (ADR: clientes manuais não têm obrigação de
+ * bater entrada — logo, nunca ficam atrasados nem ausentes automaticamente).
+ */
+export type ClientTimingMode = "start_stop" | "manual";
+
+export function isManualTiming(timing?: ClientTimingMode | string | null): boolean {
+  return timing === "manual";
+}
+
+/**
+ * Enriquecer tarefas com o modo de apontamento do cliente vinculado.
+ * Usa RPC SECURITY DEFINER porque o funcionário nem sempre tem acesso
+ * direto à ficha do cliente (RLS de `clients`).
+ */
+export async function attachClientTimingModes<T extends { id: string; client_id: string | null }>(
+  tasks: readonly T[],
+): Promise<(T & { client_timing_mode: ClientTimingMode | null })[]> {
+  const ids = tasks.filter((t) => t.client_id).map((t) => t.id);
+  const base = tasks.map((t) => ({ ...t, client_timing_mode: null as ClientTimingMode | null }));
+  if (ids.length === 0) return base;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("tasks_timing_modes", { _task_ids: ids });
+  if (error || !data) return base;
+
+  const map = new Map<string, ClientTimingMode>();
+  for (const row of data as { task_id: string; timing_mode: string }[]) {
+    map.set(row.task_id, row.timing_mode as ClientTimingMode);
+  }
+  return base.map((t) => ({ ...t, client_timing_mode: map.get(t.id) ?? null }));
+}
+
 export interface TaskRow {
   id: string;
   company_id: string;
@@ -57,6 +90,8 @@ export interface TaskRow {
   archived_at?: string | null;
   archived_by?: string | null;
   deleted_at?: string | null;
+  /** Preenchido pela UI a partir do cliente vinculado (não é coluna de `tasks`). */
+  client_timing_mode?: ClientTimingMode | null;
 }
 
 // =========================================================
@@ -249,9 +284,13 @@ export async function recurrenceUpdateOccurrence(taskId: string, payload: Editab
  * Calculado apenas para renderização.
  */
 export function isVisuallyLate(
-  task: Pick<TaskRow, "status" | "scheduled_for" | "recurrence_date" | "due_at">,
+  task: Pick<TaskRow, "status" | "scheduled_for" | "recurrence_date" | "due_at"> & {
+    client_timing_mode?: ClientTimingMode | string | null;
+  },
 ): boolean {
   if (task.status === "concluido" || task.status === "cancelado" || task.status === "ausente") return false;
+  // Cliente manual: sem horário obrigatório de entrada → nunca "atrasado".
+  if (isManualTiming(task.client_timing_mode)) return false;
 
   if (task.scheduled_for) {
     return new Date(task.scheduled_for).getTime() < Date.now();
@@ -284,10 +323,14 @@ export function absenceAllowedAt(task: Pick<TaskRow, "scheduled_for" | "recurren
 }
 
 export function canBecomeAbsent(
-  task: Pick<TaskRow, "status" | "scheduled_for" | "recurrence_date" | "due_at">,
+  task: Pick<TaskRow, "status" | "scheduled_for" | "recurrence_date" | "due_at"> & {
+    client_timing_mode?: ClientTimingMode | string | null;
+  },
   now = new Date(),
 ): boolean {
   if (task.status !== "pendente" && task.status !== "autorizado") return false;
+  // Cliente manual: ausência (automática ou manual) não se aplica.
+  if (isManualTiming(task.client_timing_mode)) return false;
 
   const threshold = absenceAllowedAt(task);
   if (!threshold) return false;
@@ -311,7 +354,7 @@ type SortableTask = Pick<
   | "cancelled_at"
   | "marked_absent_at"
   | "updated_at"
-> & { recurrence_date?: string | null };
+> & { recurrence_date?: string | null; client_timing_mode?: ClientTimingMode | string | null };
 
 const FAR_FUTURE = "9999-12-31T23:59";
 
@@ -393,7 +436,9 @@ export function compareTasksChronologically(a: SortableTask, b: SortableTask): n
  */
 export function availableActions(
   task: Pick<TaskRow, "status" | "assigned_to"> &
-    Partial<Pick<TaskRow, "scheduled_for" | "recurrence_date" | "due_at">>,
+    Partial<Pick<TaskRow, "scheduled_for" | "recurrence_date" | "due_at">> & {
+      client_timing_mode?: ClientTimingMode | string | null;
+    },
   ctx: { userId: string; isManager: boolean },
 ): TaskAction[] {
   const isAssignee = task.assigned_to === ctx.userId;
@@ -412,6 +457,7 @@ export function availableActions(
       scheduled_for: task.scheduled_for ?? null,
       recurrence_date: task.recurrence_date ?? null,
       due_at: task.due_at ?? null,
+      client_timing_mode: task.client_timing_mode ?? null,
     })
   )
     out.push("marcar_ausente");
