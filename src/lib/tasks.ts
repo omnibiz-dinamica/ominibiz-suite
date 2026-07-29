@@ -27,6 +27,16 @@ export const STATUS_TONE: Record<TaskStatus, string> = {
 
 export const TERMINAL_STATUSES: TaskStatus[] = ["concluido", "cancelado", "ausente"];
 
+/**
+ * Modo de apontamento do cliente (ADR: clientes manuais não têm obrigação de
+ * bater entrada — logo, nunca ficam atrasados nem ausentes automaticamente).
+ */
+export type ClientTimingMode = "start_stop" | "manual";
+
+export function isManualTiming(timing?: ClientTimingMode | string | null): boolean {
+  return timing === "manual";
+}
+
 export interface TaskRow {
   id: string;
   company_id: string;
