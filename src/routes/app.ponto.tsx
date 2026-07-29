@@ -143,7 +143,9 @@ function PontoPage() {
       if (!openEntry?.task_id) return null;
       const { data, error } = await supabase.from("tasks").select("*").eq("id", openEntry.task_id).maybeSingle();
       if (error) throw error;
-      return (data ?? null) as unknown as TaskRow | null;
+      if (!data) return null;
+      const [enriched] = await attachClientTimingModes([data as unknown as TaskRow]);
+      return enriched as unknown as TaskRow;
     },
     enabled: !!openEntry,
   });
