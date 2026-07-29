@@ -331,7 +331,7 @@ type SortableTask = Pick<
   | "cancelled_at"
   | "marked_absent_at"
   | "updated_at"
-> & { recurrence_date?: string | null };
+> & { recurrence_date?: string | null; client_timing_mode?: ClientTimingMode | string | null };
 
 const FAR_FUTURE = "9999-12-31T23:59";
 
@@ -413,7 +413,9 @@ export function compareTasksChronologically(a: SortableTask, b: SortableTask): n
  */
 export function availableActions(
   task: Pick<TaskRow, "status" | "assigned_to"> &
-    Partial<Pick<TaskRow, "scheduled_for" | "recurrence_date" | "due_at">>,
+    Partial<Pick<TaskRow, "scheduled_for" | "recurrence_date" | "due_at">> & {
+      client_timing_mode?: ClientTimingMode | string | null;
+    },
   ctx: { userId: string; isManager: boolean },
 ): TaskAction[] {
   const isAssignee = task.assigned_to === ctx.userId;
@@ -432,6 +434,7 @@ export function availableActions(
       scheduled_for: task.scheduled_for ?? null,
       recurrence_date: task.recurrence_date ?? null,
       due_at: task.due_at ?? null,
+      client_timing_mode: task.client_timing_mode ?? null,
     })
   )
     out.push("marcar_ausente");
