@@ -42,6 +42,7 @@ import {
   STATUS_LABELS,
   STATUS_TONE,
   isVisuallyLate,
+  attachClientTimingModes,
 } from "@/lib/tasks";
 import { usePunchFlow } from "@/hooks/use-punch-flow";
 import { PunchFlowOverlay } from "@/components/ponto/PunchFlowOverlay";
@@ -168,7 +169,7 @@ function PontoPage() {
       }
       const { data, error } = await q;
       if (error) throw error;
-      return (data ?? []) as unknown as TaskRow[];
+      return (await attachClientTimingModes((data ?? []) as unknown as TaskRow[])) as unknown as TaskRow[];
     },
     enabled: !!user && !openEntry,
   });
