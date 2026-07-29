@@ -261,9 +261,13 @@ export async function recurrenceUpdateOccurrence(taskId: string, payload: Editab
  * Calculado apenas para renderização.
  */
 export function isVisuallyLate(
-  task: Pick<TaskRow, "status" | "scheduled_for" | "recurrence_date" | "due_at">,
+  task: Pick<TaskRow, "status" | "scheduled_for" | "recurrence_date" | "due_at"> & {
+    client_timing_mode?: ClientTimingMode | string | null;
+  },
 ): boolean {
   if (task.status === "concluido" || task.status === "cancelado" || task.status === "ausente") return false;
+  // Cliente manual: sem horário obrigatório de entrada → nunca "atrasado".
+  if (isManualTiming(task.client_timing_mode)) return false;
 
   if (task.scheduled_for) {
     return new Date(task.scheduled_for).getTime() < Date.now();
@@ -296,10 +300,14 @@ export function absenceAllowedAt(task: Pick<TaskRow, "scheduled_for" | "recurren
 }
 
 export function canBecomeAbsent(
-  task: Pick<TaskRow, "status" | "scheduled_for" | "recurrence_date" | "due_at">,
+  task: Pick<TaskRow, "status" | "scheduled_for" | "recurrence_date" | "due_at"> & {
+    client_timing_mode?: ClientTimingMode | string | null;
+  },
   now = new Date(),
 ): boolean {
   if (task.status !== "pendente" && task.status !== "autorizado") return false;
+  // Cliente manual: ausência (automática ou manual) não se aplica.
+  if (isManualTiming(task.client_timing_mode)) return false;
 
   const threshold = absenceAllowedAt(task);
   if (!threshold) return false;
