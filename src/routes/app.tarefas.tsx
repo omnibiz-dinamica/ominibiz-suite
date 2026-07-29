@@ -55,6 +55,7 @@ import {
   availableActions,
   isVisuallyLate,
   sweepAbsent,
+  attachClientTimingModes,
   transitionTask,
   archiveTask,
   canArchive,
