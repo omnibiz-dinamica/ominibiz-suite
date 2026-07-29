@@ -37,6 +37,29 @@ export function isManualTiming(timing?: ClientTimingMode | string | null): boole
   return timing === "manual";
 }
 
+/**
+ * Enriquecer tarefas com o modo de apontamento do cliente vinculado.
+ * Usa RPC SECURITY DEFINER porque o funcionário nem sempre tem acesso
+ * direto à ficha do cliente (RLS de `clients`).
+ */
+export async function attachClientTimingModes<T extends { id: string; client_id: string | null }>(
+  tasks: readonly T[],
+): Promise<(T & { client_timing_mode: ClientTimingMode | null })[]> {
+  const ids = tasks.filter((t) => t.client_id).map((t) => t.id);
+  const base = tasks.map((t) => ({ ...t, client_timing_mode: null as ClientTimingMode | null }));
+  if (ids.length === 0) return base;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("tasks_timing_modes", { _task_ids: ids });
+  if (error || !data) return base;
+
+  const map = new Map<string, ClientTimingMode>();
+  for (const row of data as { task_id: string; timing_mode: string }[]) {
+    map.set(row.task_id, row.timing_mode as ClientTimingMode);
+  }
+  return base.map((t) => ({ ...t, client_timing_mode: map.get(t.id) ?? null }));
+}
+
 export interface TaskRow {
   id: string;
   company_id: string;
