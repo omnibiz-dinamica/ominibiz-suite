@@ -2177,7 +2177,7 @@ export type Database = {
           monthly_rule: Json
           priority: string
           punch_mode_override: Database["public"]["Enums"]["punch_mode"] | null
-          scheduled_time: string
+          scheduled_time: string | null
           start_date: string
           status: Database["public"]["Enums"]["recurrence_status"]
           title: string
@@ -2203,7 +2203,7 @@ export type Database = {
           monthly_rule?: Json
           priority?: string
           punch_mode_override?: Database["public"]["Enums"]["punch_mode"] | null
-          scheduled_time?: string
+          scheduled_time?: string | null
           start_date: string
           status?: Database["public"]["Enums"]["recurrence_status"]
           title: string
@@ -2229,7 +2229,7 @@ export type Database = {
           monthly_rule?: Json
           priority?: string
           punch_mode_override?: Database["public"]["Enums"]["punch_mode"] | null
-          scheduled_time?: string
+          scheduled_time?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["recurrence_status"]
           title?: string
@@ -4217,7 +4217,7 @@ export type Database = {
           monthly_rule: Json
           priority: string
           punch_mode_override: Database["public"]["Enums"]["punch_mode"] | null
-          scheduled_time: string
+          scheduled_time: string | null
           start_date: string
           status: Database["public"]["Enums"]["recurrence_status"]
           title: string
