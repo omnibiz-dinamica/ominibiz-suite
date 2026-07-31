@@ -55,7 +55,6 @@ import {
   availableActions,
   isVisuallyLate,
   sweepAbsent,
-  attachClientTimingModes,
   transitionTask,
   archiveTask,
   canArchive,
@@ -159,9 +158,7 @@ function TasksPage() {
       else q = q.is("archived_at", null);
       const { data, error } = await q;
       if (error) throw error;
-      return (await attachClientTimingModes(
-        (data ?? []) as unknown as TaskRow[],
-      )) as unknown as TaskRow[];
+      return (data ?? []) as unknown as TaskRow[];
     },
     enabled: !!user,
   });
@@ -1495,8 +1492,7 @@ function TaskForm({
   const [recurrence, setRecurrence] = useState<RecurrenceFormValue>(emptyRecurrence());
   const [pendingDocs, setPendingDocs] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
-  const selectedClient = clients.find((c) => c.id === clientId);
-  const timingMode: "start_stop" | "manual" = selectedClient?.timing_mode === "manual" ? "manual" : "start_stop";
+  const timingMode: "start_stop" = "start_stop";
   const uploadCreationDocs = async (taskId: string) => {
     for (const file of pendingDocs) {
       if (file.size > TASK_DOC_MAX_SIZE) {
@@ -1588,12 +1584,11 @@ function TaskForm({
         if (initial) {
           ({ error } = await supabase.from("tasks").update(payload).eq("id", initial.id));
         } else if (recurrence.enabled) {
-          // Horário e duração da recorrência SEMPRE derivados do topo do formulário.
-          // • start_stop: usa scheduledFor (HH:MM) e (end - start) em minutos.
-          // • manual:     "00:00" e 0 min — funcionário registra hora no apontamento.
-          const derivedTime = timingMode === "manual" || !startTime ? "00:00" : startTime;
+          // Horario e duracao da recorrencia sao derivados do topo do formulario.
+          // Sem horario, a recorrencia fica por dia; nunca materializa 00:00.
+          const derivedTime = startTime ? `${startTime}:00` : null;
           let derivedDuration = 0;
-          if (timingMode !== "manual" && startISO && endISO) {
+          if (startISO && endISO) {
             derivedDuration = Math.max(
               0,
               Math.round((new Date(endISO).getTime() - new Date(startISO).getTime()) / 60000),
@@ -1735,12 +1730,7 @@ function TaskForm({
           <Label>
             Hora início <span className="text-xs text-muted-foreground">(opcional)</span>
           </Label>
-          <Input
-            type="time"
-            value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
-            placeholder={timingMode === "manual" ? "A definir" : undefined}
-          />
+          <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
         </div>
         <div className="space-y-1.5">
           <Label>Data fim</Label>
@@ -1750,20 +1740,8 @@ function TaskForm({
           <Label>
             Hora fim <span className="text-xs text-muted-foreground">(opcional)</span>
           </Label>
-          <Input
-            type="time"
-            value={endTime}
-            onChange={(e) => setEndTime(e.target.value)}
-            placeholder={timingMode === "manual" ? "A definir" : undefined}
-          />
+          <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
         </div>
-        {timingMode === "manual" && (
-          <div className="col-span-2 rounded-md border border-info/40 bg-info/5 px-3 py-2 text-xs text-info">
-            Cliente em modo <b>Manual</b>: as <b>datas</b> são obrigatórias e as horas são opcionais. Se deixar as horas
-            em branco, a tarefa será salva como <b>“Sem horário definido”</b> e o funcionário informará hora de entrada
-            e saída na Folha de Ponto.
-          </div>
-        )}
         <div className="space-y-1.5">
           <Label>Tolerância de ausência (min)</Label>
           <Input
