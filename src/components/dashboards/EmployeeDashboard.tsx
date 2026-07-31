@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Clock, ListChecks, Play } from "lucide-react";
 import type { TaskRow } from "@/lib/tasks";
-import { STATUS_LABELS, STATUS_TONE, sortTasksForDisplay } from "@/lib/tasks";
+import { STATUS_LABELS, STATUS_TONE } from "@/lib/tasks";
 import { formatWallDate, formatWallTime } from "@/lib/wall-clock";
 
 export function EmployeeDashboard() {
@@ -19,10 +19,11 @@ export function EmployeeDashboard() {
         .select("*")
         .eq("assigned_to", user!.id)
         .in("status", ["pendente", "autorizado", "em_andamento"])
-        .limit(20);
+        .order("due_at", { ascending: true, nullsFirst: false })
+        .order("scheduled_for", { ascending: true, nullsFirst: false })
+        .limit(8);
       if (error) throw error;
-      // Ordenação canônica única (SUP-2026-000040).
-      return sortTasksForDisplay((data ?? []) as unknown as TaskRow[]).slice(0, 8);
+      return (data ?? []) as unknown as TaskRow[];
     },
     enabled: !!user,
   });
