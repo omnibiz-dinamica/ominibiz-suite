@@ -55,14 +55,15 @@ export function EditRecurrenceDialog({
         setScheduledFor(wallISOToInput(sf));
         setScheduledTime(formatWallTime(sf));
       } else if (recurrence) {
-        setScheduledTime(recurrence.scheduled_time.slice(0, 5));
+        setScheduledTime(recurrence.scheduled_time?.slice(0, 5) ?? "");
+        setScheduledFor("");
       }
       setDuration(recurrence?.duration_minutes ?? 0);
     } else if (recurrence) {
       setTitle(recurrence.title);
       setPriority(recurrence.priority);
       setAssignedTo(recurrence.assigned_to ?? "");
-      setScheduledTime(recurrence.scheduled_time.slice(0, 5));
+      setScheduledTime(recurrence.scheduled_time?.slice(0, 5) ?? "");
       setDuration(recurrence.duration_minutes);
     }
   }, [open, recurrence, fromTask, allowThis]);
@@ -73,17 +74,17 @@ export function EditRecurrenceDialog({
     try {
       if (scope === "this") {
         if (!fromTask) throw new Error("Tarefa não informada para escopo 'esta'");
-        const sfIso = wallInputToISO(scheduledFor) ?? undefined;
+        const sfIso = wallInputToISO(scheduledFor);
         const sfStart = sfIso ? new Date(sfIso) : null;
         const safeDuration = Math.max(0, duration || 0);
         const seIso =
-          sfStart && safeDuration > 0 ? new Date(sfStart.getTime() + safeDuration * 60_000).toISOString() : undefined;
+          sfStart && safeDuration > 0 ? new Date(sfStart.getTime() + safeDuration * 60_000).toISOString() : null;
         await recurrenceUpdateOccurrence(fromTask.id, {
           title: title.trim(),
           priority,
           assigned_to: assignedTo || null,
-          ...(sfIso ? { scheduled_for: sfIso } : {}),
-          ...(seIso ? { scheduled_end: seIso } : {}),
+          scheduled_for: sfIso,
+          scheduled_end: seIso,
         });
         toast.success("Ocorrência atualizada");
       } else {
@@ -93,7 +94,7 @@ export function EditRecurrenceDialog({
             title: title.trim(),
             priority,
             assigned_to: assignedTo || null,
-            scheduled_time: scheduledTime ? `${scheduledTime}:00` : undefined,
+            scheduled_time: scheduledTime ? `${scheduledTime}:00` : null,
             duration_minutes: Math.max(0, duration || 0),
           },
           scope === "future" ? "future" : "all",
