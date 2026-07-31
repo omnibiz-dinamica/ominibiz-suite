@@ -7,20 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Plus, Users, Phone, Mail, MapPin, Pencil, Power, Trash2, FileSpreadsheet, FileDown } from "lucide-react";
 import { RoleGuard } from "@/components/RoleGuard";
@@ -78,9 +66,7 @@ function ClientsPage() {
   const { data: clients, isLoading } = useQuery({
     queryKey: ["clients", currentCompanyId, isManager, user?.id],
     queryFn: async () => {
-      let q = (supabase.from("clients" as never) as any)
-        .select("*")
-        .order("name", { ascending: true });
+      let q = (supabase.from("clients" as never) as any).select("*").order("name", { ascending: true });
       if (currentCompanyId) q = q.eq("company_id", currentCompanyId);
       const { data, error } = await q;
       if (error) throw error;
@@ -92,8 +78,7 @@ function ClientsPage() {
   const { data: assignees } = useQuery({
     queryKey: ["client-assignees", currentCompanyId],
     queryFn: async () => {
-      const { data, error } = await (supabase.from("client_assignees" as never) as any)
-        .select("*");
+      const { data, error } = await (supabase.from("client_assignees" as never) as any).select("*");
       if (error) throw error;
       return (data ?? []) as unknown as AssigneeRow[];
     },
@@ -104,16 +89,10 @@ function ClientsPage() {
     queryKey: ["members", currentCompanyId],
     queryFn: async () => {
       if (!currentCompanyId) return [];
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("company_id", currentCompanyId);
+      const { data: roles } = await supabase.from("user_roles").select("user_id").eq("company_id", currentCompanyId);
       const ids = (roles ?? []).map((r) => r.user_id);
       if (ids.length === 0) return [];
-      const { data: profs } = await supabase
-        .from("profiles")
-        .select("id, full_name")
-        .in("id", ids);
+      const { data: profs } = await supabase.from("profiles").select("id, full_name").in("id", ids);
       return (profs ?? []) as Member[];
     },
     enabled: isManager && !!currentCompanyId,
@@ -136,15 +115,9 @@ function ClientsPage() {
     if (!user) return;
     const ch = supabase
       .channel(`user:${user.id}:clients-ui-sync`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "clients" },
-        () => invalidateClientsCache(qc),
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "client_assignees" },
-        () => invalidateClientsCache(qc),
+      .on("postgres_changes", { event: "*", schema: "public", table: "clients" }, () => invalidateClientsCache(qc))
+      .on("postgres_changes", { event: "*", schema: "public", table: "client_assignees" }, () =>
+        invalidateClientsCache(qc),
       )
       .subscribe();
     return () => {
@@ -168,9 +141,7 @@ function ClientsPage() {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase.from("clients" as never) as any)
-        .delete()
-        .eq("id", id);
+      const { error } = await (supabase.from("clients" as never) as any).delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -180,13 +151,10 @@ function ClientsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const assigneesByClient = (assignees ?? []).reduce<Record<string, AssigneeRow[]>>(
-    (acc, a) => {
-      (acc[a.client_id] ||= []).push(a);
-      return acc;
-    },
-    {},
-  );
+  const assigneesByClient = (assignees ?? []).reduce<Record<string, AssigneeRow[]>>((acc, a) => {
+    (acc[a.client_id] ||= []).push(a);
+    return acc;
+  }, {});
   const membersById = new Map((members ?? []).map((m) => [m.id, m.full_name]));
 
   const BILLING_LABEL: Record<ClientRow["billing_mode"], string> = {
@@ -228,7 +196,7 @@ function ClientsPage() {
     },
     {
       header: "Apontamento",
-      accessor: (c) => (c.timing_mode === "manual" ? "Manual" : "Start/Stop"),
+      accessor: () => "Start/Stop",
       width: 80,
     },
     { header: "Status", accessor: (c) => c.status, width: 60 },
@@ -257,9 +225,7 @@ function ClientsPage() {
         <div>
           <h1 className="font-display text-3xl font-semibold tracking-tight">Clientes</h1>
           <p className="mt-1 text-muted-foreground">
-            {isManager
-              ? "Cadastre clientes e defina os funcionários responsáveis."
-              : "Clientes em que você atende."}
+            {isManager ? "Cadastre clientes e defina os funcionários responsáveis." : "Clientes em que você atende."}
           </p>
         </div>
         {isManager && currentCompanyId && (
@@ -271,39 +237,39 @@ function ClientsPage() {
               <FileDown className="mr-2 h-4 w-4" /> Exportar PDF
             </Button>
             <Dialog
-            open={open || !!editing}
-            onOpenChange={(v) => {
-              if (!v) {
-                setOpen(false);
-                setEditing(null);
-              } else {
-                setOpen(true);
-              }
-            }}
-          >
-            <DialogTrigger asChild>
-              <Button onClick={() => setEditing(null)}>
-                <Plus className="mr-2 h-4 w-4" /> Novo cliente
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>{editing ? "Editar cliente" : "Novo cliente"}</DialogTitle>
-              </DialogHeader>
-              <ClientForm
-                companyId={currentCompanyId}
-                userId={user!.id}
-                initial={editing}
-                members={members ?? []}
-                assignees={editing ? assigneesByClient[editing.id] ?? [] : []}
-                onDone={() => {
+              open={open || !!editing}
+              onOpenChange={(v) => {
+                if (!v) {
                   setOpen(false);
                   setEditing(null);
-                  invalidateClientsCache(qc);
-                }}
-              />
-            </DialogContent>
-          </Dialog>
+                } else {
+                  setOpen(true);
+                }
+              }}
+            >
+              <DialogTrigger asChild>
+                <Button onClick={() => setEditing(null)}>
+                  <Plus className="mr-2 h-4 w-4" /> Novo cliente
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{editing ? "Editar cliente" : "Novo cliente"}</DialogTitle>
+                </DialogHeader>
+                <ClientForm
+                  companyId={currentCompanyId}
+                  userId={user!.id}
+                  initial={editing}
+                  members={members ?? []}
+                  assignees={editing ? (assigneesByClient[editing.id] ?? []) : []}
+                  onDone={() => {
+                    setOpen(false);
+                    setEditing(null);
+                    invalidateClientsCache(qc);
+                  }}
+                />
+              </DialogContent>
+            </Dialog>
           </div>
         )}
       </div>
@@ -329,18 +295,13 @@ function ClientsPage() {
           {(clients ?? []).map((c) => {
             const team = assigneesByClient[c.id] ?? [];
             return (
-              <li
-                key={c.id}
-                className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4"
-              >
+              <li key={c.id} className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <h3 className="truncate font-medium">{c.name}</h3>
                     <span
                       className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium uppercase ${
-                        c.status === "ativo"
-                          ? "bg-success/15 text-success"
-                          : "bg-muted text-muted-foreground"
+                        c.status === "ativo" ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"
                       }`}
                     >
                       {c.status}
@@ -348,12 +309,7 @@ function ClientsPage() {
                   </div>
                   {isManager && (
                     <div className="flex shrink-0 gap-1">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        title="Editar"
-                        onClick={() => setEditing(c)}
-                      >
+                      <Button size="icon" variant="ghost" title="Editar" onClick={() => setEditing(c)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button
@@ -394,24 +350,18 @@ function ClientsPage() {
                       <MapPin className="h-3 w-3" /> {c.address}
                     </div>
                   )}
-                  {c.notes && (
-                    <div className="line-clamp-2 pt-1 text-foreground/70">{c.notes}</div>
-                  )}
+                  {c.notes && <div className="line-clamp-2 pt-1 text-foreground/70">{c.notes}</div>}
                 </div>
 
                 {team.length > 0 && (
                   <div className="border-t border-border/60 pt-2">
-                    <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                      Equipe
-                    </div>
+                    <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Equipe</div>
                     <div className="mt-1 flex flex-wrap gap-1">
                       {team.map((a) => (
                         <span
                           key={a.id}
                           className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] ${
-                            a.is_primary
-                              ? "bg-primary/15 text-primary"
-                              : "bg-muted text-muted-foreground"
+                            a.is_primary ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
                           }`}
                         >
                           {a.is_primary && "★ "}
@@ -451,18 +401,10 @@ function ClientForm({
   const [address, setAddress] = useState(initial?.address ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [status, setStatus] = useState<"ativo" | "inativo">(initial?.status ?? "ativo");
-  const [timingMode, setTimingMode] = useState<"start_stop" | "manual">(
-    initial?.timing_mode ?? "start_stop",
-  );
-  const [billingMode, setBillingMode] = useState<ClientRow["billing_mode"]>(
-    initial?.billing_mode ?? "hourly",
-  );
-  const [hourlyRate, setHourlyRate] = useState<string>(
-    initial?.hourly_rate != null ? String(initial.hourly_rate) : "",
-  );
-  const [fixedRate, setFixedRate] = useState<string>(
-    initial?.fixed_rate != null ? String(initial.fixed_rate) : "",
-  );
+  const timingMode: "start_stop" = "start_stop";
+  const [billingMode, setBillingMode] = useState<ClientRow["billing_mode"]>(initial?.billing_mode ?? "hourly");
+  const [hourlyRate, setHourlyRate] = useState<string>(initial?.hourly_rate != null ? String(initial.hourly_rate) : "");
+  const [fixedRate, setFixedRate] = useState<string>(initial?.fixed_rate != null ? String(initial.fixed_rate) : "");
   const [monthlyRate, setMonthlyRate] = useState<string>(
     initial?.monthly_rate != null ? String(initial.monthly_rate) : "",
   );
@@ -472,12 +414,8 @@ function ClientForm({
     address: initial?.geo_address ?? null,
     radiusM: initial?.geo_radius_m ?? 50,
   });
-  const [selected, setSelected] = useState<Set<string>>(
-    () => new Set(assignees.map((a) => a.user_id)),
-  );
-  const [primary, setPrimary] = useState<string>(
-    () => assignees.find((a) => a.is_primary)?.user_id ?? "",
-  );
+  const [selected, setSelected] = useState<Set<string>>(() => new Set(assignees.map((a) => a.user_id)));
+  const [primary, setPrimary] = useState<string>(() => assignees.find((a) => a.is_primary)?.user_id ?? "");
   const [loading, setLoading] = useState(false);
 
   const toggleMember = (id: string) => {
@@ -516,9 +454,7 @@ function ClientForm({
           };
           let clientId = initial?.id;
           if (initial) {
-            const { error } = await (
-              supabase.from("clients" as never) as any
-            )
+            const { error } = await (supabase.from("clients" as never) as any)
               .update({
                 name: name.trim(),
                 phone: phone.trim() || null,
@@ -537,9 +473,7 @@ function ClientForm({
               .eq("id", initial.id);
             if (error) throw error;
           } else {
-            const { data, error } = await (
-              supabase.from("clients" as never) as any
-            )
+            const { data, error } = await (supabase.from("clients" as never) as any)
               .insert({
                 company_id: companyId,
                 name: name.trim(),
@@ -568,22 +502,16 @@ function ClientForm({
             // Remove os desmarcados
             const toRemove = assignees.filter((a) => !selected.has(a.user_id));
             if (toRemove.length > 0) {
-              await (
-                supabase.from("client_assignees" as never) as any
-              )
-                .delete()
-                .in(
-                  "id",
-                  toRemove.map((a) => a.id),
-                );
+              await (supabase.from("client_assignees" as never) as any).delete().in(
+                "id",
+                toRemove.map((a) => a.id),
+              );
             }
             // Adiciona novos
             const existing = new Set(assignees.map((a) => a.user_id));
             const toAdd = [...selected].filter((u) => !existing.has(u));
             if (toAdd.length > 0) {
-              await (
-                supabase.from("client_assignees" as never) as any
-              ).insert(
+              await (supabase.from("client_assignees" as never) as any).insert(
                 toAdd.map((u) => ({
                   company_id: companyId,
                   client_id: clientId,
@@ -593,15 +521,11 @@ function ClientForm({
               );
             }
             // Atualiza primário
-            await (
-              supabase.from("client_assignees" as never) as any
-            )
+            await (supabase.from("client_assignees" as never) as any)
               .update({ is_primary: false })
               .eq("client_id", clientId);
             if (primary && selected.has(primary)) {
-              await (
-                supabase.from("client_assignees" as never) as any
-              )
+              await (supabase.from("client_assignees" as never) as any)
                 .update({ is_primary: true })
                 .eq("client_id", clientId)
                 .eq("user_id", primary);
@@ -628,12 +552,7 @@ function ClientForm({
         </div>
         <div className="space-y-1.5">
           <Label>Email</Label>
-          <Input
-            type="email"
-            maxLength={150}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
+          <Input type="email" maxLength={150} value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
       </div>
       <div className="space-y-1.5">
@@ -660,20 +579,13 @@ function ClientForm({
       <div className="space-y-1.5">
         <Label>Modo de apontamento</Label>
         <div className="flex gap-2">
-          {(
-            [
-              { v: "start_stop", label: "Start/Stop", hint: "Funcionário marca início e fim" },
-              { v: "manual", label: "Manual", hint: "Sem horário — apenas datas" },
-            ] as const
-          ).map((opt) => (
+          {([{ v: "start_stop", label: "Start/Stop", hint: "Funcionário marca início e fim" }] as const).map((opt) => (
             <button
               key={opt.v}
               type="button"
-              onClick={() => setTimingMode(opt.v)}
+              onClick={() => undefined}
               className={`flex-1 rounded-lg border p-2 text-left text-xs transition ${
-                timingMode === opt.v
-                  ? "border-primary bg-primary/10"
-                  : "border-border hover:border-primary/50"
+                timingMode === opt.v ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
               }`}
             >
               <div className="font-medium">{opt.label}</div>
@@ -686,7 +598,9 @@ function ClientForm({
       <div className="space-y-1.5">
         <Label>Forma de cobrança</Label>
         <Select value={billingMode} onValueChange={(v) => setBillingMode(v as ClientRow["billing_mode"])}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="hourly">Por hora</SelectItem>
             <SelectItem value="fixed">Valor fixo</SelectItem>
@@ -750,26 +664,14 @@ function ClientForm({
             {members.map((m) => {
               const checked = selected.has(m.id);
               return (
-                <label
-                  key={m.id}
-                  className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-accent"
-                >
+                <label key={m.id} className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-accent">
                   <span className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => toggleMember(m.id)}
-                    />
+                    <input type="checkbox" checked={checked} onChange={() => toggleMember(m.id)} />
                     {m.full_name ?? m.id.slice(0, 8)}
                   </span>
                   {checked && (
                     <label className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                      <input
-                        type="radio"
-                        name="primary"
-                        checked={primary === m.id}
-                        onChange={() => setPrimary(m.id)}
-                      />
+                      <input type="radio" name="primary" checked={primary === m.id} onChange={() => setPrimary(m.id)} />
                       principal
                     </label>
                   )}
