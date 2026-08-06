@@ -9,10 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
+import { Drawer, DrawerContent, ModalHeader, ModalBody, ModalFooter } from "@/components/ui/drawer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Receipt, Upload, Download, Mail, UserPlus, Trash2, Loader2, FileText, AlertTriangle, CheckCircle2, History, Send } from "lucide-react";
+import { Receipt, Upload, Download, Mail, UserPlus, Trash2, Loader2, FileText, AlertTriangle, CheckCircle2, History, Send, UserCog } from "lucide-react";
 import { extractPdfText, parsePayslipText, fuzzyMatchEmployee, MONTH_LABEL_PT } from "@/lib/payslip-parser";
 
 export const Route = createFileRoute("/app/rh/recibos")({ component: PayslipsAdminPage });
@@ -447,11 +447,13 @@ function AssignDrawer({
 
   return (
     <Drawer open={!!payslip} onOpenChange={(o) => !o && onClose()}>
-      <DrawerContent>
-        <DrawerHeader>
-          <DrawerTitle>Associar recibo ao funcionário</DrawerTitle>
-        </DrawerHeader>
-        <div className="mx-auto w-full max-w-2xl space-y-4 px-4 pb-4">
+      <DrawerContent size="md">
+        <ModalHeader
+          icon={UserCog}
+          title="Associar recibo ao funcionário"
+          description="Defina o funcionário, o período e os valores do recibo."
+        />
+        <ModalBody className="space-y-4">
           {payslip?.employee_name_detected && (
             <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm">
               <div className="text-xs uppercase tracking-wide text-muted-foreground">Nome detectado no PDF</div>
@@ -504,16 +506,14 @@ function AssignDrawer({
               <Input value={net} onChange={(e) => setNet(e.target.value)} placeholder="0,00" inputMode="decimal" />
             </div>
           </div>
-        </div>
-        <DrawerFooter>
-          <div className="mx-auto flex w-full max-w-2xl gap-2">
-            <Button variant="outline" onClick={onClose} className="flex-1">Cancelar</Button>
-            <Button onClick={() => save.mutate()} disabled={save.isPending || !userId} className="flex-1">
-              {save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Salvar e associar
-            </Button>
-          </div>
-        </DrawerFooter>
+        </ModalBody>
+        <ModalFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button onClick={() => save.mutate()} disabled={save.isPending || !userId}>
+            {save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Salvar e associar
+          </Button>
+        </ModalFooter>
       </DrawerContent>
     </Drawer>
   );
@@ -541,11 +541,9 @@ function HistoryDrawer({ payslip, onClose }: { payslip: Payslip | null; onClose:
 
   return (
     <Drawer open={!!payslip} onOpenChange={(o) => !o && onClose()}>
-      <DrawerContent>
-        <DrawerHeader>
-          <DrawerTitle>Histórico de envios</DrawerTitle>
-        </DrawerHeader>
-        <div className="mx-auto w-full max-w-2xl space-y-3 px-4 pb-6">
+      <DrawerContent size="md">
+        <ModalHeader icon={History} title="Histórico de envios" description="Eventos de entrega registados para este recibo." />
+        <ModalBody className="space-y-3">
           {payslip && (
             <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm">
               <div className="font-medium">{payslip.original_filename}</div>
@@ -585,7 +583,7 @@ function HistoryDrawer({ payslip, onClose }: { payslip: Payslip | null; onClose:
               })}
             </ul>
           )}
-        </div>
+        </ModalBody>
       </DrawerContent>
     </Drawer>
   );

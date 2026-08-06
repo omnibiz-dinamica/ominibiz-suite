@@ -1,11 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, ModalBody, ModalHeader } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { punchAuditList, type PunchAuditRow } from "@/lib/punch-admin";
 import { History, Plus, Pencil } from "lucide-react";
@@ -62,13 +56,14 @@ export function PunchAuditDrawer({ open, onOpenChange, timeEntryId }: Props) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2"><History className="h-4 w-4" /> Histórico de alterações</SheetTitle>
-          <SheetDescription>Cada criação ou correção fica registrada com motivo.</SheetDescription>
-        </SheetHeader>
+      <SheetContent className="w-full sm:max-w-lg">
+        <ModalHeader
+          icon={History}
+          title="Histórico de alterações"
+          description="Cada criação ou correção fica registrada com motivo."
+        />
 
-        <div className="mt-5 space-y-3">
+        <ModalBody className="space-y-3">
           {isLoading && <div className="text-sm text-muted-foreground">Carregando...</div>}
           {!isLoading && (audit ?? []).length === 0 && (
             <div className="rounded-lg border border-border bg-muted/30 p-4 text-center text-sm text-muted-foreground">
@@ -104,7 +99,7 @@ export function PunchAuditDrawer({ open, onOpenChange, timeEntryId }: Props) {
               )}
             </div>
           ))}
-        </div>
+        </ModalBody>
       </SheetContent>
     </Sheet>
   );

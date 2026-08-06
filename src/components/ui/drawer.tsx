@@ -93,6 +93,8 @@ export {
   DrawerFooter,
   DrawerTitle,
   DrawerDescription,
+  ModalHeader,
+  ModalFooter,
   ModalBody,
   ModalSection,
   ModalTabsBar,

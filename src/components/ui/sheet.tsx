@@ -120,6 +120,8 @@ export {
   SheetTitle,
   SheetDescription,
   ModalBody,
+  ModalHeader,
+  ModalFooter,
   ModalSection,
   ModalTabsBar,
   modalHeaderChrome,

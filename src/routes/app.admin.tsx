@@ -8,9 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTrigger, ModalHeader, ModalBody, ModalFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Building2, CheckCircle2, Copy, Plus, MailCheck, AlertCircle } from "lucide-react";
+import { Building2, CheckCircle2, Copy, Plus, MailCheck, AlertCircle, PlusCircle } from "lucide-react";
 import {
   COUNTRIES,
   COUNTRY_CURRENCY,
@@ -195,12 +195,10 @@ function AdminPage() {
               <Plus className="mr-2 h-4 w-4" /> Criar empresa
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Nova empresa</DialogTitle>
-            </DialogHeader>
+          <DialogContent size="md">
+            <ModalHeader icon={PlusCircle} title="Nova empresa" description="Crie a empresa e gere o convite para o administrador." />
             {result ? (
-              <div className="space-y-4">
+              <ModalBody className="space-y-4">
                 {result.emailSent ? (
                   <div className="flex items-start gap-3 rounded-lg border border-success/40 bg-success/10 p-3 text-sm">
                     <MailCheck className="mt-0.5 h-4 w-4 text-success" />
@@ -251,15 +249,17 @@ function AdminPage() {
                 >
                   Concluir
                 </Button>
-              </div>
+              </ModalBody>
             ) : (
               <form
-                className="space-y-4"
+                id="admin-create-company-form"
+                className="contents"
                 onSubmit={(e) => {
                   e.preventDefault();
                   create.mutate();
                 }}
               >
+              <ModalBody className="space-y-4">
                 <div className="space-y-1.5">
                   <Label>Nome da empresa</Label>
                   <Input required value={name} onChange={(e) => setName(e.target.value)} maxLength={120} />
@@ -296,12 +296,15 @@ function AdminPage() {
                   <Label>Email do administrador</Label>
                   <Input type="email" required value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} />
                 </div>
-                <DialogFooter>
-                  <Button type="submit" disabled={create.isPending} className="w-full">
-                    {create.isPending ? "Criando..." : "Criar empresa e gerar convite"}
-                  </Button>
-                </DialogFooter>
+              </ModalBody>
               </form>
+            )}
+            {!result && (
+              <ModalFooter>
+                <Button type="submit" form="admin-create-company-form" disabled={create.isPending}>
+                  {create.isPending ? "Criando..." : "Criar empresa e gerar convite"}
+                </Button>
+              </ModalFooter>
             )}
           </DialogContent>
         </Dialog>

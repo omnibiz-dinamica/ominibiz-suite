@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MapPin, Filter, X } from "lucide-react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, ModalBody, ModalHeader } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -95,19 +95,18 @@ export function PunchGeoDrawer({ open, onOpenChange, timeEntryId, entryLabel }: 
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-5xl overflow-y-auto">
-        <SheetHeader className="mb-4">
-          <SheetTitle className="flex items-center gap-2">
-            <MapPin className="h-5 w-5" />
-            Geolocalização do registo
-          </SheetTitle>
-          {entryLabel && (
-            <p className="text-xs text-muted-foreground">
-              {[entryLabel.user, entryLabel.task, entryLabel.client].filter(Boolean).join(" · ")}
-            </p>
-          )}
-        </SheetHeader>
+      <SheetContent side="right" className="w-full sm:max-w-5xl">
+        <ModalHeader
+          icon={MapPin}
+          title="Geolocalização do registo"
+          description={
+            entryLabel
+              ? [entryLabel.user, entryLabel.task, entryLabel.client].filter(Boolean).join(" · ")
+              : undefined
+          }
+        />
 
+        <ModalBody className="space-y-4">
         {/* Resumo */}
         <section className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
           <SummaryChip icon="🟢" label="Dentro" value={summary.within} tone="success" />
@@ -254,6 +253,7 @@ export function PunchGeoDrawer({ open, onOpenChange, timeEntryId, entryLabel }: 
             )}
           </div>
         </div>
+        </ModalBody>
       </SheetContent>
     </Sheet>
   );

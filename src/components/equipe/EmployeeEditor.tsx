@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ModalTabsBar, ModalBody } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -54,7 +55,7 @@ export function EmployeeEditor({ userId, companyId, currentRole, onDone }: Emplo
   const [tab, setTab] = useState("dados");
 
   if (isLoading || !profile) {
-    return <div className="py-10 text-center text-sm text-muted-foreground">Carregando…</div>;
+    return <div className="p-6 py-10 text-center text-sm text-muted-foreground">Carregando…</div>;
   }
 
   const save = async (patch: Record<string, unknown>, msg = "Salvo") => {
@@ -74,43 +75,47 @@ export function EmployeeEditor({ userId, companyId, currentRole, onDone }: Emplo
   };
 
   return (
-    <Tabs value={tab} onValueChange={setTab} className="w-full">
-      <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6">
-        <TabsTrigger value="dados">Dados</TabsTrigger>
-        <TabsTrigger value="rh">Contabilidade/RH</TabsTrigger>
-        <TabsTrigger value="docs">Documentos</TabsTrigger>
-        <TabsTrigger value="fin">Financeiro</TabsTrigger>
-        <TabsTrigger value="sig">Assinaturas</TabsTrigger>
-        <TabsTrigger value="anx">Anexos</TabsTrigger>
-      </TabsList>
+    <Tabs value={tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col">
+      <ModalTabsBar>
+        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6">
+          <TabsTrigger value="dados">Dados</TabsTrigger>
+          <TabsTrigger value="rh">Contabilidade/RH</TabsTrigger>
+          <TabsTrigger value="docs">Documentos</TabsTrigger>
+          <TabsTrigger value="fin">Financeiro</TabsTrigger>
+          <TabsTrigger value="sig">Assinaturas</TabsTrigger>
+          <TabsTrigger value="anx">Anexos</TabsTrigger>
+        </TabsList>
+      </ModalTabsBar>
 
-      <TabsContent value="dados" className="space-y-4 pt-4">
-        <TabDadosGerais
-          profile={profile}
-          companies={companies}
-          currentRole={currentRole}
-          userId={userId}
-          companyId={companyId}
-          canPromoteOwner={!!(isOwner || isSuperAdmin)}
-          onSave={save}
-          onDone={onDone}
-        />
-      </TabsContent>
-      <TabsContent value="rh" className="space-y-4 pt-4">
-        <TabRH profile={profile} onSave={save} />
-      </TabsContent>
-      <TabsContent value="docs" className="space-y-4 pt-4">
-        <TabDocs profile={profile} onSave={save} />
-      </TabsContent>
-      <TabsContent value="fin" className="space-y-4 pt-4">
-        <TabFinanceiro profile={profile} onSave={save} />
-      </TabsContent>
-      <TabsContent value="sig" className="space-y-4 pt-4">
-        <TabAssinaturas profile={profile} userId={userId} companyId={companyId} onSave={save} />
-      </TabsContent>
-      <TabsContent value="anx" className="space-y-4 pt-4">
-        <TabAnexos userId={userId} companyId={companyId} />
-      </TabsContent>
+      <ModalBody>
+        <TabsContent value="dados" className="mt-0 space-y-4">
+          <TabDadosGerais
+            profile={profile}
+            companies={companies}
+            currentRole={currentRole}
+            userId={userId}
+            companyId={companyId}
+            canPromoteOwner={!!(isOwner || isSuperAdmin)}
+            onSave={save}
+            onDone={onDone}
+          />
+        </TabsContent>
+        <TabsContent value="rh" className="mt-0 space-y-4">
+          <TabRH profile={profile} onSave={save} />
+        </TabsContent>
+        <TabsContent value="docs" className="mt-0 space-y-4">
+          <TabDocs profile={profile} onSave={save} />
+        </TabsContent>
+        <TabsContent value="fin" className="mt-0 space-y-4">
+          <TabFinanceiro profile={profile} onSave={save} />
+        </TabsContent>
+        <TabsContent value="sig" className="mt-0 space-y-4">
+          <TabAssinaturas profile={profile} userId={userId} companyId={companyId} onSave={save} />
+        </TabsContent>
+        <TabsContent value="anx" className="mt-0 space-y-4">
+          <TabAnexos userId={userId} companyId={companyId} />
+        </TabsContent>
+      </ModalBody>
     </Tabs>
   );
 }
