@@ -8,9 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTrigger, ModalHeader, ModalBody, ModalFooter, ModalSection } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Users, Phone, Mail, MapPin, Pencil, Power, Trash2, FileSpreadsheet, FileDown } from "lucide-react";
+import { Plus, Users, Phone, Mail, MapPin, Pencil, Power, Trash2, FileSpreadsheet, FileDown, UserCog } from "lucide-react";
 import { RoleGuard } from "@/components/RoleGuard";
 import { exportToExcel, exportToPdf, type ExportColumn } from "@/lib/exports";
 import { ClientGeoEditor, validateClientGeo, type ClientGeoValue } from "@/components/clientes/ClientGeoEditor";
@@ -252,10 +252,12 @@ function ClientsPage() {
                   <Plus className="mr-2 h-4 w-4" /> Novo cliente
                 </Button>
               </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{editing ? "Editar cliente" : "Novo cliente"}</DialogTitle>
-                </DialogHeader>
+              <DialogContent size="lg">
+                <ModalHeader
+                  icon={Users}
+                  title={editing ? "Editar cliente" : "Novo cliente"}
+                  description={editing ? "Atualize os dados do cliente." : "Registe um novo cliente e a sua equipa responsável."}
+                />
                 <ClientForm
                   companyId={currentCompanyId}
                   userId={user!.id}
@@ -266,6 +268,10 @@ function ClientsPage() {
                     setOpen(false);
                     setEditing(null);
                     invalidateClientsCache(qc);
+                  }}
+                  onCancel={() => {
+                    setOpen(false);
+                    setEditing(null);
                   }}
                 />
               </DialogContent>
