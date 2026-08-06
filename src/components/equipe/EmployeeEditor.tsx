@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ModalTabsBar, ModalBody } from "@/components/ui/dialog";
+import { ModalBody, ModalFooter, ModalTabsBar } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -54,12 +54,31 @@ export function EmployeeEditor({ userId, companyId, currentRole, onDone }: Emplo
   });
 
   const [tab, setTab] = useState("dados");
+  const [saving, setSaving] = useState(false);
+
+  /** Footer submit target per tab (tabs without a form keep their inline actions). */
+  const TAB_FORMS: Record<string, { id: string; label: string }> = {
+    dados: { id: "employee-dados-form", label: "Salvar dados gerais" },
+    rh: { id: "employee-rh-form", label: "Salvar dados de contabilidade" },
+    docs: { id: "employee-docs-form", label: "Salvar documentos" },
+    fin: { id: "employee-fin-form", label: "Salvar financeiro" },
+  };
+  const footerAction = TAB_FORMS[tab];
 
   if (isLoading || !profile) {
     return <div className="p-6 py-10 text-center text-sm text-muted-foreground">Carregando…</div>;
   }
 
   const save = async (patch: Record<string, unknown>, msg = "Salvo") => {
+    setSaving(true);
+    try {
+      await runSave(patch, msg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const runSave = async (patch: Record<string, unknown>, msg = "Salvo") => {
     const { error } = await (
       supabase.from("profiles") as unknown as {
         update: (p: Record<string, unknown>) => {
@@ -117,6 +136,17 @@ export function EmployeeEditor({ userId, companyId, currentRole, onDone }: Emplo
           <TabAnexos userId={userId} companyId={companyId} />
         </TabsContent>
       </ModalBody>
+
+      <ModalFooter>
+        <Button type="button" variant="outline" onClick={onDone}>
+          Fechar
+        </Button>
+        {footerAction && (
+          <Button type="submit" form={footerAction.id} disabled={saving}>
+            {saving ? "Salvando…" : footerAction.label}
+          </Button>
+        )}
+      </ModalFooter>
     </Tabs>
   );
 }
@@ -175,6 +205,7 @@ function TabDadosGerais({
 
   return (
     <form
+      id="employee-dados-form"
       className="space-y-4"
       onSubmit={async (e) => {
         e.preventDefault();
@@ -295,9 +326,6 @@ function TabDadosGerais({
         </Field>
       </ModalSection>
 
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Salvando…" : "Salvar dados gerais"}
-      </Button>
     </form>
   );
 }
@@ -329,6 +357,7 @@ function TabRH({
   const [loading, setLoading] = useState(false);
   return (
     <form
+      id="employee-rh-form"
       className="space-y-4"
       onSubmit={async (e) => {
         e.preventDefault();
@@ -442,9 +471,6 @@ function TabRH({
       <p className="text-xs text-muted-foreground">
         Sistema alerta automaticamente 30 dias antes da renovação do contrato no Dashboard RH e em Notificações.
       </p>
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Salvando…" : "Salvar dados de contabilidade"}
-      </Button>
     </form>
   );
 }
@@ -478,6 +504,7 @@ function TabDocs({
   const [loading, setLoading] = useState(false);
   return (
     <form
+      id="employee-docs-form"
       className="space-y-4"
       onSubmit={async (e) => {
         e.preventDefault();
@@ -567,9 +594,6 @@ function TabDocs({
           <Input type="date" value={f.occ_health_next_at} onChange={upd("occ_health_next_at")} />
         </Field>
       </div>
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Salvando…" : "Salvar documentos"}
-      </Button>
     </form>
   );
 }
@@ -628,6 +652,7 @@ function TabFinanceiro({
   const [loading, setLoading] = useState(false);
   return (
     <form
+      id="employee-fin-form"
       className="space-y-4"
       onSubmit={async (e) => {
         e.preventDefault();
@@ -734,9 +759,6 @@ function TabFinanceiro({
           </Field>
         </div>
       </div>
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Salvando…" : "Salvar financeiro"}
-      </Button>
     </form>
   );
 }
