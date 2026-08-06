@@ -254,7 +254,8 @@ export function isVisuallyLate(
   if (task.status === "concluido" || task.status === "cancelado" || task.status === "ausente") return false;
 
   if (task.scheduled_for) {
-    return new Date(task.scheduled_for).getTime() < Date.now();
+    // Tarefa com horário só fica atrasada visualmente 1h após o início.
+    return new Date(task.scheduled_for).getTime() + 60 * 60 * 1000 <= Date.now();
   }
 
   const dateSource = task.recurrence_date ?? task.due_at;
