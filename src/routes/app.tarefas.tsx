@@ -1482,7 +1482,10 @@ function TaskForm({
 }) {
   const [title, setTitle] = useState(initial?.title ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
-  const [assignedTo, setAssignedTo] = useState<string>(initial?.assigned_to ?? "");
+  const [assignees, setAssignees] = useState<string[]>(initial?.assigned_to ? [initial.assigned_to] : []);
+  const assignedTo = assignees[0] ?? "";
+  const toggleAssignee = (id: string) =>
+    setAssignees((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   const [clientId, setClientId] = useState<string>(initial?.client_id ?? "");
   const [priority, setPriority] = useState<"baixa" | "media" | "alta" | "urgente">(initial?.priority ?? "media");
   const [startDate, setStartDate] = useState<string>(
@@ -1552,7 +1555,7 @@ function TaskForm({
         const startISO = startTime ? wallDateTimeToISO(startDate, startTime) : null;
         const endISO = endTime ? wallDateTimeToISO(endDate, endTime) : null;
         const dueISO = endISO ?? wallDateToEndOfDayISO(endDate);
-        if (!assignedTo) {
+        if (assignees.length === 0) {
           toast.error("Atribua a tarefa a um funcionario antes de salvar.");
           return;
         }
@@ -1576,22 +1579,27 @@ function TaskForm({
           toast.error("O horário de fim deve ser posterior ao de início.");
           return;
         }
-        // Conflito com férias aprovadas do funcionário no período.
+        // Conflito com férias aprovadas dos funcionários no período.
         {
           const rangeStart = recurrence.enabled ? recurrence.startDate || startDate : startDate;
           const rangeEnd = recurrence.enabled ? recurrence.endDate || endDate : endDate;
           const { data: vacations } = await supabase
             .from("vacation_requests")
-            .select("start_date, end_date")
+            .select("start_date, end_date, user_id")
             .eq("company_id", companyId)
-            .eq("user_id", assignedTo)
+            .in("user_id", assignees)
             .eq("status", "aprovado")
             .lte("start_date", rangeEnd)
             .gte("end_date", rangeStart);
           if (vacations && vacations.length > 0) {
-            const periods = vacations.map((v) => `${v.start_date} → ${v.end_date}`).join(", ");
+            const periods = vacations
+              .map((v) => {
+                const name = members.find((m) => m.id === v.user_id)?.full_name ?? "Funcionário";
+                return `${name}: ${v.start_date} → ${v.end_date}`;
+              })
+              .join(", ");
             const ok = window.confirm(
-              `Este funcionário tem férias aprovadas no período (${periods}). Deseja continuar mesmo assim?`,
+              `Há férias aprovadas no período (${periods}). Deseja continuar mesmo assim?`,
             );
             if (!ok) return;
           }
@@ -1603,7 +1611,7 @@ function TaskForm({
         const payload = {
           title: finalTitle,
           description: description.trim() || null,
-          assigned_to: assignedTo || null,
+          assigned_to: assignedTo,
           client_id: clientId || null,
           priority,
           // Wall-clock: preservar o horário exato cadastrado, sem fuso.
@@ -1615,7 +1623,7 @@ function TaskForm({
           punch_mode_override: punchMode || null,
         };
         let error: { message: string } | null = null;
-        let createdTaskId: string | null = null;
+        const createdTaskIds: string[] = [];
         if (initial) {
           ({ error } = await supabase.from("tasks").update(payload).eq("id", initial.id));
         } else if (recurrence.enabled) {
@@ -1629,26 +1637,28 @@ function TaskForm({
               Math.round((new Date(endISO).getTime() - new Date(startISO).getTime()) / 60000),
             );
           }
-          // Cria recorrência e materializa as próximas 14 dias.
+          // Uma série (task_recurrence) por funcionário selecionado.
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const ins = await (supabase.from("task_recurrences" as any) as any).insert({
-            company_id: companyId,
-            created_by: userId,
-            title: payload.title,
-            description: payload.description,
-            assigned_to: payload.assigned_to,
-            client_id: payload.client_id,
-            priority: payload.priority,
-            absence_grace_minutes: payload.absence_grace_minutes,
-            punch_mode_override: payload.punch_mode_override,
-            frequency: recurrence.frequency,
-            weekdays: recurrence.frequency === "weekly" ? recurrence.weekdays : [],
-            monthly_rule: recurrence.frequency === "monthly" ? { day_of_month: recurrence.dayOfMonth } : {},
-            start_date: recurrence.startDate,
-            end_date: recurrence.endDate || null,
-            scheduled_time: derivedTime,
-            duration_minutes: derivedDuration,
-          });
+          const ins = await (supabase.from("task_recurrences" as any) as any).insert(
+            assignees.map((memberId) => ({
+              company_id: companyId,
+              created_by: userId,
+              title: payload.title,
+              description: payload.description,
+              assigned_to: memberId,
+              client_id: payload.client_id,
+              priority: payload.priority,
+              absence_grace_minutes: payload.absence_grace_minutes,
+              punch_mode_override: payload.punch_mode_override,
+              frequency: recurrence.frequency,
+              weekdays: recurrence.frequency === "weekly" ? recurrence.weekdays : [],
+              monthly_rule: recurrence.frequency === "monthly" ? { day_of_month: recurrence.dayOfMonth } : {},
+              start_date: recurrence.startDate,
+              end_date: recurrence.endDate || null,
+              scheduled_time: derivedTime,
+              duration_minutes: derivedDuration,
+            })),
+          );
           error = ins.error;
           if (!error) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1658,22 +1668,30 @@ function TaskForm({
             });
           }
         } else {
+          // Uma tarefa por funcionário selecionado (tasks.assigned_to segue único).
           const inserted = await supabase
             .from("tasks")
-            .insert({ ...payload, company_id: companyId, created_by: userId })
+            .insert(
+              assignees.map((memberId) => ({
+                ...payload,
+                assigned_to: memberId,
+                company_id: companyId,
+                created_by: userId,
+              })),
+            )
             .select("id")
-            .single();
+          ;
           error = inserted.error;
-          createdTaskId = inserted.data?.id ?? null;
+          for (const row of inserted.data ?? []) createdTaskIds.push(row.id);
         }
         if (error) {
           setLoading(false);
           toast.error(error.message);
           return;
         }
-        if (!initial && createdTaskId && pendingDocs.length > 0) {
+        if (!initial && createdTaskIds.length > 0 && pendingDocs.length > 0) {
           try {
-            await uploadCreationDocs(createdTaskId);
+            for (const taskId of createdTaskIds) await uploadCreationDocs(taskId);
           } catch (e) {
             setLoading(false);
             toast.error((e as Error).message);
@@ -1681,7 +1699,9 @@ function TaskForm({
           }
         }
         setLoading(false);
-        toast.success(initial ? "Tarefa atualizada" : "Tarefa criada");
+        toast.success(
+          initial ? "Tarefa atualizada" : assignees.length > 1 ? `${assignees.length} tarefas criadas` : "Tarefa criada",
+        );
         onDone();
       }}
     >
@@ -1744,18 +1764,48 @@ function TaskForm({
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5 col-span-2">
           <Label>Atribuir a</Label>
-          <Select value={assignedTo} onValueChange={setAssignedTo}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione" />
-            </SelectTrigger>
-            <SelectContent>
-              {members.map((m) => (
-                <SelectItem key={m.id} value={m.id}>
-                  {m.full_name ?? m.id.slice(0, 8)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {initial ? (
+            <Select value={assignedTo} onValueChange={(v) => setAssignees([v])}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                {members.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.full_name ?? m.id.slice(0, 8)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <>
+              <div className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-border p-2">
+                {members.length === 0 && (
+                  <p className="px-1 py-2 text-xs text-muted-foreground">Nenhum funcionário disponível.</p>
+                )}
+                {members.map((m) => {
+                  const checked = assignees.includes(m.id);
+                  return (
+                    <label
+                      key={m.id}
+                      className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent"
+                    >
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 accent-primary"
+                        checked={checked}
+                        onChange={() => toggleAssignee(m.id)}
+                      />
+                      <span className="truncate">{m.full_name ?? m.id.slice(0, 8)}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Selecione um ou mais funcionários — será criada uma tarefa para cada um.
+              </p>
+            </>
+          )}
         </div>
         <div className="space-y-1.5">
           <Label>Data início</Label>
