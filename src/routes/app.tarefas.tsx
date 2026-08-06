@@ -194,10 +194,10 @@ function TasksPage() {
         .eq("company_id", currentCompanyId)
         .eq("status", "ativo")
         .order("name", { ascending: true });
-      if (error) throw error;
+      if (error) return [] as ClientOption[];
       return (data ?? []) as unknown as ClientOption[];
     },
-    enabled: isManager && !!currentCompanyId,
+    enabled: !!currentCompanyId,
   });
 
   // Varredura de ausentes por evento: ao carregar a tela. Nunca em loop.
@@ -659,7 +659,14 @@ function TasksPage() {
         />
       )}
 
-      {!isLoading && filteredTasks.length > 0 && !isManager && (
+      {!isManager && !isLoading && (
+        <div className="flex flex-wrap items-center gap-1 rounded-2xl border border-border bg-card px-3 py-2">
+          <FilterChip label="Lista" active={taskView === "list"} onClick={() => setTaskView("list")} />
+          <FilterChip label="Calendário" active={taskView === "calendar"} onClick={() => setTaskView("calendar")} />
+        </div>
+      )}
+
+      {!isLoading && filteredTasks.length > 0 && !isManager && taskView === "list" && (
         <div className="rounded-2xl border border-border bg-card">
           <ul className="divide-y divide-border">
             {filteredTasks.map((t) => (
@@ -681,6 +688,26 @@ function TasksPage() {
             ))}
           </ul>
         </div>
+      )}
+
+      {!isLoading && filteredTasks.length > 0 && !isManager && taskView === "calendar" && (
+        <TaskPlanningCalendar
+          tasks={filteredTasks}
+          members={members ?? []}
+          clients={clientsList ?? []}
+          groupBy="client"
+          userId={user!.id}
+          isManager={false}
+          onEdit={setEditing}
+          onEditSeries={setEditingSeries}
+          onReassign={setReassigning}
+          onDelete={handleDeleteRequest}
+          onTransition={handleTransition}
+          onArchive={(id, archive) => archiveMut.mutate({ id, archive })}
+          onMoveDate={(id, dateKey) => moveTaskDate.mutate({ id, dateKey })}
+          transitionPending={transition.isPending}
+          archivePending={archiveMut.isPending}
+        />
       )}
     </div>
   );
