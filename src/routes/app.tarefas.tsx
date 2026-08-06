@@ -940,8 +940,11 @@ function TaskPlanningCalendar({
                     <div
                       key={dateKey(day)}
                       className={`min-h-28 rounded-lg border border-border bg-background p-2 transition hover:border-primary/40 ${muted ? "opacity-50" : ""}`}
-                      onDragOver={(event) => event.preventDefault()}
+                      onDragOver={(event) => {
+                        if (handlers.isManager) event.preventDefault();
+                      }}
                       onDrop={(event) => {
+                        if (!handlers.isManager) return;
                         event.preventDefault();
                         const taskId = event.dataTransfer.getData("text/task-id");
                         if (taskId) handlers.onMoveDate(taskId, dateKey(day));
