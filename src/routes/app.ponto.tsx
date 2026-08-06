@@ -23,9 +23,11 @@ import {
   LogOut,
   Hand,
   Zap,
+  Timer,
+  LogIn as LogInIcon,
 } from "lucide-react";
 import { TaskDocuments } from "@/components/tasks/TaskDocuments";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/dialog";
 import {
   type TimeEntryRow,
   type TaskRow,
@@ -448,137 +450,152 @@ function PontoPage() {
 
       {/* Dialog de escolha de método (modo "ambos") */}
       <Dialog open={!!modeChoice} onOpenChange={(o) => !o && setModeChoice(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Como deseja registrar?</DialogTitle>
-            <DialogDescription>
-              Esta empresa permite ambos os modos. Escolha como abrir o ponto para esta tarefa.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-2 pt-2">
-            <Button
-              size="lg"
-              className="h-14 justify-start"
-              onClick={() => {
-                if (!modeChoice) return;
-                startMut.mutate(modeChoice.id);
-                setModeChoice(null);
-              }}
-            >
-              <Zap className="mr-2 h-5 w-5" />
-              <div className="text-left">
-                <div className="text-sm font-semibold">Automático</div>
-                <div className="text-xs opacity-80">Inicia tarefa e abre o ponto em um clique.</div>
-              </div>
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="h-14 justify-start"
-              onClick={() => {
-                if (!modeChoice) return;
-                setManualStartTask(modeChoice);
-                setManualStartAt(manualDefaultDateTime(modeChoice));
-                setModeChoice(null);
-              }}
-            >
-              <Hand className="mr-2 h-5 w-5" />
-              <div className="text-left">
-                <div className="text-sm font-semibold">Manual</div>
-                <div className="text-xs opacity-80">Bater entrada/saída manualmente durante a tarefa.</div>
-              </div>
-            </Button>
-          </div>
+        <DialogContent size="sm">
+          <ModalHeader
+            icon={Timer}
+            title="Como deseja registrar?"
+            description="Esta empresa permite ambos os modos. Escolha como abrir o ponto para esta tarefa."
+          />
+          <ModalBody>
+            <div className="grid gap-2">
+              <Button
+                size="lg"
+                className="h-14 justify-start"
+                onClick={() => {
+                  if (!modeChoice) return;
+                  startMut.mutate(modeChoice.id);
+                  setModeChoice(null);
+                }}
+              >
+                <Zap className="mr-2 h-5 w-5" />
+                <div className="text-left">
+                  <div className="text-sm font-semibold">Automático</div>
+                  <div className="text-xs opacity-80">Inicia tarefa e abre o ponto em um clique.</div>
+                </div>
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="h-14 justify-start"
+                onClick={() => {
+                  if (!modeChoice) return;
+                  setManualStartTask(modeChoice);
+                  setManualStartAt(manualDefaultDateTime(modeChoice));
+                  setModeChoice(null);
+                }}
+              >
+                <Hand className="mr-2 h-5 w-5" />
+                <div className="text-left">
+                  <div className="text-sm font-semibold">Manual</div>
+                  <div className="text-xs opacity-80">Bater entrada/saída manualmente durante a tarefa.</div>
+                </div>
+              </Button>
+            </div>
+          </ModalBody>
         </DialogContent>
       </Dialog>
 
       <Dialog open={!!manualStartTask} onOpenChange={(o) => !o && setManualStartTask(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Registrar entrada manual</DialogTitle>
-            <DialogDescription>
-              Informe o horario real de entrada para iniciar esta tarefa manualmente.
-            </DialogDescription>
-          </DialogHeader>
-          <form
-            className="space-y-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!manualStartTask || !manualStartAt) return;
-              manualStartMut.mutate({ taskId: manualStartTask.id, startedAt: manualStartAt });
-            }}
-          >
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="manual-start-at">
-                Hora de entrada
-              </label>
-              <Input
-                id="manual-start-at"
-                type="datetime-local"
-                value={manualStartAt}
-                onChange={(e) => setManualStartAt(e.target.value)}
-                required
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={manualStartMut.isPending}>
+        <DialogContent size="sm">
+          <ModalHeader
+            icon={LogInIcon}
+            title="Registrar entrada manual"
+            description="Informe o horário real de entrada para iniciar esta tarefa manualmente."
+          />
+          <ModalBody>
+            <form
+              id="manual-start-form"
+              className="space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!manualStartTask || !manualStartAt) return;
+                manualStartMut.mutate({ taskId: manualStartTask.id, startedAt: manualStartAt });
+              }}
+            >
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="manual-start-at">
+                  Hora de entrada
+                </label>
+                <Input
+                  id="manual-start-at"
+                  type="datetime-local"
+                  value={manualStartAt}
+                  onChange={(e) => setManualStartAt(e.target.value)}
+                  required
+                />
+              </div>
+            </form>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="outline" onClick={() => setManualStartTask(null)} disabled={manualStartMut.isPending}>
+              Cancelar
+            </Button>
+            <Button type="submit" form="manual-start-form" disabled={manualStartMut.isPending}>
               <LogIn className="mr-2 h-4 w-4" />
               {manualStartMut.isPending ? "Registrando..." : "Iniciar manual"}
             </Button>
-          </form>
+          </ModalFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={manualEndOpen} onOpenChange={setManualEndOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Finalizar ponto manual</DialogTitle>
-            <DialogDescription>
-              Informe o horario real de saida. A tarefa sera concluida com este apontamento.
-            </DialogDescription>
-          </DialogHeader>
-          <form
-            className="space-y-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!openEntry || !manualEndAt) return;
-              const reason = manualEndReason.trim();
-              if (manualEndRequiresReason && reason.length < 3) {
-                toast.error("Informe a justificativa do fechamento tardio.");
-                return;
-              }
-              manualEndMut.mutate({ entryId: openEntry.id, endedAt: manualEndAt, reason: reason || undefined });
-            }}
-          >
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="manual-end-at">
-                Hora de saida
-              </label>
-              <Input
-                id="manual-end-at"
-                type="datetime-local"
-                value={manualEndAt}
-                onChange={(e) => setManualEndAt(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="manual-end-reason">
-                Justificativa {manualEndRequiresReason ? "*" : "(opcional)"}
-              </label>
-              <Textarea
-                id="manual-end-reason"
-                value={manualEndReason}
-                onChange={(e) => setManualEndReason(e.target.value)}
-                rows={3}
-                maxLength={500}
-                placeholder="Ex.: esqueci de bater saída ontem; horário correto confirmado com o gestor."
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={manualEndMut.isPending}>
+        <DialogContent size="sm">
+          <ModalHeader
+            icon={LogOut}
+            title="Finalizar ponto manual"
+            description="Informe o horário real de saída. A tarefa será concluída com este apontamento."
+          />
+          <ModalBody>
+            <form
+              id="manual-end-form"
+              className="space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!openEntry || !manualEndAt) return;
+                const reason = manualEndReason.trim();
+                if (manualEndRequiresReason && reason.length < 3) {
+                  toast.error("Informe a justificativa do fechamento tardio.");
+                  return;
+                }
+                manualEndMut.mutate({ entryId: openEntry.id, endedAt: manualEndAt, reason: reason || undefined });
+              }}
+            >
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="manual-end-at">
+                  Hora de saída
+                </label>
+                <Input
+                  id="manual-end-at"
+                  type="datetime-local"
+                  value={manualEndAt}
+                  onChange={(e) => setManualEndAt(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="manual-end-reason">
+                  Justificativa {manualEndRequiresReason ? "*" : "(opcional)"}
+                </label>
+                <Textarea
+                  id="manual-end-reason"
+                  value={manualEndReason}
+                  onChange={(e) => setManualEndReason(e.target.value)}
+                  rows={3}
+                  maxLength={500}
+                  placeholder="Ex.: esqueci de bater saída ontem; horário correto confirmado com o gestor."
+                />
+              </div>
+            </form>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="outline" onClick={() => setManualEndOpen(false)} disabled={manualEndMut.isPending}>
+              Cancelar
+            </Button>
+            <Button type="submit" form="manual-end-form" disabled={manualEndMut.isPending}>
               <LogOut className="mr-2 h-4 w-4" />
               {manualEndMut.isPending ? "Finalizando..." : "Finalizar manual"}
             </Button>
-          </form>
+          </ModalFooter>
         </DialogContent>
       </Dialog>
 
