@@ -393,6 +393,7 @@ function ClientForm({
   members,
   assignees,
   onDone,
+  onCancel,
 }: {
   companyId: string;
   userId: string;
@@ -400,6 +401,7 @@ function ClientForm({
   members: Member[];
   assignees: AssigneeRow[];
   onDone: () => void;
+  onCancel: () => void;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [phone, setPhone] = useState(initial?.phone ?? "");
@@ -438,7 +440,10 @@ function ClientForm({
   };
 
   return (
+    <>
+    <ModalBody>
     <form
+      id="client-form"
       className="space-y-4"
       onSubmit={async (e) => {
         e.preventDefault();
@@ -547,125 +552,132 @@ function ClientForm({
         }
       }}
     >
-      <div className="space-y-1.5">
-        <Label>Nome</Label>
-        <Input required maxLength={150} value={name} onChange={(e) => setName(e.target.value)} />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
+      <ModalSection title="Dados do cliente" icon={Users}>
         <div className="space-y-1.5">
-          <Label>Telefone</Label>
-          <Input maxLength={40} value={phone} onChange={(e) => setPhone(e.target.value)} />
+          <Label>Nome</Label>
+          <Input required maxLength={150} value={name} onChange={(e) => setName(e.target.value)} />
         </div>
         <div className="space-y-1.5">
-          <Label>Email</Label>
-          <Input type="email" maxLength={150} value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Label>Observações</Label>
+          <Textarea maxLength={1000} value={notes} onChange={(e) => setNotes(e.target.value)} />
         </div>
-      </div>
-      <div className="space-y-1.5">
-        <Label>Endereço</Label>
-        <Input maxLength={250} value={address} onChange={(e) => setAddress(e.target.value)} />
-      </div>
-      <div className="space-y-1.5">
-        <Label>Observações</Label>
-        <Textarea maxLength={1000} value={notes} onChange={(e) => setNotes(e.target.value)} />
-      </div>
-      <div className="space-y-1.5">
-        <Label>Status</Label>
-        <Select value={status} onValueChange={(v) => setStatus(v as typeof status)}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ativo">Ativo</SelectItem>
-            <SelectItem value="inativo">Inativo</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-1.5">
-        <Label>Modo de apontamento</Label>
-        <div className="flex gap-2">
-          {([{ v: "start_stop", label: "Start/Stop", hint: "Funcionário marca início e fim" }] as const).map((opt) => (
-            <button
-              key={opt.v}
-              type="button"
-              onClick={() => undefined}
-              className={`flex-1 rounded-lg border p-2 text-left text-xs transition ${
-                timingMode === opt.v ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
-              }`}
-            >
-              <div className="font-medium">{opt.label}</div>
-              <div className="text-[10px] text-muted-foreground">{opt.hint}</div>
-            </button>
-          ))}
+        <div className="space-y-1.5">
+          <Label>Status</Label>
+          <Select value={status} onValueChange={(v) => setStatus(v as typeof status)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ativo">Ativo</SelectItem>
+              <SelectItem value="inativo">Inativo</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-      </div>
+      </ModalSection>
 
-      <div className="space-y-1.5">
-        <Label>Forma de cobrança</Label>
-        <Select value={billingMode} onValueChange={(v) => setBillingMode(v as ClientRow["billing_mode"])}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="hourly">Por hora</SelectItem>
-            <SelectItem value="fixed">Valor fixo</SelectItem>
-            <SelectItem value="monthly">Mensal</SelectItem>
-            <SelectItem value="mixed">Misto (hora + fixo)</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="grid grid-cols-3 gap-2">
-        {(billingMode === "hourly" || billingMode === "mixed") && (
+      <ModalSection title="Contacto" icon={Mail}>
+        <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label className="text-xs">Valor / hora (€)</Label>
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              value={hourlyRate}
-              onChange={(e) => setHourlyRate(e.target.value)}
-              placeholder="Herda da empresa"
-            />
+            <Label>Telefone</Label>
+            <Input maxLength={40} value={phone} onChange={(e) => setPhone(e.target.value)} />
           </div>
-        )}
-        {(billingMode === "fixed" || billingMode === "mixed") && (
           <div className="space-y-1.5">
-            <Label className="text-xs">Valor fixo (€)</Label>
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              value={fixedRate}
-              onChange={(e) => setFixedRate(e.target.value)}
-              placeholder="Herda da empresa"
-            />
+            <Label>Email</Label>
+            <Input type="email" maxLength={150} value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
-        )}
-        {billingMode === "monthly" && (
-          <div className="space-y-1.5 col-span-3">
-            <Label className="text-xs">Valor mensal (€)</Label>
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              value={monthlyRate}
-              onChange={(e) => setMonthlyRate(e.target.value)}
-              placeholder="Herda da empresa"
-            />
-          </div>
-        )}
-      </div>
-      <p className="text-[10px] text-muted-foreground">
-        Deixe em branco para herdar o valor padrão da empresa (ADR-017).
-      </p>
+        </div>
+      </ModalSection>
 
-      <ClientGeoEditor value={geo} onChange={setGeo} />
+      <ModalSection title="Endereço e geolocalização" icon={MapPin}>
+        <div className="space-y-1.5">
+          <Label>Endereço</Label>
+          <Input maxLength={250} value={address} onChange={(e) => setAddress(e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Modo de apontamento</Label>
+          <div className="flex gap-2">
+            {([{ v: "start_stop", label: "Start/Stop", hint: "Funcionário marca início e fim" }] as const).map((opt) => (
+              <button
+                key={opt.v}
+                type="button"
+                onClick={() => undefined}
+                className={`flex-1 rounded-lg border p-2 text-left text-xs transition ${
+                  timingMode === opt.v ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
+                }`}
+              >
+                <div className="font-medium">{opt.label}</div>
+                <div className="text-[10px] text-muted-foreground">{opt.hint}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+        <ClientGeoEditor value={geo} onChange={setGeo} />
+      </ModalSection>
+
+      <ModalSection title="Cobrança" icon={FileSpreadsheet}>
+        <div className="space-y-1.5">
+          <Label>Forma de cobrança</Label>
+          <Select value={billingMode} onValueChange={(v) => setBillingMode(v as ClientRow["billing_mode"])}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="hourly">Por hora</SelectItem>
+              <SelectItem value="fixed">Valor fixo</SelectItem>
+              <SelectItem value="monthly">Mensal</SelectItem>
+              <SelectItem value="mixed">Misto (hora + fixo)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2">
+          {(billingMode === "hourly" || billingMode === "mixed") && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Valor / hora (€)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={hourlyRate}
+                onChange={(e) => setHourlyRate(e.target.value)}
+                placeholder="Herda da empresa"
+              />
+            </div>
+          )}
+          {(billingMode === "fixed" || billingMode === "mixed") && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Valor fixo (€)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={fixedRate}
+                onChange={(e) => setFixedRate(e.target.value)}
+                placeholder="Herda da empresa"
+              />
+            </div>
+          )}
+          {billingMode === "monthly" && (
+            <div className="space-y-1.5 col-span-3">
+              <Label className="text-xs">Valor mensal (€)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={monthlyRate}
+                onChange={(e) => setMonthlyRate(e.target.value)}
+                placeholder="Herda da empresa"
+              />
+            </div>
+          )}
+        </div>
+        <p className="text-[10px] text-muted-foreground">
+          Deixe em branco para herdar o valor padrão da empresa (ADR-017).
+        </p>
+      </ModalSection>
 
       {members.length > 0 && (
-        <div className="space-y-2">
-          <Label>Equipe responsável</Label>
+        <ModalSection title="Equipa responsável" icon={UserCog}>
           <div className="space-y-1 rounded-lg border border-border p-2">
             {members.map((m) => {
               const checked = selected.has(m.id);
@@ -685,12 +697,16 @@ function ClientForm({
               );
             })}
           </div>
-        </div>
+        </ModalSection>
       )}
-
-      <Button type="submit" className="w-full" disabled={loading}>
+    </form>
+    </ModalBody>
+    <ModalFooter>
+      <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
+      <Button type="submit" form="client-form" disabled={loading}>
         {loading ? "Salvando..." : initial ? "Salvar alterações" : "Criar cliente"}
       </Button>
-    </form>
+    </ModalFooter>
+    </>
   );
 }
