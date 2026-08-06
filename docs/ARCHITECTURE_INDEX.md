@@ -152,6 +152,8 @@
 ## 5. Documentos relacionados
 
 - [`HOMOLOGACAO_RBAC.md`](./HOMOLOGACAO_RBAC.md) — Checklist e relatório de auditoria arquitetural para homologação de módulos.
+- [`ARCHITECTURE_MODAL_DESIGN_SYSTEM.md`](./ARCHITECTURE_MODAL_DESIGN_SYSTEM.md) — Design System canónico de modais (Dialog/Sheet/Drawer/AlertDialog). Ver ADR-026.
+- [`UI_MODAL_GUIDELINES.md`](./UI_MODAL_GUIDELINES.md) — Guia de uso dos primitivos de modal para novos ecrãs.
 
 ---
 
