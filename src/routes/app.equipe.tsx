@@ -306,7 +306,7 @@ function TeamPage() {
       <div className="rounded-2xl border border-border bg-card p-6">
         <h2 className="font-display text-lg font-semibold">Reenviar acesso</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Use para funcionÃ¡rio que jÃ¡ existe, perdeu a senha ou precisa entrar em outro aparelho.
+          Use para funcionário que já existe, perdeu a senha ou precisa entrar em outro aparelho.
         </p>
         <form
           className="mt-4 flex flex-wrap items-end gap-3"
@@ -316,7 +316,7 @@ function TeamPage() {
           }}
         >
           <div className="flex-1 min-w-[220px] space-y-1.5">
-            <Label>Email do funcionÃ¡rio</Label>
+            <Label>Email do funcionário</Label>
             <Input type="email" required value={accessEmail} onChange={(e) => setAccessEmail(e.target.value)} />
           </div>
           <Button type="submit" variant="outline" disabled={sendAccessLink.isPending}>
