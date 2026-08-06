@@ -56,6 +56,37 @@ const schema = z.object({
   module: z.string().max(120).optional(),
 });
 
+const DRAFT_KEY = "omnibiz:support:new-ticket:draft:v1";
+
+type Draft = {
+  type?: string;
+  priority?: string;
+  title?: string;
+  description?: string;
+  module?: string;
+};
+
+function readDraft(): Draft | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object") return null;
+    return parsed as Draft;
+  } catch {
+    return null;
+  }
+}
+
+function clearDraft() {
+  try {
+    window.sessionStorage.removeItem(DRAFT_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 export interface NewTicketDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -94,15 +125,29 @@ export function NewTicketDialog({
 
   useEffect(() => {
     if (open) {
-      setType(defaultType ?? "duvida");
-      setPriority("normal");
-      setTitle(defaultTitle ?? "");
-      setDescription("");
-      setModule(defaultModule ?? "");
+      const draft = readDraft();
+      setType((draft?.type as SupportTicketType) ?? defaultType ?? "duvida");
+      setPriority((draft?.priority as SupportTicketPriority) ?? "normal");
+      setTitle(draft?.title ?? defaultTitle ?? "");
+      setDescription(draft?.description ?? "");
+      setModule(draft?.module ?? defaultModule ?? "");
       setFiles([]);
       setFormError(null);
     }
   }, [open, defaultType, defaultTitle, defaultModule]);
+
+  // Rascunho persistido: anexar imagem (input file) não pode perder o que foi digitado.
+  useEffect(() => {
+    if (!open || typeof window === "undefined") return;
+    try {
+      window.sessionStorage.setItem(
+        DRAFT_KEY,
+        JSON.stringify({ type, priority, title, description, module }),
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [open, type, priority, title, description, module]);
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -129,6 +174,7 @@ export function NewTicketDialog({
       return ticket;
     },
     onSuccess: (ticket) => {
+      clearDraft();
       invalidateSupportCache(qc);
       toast.success(`Ticket ${ticket.ticket_number} criado.`);
       onOpenChange(false);

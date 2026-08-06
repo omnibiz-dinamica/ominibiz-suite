@@ -25,6 +25,7 @@ import {
   Zap,
   Timer,
   LogIn as LogInIcon,
+  UserX,
 } from "lucide-react";
 import { TaskDocuments } from "@/components/tasks/TaskDocuments";
 import { Dialog, DialogContent, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/dialog";
@@ -44,6 +45,7 @@ import {
   STATUS_LABELS,
   STATUS_TONE,
   isVisuallyLate,
+  canBecomeAbsent,
 } from "@/lib/tasks";
 import { usePunchFlow } from "@/hooks/use-punch-flow";
 import { PunchFlowOverlay } from "@/components/ponto/PunchFlowOverlay";
@@ -333,6 +335,15 @@ function PontoPage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+  const markAbsentMut = useMutation({
+    mutationFn: (taskId: string) => transitionTask(taskId, "marcar_ausente"),
+    onSuccess: () => {
+      toast.success("Falta registrada na tarefa.");
+      qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const state = openEntry ? punchState(openEntry) : "encerrado";
   const liveSec = openEntry ? effectiveSecondsNow(openEntry) : 0;
@@ -417,6 +428,10 @@ function PontoPage() {
           onRequestAuth={(id) => requestAuthMut.mutate(id)}
           requestingAuth={requestAuthMut.isPending}
           requestingAuthId={requestAuthMut.variables ?? null}
+          canMarkAbsent={isManager}
+          onMarkAbsent={(id) => markAbsentMut.mutate(id)}
+          markingAbsent={markAbsentMut.isPending}
+          markingAbsentId={markAbsentMut.variables ?? null}
         />
       )}
 
@@ -749,6 +764,10 @@ function UpcomingTasks({
   onRequestAuth,
   requestingAuth,
   requestingAuthId,
+  canMarkAbsent,
+  onMarkAbsent,
+  markingAbsent,
+  markingAbsentId,
 }: {
   tasks: TaskRow[];
   clientsMap: Record<string, string>;
@@ -761,6 +780,10 @@ function UpcomingTasks({
   onRequestAuth: (id: string) => void;
   requestingAuth: boolean;
   requestingAuthId: string | null;
+  canMarkAbsent: boolean;
+  onMarkAbsent: (id: string) => void;
+  markingAbsent: boolean;
+  markingAbsentId: string | null;
 }) {
   if (tasks.length === 0) {
     return (
@@ -899,6 +922,17 @@ function UpcomingTasks({
               )}
             </Button>
           )}
+          {canMarkAbsent && canBecomeAbsent(nextStartable) && (
+            <Button
+              size="lg"
+              variant="outline"
+              className="h-12 w-full text-base"
+              disabled={markingAbsent && markingAbsentId === nextStartable.id}
+              onClick={() => onMarkAbsent(nextStartable.id)}
+            >
+              <UserX className="mr-2 h-5 w-5" /> Marcar falta
+            </Button>
+          )}
         </div>
       </section>
 
@@ -986,6 +1020,17 @@ function UpcomingTasks({
                       </>
                     )}
                   </Button>
+                  {canMarkAbsent && canBecomeAbsent(t) && (
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="h-12 w-full sm:w-auto"
+                      disabled={markingAbsent && markingAbsentId === t.id}
+                      onClick={() => onMarkAbsent(t.id)}
+                    >
+                      <UserX className="mr-2 h-5 w-5" /> Marcar falta
+                    </Button>
+                  )}
                 </li>
               );
             })}
