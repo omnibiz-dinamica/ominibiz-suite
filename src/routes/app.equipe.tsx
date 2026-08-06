@@ -31,6 +31,16 @@ interface MemberRow {
   } | null;
 }
 
+function getMemberDisplayName(member: MemberRow) {
+  const fullName = member.profile?.full_name?.trim();
+  if (fullName) return fullName;
+
+  const email = member.profile?.email?.trim();
+  if (email) return email;
+
+  return "Sem identificação";
+}
+
 export const Route = createFileRoute("/app/equipe")({
   component: () => (
     <RoleGuard allow={["manager", "owner", "super_admin"]}>
@@ -319,13 +329,16 @@ function TeamPage() {
           {(members ?? []).map((m) => {
             const active = m.profile?.is_active ?? true;
             const isSelf = m.user_id === user?.id;
+            const displayName = getMemberDisplayName(m);
+            const email = m.profile?.email?.trim() || null;
+            const shouldShowEmailAside = email && email !== displayName;
             return (
               <li key={m.user_id + m.role} className="flex flex-wrap items-center justify-between gap-3 py-3">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 font-medium">
-                    <span className="truncate">{m.profile?.full_name ?? m.user_id.slice(0, 8)}</span>
-                    {m.profile?.email && (
-                      <span className="break-all text-sm font-normal text-muted-foreground">{m.profile.email}</span>
+                    <span className="truncate">{displayName}</span>
+                    {shouldShowEmailAside && (
+                      <span className="break-all text-sm font-normal text-muted-foreground">{email}</span>
                     )}
                     {!active && (
                       <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase text-muted-foreground">
