@@ -182,6 +182,11 @@ function buildGroups(args: {
       });
     }
     groups.push({
+      id: "suporte",
+      label: "Suporte",
+      items: [{ to: "/app/suporte", label: "Meu Suporte", icon: LifeBuoy, module: "support" }],
+    });
+    groups.push({
       id: "conta",
       label: "Conta",
       items: [{ to: "/app/perfil", label: "Perfil", icon: UserCircle }],
