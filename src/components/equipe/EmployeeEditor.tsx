@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
-import { Download, Trash2, Upload } from "lucide-react";
+import { Download, Trash2, Upload, IdCard, Building2, MapPin } from "lucide-react";
+import { ModalSection } from "@/components/ui/dialog";
 
 /**
  * Tabbed employee editor (Aba 1-6) for the Equipe module.
@@ -211,80 +212,89 @@ function TabDadosGerais({
         }
       }}
     >
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Nome completo">
-          <Input maxLength={150} value={fullName} onChange={(e) => setFullName(e.target.value)} />
-        </Field>
-        <Field label="Telefone">
-          <Input maxLength={40} value={phone} onChange={(e) => setPhone(e.target.value)} />
-        </Field>
-      </div>
-      <Field label="Empresa">
-        <Select value={companyPrimary || "none"} onValueChange={(v) => setCompanyPrimary(v === "none" ? "" : v)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">— sem empresa principal —</SelectItem>
-            {companies.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </Field>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Cargo / Função">
-          <Input maxLength={120} value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
-        </Field>
-        <Field label="Local de trabalho principal">
-          <Input maxLength={200} value={workLocation} onChange={(e) => setWorkLocation(e.target.value)} />
-        </Field>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Equipa (1–10, opcional)">
-          <Select value={teamNumber || "none"} onValueChange={(v) => setTeamNumber(v === "none" ? "" : v)}>
+      <ModalSection title="Identificação" icon={IdCard}>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Nome completo">
+            <Input maxLength={150} value={fullName} onChange={(e) => setFullName(e.target.value)} />
+          </Field>
+          <Field label="Telefone">
+            <Input maxLength={40} value={phone} onChange={(e) => setPhone(e.target.value)} />
+          </Field>
+        </div>
+      </ModalSection>
+
+      <ModalSection title="Organização e acesso" icon={Building2}>
+        <Field label="Empresa">
+          <Select value={companyPrimary || "none"} onValueChange={(v) => setCompanyPrimary(v === "none" ? "" : v)}>
             <SelectTrigger>
-              <SelectValue placeholder="—" />
+              <SelectValue placeholder="Selecione" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">— sem equipa —</SelectItem>
-              {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                <SelectItem key={n} value={String(n)}>
-                  {n}
+              <SelectItem value="none">— sem empresa principal —</SelectItem>
+              {companies.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </Field>
-        <Field label="Status">
-          <Select value={status} onValueChange={setStatus}>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Cargo / Função">
+            <Input maxLength={120} value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
+          </Field>
+          <Field label="Local de trabalho principal">
+            <Input maxLength={200} value={workLocation} onChange={(e) => setWorkLocation(e.target.value)} />
+          </Field>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Equipa (1–10, opcional)">
+            <Select value={teamNumber || "none"} onValueChange={(v) => setTeamNumber(v === "none" ? "" : v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="—" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">— sem equipa —</SelectItem>
+                {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                  <SelectItem key={n} value={String(n)}>
+                    {n}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Status">
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ativo">Ativo</SelectItem>
+                <SelectItem value="inativo">Inativo</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+        </div>
+        <Field label="Papel no sistema">
+          <Select value={role} onValueChange={(v) => setRole(v as Role)}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ativo">Ativo</SelectItem>
-              <SelectItem value="inativo">Inativo</SelectItem>
+              <SelectItem value="employee">Funcionário</SelectItem>
+              <SelectItem value="manager">Gestor</SelectItem>
+              {canPromoteOwner && <SelectItem value="owner">Owner</SelectItem>}
             </SelectContent>
           </Select>
         </Field>
-      </div>
-      <Field label="Morada">
-        <Textarea rows={2} value={addressBe} onChange={(e) => setAddressBe(e.target.value)} />
-      </Field>
-      <Field label="Papel no sistema">
-        <Select value={role} onValueChange={(v) => setRole(v as Role)}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="employee">Funcionário</SelectItem>
-            <SelectItem value="manager">Gestor</SelectItem>
-            {canPromoteOwner && <SelectItem value="owner">Owner</SelectItem>}
-          </SelectContent>
-        </Select>
-      </Field>
+      </ModalSection>
+
+      <ModalSection title="Morada" icon={MapPin}>
+        <Field label="Morada">
+          <Textarea rows={2} value={addressBe} onChange={(e) => setAddressBe(e.target.value)} />
+        </Field>
+      </ModalSection>
+
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? "Salvando…" : "Salvar dados gerais"}
       </Button>
