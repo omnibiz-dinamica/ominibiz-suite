@@ -25,6 +25,7 @@ import {
   Zap,
   Timer,
   LogIn as LogInIcon,
+  UserX,
 } from "lucide-react";
 import { TaskDocuments } from "@/components/tasks/TaskDocuments";
 import { Dialog, DialogContent, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/dialog";
@@ -44,6 +45,7 @@ import {
   STATUS_LABELS,
   STATUS_TONE,
   isVisuallyLate,
+  canBecomeAbsent,
 } from "@/lib/tasks";
 import { usePunchFlow } from "@/hooks/use-punch-flow";
 import { PunchFlowOverlay } from "@/components/ponto/PunchFlowOverlay";
@@ -333,6 +335,15 @@ function PontoPage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+  const markAbsentMut = useMutation({
+    mutationFn: (taskId: string) => transitionTask(taskId, "marcar_ausente"),
+    onSuccess: () => {
+      toast.success("Falta registrada na tarefa.");
+      qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const state = openEntry ? punchState(openEntry) : "encerrado";
   const liveSec = openEntry ? effectiveSecondsNow(openEntry) : 0;
@@ -417,6 +428,10 @@ function PontoPage() {
           onRequestAuth={(id) => requestAuthMut.mutate(id)}
           requestingAuth={requestAuthMut.isPending}
           requestingAuthId={requestAuthMut.variables ?? null}
+          canMarkAbsent={isManager}
+          onMarkAbsent={(id) => markAbsentMut.mutate(id)}
+          markingAbsent={markAbsentMut.isPending}
+          markingAbsentId={markAbsentMut.variables ?? null}
         />
       )}
 
