@@ -698,7 +698,7 @@ function TasksPage() {
           groupBy="client"
           userId={user!.id}
           isManager={false}
-          onEdit={setEditing}
+          onEdit={() => {}}
           onEditSeries={setEditingSeries}
           onReassign={setReassigning}
           onDelete={handleDeleteRequest}
@@ -1025,8 +1025,11 @@ function CalendarDayColumn({
   return (
     <div
       className="min-h-40 rounded-lg border border-border bg-background transition hover:border-primary/40"
-      onDragOver={(event) => event.preventDefault()}
+      onDragOver={(event) => {
+        if (handlers.isManager) event.preventDefault();
+      }}
       onDrop={(event) => {
+        if (!handlers.isManager) return;
         event.preventDefault();
         const taskId = event.dataTransfer.getData("text/task-id");
         if (taskId) handlers.onMoveDate(taskId, dateKeyValue);
@@ -1064,8 +1067,7 @@ function MiniTaskChip({ task, onClick }: { task: TaskRow; onClick: () => void })
   return (
     <button
       type="button"
-      draggable
-      onDragStart={(event) => event.dataTransfer.setData("text/task-id", task.id)}
+      draggable={false}
       onClick={onClick}
       className="block w-full truncate rounded-md bg-primary/10 px-2 py-1 text-left text-[11px] font-medium text-primary hover:bg-primary/15"
       title={task.title}
@@ -1238,8 +1240,11 @@ function CalendarTaskCard({
   return (
     <li
       className="space-y-2 px-3 py-3"
-      draggable
-      onDragStart={(event) => event.dataTransfer.setData("text/task-id", task.id)}
+      draggable={isManager}
+      onDragStart={(event) => {
+        if (!isManager) return;
+        event.dataTransfer.setData("text/task-id", task.id);
+      }}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
