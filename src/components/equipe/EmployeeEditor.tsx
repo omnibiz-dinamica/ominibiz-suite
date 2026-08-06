@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ModalBody, ModalFooter, ModalTabsBar } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
-import { Download, Trash2, Upload } from "lucide-react";
+import { Download, Trash2, Upload, IdCard, Building2, MapPin } from "lucide-react";
+import { ModalSection } from "@/components/ui/dialog";
 
 /**
  * Tabbed employee editor (Aba 1-6) for the Equipe module.
@@ -52,12 +54,31 @@ export function EmployeeEditor({ userId, companyId, currentRole, onDone }: Emplo
   });
 
   const [tab, setTab] = useState("dados");
+  const [saving, setSaving] = useState(false);
+
+  /** Footer submit target per tab (tabs without a form keep their inline actions). */
+  const TAB_FORMS: Record<string, { id: string; label: string }> = {
+    dados: { id: "employee-dados-form", label: "Salvar dados gerais" },
+    rh: { id: "employee-rh-form", label: "Salvar dados de contabilidade" },
+    docs: { id: "employee-docs-form", label: "Salvar documentos" },
+    fin: { id: "employee-fin-form", label: "Salvar financeiro" },
+  };
+  const footerAction = TAB_FORMS[tab];
 
   if (isLoading || !profile) {
-    return <div className="py-10 text-center text-sm text-muted-foreground">Carregando…</div>;
+    return <div className="p-6 py-10 text-center text-sm text-muted-foreground">Carregando…</div>;
   }
 
   const save = async (patch: Record<string, unknown>, msg = "Salvo") => {
+    setSaving(true);
+    try {
+      await runSave(patch, msg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const runSave = async (patch: Record<string, unknown>, msg = "Salvo") => {
     const { error } = await (
       supabase.from("profiles") as unknown as {
         update: (p: Record<string, unknown>) => {
@@ -74,43 +95,58 @@ export function EmployeeEditor({ userId, companyId, currentRole, onDone }: Emplo
   };
 
   return (
-    <Tabs value={tab} onValueChange={setTab} className="w-full">
-      <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6">
-        <TabsTrigger value="dados">Dados</TabsTrigger>
-        <TabsTrigger value="rh">Contabilidade/RH</TabsTrigger>
-        <TabsTrigger value="docs">Documentos</TabsTrigger>
-        <TabsTrigger value="fin">Financeiro</TabsTrigger>
-        <TabsTrigger value="sig">Assinaturas</TabsTrigger>
-        <TabsTrigger value="anx">Anexos</TabsTrigger>
-      </TabsList>
+    <Tabs value={tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col">
+      <ModalTabsBar>
+        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6">
+          <TabsTrigger value="dados">Dados</TabsTrigger>
+          <TabsTrigger value="rh">Contabilidade/RH</TabsTrigger>
+          <TabsTrigger value="docs">Documentos</TabsTrigger>
+          <TabsTrigger value="fin">Financeiro</TabsTrigger>
+          <TabsTrigger value="sig">Assinaturas</TabsTrigger>
+          <TabsTrigger value="anx">Anexos</TabsTrigger>
+        </TabsList>
+      </ModalTabsBar>
 
-      <TabsContent value="dados" className="space-y-4 pt-4">
-        <TabDadosGerais
-          profile={profile}
-          companies={companies}
-          currentRole={currentRole}
-          userId={userId}
-          companyId={companyId}
-          canPromoteOwner={!!(isOwner || isSuperAdmin)}
-          onSave={save}
-          onDone={onDone}
-        />
-      </TabsContent>
-      <TabsContent value="rh" className="space-y-4 pt-4">
-        <TabRH profile={profile} onSave={save} />
-      </TabsContent>
-      <TabsContent value="docs" className="space-y-4 pt-4">
-        <TabDocs profile={profile} onSave={save} />
-      </TabsContent>
-      <TabsContent value="fin" className="space-y-4 pt-4">
-        <TabFinanceiro profile={profile} onSave={save} />
-      </TabsContent>
-      <TabsContent value="sig" className="space-y-4 pt-4">
-        <TabAssinaturas profile={profile} userId={userId} companyId={companyId} onSave={save} />
-      </TabsContent>
-      <TabsContent value="anx" className="space-y-4 pt-4">
-        <TabAnexos userId={userId} companyId={companyId} />
-      </TabsContent>
+      <ModalBody>
+        <TabsContent value="dados" className="mt-0 space-y-4">
+          <TabDadosGerais
+            profile={profile}
+            companies={companies}
+            currentRole={currentRole}
+            userId={userId}
+            companyId={companyId}
+            canPromoteOwner={!!(isOwner || isSuperAdmin)}
+            onSave={save}
+            onDone={onDone}
+          />
+        </TabsContent>
+        <TabsContent value="rh" className="mt-0 space-y-4">
+          <TabRH profile={profile} onSave={save} />
+        </TabsContent>
+        <TabsContent value="docs" className="mt-0 space-y-4">
+          <TabDocs profile={profile} onSave={save} />
+        </TabsContent>
+        <TabsContent value="fin" className="mt-0 space-y-4">
+          <TabFinanceiro profile={profile} onSave={save} />
+        </TabsContent>
+        <TabsContent value="sig" className="mt-0 space-y-4">
+          <TabAssinaturas profile={profile} userId={userId} companyId={companyId} onSave={save} />
+        </TabsContent>
+        <TabsContent value="anx" className="mt-0 space-y-4">
+          <TabAnexos userId={userId} companyId={companyId} />
+        </TabsContent>
+      </ModalBody>
+
+      <ModalFooter>
+        <Button type="button" variant="outline" onClick={onDone}>
+          Fechar
+        </Button>
+        {footerAction && (
+          <Button type="submit" form={footerAction.id} disabled={saving}>
+            {saving ? "Salvando…" : footerAction.label}
+          </Button>
+        )}
+      </ModalFooter>
     </Tabs>
   );
 }
@@ -169,6 +205,7 @@ function TabDadosGerais({
 
   return (
     <form
+      id="employee-dados-form"
       className="space-y-4"
       onSubmit={async (e) => {
         e.preventDefault();
@@ -206,83 +243,89 @@ function TabDadosGerais({
         }
       }}
     >
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Nome completo">
-          <Input maxLength={150} value={fullName} onChange={(e) => setFullName(e.target.value)} />
-        </Field>
-        <Field label="Telefone">
-          <Input maxLength={40} value={phone} onChange={(e) => setPhone(e.target.value)} />
-        </Field>
-      </div>
-      <Field label="Empresa">
-        <Select value={companyPrimary || "none"} onValueChange={(v) => setCompanyPrimary(v === "none" ? "" : v)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">— sem empresa principal —</SelectItem>
-            {companies.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </Field>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Cargo / Função">
-          <Input maxLength={120} value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
-        </Field>
-        <Field label="Local de trabalho principal">
-          <Input maxLength={200} value={workLocation} onChange={(e) => setWorkLocation(e.target.value)} />
-        </Field>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Equipa (1–10, opcional)">
-          <Select value={teamNumber || "none"} onValueChange={(v) => setTeamNumber(v === "none" ? "" : v)}>
+      <ModalSection title="Identificação" icon={IdCard}>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Nome completo">
+            <Input maxLength={150} value={fullName} onChange={(e) => setFullName(e.target.value)} />
+          </Field>
+          <Field label="Telefone">
+            <Input maxLength={40} value={phone} onChange={(e) => setPhone(e.target.value)} />
+          </Field>
+        </div>
+      </ModalSection>
+
+      <ModalSection title="Organização e acesso" icon={Building2}>
+        <Field label="Empresa">
+          <Select value={companyPrimary || "none"} onValueChange={(v) => setCompanyPrimary(v === "none" ? "" : v)}>
             <SelectTrigger>
-              <SelectValue placeholder="—" />
+              <SelectValue placeholder="Selecione" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">— sem equipa —</SelectItem>
-              {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                <SelectItem key={n} value={String(n)}>
-                  {n}
+              <SelectItem value="none">— sem empresa principal —</SelectItem>
+              {companies.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </Field>
-        <Field label="Status">
-          <Select value={status} onValueChange={setStatus}>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Cargo / Função">
+            <Input maxLength={120} value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
+          </Field>
+          <Field label="Local de trabalho principal">
+            <Input maxLength={200} value={workLocation} onChange={(e) => setWorkLocation(e.target.value)} />
+          </Field>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Equipa (1–10, opcional)">
+            <Select value={teamNumber || "none"} onValueChange={(v) => setTeamNumber(v === "none" ? "" : v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="—" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">— sem equipa —</SelectItem>
+                {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                  <SelectItem key={n} value={String(n)}>
+                    {n}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Status">
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ativo">Ativo</SelectItem>
+                <SelectItem value="inativo">Inativo</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+        </div>
+        <Field label="Papel no sistema">
+          <Select value={role} onValueChange={(v) => setRole(v as Role)}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ativo">Ativo</SelectItem>
-              <SelectItem value="inativo">Inativo</SelectItem>
+              <SelectItem value="employee">Funcionário</SelectItem>
+              <SelectItem value="manager">Gestor</SelectItem>
+              {canPromoteOwner && <SelectItem value="owner">Owner</SelectItem>}
             </SelectContent>
           </Select>
         </Field>
-      </div>
-      <Field label="Morada">
-        <Textarea rows={2} value={addressBe} onChange={(e) => setAddressBe(e.target.value)} />
-      </Field>
-      <Field label="Papel no sistema">
-        <Select value={role} onValueChange={(v) => setRole(v as Role)}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="employee">Funcionário</SelectItem>
-            <SelectItem value="manager">Gestor</SelectItem>
-            {canPromoteOwner && <SelectItem value="owner">Owner</SelectItem>}
-          </SelectContent>
-        </Select>
-      </Field>
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Salvando…" : "Salvar dados gerais"}
-      </Button>
+      </ModalSection>
+
+      <ModalSection title="Morada" icon={MapPin}>
+        <Field label="Morada">
+          <Textarea rows={2} value={addressBe} onChange={(e) => setAddressBe(e.target.value)} />
+        </Field>
+      </ModalSection>
+
     </form>
   );
 }
@@ -314,6 +357,7 @@ function TabRH({
   const [loading, setLoading] = useState(false);
   return (
     <form
+      id="employee-rh-form"
       className="space-y-4"
       onSubmit={async (e) => {
         e.preventDefault();
@@ -427,9 +471,6 @@ function TabRH({
       <p className="text-xs text-muted-foreground">
         Sistema alerta automaticamente 30 dias antes da renovação do contrato no Dashboard RH e em Notificações.
       </p>
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Salvando…" : "Salvar dados de contabilidade"}
-      </Button>
     </form>
   );
 }
@@ -463,6 +504,7 @@ function TabDocs({
   const [loading, setLoading] = useState(false);
   return (
     <form
+      id="employee-docs-form"
       className="space-y-4"
       onSubmit={async (e) => {
         e.preventDefault();
@@ -552,9 +594,6 @@ function TabDocs({
           <Input type="date" value={f.occ_health_next_at} onChange={upd("occ_health_next_at")} />
         </Field>
       </div>
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Salvando…" : "Salvar documentos"}
-      </Button>
     </form>
   );
 }
@@ -613,6 +652,7 @@ function TabFinanceiro({
   const [loading, setLoading] = useState(false);
   return (
     <form
+      id="employee-fin-form"
       className="space-y-4"
       onSubmit={async (e) => {
         e.preventDefault();
@@ -719,9 +759,6 @@ function TabFinanceiro({
           </Field>
         </div>
       </div>
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Salvando…" : "Salvar financeiro"}
-      </Button>
     </form>
   );
 }

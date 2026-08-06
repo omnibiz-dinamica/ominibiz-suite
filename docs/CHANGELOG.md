@@ -578,3 +578,39 @@ Consulte `docs/RELEASE_NOTES_GEOFENCING_v1.0.md` e `docs/RELEASE_HISTORY.md`.
 #### Compatibilidade
 - Clientes `start_stop` mantêm exatamente o comportamento anterior.
 - Ver ADR-025 em `docs/DECISIONS.md`.
+
+## [UI] Padronização global dos modais — Design System único
+
+Todos os modais, dialogs, sheets e drawers passam a usar um padrão canónico
+único, moderno e responsivo. **Nenhuma alteração de banco de dados, RBAC, RLS,
+queries, mutations ou fluxos funcionais.**
+
+#### Núcleo (primitivos canónicos)
+- `src/components/ui/dialog.tsx`: novos `ModalHeader` (ícone + título + subtítulo
+  + fechar 44×44px), `ModalBody` (único elemento rolável), `ModalFooter` (fixo no
+  fundo, ações à direita no desktop e empilhadas no mobile), `ModalSection`
+  (cards internos) e `ModalTabsBar`. `DialogContent` ganhou variantes de largura
+  (`sm`, `md`, `lg`, `xl`) e é full-screen no mobile.
+- `src/components/ui/sheet.tsx` e `src/components/ui/drawer.tsx`: shells em
+  flex-column sem padding próprio, reexportando `ModalHeader`/`ModalFooter`.
+- `src/components/ui/alert-dialog.tsx`: alinhado à mesma linguagem visual.
+- `src/lib/utils.ts`: removidos os helpers legados (`modalContentFrame`,
+  `modalSafePadding`, `modalHeaderChrome`, `modalHeaderPadding`,
+  `modalTitleChrome`, `modalCloseChrome`), causa dos scrolls aninhados.
+
+#### Ecrãs migrados
+- Tarefas: `app.tarefas.tsx`, `EditRecurrenceDialog.tsx`, `ReassignDialog.tsx`.
+- Ponto: `app.ponto.tsx`, `PunchEditorDrawer.tsx`, `PunchAuditDrawer.tsx`,
+  `PunchGeoDrawer.tsx`, `PunchFlowOverlay.tsx`.
+- Equipa/Clientes: `app.equipe.tsx`, `EmployeeEditor.tsx` (abas em `ModalTabsBar`
+  + rodapé único que submete o formulário da aba ativa), `app.clientes.tsx`,
+  `app.comercial.clientes.tsx`, `ManagerInviteCard.tsx`.
+- RH/Admin/Suporte: `app.rh.recibos.tsx`, `app.admin.tsx`, `NewTicketDialog.tsx`.
+
+#### Validação
+- `tsgo --noEmit` limpo; `vite build` verde.
+- Verificação no preview real (1920px e 390px) em Clientes, Tarefas e Suporte:
+  exatamente **um** contentor rolável por modal, botão fechar 44×44px, sem
+  overflow horizontal e full-screen no mobile.
+- Documentação: `docs/ARCHITECTURE_MODAL_DESIGN_SYSTEM.md` e
+  `docs/UI_MODAL_GUIDELINES.md`.

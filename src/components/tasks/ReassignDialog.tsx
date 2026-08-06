@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, ModalHeader, ModalBody, ModalFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EmployeePicker, type EmployeeOption } from "@/components/common/EmployeePicker";
 import { recurrenceReassign, type ReassignScope, type TaskRow } from "@/lib/tasks";
 import { toast } from "sonner";
+import { UserCog } from "lucide-react";
 
 export function ReassignDialog({
   task,
@@ -42,9 +43,9 @@ export function ReassignDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader><DialogTitle>Reatribuir tarefa</DialogTitle></DialogHeader>
-        <div className="space-y-4">
+      <DialogContent size="sm">
+        <ModalHeader icon={UserCog} title="Reatribuir tarefa" description="Escolha o novo responsável pela tarefa." />
+        <ModalBody className="space-y-4">
           <div className="space-y-1.5">
             <Label>Novo responsável</Label>
             <EmployeePicker
@@ -68,10 +69,15 @@ export function ReassignDialog({
               </Select>
             </div>
           )}
-          <Button className="w-full" disabled={!user || saving} onClick={submit}>
+        </ModalBody>
+        <ModalFooter>
+          <Button type="button" variant="outline" disabled={saving} onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button disabled={!user || saving} onClick={submit}>
             {saving ? "Aplicando..." : "Reatribuir"}
           </Button>
-        </div>
+        </ModalFooter>
       </DialogContent>
     </Dialog>
   );

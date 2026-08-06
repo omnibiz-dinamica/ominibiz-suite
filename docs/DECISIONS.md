@@ -442,3 +442,22 @@ central, aplicada no banco (fonte única de verdade):
 (`src/lib/tasks.ts`) devolvem `false` para tarefas manuais; as listagens de
 `/app/tarefas` e `/app/ponto` enriquecem as tarefas via `attachClientTimingModes`.
 Iniciar e concluir a tarefa continua livre — nunca bloqueado por horário.
+
+## ADR-026 — Design System único para modais
+
+**Contexto.** Cada ecrã montava o seu próprio modal com helpers de classes
+soltos (`modalContentFrame`, `modalSafePadding`, …), o que gerava scrolls
+aninhados, cabeçalhos inconsistentes, botões de fechar pequenos e ações
+perdidas no meio do conteúdo.
+
+**Decisão.** Introduzir primitivos canónicos em `src/components/ui/dialog.tsx`
+(`ModalHeader`, `ModalBody`, `ModalFooter`, `ModalSection`, `ModalTabsBar`) e
+obrigar todos os shells (`Dialog`, `Sheet`, `Drawer`, `AlertDialog`) a serem
+contentores flex-column sem padding próprio, com **um único** elemento rolável
+(`ModalBody`). Larguras por variante no desktop e full-screen no mobile.
+Os helpers legados de `src/lib/utils.ts` foram removidos.
+
+**Consequências.** Novos modais devem seguir
+`docs/UI_MODAL_GUIDELINES.md`. Em modais com abas, o rodapé é único e submete o
+formulário da aba ativa via `form="<id>"` (padrão aplicado no `EmployeeEditor`).
+Nenhuma regra de negócio, RBAC ou RLS foi alterada.

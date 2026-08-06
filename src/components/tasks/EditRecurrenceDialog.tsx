@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, ModalHeader, ModalBody, ModalFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +12,7 @@ import {
   type ReassignScope,
 } from "@/lib/tasks";
 import { formatWallTime, wallInputToISO, wallISOToInput } from "@/lib/wall-clock";
+import { Repeat } from "lucide-react";
 import { toast } from "sonner";
 
 type Priority = "baixa" | "media" | "alta" | "urgente";
@@ -113,11 +114,9 @@ export function EditRecurrenceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Editar recorrência</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
+      <DialogContent size="md">
+        <ModalHeader icon={Repeat} title="Editar recorrência" description="Atualize os dados desta série de tarefas." />
+        <ModalBody className="space-y-4">
           <div className="space-y-1.5">
             <Label>Aplicar em</Label>
             <Select value={scope} onValueChange={(v) => setScope(v as ReassignScope)}>
@@ -190,10 +189,15 @@ export function EditRecurrenceDialog({
             </div>
           </div>
 
-          <Button className="w-full" disabled={saving || !title.trim()} onClick={submit}>
+        </ModalBody>
+        <ModalFooter>
+          <Button type="button" variant="outline" disabled={saving} onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button disabled={saving || !title.trim()} onClick={submit}>
             {saving ? "Salvando..." : "Salvar alterações"}
           </Button>
-        </div>
+        </ModalFooter>
       </DialogContent>
     </Dialog>
   );

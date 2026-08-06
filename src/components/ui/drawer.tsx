@@ -2,7 +2,15 @@ import * as React from "react";
 import { Drawer as DrawerPrimitive } from "vaul";
 import { X } from "lucide-react";
 
-import { cn, modalCloseChrome, modalHeaderChrome, modalTitleChrome } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import {
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+  ModalSection,
+  ModalTabsBar,
+  modalCloseButton,
+} from "@/components/ui/dialog";
 
 const Drawer = ({ shouldScaleBackground = true, ...props }: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
   <DrawerPrimitive.Root shouldScaleBackground={shouldScaleBackground} {...props} />
@@ -32,40 +40,37 @@ const DrawerContent = React.forwardRef<
     <DrawerPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed inset-x-0 bottom-0 z-50 mt-24 flex max-h-[calc(100dvh-1rem)] h-auto flex-col overflow-y-auto overscroll-contain rounded-t-[10px] border bg-background pb-[env(safe-area-inset-bottom)]",
+        "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto max-h-[94dvh] flex-col overflow-hidden rounded-t-2xl border bg-background text-foreground shadow-2xl outline-none",
         className,
       )}
       {...props}
     >
-      <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" />
-      <DrawerPrimitive.Close className={modalCloseChrome}>
-        <X className="h-4 w-4" />
-        <span className="sr-only">Close</span>
-      </DrawerPrimitive.Close>
+      <div className="mx-auto mt-3 h-1.5 w-[80px] shrink-0 rounded-full bg-muted" />
       {children}
+      <DrawerPrimitive.Close className={modalCloseButton} aria-label="Fechar">
+        <X className="h-5 w-5" />
+        <span className="sr-only">Fechar</span>
+      </DrawerPrimitive.Close>
     </DrawerPrimitive.Content>
   </DrawerPortal>
 ));
 DrawerContent.displayName = "DrawerContent";
 
-const DrawerHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div
-    className={cn("grid gap-1.5 px-4 pb-4 pr-20 pt-4 text-center sm:text-left", modalHeaderChrome, className)}
-    {...props}
-  />
-);
+const DrawerHeader = ModalHeader;
 DrawerHeader.displayName = "DrawerHeader";
 
-const DrawerFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("mt-auto flex flex-col gap-2 p-4", className)} {...props} />
-);
+const DrawerFooter = ModalFooter;
 DrawerFooter.displayName = "DrawerFooter";
 
 const DrawerTitle = React.forwardRef<
   React.ElementRef<typeof DrawerPrimitive.Title>,
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Title>
 >(({ className, ...props }, ref) => (
-  <DrawerPrimitive.Title ref={ref} className={cn(modalTitleChrome, className)} {...props} />
+  <DrawerPrimitive.Title
+    ref={ref}
+    className={cn("min-w-0 truncate font-display text-base font-semibold leading-tight sm:text-lg", className)}
+    {...props}
+  />
 ));
 DrawerTitle.displayName = DrawerPrimitive.Title.displayName;
 
@@ -88,4 +93,9 @@ export {
   DrawerFooter,
   DrawerTitle,
   DrawerDescription,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalSection,
+  ModalTabsBar,
 };

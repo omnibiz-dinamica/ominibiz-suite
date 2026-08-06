@@ -10,14 +10,14 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { z } from "zod";
-import { AlertCircle, Loader2, Paperclip, X } from "lucide-react";
+import { AlertCircle, LifeBuoy, Loader2, Paperclip, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  ModalSection,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -162,86 +162,82 @@ export function NewTicketDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] flex-col p-0 sm:max-w-2xl">
-        <DialogHeader className="shrink-0 border-b border-border px-6 py-4">
-          <DialogTitle>Nova solicitação de suporte</DialogTitle>
-          <DialogDescription>
-            Envie diretamente para a equipe do OmniBiz. Preencha o máximo de detalhes possível.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent size="lg">
+        <ModalHeader
+          icon={LifeBuoy}
+          title="Nova solicitação de suporte"
+          description="Envie diretamente para a equipe do OmniBiz. Preencha o máximo de detalhes possível."
+        />
 
-        <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
+        <ModalBody className="space-y-4">
           {!currentCompanyId && (
             <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
               <AlertCircle className="mt-0.5 h-4 w-4" />
               <span>Selecione uma empresa antes de abrir um ticket.</span>
             </div>
           )}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label>Tipo do pedido</Label>
-              <Select value={type} onValueChange={(v) => setType(v as SupportTicketType)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {TICKET_TYPE_LIST.map((t) => (
-                    <SelectItem key={t} value={t}>{TICKET_TYPE_LABEL[t]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+
+          <ModalSection title="Dados do ticket">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>Tipo do pedido</Label>
+                <Select value={type} onValueChange={(v) => setType(v as SupportTicketType)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {TICKET_TYPE_LIST.map((t) => (
+                      <SelectItem key={t} value={t}>{TICKET_TYPE_LABEL[t]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Prioridade</Label>
+                <Select value={priority} onValueChange={(v) => setPriority(v as SupportTicketPriority)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {TICKET_PRIORITY_LIST.map((p) => (
+                      <SelectItem key={p} value={p}>{TICKET_PRIORITY_LABEL[p]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+
             <div className="space-y-1.5">
-              <Label>Prioridade</Label>
-              <Select value={priority} onValueChange={(v) => setPriority(v as SupportTicketPriority)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {TICKET_PRIORITY_LIST.map((p) => (
-                    <SelectItem key={p} value={p}>{TICKET_PRIORITY_LABEL[p]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Título</Label>
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                maxLength={200}
+                placeholder="Resuma o problema em uma frase"
+              />
             </div>
-          </div>
 
-          <div className="space-y-1.5">
-            <Label>Título</Label>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              maxLength={200}
-              placeholder="Resuma o problema em uma frase"
-            />
-          </div>
+            <div className="space-y-1.5">
+              <Label>Módulo afetado (opcional)</Label>
+              <Input
+                value={module}
+                onChange={(e) => setModule(e.target.value)}
+                maxLength={120}
+                placeholder="Ex.: Tarefas, Folha de ponto, Frota"
+              />
+            </div>
+          </ModalSection>
 
-          <div className="space-y-1.5">
-            <Label>Descrição detalhada</Label>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={6}
-              maxLength={10000}
-              placeholder="O que aconteceu? O que você tentou fazer? Qual era o resultado esperado?"
-            />
-          </div>
+          <ModalSection title="Mensagem">
+            <div className="space-y-1.5">
+              <Label>Descrição detalhada</Label>
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={6}
+                maxLength={10000}
+                placeholder="O que aconteceu? O que você tentou fazer? Qual era o resultado esperado?"
+              />
+            </div>
+          </ModalSection>
 
-          <div className="space-y-1.5">
-            <Label>Módulo afetado (opcional)</Label>
-            <Input
-              value={module}
-              onChange={(e) => setModule(e.target.value)}
-              maxLength={120}
-              placeholder="Ex.: Tarefas, Folha de ponto, Frota"
-            />
-          </div>
-
-          <div className="rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-            <div className="font-medium text-foreground">Contexto técnico enviado automaticamente</div>
-            <div>Rota atual: <span className="font-mono">{route || "-"}</span></div>
-            <div className="truncate">URL: <span className="font-mono">{pageUrl || "-"}</span></div>
-            <div>Nenhuma senha, token ou dado sensível é enviado.</div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Anexos (imagem, PDF, documento — até 20 MB, máx. 5)</Label>
+          <ModalSection title="Anexos" description="Imagem, PDF, documento — até 20 MB, máx. 5.">
             <input
               type="file"
               multiple
@@ -274,16 +270,24 @@ export function NewTicketDialog({
                 ))}
               </ul>
             )}
-          </div>
+          </ModalSection>
+
+          <ModalSection title="Contexto técnico" description="Enviado automaticamente com o ticket.">
+            <div className="rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+              <div>Rota atual: <span className="font-mono">{route || "-"}</span></div>
+              <div className="truncate">URL: <span className="font-mono">{pageUrl || "-"}</span></div>
+              <div>Nenhuma senha, token ou dado sensível é enviado.</div>
+            </div>
+          </ModalSection>
 
           {formError && (
             <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
               {formError}
             </div>
           )}
-        </div>
+        </ModalBody>
 
-        <DialogFooter className="shrink-0 border-t border-border px-6 py-3">
+        <ModalFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>
             Cancelar
           </Button>
@@ -297,7 +301,7 @@ export function NewTicketDialog({
               "Enviar solicitação"
             )}
           </Button>
-        </DialogFooter>
+        </ModalFooter>
       </DialogContent>
     </Dialog>
   );
