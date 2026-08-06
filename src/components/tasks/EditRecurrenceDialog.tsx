@@ -71,6 +71,10 @@ export function EditRecurrenceDialog({
 
   const submit = async () => {
     if (!recurrence) return;
+    if (!assignedTo) {
+      toast.error("Atribua a tarefa a um funcionario antes de salvar.");
+      return;
+    }
     setSaving(true);
     try {
       if (scope === "this") {
@@ -83,7 +87,7 @@ export function EditRecurrenceDialog({
         await recurrenceUpdateOccurrence(fromTask.id, {
           title: title.trim(),
           priority,
-          assigned_to: assignedTo || null,
+          assigned_to: assignedTo,
           scheduled_for: sfIso,
           scheduled_end: seIso,
         });
@@ -94,7 +98,7 @@ export function EditRecurrenceDialog({
           {
             title: title.trim(),
             priority,
-            assigned_to: assignedTo || null,
+            assigned_to: assignedTo,
             scheduled_time: scheduledTime ? `${scheduledTime}:00` : null,
             duration_minutes: Math.max(0, duration || 0),
           },
@@ -194,7 +198,7 @@ export function EditRecurrenceDialog({
           <Button type="button" variant="outline" disabled={saving} onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button disabled={saving || !title.trim()} onClick={submit}>
+          <Button disabled={saving || !title.trim() || !assignedTo} onClick={submit}>
             {saving ? "Salvando..." : "Salvar alterações"}
           </Button>
         </ModalFooter>

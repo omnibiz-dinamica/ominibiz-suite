@@ -1552,6 +1552,10 @@ function TaskForm({
         const startISO = startTime ? wallDateTimeToISO(startDate, startTime) : null;
         const endISO = endTime ? wallDateTimeToISO(endDate, endTime) : null;
         const dueISO = endISO ?? wallDateToEndOfDayISO(endDate);
+        if (!assignedTo) {
+          toast.error("Atribua a tarefa a um funcionario antes de salvar.");
+          return;
+        }
         if (!dueISO) {
           toast.error("Data de fim inválida.");
           return;
@@ -1571,6 +1575,26 @@ function TaskForm({
         if (startISO && endISO && endISO < startISO) {
           toast.error("O horário de fim deve ser posterior ao de início.");
           return;
+        }
+        // Conflito com férias aprovadas do funcionário no período.
+        {
+          const rangeStart = recurrence.enabled ? recurrence.startDate || startDate : startDate;
+          const rangeEnd = recurrence.enabled ? recurrence.endDate || endDate : endDate;
+          const { data: vacations } = await supabase
+            .from("vacation_requests")
+            .select("start_date, end_date")
+            .eq("company_id", companyId)
+            .eq("user_id", assignedTo)
+            .eq("status", "aprovado")
+            .lte("start_date", rangeEnd)
+            .gte("end_date", rangeStart);
+          if (vacations && vacations.length > 0) {
+            const periods = vacations.map((v) => `${v.start_date} → ${v.end_date}`).join(", ");
+            const ok = window.confirm(
+              `Este funcionário tem férias aprovadas no período (${periods}). Deseja continuar mesmo assim?`,
+            );
+            if (!ok) return;
+          }
         }
         setLoading(true);
         // Título derivado do cliente quando não preenchido manualmente.
