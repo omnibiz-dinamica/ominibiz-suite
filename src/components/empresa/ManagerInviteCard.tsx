@@ -8,9 +8,9 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Send, Mail, RefreshCw, PencilLine, ShieldCheck } from "lucide-react";
@@ -192,25 +192,26 @@ export function ManagerInviteCard({ companyId, companyName }: { companyId: strin
       )}
 
       <Dialog open={!!replaceOpen} onOpenChange={(v) => !v && setReplaceOpen(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Alterar email do gestor</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            O convite atual será revogado e um novo será enviado para o novo email.
-          </p>
-          <div className="space-y-2">
-            <Label>Novo email do gestor</Label>
-            <Input
-              type="email"
-              value={newEmail}
-              onChange={(e) => setNewEmail(e.target.value)}
-              placeholder="novo-gestor@empresa.com"
-              autoFocus
-            />
-            <p className="text-xs text-muted-foreground">Anterior: {replaceOpen?.email}</p>
-          </div>
-          <DialogFooter>
+        <DialogContent size="sm">
+          <ModalHeader
+            icon={PencilLine}
+            title="Alterar email do gestor"
+            description="O convite atual será revogado e um novo será enviado para o novo email."
+          />
+          <ModalBody>
+            <div className="space-y-2">
+              <Label>Novo email do gestor</Label>
+              <Input
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder="novo-gestor@empresa.com"
+                autoFocus
+              />
+              <p className="text-xs text-muted-foreground">Anterior: {replaceOpen?.email}</p>
+            </div>
+          </ModalBody>
+          <ModalFooter>
             <Button variant="outline" onClick={() => setReplaceOpen(null)}>Cancelar</Button>
             <Button
               disabled={!newEmail || replace.isPending || newEmail.trim().toLowerCase() === replaceOpen?.email}
@@ -221,7 +222,7 @@ export function ManagerInviteCard({ companyId, companyName }: { companyId: strin
             >
               <Send className="mr-2 h-4 w-4" /> Revogar antigo e enviar novo
             </Button>
-          </DialogFooter>
+          </ModalFooter>
         </DialogContent>
       </Dialog>
     </div>
