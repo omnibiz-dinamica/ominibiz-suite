@@ -246,7 +246,7 @@ function TeamPage() {
     },
     onSuccess: (recipient) => {
       toast.success("Link de acesso enviado.", {
-        description: `O funcionÃ¡rio receberÃ¡ instruÃ§Ãµes em ${recipient}.`,
+        description: `O funcionário receberá instruções em ${recipient}.`,
       });
       setAccessEmail("");
     },
