@@ -18,7 +18,7 @@ import {
   ORIGIN_LABEL,
 } from "@/lib/punch-admin";
 import { formatDuration } from "@/lib/tasks";
-import { ClockPlus, Pencil, Users, Clock, Coffee, FileText } from "lucide-react";
+import { ClockPlus, Pencil, Users, Clock, FileText } from "lucide-react";
 
 type Mode = "create" | "edit";
 
