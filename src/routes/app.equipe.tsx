@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, ModalHeader, ModalBody } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Copy, Trash2, Pencil, Power, Send } from "lucide-react";
+import { Copy, Trash2, Pencil, Power, Send, UserCog } from "lucide-react";
 import { RoleGuard } from "@/components/RoleGuard";
 import { sendTransactionalEmail } from "@/lib/email/send";
 import { buildAppUrl } from "@/lib/app-url";
@@ -412,21 +412,25 @@ function TeamPage() {
       </div>
 
       <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Editar colaborador</DialogTitle>
-          </DialogHeader>
-          {editing && (
-            <EmployeeEditor
-              userId={editing.user_id}
-              companyId={currentCompanyId!}
-              currentRole={editing.role}
-              onDone={() => {
-                setEditing(null);
-                qc.invalidateQueries({ queryKey: ["team-members"] });
-              }}
-            />
-          )}
+        <DialogContent size="xl">
+          <ModalHeader
+            icon={UserCog}
+            title="Editar colaborador"
+            description={editing ? getMemberDisplayName(editing) : undefined}
+          />
+          <ModalBody className="p-0">
+            {editing && (
+              <EmployeeEditor
+                userId={editing.user_id}
+                companyId={currentCompanyId!}
+                currentRole={editing.role}
+                onDone={() => {
+                  setEditing(null);
+                  qc.invalidateQueries({ queryKey: ["team-members"] });
+                }}
+              />
+            )}
+          </ModalBody>
         </DialogContent>
       </Dialog>
     </div>

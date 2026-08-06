@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -392,15 +392,15 @@ function TasksPage() {
                   <Plus className="mr-2 h-4 w-4" /> Nova tarefa
                 </Button>
               </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Nova tarefa</DialogTitle>
-                </DialogHeader>
+              <DialogContent size="lg">
+                <ModalHeader icon={ListTodo} title="Nova tarefa" description="Crie uma tarefa e atribua a um colaborador." />
                 <TaskForm
+                  formId="task-form-create"
                   members={members ?? []}
                   clients={clientsList ?? []}
                   companyId={currentCompanyId}
                   userId={user!.id}
+                  onCancel={() => setOpen(false)}
                   onDone={() => {
                     setOpen(false);
                     qc.invalidateQueries({ queryKey: ["tasks"] });
@@ -413,27 +413,23 @@ function TasksPage() {
       </div>
 
       <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Editar tarefa</DialogTitle>
-          </DialogHeader>
+        <DialogContent size="lg">
+          <ModalHeader icon={ListTodo} title="Editar tarefa" description="Atualize os dados e anexos da tarefa." />
           {editing && (
-            <>
-              <TaskForm
-                initial={editing}
-                members={members ?? []}
-                clients={clientsList ?? []}
-                companyId={editing.company_id}
-                userId={user!.id}
-                onDone={() => {
-                  setEditing(null);
-                  qc.invalidateQueries({ queryKey: ["tasks"] });
-                }}
-              />
-              <div className="mt-6 border-t border-border pt-4">
-                <TaskDocuments taskId={editing.id} companyId={editing.company_id} canManage={isManager} />
-              </div>
-            </>
+            <TaskForm
+              formId="task-form-edit"
+              initial={editing}
+              members={members ?? []}
+              clients={clientsList ?? []}
+              companyId={editing.company_id}
+              userId={user!.id}
+              onCancel={() => setEditing(null)}
+              onDone={() => {
+                setEditing(null);
+                qc.invalidateQueries({ queryKey: ["tasks"] });
+              }}
+              documentsSlot={<TaskDocuments taskId={editing.id} companyId={editing.company_id} canManage={isManager} />}
+            />
           )}
         </DialogContent>
       </Dialog>
@@ -484,14 +480,11 @@ function TasksPage() {
       </AlertDialog>
 
       <Dialog open={!!refusing} onOpenChange={(v) => !v && !transition.isPending && setRefusing(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Recusar tarefa?</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
+        <DialogContent size="sm">
+          <ModalHeader icon={XCircle} title="Recusar tarefa?" description="Confirme a recusa e informe o motivo." />
+          <ModalBody className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Confirme a recusa e informe o motivo. A tarefa ficarÃ¡ cancelada e o gestor poderÃ¡ reatribuir se
-              necessÃ¡rio.
+              A tarefa ficará cancelada e o gestor poderá reatribuir se necessário.
             </p>
             {refusing?.title && (
               <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm font-medium">
@@ -505,18 +498,18 @@ function TasksPage() {
                 value={refusalReason}
                 onChange={(event) => setRefusalReason(event.target.value)}
                 rows={3}
-                placeholder="Ex.: vou faltar, cliente desistiu, nÃ£o posso fazer, transferir para outra pessoa..."
+                placeholder="Ex.: vou faltar, cliente desistiu, não posso fazer, transferir para outra pessoa..."
               />
             </div>
-          </div>
-          <DialogFooter>
+          </ModalBody>
+          <ModalFooter>
             <Button type="button" variant="outline" disabled={transition.isPending} onClick={() => setRefusing(null)}>
               Cancelar
             </Button>
             <Button type="button" variant="destructive" disabled={transition.isPending} onClick={submitRefusal}>
               {transition.isPending ? "Recusando..." : "Confirmar recusa"}
             </Button>
-          </DialogFooter>
+          </ModalFooter>
         </DialogContent>
       </Dialog>
 
@@ -1467,19 +1460,25 @@ function ActionButton({ action, onClick, disabled }: { action: TaskAction; onCli
 }
 
 function TaskForm({
+  formId,
   members,
   clients,
   companyId,
   userId,
   initial,
+  onCancel,
   onDone,
+  documentsSlot,
 }: {
+  formId: string;
   members: { id: string; full_name: string | null }[];
   clients: { id: string; name: string; timing_mode?: "start_stop" | "manual" | null }[];
   companyId: string;
   userId: string;
   initial?: TaskRow;
+  onCancel: () => void;
   onDone: () => void;
+  documentsSlot?: ReactNode;
 }) {
   const [title, setTitle] = useState(initial?.title ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
@@ -1533,7 +1532,10 @@ function TaskForm({
   };
 
   return (
+    <>
+    <ModalBody className="space-y-4">
     <form
+      id={formId}
       className="space-y-4"
       onSubmit={async (e) => {
         e.preventDefault();
@@ -1780,9 +1782,17 @@ function TaskForm({
         </div>
       </div>
       {!initial && <RecurrenceForm value={recurrence} onChange={setRecurrence} timingMode={timingMode} />}
-      <Button type="submit" className="w-full" disabled={loading}>
+    </form>
+    {documentsSlot && <div className="border-t border-border pt-4">{documentsSlot}</div>}
+    </ModalBody>
+    <ModalFooter>
+      <Button type="button" variant="outline" disabled={loading} onClick={onCancel}>
+        Cancelar
+      </Button>
+      <Button type="submit" form={formId} disabled={loading}>
         {loading ? "Salvando..." : initial ? "Salvar alterações" : "Criar tarefa"}
       </Button>
-    </form>
+    </ModalFooter>
+    </>
   );
 }

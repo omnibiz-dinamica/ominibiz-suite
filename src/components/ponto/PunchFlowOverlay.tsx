@@ -1,12 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -77,29 +70,29 @@ export function PunchFlowOverlay({
           if (!o) onCancel();
         }}
       >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ShieldAlert className="h-5 w-5 text-warning" />
-              Justificativa necessária
-            </DialogTitle>
-            <DialogDescription>
-              {state.needsReasonMessage ??
-                "A política da empresa exige uma justificativa para prosseguir."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-1.5">
-            <Label>Motivo</Label>
-            <Textarea
-              autoFocus
-              maxLength={500}
-              rows={4}
-              placeholder="Ex.: cliente em obra vizinha, sem sinal GPS, etc."
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-            />
-          </div>
-          <DialogFooter>
+        <DialogContent size="sm">
+          <ModalHeader
+            icon={ShieldAlert}
+            title="Justificativa necessária"
+            description={
+              state.needsReasonMessage ??
+              "A política da empresa exige uma justificativa para prosseguir."
+            }
+          />
+          <ModalBody>
+            <div className="space-y-1.5">
+              <Label>Motivo</Label>
+              <Textarea
+                autoFocus
+                maxLength={500}
+                rows={4}
+                placeholder="Ex.: cliente em obra vizinha, sem sinal GPS, etc."
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+              />
+            </div>
+          </ModalBody>
+          <ModalFooter>
             <Button type="button" variant="outline" onClick={onCancel}>
               Cancelar
             </Button>
@@ -110,7 +103,7 @@ export function PunchFlowOverlay({
             >
               <Send className="mr-2 h-4 w-4" /> Enviar
             </Button>
-          </DialogFooter>
+          </ModalFooter>
         </DialogContent>
       </Dialog>
     </>

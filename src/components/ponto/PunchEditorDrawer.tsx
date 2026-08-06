@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, ModalBody, ModalFooter, ModalHeader, ModalSection } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +18,7 @@ import {
   ORIGIN_LABEL,
 } from "@/lib/punch-admin";
 import { formatDuration } from "@/lib/tasks";
+import { ClockPlus, Pencil, Users, Clock, Coffee, FileText } from "lucide-react";
 
 type Mode = "create" | "edit";
 
@@ -265,40 +266,41 @@ export function PunchEditorDrawer({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>{mode === "create" ? "Adicionar ponto" : "Corrigir ponto"}</SheetTitle>
-          <SheetDescription>
-            {mode === "create" ? "Registro manual. Toda criação é auditada." : "Toda alteração é gravada no histórico."}
-          </SheetDescription>
-        </SheetHeader>
+      <SheetContent className="w-full sm:max-w-lg">
+        <ModalHeader
+          icon={mode === "create" ? ClockPlus : Pencil}
+          title={mode === "create" ? "Adicionar ponto" : "Corrigir ponto"}
+          description={
+            mode === "create" ? "Registro manual. Toda criação é auditada." : "Toda alteração é gravada no histórico."
+          }
+        />
 
-        {mode === "edit" && entry && (
-          <div className="mt-4 rounded-lg border border-border bg-muted/40 p-3 text-xs space-y-1">
-            <div>
-              <span className="text-muted-foreground">Funcionário:</span> {entryUserName ?? entry.user_id}
-            </div>
-            <div>
-              <span className="text-muted-foreground">Tarefa:</span> {entryTaskTitle ?? entry.task_id}
-            </div>
-            <div>
-              <span className="text-muted-foreground">Cliente:</span> {entryClientName ?? "Sem cliente"}
-            </div>
-            <div>
-              <span className="text-muted-foreground">Origem:</span> {ORIGIN_LABEL[entry.origin]}
-            </div>
-            {entry.last_edited_at && (
+        <ModalBody className="space-y-4">
+          {mode === "edit" && entry && (
+            <div className="rounded-lg border border-border bg-muted/40 p-3 text-xs space-y-1">
               <div>
-                <span className="text-muted-foreground">Última edição:</span>{" "}
-                {new Date(entry.last_edited_at).toLocaleString()}
+                <span className="text-muted-foreground">Funcionário:</span> {entryUserName ?? entry.user_id}
               </div>
-            )}
-          </div>
-        )}
+              <div>
+                <span className="text-muted-foreground">Tarefa:</span> {entryTaskTitle ?? entry.task_id}
+              </div>
+              <div>
+                <span className="text-muted-foreground">Cliente:</span> {entryClientName ?? "Sem cliente"}
+              </div>
+              <div>
+                <span className="text-muted-foreground">Origem:</span> {ORIGIN_LABEL[entry.origin]}
+              </div>
+              {entry.last_edited_at && (
+                <div>
+                  <span className="text-muted-foreground">Última edição:</span>{" "}
+                  {new Date(entry.last_edited_at).toLocaleString()}
+                </div>
+              )}
+            </div>
+          )}
 
-        <div className="mt-5 space-y-4">
           {mode === "create" && (
-            <>
+            <ModalSection title="Funcionário / tarefa / cliente" icon={Users}>
               <div>
                 <Label>Tipo de registro</Label>
                 <Select
@@ -351,11 +353,11 @@ export function PunchEditorDrawer({
                   </Select>
                 </div>
               )}
-            </>
+            </ModalSection>
           )}
 
           {mode === "create" && form.entry_kind === "paid_leave" ? (
-            <div className="grid grid-cols-2 gap-3">
+            <ModalSection title="Folga remunerada" icon={Clock} contentClassName="grid grid-cols-1 gap-3 sm:grid-cols-2 space-y-0">
               <div>
                 <Label>Data da folga *</Label>
                 <Input
@@ -377,9 +379,9 @@ export function PunchEditorDrawer({
                   }
                 />
               </div>
-            </div>
+            </ModalSection>
           ) : (
-            <div className="grid grid-cols-2 gap-3">
+            <ModalSection title="Horários" icon={Clock} contentClassName="grid grid-cols-1 gap-3 sm:grid-cols-2 space-y-0">
               <div>
                 <Label>Início *</Label>
                 <Input
@@ -412,53 +414,54 @@ export function PunchEditorDrawer({
                   onChange={(e) => setForm({ ...form, resumed_at: e.target.value })}
                 />
               </div>
-            </div>
+            </ModalSection>
           )}
 
-          <div>
-            <Label>Notas</Label>
-            <Textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
-          </div>
-
-          {eff !== null && (
-            <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm">
-              Tempo efetivo previsto: <span className="font-mono font-semibold">{formatDuration(eff)}</span>
+          <ModalSection title="Motivo e auditoria" icon={FileText}>
+            <div>
+              <Label>Notas</Label>
+              <Textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
             </div>
-          )}
 
-          {mode === "edit" && diffPreview.length > 0 && (
-            <div className="rounded-lg border border-info/40 bg-info/5 p-3 text-xs space-y-1">
-              <div className="font-medium text-info">Alterações a aplicar:</div>
-              {diffPreview.map((l, i) => (
-                <div key={i}>{l}</div>
-              ))}
+            {eff !== null && (
+              <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm">
+                Tempo efetivo previsto: <span className="font-mono font-semibold">{formatDuration(eff)}</span>
+              </div>
+            )}
+
+            {mode === "edit" && diffPreview.length > 0 && (
+              <div className="rounded-lg border border-info/40 bg-info/5 p-3 text-xs space-y-1">
+                <div className="font-medium text-info">Alterações a aplicar:</div>
+                {diffPreview.map((l, i) => (
+                  <div key={i}>{l}</div>
+                ))}
+              </div>
+            )}
+
+            <div>
+              <Label>
+                Motivo{" "}
+                <span className="text-xs text-muted-foreground">
+                  (opcional — quando informado, fica registrado no histórico)
+                </span>
+              </Label>
+              <Textarea
+                rows={2}
+                value={form.reason}
+                onChange={(e) => setForm({ ...form, reason: e.target.value })}
+                placeholder="Ex.: Funcionário esqueceu de bater saída; correção conferida com supervisor."
+              />
             </div>
-          )}
-
-          <div>
-            <Label>
-              Motivo{" "}
-              <span className="text-xs text-muted-foreground">
-                (opcional — quando informado, fica registrado no histórico)
-              </span>
-            </Label>
-            <Textarea
-              rows={2}
-              value={form.reason}
-              onChange={(e) => setForm({ ...form, reason: e.target.value })}
-              placeholder="Ex.: Funcionário esqueceu de bater saída; correção conferida com supervisor."
-            />
-          </div>
-
-          <div className="flex gap-2 pt-2">
-            <Button onClick={submit} disabled={pending} className="flex-1">
-              {pending ? "Salvando..." : mode === "create" ? "Criar registro" : "Aplicar correção"}
-            </Button>
-            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
-              Cancelar
-            </Button>
-          </div>
-        </div>
+          </ModalSection>
+        </ModalBody>
+        <ModalFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
+            Cancelar
+          </Button>
+          <Button onClick={submit} disabled={pending}>
+            {pending ? "Salvando..." : mode === "create" ? "Criar registro" : "Aplicar correção"}
+          </Button>
+        </ModalFooter>
       </SheetContent>
     </Sheet>
   );
