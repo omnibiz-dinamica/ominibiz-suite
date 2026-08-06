@@ -447,7 +447,7 @@ function AssignDrawer({
 
   return (
     <Drawer open={!!payslip} onOpenChange={(o) => !o && onClose()}>
-      <DrawerContent size="md">
+      <DrawerContent>
         <ModalHeader
           icon={UserCog}
           title="Associar recibo ao funcionário"
@@ -541,7 +541,7 @@ function HistoryDrawer({ payslip, onClose }: { payslip: Payslip | null; onClose:
 
   return (
     <Drawer open={!!payslip} onOpenChange={(o) => !o && onClose()}>
-      <DrawerContent size="md">
+      <DrawerContent>
         <ModalHeader icon={History} title="Histórico de envios" description="Eventos de entrega registados para este recibo." />
         <ModalBody className="space-y-3">
           {payslip && (
