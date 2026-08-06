@@ -82,15 +82,33 @@ function TeamPage() {
         .eq("company_id", currentCompanyId!);
       const ids = (roles ?? []).map((r) => r.user_id);
       if (ids.length === 0) return [];
-      // `email` is added by migration 20260724090000; generated Supabase
-      // types may lag behind until Lovable refreshes them.
+      // Keep the primary profile query independent from newer optional
+      // columns so older Cloud Database environments still show names.
       const { data: profs } = await (supabase.from("profiles" as never) as any)
-        .select("id, full_name, email, phone, is_active, job_title, work_location, supervisor_id, team")
+        .select("id, full_name, phone, is_active, job_title, work_location, supervisor_id, team")
         .in("id", ids);
+
+      let emailsById = new Map<string, string>();
+      try {
+        const { data: emailRows } = await (supabase.from("profiles" as never) as any).select("id, email").in("id", ids);
+        emailsById = new Map(
+          ((emailRows ?? []) as Array<{ id: string; email: string | null }>)
+            .filter((p) => p.email?.trim())
+            .map((p) => [p.id, p.email!.trim()]),
+        );
+      } catch {
+        emailsById = new Map();
+      }
+
       const profileRows = (profs ?? []) as NonNullable<MemberRow["profile"]>[];
       return (roles ?? []).map((r) => ({
         ...r,
-        profile: profileRows.find((p) => p.id === r.user_id) ?? null,
+        profile: profileRows.find((p) => p.id === r.user_id)
+          ? {
+              ...profileRows.find((p) => p.id === r.user_id)!,
+              email: emailsById.get(r.user_id) ?? null,
+            }
+          : null,
       })) as MemberRow[];
     },
     enabled: !!currentCompanyId && isManager,
