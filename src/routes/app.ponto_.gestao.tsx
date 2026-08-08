@@ -255,7 +255,27 @@ function GestaoPonto() {
   };
 
   const voidMut = useMutation({
-    mutationFn: ({ id, reason }: { id: string; reason: string }) => punchAdminVoidForRedo(id, reason),
+    mutationFn: async ({ id, reason, row }: { id: string; reason: string; row: Row }) => {
+      const res = await punchAdminVoidForRedo(id, reason);
+      // Notificação não bloqueante para o funcionário.
+      if (row.task_id) {
+        try {
+          const { error } = await supabase.from("notifications" as never).insert({
+            company_id: row.company_id,
+            user_id: row.user_id,
+            task_id: row.task_id,
+            event: "task_assigned",
+            title: "Ponto devolvido para correção",
+            body: reason,
+            priority: "alta",
+          } as never);
+          if (error) console.warn("Falha ao notificar devolução de ponto:", error.message);
+        } catch (e) {
+          console.warn("Falha ao notificar devolução de ponto:", e);
+        }
+      }
+      return res;
+    },
     onSuccess: () => {
       toast.success("Ponto devolvido para refazer");
       qc.invalidateQueries({ queryKey: ["punch-admin-list"] });
@@ -275,7 +295,7 @@ function GestaoPonto() {
       toast.error("Informe um motivo com pelo menos 5 caracteres.");
       return;
     }
-    voidMut.mutate({ id: r.id, reason: reason.trim() });
+    voidMut.mutate({ id: r.id, reason: reason.trim(), row: r });
   };
 
   const { data: company } = useQuery({
