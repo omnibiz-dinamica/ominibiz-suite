@@ -375,6 +375,23 @@ export function AppLayout({ children }: { children?: ReactNode }) {
     },
   });
 
+  // Badge de app (PWA): reflete notificações não lidas no ícone instalado.
+  useEffect(() => {
+    const n = navigator as Navigator & {
+      setAppBadge?: (n?: number) => Promise<void>;
+      clearAppBadge?: () => Promise<void>;
+    };
+    try {
+      if (unreadNotifications > 0) {
+        void n.setAppBadge?.(unreadNotifications)?.catch(() => {});
+      } else {
+        void n.clearAppBadge?.()?.catch(() => {});
+      }
+    } catch {
+      /* ignora ambientes sem suporte */
+    }
+  }, [unreadNotifications]);
+
   const groups = useMemo(() => {
     if (!effectiveRole) return [] as Group[];
     const role = effectiveRole === "owner" ? "manager" : effectiveRole;
