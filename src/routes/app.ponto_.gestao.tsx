@@ -36,6 +36,8 @@ import { PunchAuditDrawer } from "@/components/ponto/PunchAuditDrawer";
 import { PunchGeoDrawer } from "@/components/ponto/PunchGeoDrawer";
 import { ORIGIN_LABEL, ORIGIN_TONE, punchAdminVoidForRedo, type AdminTimeEntry } from "@/lib/punch-admin";
 import { formatDuration } from "@/lib/tasks";
+import { formatWallDate, formatWallTime } from "@/lib/wall-clock";
+import { classifyEventStatus, type GeoPointRow } from "@/lib/punch/geo-view";
 import { exportToExcel, exportToPdf, type ExportColumn } from "@/lib/exports";
 import { toast } from "sonner";
 
@@ -70,8 +72,20 @@ const emptyFilters: Filters = {
   to: "",
 };
 
+const TASK_SELECT =
+  "tasks(title, client_id, scheduled_for, scheduled_end, recurrence_date, due_at)";
+
+type TaskJoin = {
+  title: string;
+  client_id: string | null;
+  scheduled_for?: string | null;
+  scheduled_end?: string | null;
+  recurrence_date?: string | null;
+  due_at?: string | null;
+};
+
 type Row = AdminTimeEntry & {
-  tasks: { title: string; client_id: string | null } | null;
+  tasks: TaskJoin | null;
   profiles: { full_name: string | null } | null;
   geo?: GeoSummary | null;
 };
@@ -95,6 +109,31 @@ type GeoSummary = {
 
 const fmtCoord = (p?: GeoPoint) => (p?.lat != null && p.lng != null ? `${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}` : "");
 const fmtMeters = (n: number | null | undefined) => (n != null ? `${Math.round(n)} m` : "");
+
+/** Label humano do status geo, reutilizando a classificação oficial. */
+const fmtGeoStatus = (p?: GeoPoint) => {
+  if (!p) return "";
+  return classifyEventStatus(p as unknown as GeoPointRow).label;
+};
+
+const hasWallTime = (iso: string | null | undefined) =>
+  !!iso && formatWallTime(iso) !== "00:00";
+
+/**
+ * "Previsto" — data + horário planejado da tarefa.
+ * Nunca exibe 00:00 como horário: quando não há horário definido,
+ * mostra apenas a data com o sufixo "(sem horário)".
+ */
+function formatPrevisto(t: TaskJoin | null | undefined): string {
+  if (!t) return "";
+  const base = t.scheduled_for ?? t.recurrence_date ?? t.due_at ?? null;
+  if (!base) return "";
+  const date = formatWallDate(base);
+  if (!hasWallTime(t.scheduled_for)) return `${date} (sem horário)`;
+  const start = formatWallTime(t.scheduled_for);
+  const end = hasWallTime(t.scheduled_end) ? formatWallTime(t.scheduled_end) : null;
+  return end ? `${date} ${start}–${end}` : `${date} ${start}`;
+}
 
 function GestaoPonto() {
   const { currentCompanyId } = useAuth();
@@ -155,7 +194,7 @@ function GestaoPonto() {
       let q = supabase
         .from("time_entries")
         .select(
-          "id, company_id, task_id, user_id, started_at, ended_at, paused_at, resumed_at, effective_minutes, notes, created_at, updated_at, origin, created_by, last_edited_by, last_edited_at, last_edit_reason, voided_at, voided_by, void_reason, entry_kind, paid_leave_minutes, tasks(title, client_id), profiles!inner(full_name)",
+          `id, company_id, task_id, user_id, started_at, ended_at, paused_at, resumed_at, effective_minutes, notes, created_at, updated_at, origin, created_by, last_edited_by, last_edited_at, last_edit_reason, voided_at, voided_by, void_reason, entry_kind, paid_leave_minutes, ${TASK_SELECT}, profiles!inner(full_name)`,
           { count: "exact" },
         )
         .eq("company_id", currentCompanyId!)
@@ -260,6 +299,7 @@ function GestaoPonto() {
       accessor: (r) => (r.entry_kind === "paid_leave" ? "Folga remunerada" : (r.tasks?.title ?? "")),
     },
     { header: "Cliente", accessor: (r) => (r.tasks?.client_id ? (clientsMap[r.tasks.client_id] ?? "") : "") },
+    { header: "Previsto", accessor: (r) => formatPrevisto(r.tasks) },
     { header: "Início", accessor: (r) => fmtDT(r.started_at) },
     { header: "Fim", accessor: (r) => fmtDT(r.ended_at) },
     { header: "Efetivo", accessor: (r) => (r.effective_minutes != null ? formatDuration(r.effective_minutes) : "") },
@@ -267,6 +307,8 @@ function GestaoPonto() {
     { header: "Notas", accessor: (r) => r.notes ?? "" },
     { header: "Geo entrada", accessor: (r) => fmtCoord(r.geo?.start) },
     { header: "Geo saída", accessor: (r) => fmtCoord(r.geo?.end) },
+    { header: "Status geo entrada", accessor: (r) => fmtGeoStatus(r.geo?.start) },
+    { header: "Status geo saída", accessor: (r) => fmtGeoStatus(r.geo?.end) },
     { header: "Distância entrada", accessor: (r) => fmtMeters(r.geo?.start?.distance_m) },
     { header: "Distância saída", accessor: (r) => fmtMeters(r.geo?.end?.distance_m) },
     {
@@ -279,7 +321,7 @@ function GestaoPonto() {
     let q = supabase
       .from("time_entries")
       .select(
-        "id, company_id, task_id, user_id, started_at, ended_at, paused_at, resumed_at, effective_minutes, notes, created_at, updated_at, origin, created_by, last_edited_by, last_edited_at, last_edit_reason, voided_at, voided_by, void_reason, entry_kind, paid_leave_minutes, tasks(title, client_id), profiles!inner(full_name)",
+        `id, company_id, task_id, user_id, started_at, ended_at, paused_at, resumed_at, effective_minutes, notes, created_at, updated_at, origin, created_by, last_edited_by, last_edited_at, last_edit_reason, voided_at, voided_by, void_reason, entry_kind, paid_leave_minutes, ${TASK_SELECT}, profiles!inner(full_name)`,
       )
       .eq("company_id", currentCompanyId!)
       .is("voided_at", null)
