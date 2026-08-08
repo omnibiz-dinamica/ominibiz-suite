@@ -358,6 +358,18 @@ function TasksPage() {
 
   return (
     <div className="space-y-6">
+      {search.task && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-accent/30 px-3 py-2 text-sm">
+          <span className="text-muted-foreground">Mostrando apenas a tarefa aberta pela notificação.</span>
+          <button
+            type="button"
+            className="font-medium text-primary underline underline-offset-2"
+            onClick={() => void navigate({ search: (prev: TasksSearch) => ({ ...prev, task: undefined }), replace: true })}
+          >
+            Limpar tarefa aberta pela notificação
+          </button>
+        </div>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl font-semibold tracking-tight">Tarefas</h1>
