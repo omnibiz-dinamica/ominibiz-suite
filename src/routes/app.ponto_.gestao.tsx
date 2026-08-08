@@ -98,6 +98,7 @@ type GeoPoint = {
   accuracy_m: number | null;
   distance_m: number | null;
   geo_status: string;
+  reason_code: string | null;
   reason_text: string | null;
   captured_at: string;
 };
@@ -342,7 +343,9 @@ function GestaoPonto() {
 
     const { data: geoRows, error: geoError } = await supabase
       .from("time_entry_geopoints")
-      .select("time_entry_id, event_kind, lat, lng, accuracy_m, distance_m, geo_status, reason_text, captured_at")
+      .select(
+        "time_entry_id, event_kind, lat, lng, accuracy_m, distance_m, geo_status, reason_code, reason_text, captured_at",
+      )
       .in("time_entry_id", ids)
       .order("captured_at", { ascending: true });
     if (geoError) throw geoError;
@@ -506,6 +509,7 @@ function GestaoPonto() {
                 <TableHead>Funcionário</TableHead>
                 <TableHead>Tarefa</TableHead>
                 <TableHead>Cliente</TableHead>
+                <TableHead>Previsto</TableHead>
                 <TableHead>Início</TableHead>
                 <TableHead>Fim</TableHead>
                 <TableHead className="text-right">Efetivo</TableHead>
@@ -517,14 +521,14 @@ function GestaoPonto() {
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-sm text-muted-foreground">
+                  <TableCell colSpan={10} className="text-center py-8 text-sm text-muted-foreground">
                     Carregando...
                   </TableCell>
                 </TableRow>
               )}
               {!isLoading && (result?.rows ?? []).length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-sm text-muted-foreground">
+                  <TableCell colSpan={10} className="text-center py-8 text-sm text-muted-foreground">
                     Nenhum registro encontrado.
                   </TableCell>
                 </TableRow>
@@ -535,6 +539,9 @@ function GestaoPonto() {
                   <TableCell className="max-w-[260px] truncate">{r.tasks?.title ?? "—"}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {r.tasks?.client_id ? (clientsMap[r.tasks.client_id] ?? "—") : "—"}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                    {formatPrevisto(r.tasks) || "—"}
                   </TableCell>
                   <TableCell className="text-sm">{new Date(r.started_at).toLocaleString()}</TableCell>
                   <TableCell className="text-sm">
