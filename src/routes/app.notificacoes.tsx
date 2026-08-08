@@ -143,6 +143,8 @@ function NotificationsPage() {
       nav({ to: "/app/ferias" });
     } else if (n.event.startsWith("expense_")) {
       nav({ to: "/app/despesas" });
+    } else if (n.task_id) {
+      nav({ to: "/app/tarefas", search: { task: n.task_id } });
     } else {
       nav({ to: "/app/tarefas" });
     }
@@ -248,9 +250,9 @@ function NotificationsPage() {
                       variant="ghost"
                       onClick={() => markRead.mutate(n.id)}
                       disabled={markRead.isPending}
-                      aria-label="Marcar como lida"
+                      aria-label="Marcar tratada"
                     >
-                      <Check className="h-4 w-4" />
+                      <Check className="mr-1.5 h-4 w-4" /> Marcar tratada
                     </Button>
                   )}
                 </div>

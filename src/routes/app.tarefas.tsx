@@ -95,7 +95,7 @@ const STATUS_FILTERS = [
   "atrasadas",
 ] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
-type TasksSearch = { status?: StatusFilter; employee?: string; client?: string };
+type TasksSearch = { status?: StatusFilter; employee?: string; client?: string; task?: string };
 type ClientOption = { id: string; name: string; timing_mode?: "start_stop" | "manual" | null };
 type CalendarMode = "day" | "week" | "month" | "year";
 const TASK_DOC_ACCEPT = "application/pdf,image/png,image/jpeg,image/jpg";
@@ -112,7 +112,8 @@ export const Route = createFileRoute("/app/tarefas")({
         : undefined;
     const employee = typeof s.employee === "string" && s.employee ? s.employee : undefined;
     const client = typeof s.client === "string" && s.client ? s.client : undefined;
-    return { status, employee, client };
+    const task = typeof s.task === "string" && s.task ? s.task : undefined;
+    return { status, employee, client, task };
   },
 });
 
@@ -322,6 +323,7 @@ function TasksPage() {
   const filteredTasks = useMemo(() => {
     const all = tasks ?? [];
     return all.filter((t) => {
+      if (search.task && t.id !== search.task) return false;
       if (search.employee && t.assigned_to !== search.employee) return false;
       if (search.client && t.client_id !== search.client) return false;
       if (!search.status) return true;
@@ -333,7 +335,7 @@ function TasksPage() {
       }
       return t.status === search.status;
     });
-  }, [tasks, search.status, search.employee, search.client]);
+  }, [tasks, search.status, search.employee, search.client, search.task]);
 
   const setStatusFilter = (next: StatusFilter | undefined) => {
     void navigate({
