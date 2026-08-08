@@ -44,8 +44,8 @@ function Landing() {
             <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">centralizada</span>.
           </h1>
           <p className="mt-6 text-lg text-muted-foreground md:text-xl">
-            OmniBiz é o sistema modular para reduzir falhas humanas com automações controladas.
-            Comece com limpeza — escale para restaurantes, delivery e mais.
+            OmniBiz ajuda empresas de limpeza, restaurantes, delivery e outros segmentos a centralizar rotinas,
+            acompanhar equipes e reduzir falhas operacionais com automações controladas.
           </p>
           <div className="mt-10 flex flex-wrap justify-center gap-3">
             <Button size="lg" asChild>
