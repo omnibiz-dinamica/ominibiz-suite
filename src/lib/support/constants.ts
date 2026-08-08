@@ -114,7 +114,7 @@ export const EVENT_TYPE_LABEL: Record<string, string> = {
   super_admin_returned_ticket: "Super Admin devolveu ao Gestor",
   super_admin_started_development: "Super Admin iniciou desenvolvimento",
   super_admin_resolved_ticket: "Super Admin resolveu",
-  ticket_closed: "Ticket fechado",
+  ticket_closed: "Ticket arquivado",
 };
 
 export const TICKET_STATUS_LABEL: Record<SupportTicketStatus, string> = {
@@ -125,10 +125,10 @@ export const TICKET_STATUS_LABEL: Record<SupportTicketStatus, string> = {
   em_validacao: "Em validação",
   resolvido: "Resolvido",
   rejeitado: "Rejeitado",
-  fechado: "Fechado",
+  fechado: "Arquivado",
   under_manager_review: "Em análise pelo gestor",
   waiting_employee: "Aguardando funcionário",
-  resolved_by_manager: "Resolvido pelo gestor",
+  resolved_by_manager: "Resolvido",
   escalated: "Encaminhado ao Desenvolvimento",
   under_technical_review: "Em análise técnica",
   waiting_manager: "Aguardando gestor",

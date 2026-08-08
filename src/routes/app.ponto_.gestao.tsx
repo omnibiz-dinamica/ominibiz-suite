@@ -36,6 +36,8 @@ import { PunchAuditDrawer } from "@/components/ponto/PunchAuditDrawer";
 import { PunchGeoDrawer } from "@/components/ponto/PunchGeoDrawer";
 import { ORIGIN_LABEL, ORIGIN_TONE, punchAdminVoidForRedo, type AdminTimeEntry } from "@/lib/punch-admin";
 import { formatDuration } from "@/lib/tasks";
+import { formatWallDate, formatWallTime } from "@/lib/wall-clock";
+import { classifyEventStatus, type GeoPointRow } from "@/lib/punch/geo-view";
 import { exportToExcel, exportToPdf, type ExportColumn } from "@/lib/exports";
 import { toast } from "sonner";
 
@@ -70,8 +72,20 @@ const emptyFilters: Filters = {
   to: "",
 };
 
+const TASK_SELECT =
+  "tasks(title, client_id, scheduled_for, scheduled_end, recurrence_date, due_at)";
+
+type TaskJoin = {
+  title: string;
+  client_id: string | null;
+  scheduled_for?: string | null;
+  scheduled_end?: string | null;
+  recurrence_date?: string | null;
+  due_at?: string | null;
+};
+
 type Row = AdminTimeEntry & {
-  tasks: { title: string; client_id: string | null } | null;
+  tasks: TaskJoin | null;
   profiles: { full_name: string | null } | null;
   geo?: GeoSummary | null;
 };
@@ -84,6 +98,7 @@ type GeoPoint = {
   accuracy_m: number | null;
   distance_m: number | null;
   geo_status: string;
+  reason_code: string | null;
   reason_text: string | null;
   captured_at: string;
 };
@@ -95,6 +110,31 @@ type GeoSummary = {
 
 const fmtCoord = (p?: GeoPoint) => (p?.lat != null && p.lng != null ? `${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}` : "");
 const fmtMeters = (n: number | null | undefined) => (n != null ? `${Math.round(n)} m` : "");
+
+/** Label humano do status geo, reutilizando a classificação oficial. */
+const fmtGeoStatus = (p?: GeoPoint) => {
+  if (!p) return "";
+  return classifyEventStatus(p as unknown as GeoPointRow).label;
+};
+
+const hasWallTime = (iso: string | null | undefined) =>
+  !!iso && formatWallTime(iso) !== "00:00";
+
+/**
+ * "Previsto" — data + horário planejado da tarefa.
+ * Nunca exibe 00:00 como horário: quando não há horário definido,
+ * mostra apenas a data com o sufixo "(sem horário)".
+ */
+function formatPrevisto(t: TaskJoin | null | undefined): string {
+  if (!t) return "";
+  const base = t.scheduled_for ?? t.recurrence_date ?? t.due_at ?? null;
+  if (!base) return "";
+  const date = formatWallDate(base);
+  if (!hasWallTime(t.scheduled_for)) return `${date} (sem horário)`;
+  const start = formatWallTime(t.scheduled_for);
+  const end = hasWallTime(t.scheduled_end) ? formatWallTime(t.scheduled_end) : null;
+  return end ? `${date} ${start}–${end}` : `${date} ${start}`;
+}
 
 function GestaoPonto() {
   const { currentCompanyId } = useAuth();
@@ -155,7 +195,7 @@ function GestaoPonto() {
       let q = supabase
         .from("time_entries")
         .select(
-          "id, company_id, task_id, user_id, started_at, ended_at, paused_at, resumed_at, effective_minutes, notes, created_at, updated_at, origin, created_by, last_edited_by, last_edited_at, last_edit_reason, voided_at, voided_by, void_reason, entry_kind, paid_leave_minutes, tasks(title, client_id), profiles!inner(full_name)",
+          `id, company_id, task_id, user_id, started_at, ended_at, paused_at, resumed_at, effective_minutes, notes, created_at, updated_at, origin, created_by, last_edited_by, last_edited_at, last_edit_reason, voided_at, voided_by, void_reason, entry_kind, paid_leave_minutes, ${TASK_SELECT}, profiles!inner(full_name)`,
           { count: "exact" },
         )
         .eq("company_id", currentCompanyId!)
@@ -215,7 +255,27 @@ function GestaoPonto() {
   };
 
   const voidMut = useMutation({
-    mutationFn: ({ id, reason }: { id: string; reason: string }) => punchAdminVoidForRedo(id, reason),
+    mutationFn: async ({ id, reason, row }: { id: string; reason: string; row: Row }) => {
+      const res = await punchAdminVoidForRedo(id, reason);
+      // Notificação não bloqueante para o funcionário.
+      if (row.task_id) {
+        try {
+          const { error } = await supabase.from("notifications" as never).insert({
+            company_id: row.company_id,
+            user_id: row.user_id,
+            task_id: row.task_id,
+            event: "task_assigned",
+            title: "Ponto devolvido para correção",
+            body: reason,
+            priority: "alta",
+          } as never);
+          if (error) console.warn("Falha ao notificar devolução de ponto:", error.message);
+        } catch (e) {
+          console.warn("Falha ao notificar devolução de ponto:", e);
+        }
+      }
+      return res;
+    },
     onSuccess: () => {
       toast.success("Ponto devolvido para refazer");
       qc.invalidateQueries({ queryKey: ["punch-admin-list"] });
@@ -235,7 +295,7 @@ function GestaoPonto() {
       toast.error("Informe um motivo com pelo menos 5 caracteres.");
       return;
     }
-    voidMut.mutate({ id: r.id, reason: reason.trim() });
+    voidMut.mutate({ id: r.id, reason: reason.trim(), row: r });
   };
 
   const { data: company } = useQuery({
@@ -260,6 +320,7 @@ function GestaoPonto() {
       accessor: (r) => (r.entry_kind === "paid_leave" ? "Folga remunerada" : (r.tasks?.title ?? "")),
     },
     { header: "Cliente", accessor: (r) => (r.tasks?.client_id ? (clientsMap[r.tasks.client_id] ?? "") : "") },
+    { header: "Previsto", accessor: (r) => formatPrevisto(r.tasks) },
     { header: "Início", accessor: (r) => fmtDT(r.started_at) },
     { header: "Fim", accessor: (r) => fmtDT(r.ended_at) },
     { header: "Efetivo", accessor: (r) => (r.effective_minutes != null ? formatDuration(r.effective_minutes) : "") },
@@ -267,6 +328,8 @@ function GestaoPonto() {
     { header: "Notas", accessor: (r) => r.notes ?? "" },
     { header: "Geo entrada", accessor: (r) => fmtCoord(r.geo?.start) },
     { header: "Geo saída", accessor: (r) => fmtCoord(r.geo?.end) },
+    { header: "Status geo entrada", accessor: (r) => fmtGeoStatus(r.geo?.start) },
+    { header: "Status geo saída", accessor: (r) => fmtGeoStatus(r.geo?.end) },
     { header: "Distância entrada", accessor: (r) => fmtMeters(r.geo?.start?.distance_m) },
     { header: "Distância saída", accessor: (r) => fmtMeters(r.geo?.end?.distance_m) },
     {
@@ -279,7 +342,7 @@ function GestaoPonto() {
     let q = supabase
       .from("time_entries")
       .select(
-        "id, company_id, task_id, user_id, started_at, ended_at, paused_at, resumed_at, effective_minutes, notes, created_at, updated_at, origin, created_by, last_edited_by, last_edited_at, last_edit_reason, voided_at, voided_by, void_reason, entry_kind, paid_leave_minutes, tasks(title, client_id), profiles!inner(full_name)",
+        `id, company_id, task_id, user_id, started_at, ended_at, paused_at, resumed_at, effective_minutes, notes, created_at, updated_at, origin, created_by, last_edited_by, last_edited_at, last_edit_reason, voided_at, voided_by, void_reason, entry_kind, paid_leave_minutes, ${TASK_SELECT}, profiles!inner(full_name)`,
       )
       .eq("company_id", currentCompanyId!)
       .is("voided_at", null)
@@ -300,7 +363,9 @@ function GestaoPonto() {
 
     const { data: geoRows, error: geoError } = await supabase
       .from("time_entry_geopoints")
-      .select("time_entry_id, event_kind, lat, lng, accuracy_m, distance_m, geo_status, reason_text, captured_at")
+      .select(
+        "time_entry_id, event_kind, lat, lng, accuracy_m, distance_m, geo_status, reason_code, reason_text, captured_at",
+      )
       .in("time_entry_id", ids)
       .order("captured_at", { ascending: true });
     if (geoError) throw geoError;
@@ -464,6 +529,7 @@ function GestaoPonto() {
                 <TableHead>Funcionário</TableHead>
                 <TableHead>Tarefa</TableHead>
                 <TableHead>Cliente</TableHead>
+                <TableHead>Previsto</TableHead>
                 <TableHead>Início</TableHead>
                 <TableHead>Fim</TableHead>
                 <TableHead className="text-right">Efetivo</TableHead>
@@ -475,14 +541,14 @@ function GestaoPonto() {
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-sm text-muted-foreground">
+                  <TableCell colSpan={10} className="text-center py-8 text-sm text-muted-foreground">
                     Carregando...
                   </TableCell>
                 </TableRow>
               )}
               {!isLoading && (result?.rows ?? []).length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-sm text-muted-foreground">
+                  <TableCell colSpan={10} className="text-center py-8 text-sm text-muted-foreground">
                     Nenhum registro encontrado.
                   </TableCell>
                 </TableRow>
@@ -493,6 +559,9 @@ function GestaoPonto() {
                   <TableCell className="max-w-[260px] truncate">{r.tasks?.title ?? "—"}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {r.tasks?.client_id ? (clientsMap[r.tasks.client_id] ?? "—") : "—"}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                    {formatPrevisto(r.tasks) || "—"}
                   </TableCell>
                   <TableCell className="text-sm">{new Date(r.started_at).toLocaleString()}</TableCell>
                   <TableCell className="text-sm">
