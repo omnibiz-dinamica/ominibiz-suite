@@ -1536,6 +1536,19 @@ function TaskForm({
   const assignedTo = assignees[0] ?? "";
   const toggleAssignee = (id: string) =>
     setAssignees((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const [assigneeQuery, setAssigneeQuery] = useState("");
+  const filteredAssignees = useMemo(() => {
+    const q = assigneeQuery
+      .toLocaleLowerCase("pt-BR")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+    if (!q.trim()) return members;
+    return members.filter((m) => {
+      const name = (m.full_name ?? "").toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const email = (m.email ?? "").toLocaleLowerCase("pt-BR");
+      return name.includes(q) || email.includes(q);
+    });
+  }, [members, assigneeQuery]);
   const [clientId, setClientId] = useState<string>(initial?.client_id ?? "");
   const [priority, setPriority] = useState<"baixa" | "media" | "alta" | "urgente">(initial?.priority ?? "media");
   const [startDate, setStartDate] = useState<string>(
