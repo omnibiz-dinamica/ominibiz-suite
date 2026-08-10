@@ -1521,7 +1521,7 @@ function TaskForm({
   documentsSlot,
 }: {
   formId: string;
-  members: { id: string; full_name: string | null }[];
+  members: { id: string; full_name: string | null; email?: string | null }[];
   clients: { id: string; name: string; timing_mode?: "start_stop" | "manual" | null }[];
   companyId: string;
   userId: string;
