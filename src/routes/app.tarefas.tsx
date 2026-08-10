@@ -52,6 +52,7 @@ import {
   Ban,
   ListTodo,
   XCircle,
+  Search,
 } from "lucide-react";
 import {
   STATUS_LABELS,
