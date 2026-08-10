@@ -52,6 +52,7 @@ import {
   Ban,
   ListTodo,
   XCircle,
+  Search,
 } from "lucide-react";
 import {
   STATUS_LABELS,
@@ -1520,7 +1521,7 @@ function TaskForm({
   documentsSlot,
 }: {
   formId: string;
-  members: { id: string; full_name: string | null }[];
+  members: { id: string; full_name: string | null; email?: string | null }[];
   clients: { id: string; name: string; timing_mode?: "start_stop" | "manual" | null }[];
   companyId: string;
   userId: string;
@@ -1535,6 +1536,19 @@ function TaskForm({
   const assignedTo = assignees[0] ?? "";
   const toggleAssignee = (id: string) =>
     setAssignees((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const [assigneeQuery, setAssigneeQuery] = useState("");
+  const filteredAssignees = useMemo(() => {
+    const q = assigneeQuery
+      .toLocaleLowerCase("pt-BR")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+    if (!q.trim()) return members;
+    return members.filter((m) => {
+      const name = (m.full_name ?? "").toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const email = (m.email ?? "").toLocaleLowerCase("pt-BR");
+      return name.includes(q) || email.includes(q);
+    });
+  }, [members, assigneeQuery]);
   const [clientId, setClientId] = useState<string>(initial?.client_id ?? "");
   const [priority, setPriority] = useState<"baixa" | "media" | "alta" | "urgente">(initial?.priority ?? "media");
   const [startDate, setStartDate] = useState<string>(
@@ -1828,11 +1842,27 @@ function TaskForm({
             </Select>
           ) : (
             <>
+              <div className="relative">
+                <Search
+                  className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden
+                />
+                <Input
+                  value={assigneeQuery}
+                  onChange={(e) => setAssigneeQuery(e.target.value)}
+                  placeholder="Pesquisar funcionário"
+                  aria-label="Pesquisar funcionário"
+                  className="h-9 pl-8"
+                />
+              </div>
               <div className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-border p-2">
                 {members.length === 0 && (
                   <p className="px-1 py-2 text-xs text-muted-foreground">Nenhum funcionário disponível.</p>
                 )}
-                {members.map((m) => {
+                {filteredAssignees.length === 0 && members.length > 0 && (
+                  <p className="px-1 py-2 text-xs text-muted-foreground">Nenhum funcionário encontrado.</p>
+                )}
+                {filteredAssignees.map((m) => {
                   const checked = assignees.includes(m.id);
                   return (
                     <label
