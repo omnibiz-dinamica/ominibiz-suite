@@ -16,6 +16,9 @@ import {
   COUNTRY_CURRENCY,
   MODULE_CATALOG,
   PLAN_OPTIONS,
+  BUSINESS_VERTICALS,
+  RESTAURANT_ENABLED_MODULES,
+  normalizeBusinessVertical,
   billingAnnualTotal,
   billingMonthlyTotal,
   countryDefaults,
@@ -29,6 +32,7 @@ import {
   type BillingPlan,
   type CountryCode,
   type ModuleKey,
+  type BusinessVertical,
 } from "@/lib/locale";
 import { RoleGuard } from "@/components/RoleGuard";
 import { sendInviteEmail } from "@/lib/invites/send-invite-email";
@@ -59,6 +63,7 @@ type AdminCompany = {
   user_limit?: number | null;
   enabled_modules?: ModuleKey[] | string[] | null;
   billing_notes?: string | null;
+  business_vertical?: string | null;
 };
 
 function AdminRouteContent() {
@@ -83,7 +88,7 @@ function AdminPage() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase.from("companies" as any) as any)
         .select(
-          "id, name, slug, country, currency, language, timezone, status, created_at, billing_plan, billing_cycle, billing_country, billing_currency, employee_limit, user_limit, enabled_modules, billing_notes",
+          "id, name, slug, country, currency, language, timezone, status, created_at, billing_plan, billing_cycle, billing_country, billing_currency, employee_limit, user_limit, enabled_modules, billing_notes, business_vertical",
         )
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -368,6 +373,18 @@ function BillingControls({ company }: { company: AdminCompany }) {
   const [country, setCountry] = useState<"PT" | "BE" | "ES" | "BR">(initialCountry);
   const [modules, setModules] = useState<ModuleKey[]>(normalizeModules(company.enabled_modules));
   const [notes, setNotes] = useState(company.billing_notes ?? "");
+  const [vertical, setVertical] = useState<BusinessVertical>(normalizeBusinessVertical(company.business_vertical));
+
+  /**
+   * ADR-027 — ao marcar a empresa como Restaurante & Delivery, ativa o pacote
+   * de módulos do restaurante (sem remover os módulos já ativos).
+   */
+  const changeVertical = (next: BusinessVertical) => {
+    setVertical(next);
+    if (next === "restaurant_delivery") {
+      setModules((current) => Array.from(new Set([...current, ...RESTAURANT_ENABLED_MODULES])));
+    }
+  };
 
   const currency = COUNTRY_CURRENCY[country];
   const effectiveCompany = {
@@ -403,6 +420,7 @@ function BillingControls({ company }: { company: AdminCompany }) {
           billing_base_monthly: baseMonthly,
           billing_addons_monthly: addonsMonthly,
           billing_notes: notes.trim() || null,
+          business_vertical: vertical,
         })
         .eq("id", company.id);
       if (error) throw error;
@@ -418,6 +436,21 @@ function BillingControls({ company }: { company: AdminCompany }) {
   return (
     <div className="rounded-xl border border-border bg-muted/20 p-4">
       <div className="grid gap-3 md:grid-cols-4">
+        <div className="space-y-1.5">
+          <Label>Ramo de atividade</Label>
+          <Select value={vertical} onValueChange={(v) => changeVertical(v as BusinessVertical)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {BUSINESS_VERTICALS.map((v) => (
+                <SelectItem key={v.value} value={v.value}>
+                  {v.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <div className="space-y-1.5">
           <Label>Plano</Label>
           <Select value={plan} onValueChange={(v) => setPlan(v as BillingPlan)}>

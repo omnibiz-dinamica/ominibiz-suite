@@ -36,11 +36,19 @@ import { Route as AppClientesRouteImport } from './routes/app.clientes'
 import { Route as AppAssistenteRouteImport } from './routes/app.assistente'
 import { Route as AppAdminRouteImport } from './routes/app.admin'
 import { Route as AppRhIndexRouteImport } from './routes/app.rh.index'
+import { Route as AppRestauranteIndexRouteImport } from './routes/app.restaurante.index'
 import { Route as AppComercialIndexRouteImport } from './routes/app.comercial.index'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as AppTarefasRecorrentesRouteImport } from './routes/app.tarefas.recorrentes'
 import { Route as AppSuporteIdRouteImport } from './routes/app.suporte.$id'
 import { Route as AppRhRecibosRouteImport } from './routes/app.rh.recibos'
+import { Route as AppRestauranteZonasRouteImport } from './routes/app.restaurante.zonas'
+import { Route as AppRestaurantePedidosRouteImport } from './routes/app.restaurante.pedidos'
+import { Route as AppRestauranteMesasRouteImport } from './routes/app.restaurante.mesas'
+import { Route as AppRestauranteMenuRouteImport } from './routes/app.restaurante.menu'
+import { Route as AppRestauranteEntregadoresRouteImport } from './routes/app.restaurante.entregadores'
+import { Route as AppRestauranteDeliveryRouteImport } from './routes/app.restaurante.delivery'
+import { Route as AppRestauranteCozinhaRouteImport } from './routes/app.restaurante.cozinha'
 import { Route as AppPontoGestaoRouteImport } from './routes/app.ponto_.gestao'
 import { Route as AppFrotaCartoesRouteImport } from './routes/app.frota.cartoes'
 import { Route as AppComercialTemplatesRouteImport } from './routes/app.comercial.templates'
@@ -191,6 +199,11 @@ const AppRhIndexRoute = AppRhIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRhRoute,
 } as any)
+const AppRestauranteIndexRoute = AppRestauranteIndexRouteImport.update({
+  id: '/restaurante/',
+  path: '/restaurante/',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppComercialIndexRoute = AppComercialIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -215,6 +228,42 @@ const AppRhRecibosRoute = AppRhRecibosRouteImport.update({
   id: '/recibos',
   path: '/recibos',
   getParentRoute: () => AppRhRoute,
+} as any)
+const AppRestauranteZonasRoute = AppRestauranteZonasRouteImport.update({
+  id: '/restaurante/zonas',
+  path: '/restaurante/zonas',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppRestaurantePedidosRoute = AppRestaurantePedidosRouteImport.update({
+  id: '/restaurante/pedidos',
+  path: '/restaurante/pedidos',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppRestauranteMesasRoute = AppRestauranteMesasRouteImport.update({
+  id: '/restaurante/mesas',
+  path: '/restaurante/mesas',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppRestauranteMenuRoute = AppRestauranteMenuRouteImport.update({
+  id: '/restaurante/menu',
+  path: '/restaurante/menu',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppRestauranteEntregadoresRoute =
+  AppRestauranteEntregadoresRouteImport.update({
+    id: '/restaurante/entregadores',
+    path: '/restaurante/entregadores',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppRestauranteDeliveryRoute = AppRestauranteDeliveryRouteImport.update({
+  id: '/restaurante/delivery',
+  path: '/restaurante/delivery',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppRestauranteCozinhaRoute = AppRestauranteCozinhaRouteImport.update({
+  id: '/restaurante/cozinha',
+  path: '/restaurante/cozinha',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppPontoGestaoRoute = AppPontoGestaoRouteImport.update({
   id: '/ponto_/gestao',
@@ -325,11 +374,19 @@ export interface FileRoutesByFullPath {
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
   '/app/ponto/gestao': typeof AppPontoGestaoRoute
+  '/app/restaurante/cozinha': typeof AppRestauranteCozinhaRoute
+  '/app/restaurante/delivery': typeof AppRestauranteDeliveryRoute
+  '/app/restaurante/entregadores': typeof AppRestauranteEntregadoresRoute
+  '/app/restaurante/menu': typeof AppRestauranteMenuRoute
+  '/app/restaurante/mesas': typeof AppRestauranteMesasRoute
+  '/app/restaurante/pedidos': typeof AppRestaurantePedidosRoute
+  '/app/restaurante/zonas': typeof AppRestauranteZonasRoute
   '/app/rh/recibos': typeof AppRhRecibosRoute
   '/app/suporte/$id': typeof AppSuporteIdRoute
   '/app/tarefas/recorrentes': typeof AppTarefasRecorrentesRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/app/comercial/': typeof AppComercialIndexRoute
+  '/app/restaurante/': typeof AppRestauranteIndexRoute
   '/app/rh/': typeof AppRhIndexRoute
   '/api/public/whatsapp/dispatch': typeof ApiPublicWhatsappDispatchRoute
   '/app/comercial/contratos/$id': typeof AppComercialContratosIdRoute
@@ -370,11 +427,19 @@ export interface FileRoutesByTo {
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
   '/app/ponto/gestao': typeof AppPontoGestaoRoute
+  '/app/restaurante/cozinha': typeof AppRestauranteCozinhaRoute
+  '/app/restaurante/delivery': typeof AppRestauranteDeliveryRoute
+  '/app/restaurante/entregadores': typeof AppRestauranteEntregadoresRoute
+  '/app/restaurante/menu': typeof AppRestauranteMenuRoute
+  '/app/restaurante/mesas': typeof AppRestauranteMesasRoute
+  '/app/restaurante/pedidos': typeof AppRestaurantePedidosRoute
+  '/app/restaurante/zonas': typeof AppRestauranteZonasRoute
   '/app/rh/recibos': typeof AppRhRecibosRoute
   '/app/suporte/$id': typeof AppSuporteIdRoute
   '/app/tarefas/recorrentes': typeof AppTarefasRecorrentesRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/app/comercial': typeof AppComercialIndexRoute
+  '/app/restaurante': typeof AppRestauranteIndexRoute
   '/app/rh': typeof AppRhIndexRoute
   '/api/public/whatsapp/dispatch': typeof ApiPublicWhatsappDispatchRoute
   '/app/comercial/contratos/$id': typeof AppComercialContratosIdRoute
@@ -419,11 +484,19 @@ export interface FileRoutesById {
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
   '/app/ponto_/gestao': typeof AppPontoGestaoRoute
+  '/app/restaurante/cozinha': typeof AppRestauranteCozinhaRoute
+  '/app/restaurante/delivery': typeof AppRestauranteDeliveryRoute
+  '/app/restaurante/entregadores': typeof AppRestauranteEntregadoresRoute
+  '/app/restaurante/menu': typeof AppRestauranteMenuRoute
+  '/app/restaurante/mesas': typeof AppRestauranteMesasRoute
+  '/app/restaurante/pedidos': typeof AppRestaurantePedidosRoute
+  '/app/restaurante/zonas': typeof AppRestauranteZonasRoute
   '/app/rh/recibos': typeof AppRhRecibosRoute
   '/app/suporte/$id': typeof AppSuporteIdRoute
   '/app/tarefas/recorrentes': typeof AppTarefasRecorrentesRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/app/comercial/': typeof AppComercialIndexRoute
+  '/app/restaurante/': typeof AppRestauranteIndexRoute
   '/app/rh/': typeof AppRhIndexRoute
   '/api/public/whatsapp/dispatch': typeof ApiPublicWhatsappDispatchRoute
   '/app/comercial/contratos/$id': typeof AppComercialContratosIdRoute
@@ -469,11 +542,19 @@ export interface FileRouteTypes {
     | '/app/comercial/templates'
     | '/app/frota/cartoes'
     | '/app/ponto/gestao'
+    | '/app/restaurante/cozinha'
+    | '/app/restaurante/delivery'
+    | '/app/restaurante/entregadores'
+    | '/app/restaurante/menu'
+    | '/app/restaurante/mesas'
+    | '/app/restaurante/pedidos'
+    | '/app/restaurante/zonas'
     | '/app/rh/recibos'
     | '/app/suporte/$id'
     | '/app/tarefas/recorrentes'
     | '/lovable/email/suppression'
     | '/app/comercial/'
+    | '/app/restaurante/'
     | '/app/rh/'
     | '/api/public/whatsapp/dispatch'
     | '/app/comercial/contratos/$id'
@@ -514,11 +595,19 @@ export interface FileRouteTypes {
     | '/app/comercial/templates'
     | '/app/frota/cartoes'
     | '/app/ponto/gestao'
+    | '/app/restaurante/cozinha'
+    | '/app/restaurante/delivery'
+    | '/app/restaurante/entregadores'
+    | '/app/restaurante/menu'
+    | '/app/restaurante/mesas'
+    | '/app/restaurante/pedidos'
+    | '/app/restaurante/zonas'
     | '/app/rh/recibos'
     | '/app/suporte/$id'
     | '/app/tarefas/recorrentes'
     | '/lovable/email/suppression'
     | '/app/comercial'
+    | '/app/restaurante'
     | '/app/rh'
     | '/api/public/whatsapp/dispatch'
     | '/app/comercial/contratos/$id'
@@ -562,11 +651,19 @@ export interface FileRouteTypes {
     | '/app/comercial/templates'
     | '/app/frota/cartoes'
     | '/app/ponto_/gestao'
+    | '/app/restaurante/cozinha'
+    | '/app/restaurante/delivery'
+    | '/app/restaurante/entregadores'
+    | '/app/restaurante/menu'
+    | '/app/restaurante/mesas'
+    | '/app/restaurante/pedidos'
+    | '/app/restaurante/zonas'
     | '/app/rh/recibos'
     | '/app/suporte/$id'
     | '/app/tarefas/recorrentes'
     | '/lovable/email/suppression'
     | '/app/comercial/'
+    | '/app/restaurante/'
     | '/app/rh/'
     | '/api/public/whatsapp/dispatch'
     | '/app/comercial/contratos/$id'
@@ -787,6 +884,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRhIndexRouteImport
       parentRoute: typeof AppRhRoute
     }
+    '/app/restaurante/': {
+      id: '/app/restaurante/'
+      path: '/restaurante'
+      fullPath: '/app/restaurante/'
+      preLoaderRoute: typeof AppRestauranteIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/comercial/': {
       id: '/app/comercial/'
       path: '/'
@@ -821,6 +925,55 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/rh/recibos'
       preLoaderRoute: typeof AppRhRecibosRouteImport
       parentRoute: typeof AppRhRoute
+    }
+    '/app/restaurante/zonas': {
+      id: '/app/restaurante/zonas'
+      path: '/restaurante/zonas'
+      fullPath: '/app/restaurante/zonas'
+      preLoaderRoute: typeof AppRestauranteZonasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/restaurante/pedidos': {
+      id: '/app/restaurante/pedidos'
+      path: '/restaurante/pedidos'
+      fullPath: '/app/restaurante/pedidos'
+      preLoaderRoute: typeof AppRestaurantePedidosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/restaurante/mesas': {
+      id: '/app/restaurante/mesas'
+      path: '/restaurante/mesas'
+      fullPath: '/app/restaurante/mesas'
+      preLoaderRoute: typeof AppRestauranteMesasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/restaurante/menu': {
+      id: '/app/restaurante/menu'
+      path: '/restaurante/menu'
+      fullPath: '/app/restaurante/menu'
+      preLoaderRoute: typeof AppRestauranteMenuRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/restaurante/entregadores': {
+      id: '/app/restaurante/entregadores'
+      path: '/restaurante/entregadores'
+      fullPath: '/app/restaurante/entregadores'
+      preLoaderRoute: typeof AppRestauranteEntregadoresRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/restaurante/delivery': {
+      id: '/app/restaurante/delivery'
+      path: '/restaurante/delivery'
+      fullPath: '/app/restaurante/delivery'
+      preLoaderRoute: typeof AppRestauranteDeliveryRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/restaurante/cozinha': {
+      id: '/app/restaurante/cozinha'
+      path: '/restaurante/cozinha'
+      fullPath: '/app/restaurante/cozinha'
+      preLoaderRoute: typeof AppRestauranteCozinhaRouteImport
+      parentRoute: typeof AppRoute
     }
     '/app/ponto_/gestao': {
       id: '/app/ponto_/gestao'
@@ -1036,6 +1189,14 @@ interface AppRouteChildren {
   AppTarefasRoute: typeof AppTarefasRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
   AppPontoGestaoRoute: typeof AppPontoGestaoRoute
+  AppRestauranteCozinhaRoute: typeof AppRestauranteCozinhaRoute
+  AppRestauranteDeliveryRoute: typeof AppRestauranteDeliveryRoute
+  AppRestauranteEntregadoresRoute: typeof AppRestauranteEntregadoresRoute
+  AppRestauranteMenuRoute: typeof AppRestauranteMenuRoute
+  AppRestauranteMesasRoute: typeof AppRestauranteMesasRoute
+  AppRestaurantePedidosRoute: typeof AppRestaurantePedidosRoute
+  AppRestauranteZonasRoute: typeof AppRestauranteZonasRoute
+  AppRestauranteIndexRoute: typeof AppRestauranteIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -1058,6 +1219,14 @@ const AppRouteChildren: AppRouteChildren = {
   AppTarefasRoute: AppTarefasRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
   AppPontoGestaoRoute: AppPontoGestaoRoute,
+  AppRestauranteCozinhaRoute: AppRestauranteCozinhaRoute,
+  AppRestauranteDeliveryRoute: AppRestauranteDeliveryRoute,
+  AppRestauranteEntregadoresRoute: AppRestauranteEntregadoresRoute,
+  AppRestauranteMenuRoute: AppRestauranteMenuRoute,
+  AppRestauranteMesasRoute: AppRestauranteMesasRoute,
+  AppRestaurantePedidosRoute: AppRestaurantePedidosRoute,
+  AppRestauranteZonasRoute: AppRestauranteZonasRoute,
+  AppRestauranteIndexRoute: AppRestauranteIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

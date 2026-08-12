@@ -27,6 +27,13 @@ import {
   Repeat,
   CreditCard,
   LifeBuoy,
+  UtensilsCrossed,
+  ShoppingBag,
+  ChefHat,
+  Truck,
+  BookOpen,
+  Bike,
+  MapPin,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
@@ -40,7 +47,9 @@ import {
   isModuleEnabled,
   moduleForPath,
   normalizeModules,
+  normalizeBusinessVertical,
   type ModuleKey,
+  type BusinessVertical,
 } from "@/lib/locale";
 
 function detectBrowser(): { name: string; version: string } {
@@ -122,8 +131,10 @@ function buildGroups(args: {
   role: "super_admin" | "manager" | "employee";
   superAdminOperating: boolean;
   employeeHasVehicle: boolean;
+  vertical: BusinessVertical;
 }): Group[] {
-  const { role, superAdminOperating, employeeHasVehicle } = args;
+  const { role, superAdminOperating, employeeHasVehicle, vertical } = args;
+  const isRestaurant = vertical === "restaurant_delivery";
 
   if (role === "super_admin" && !superAdminOperating) {
     return [
@@ -195,6 +206,83 @@ function buildGroups(args: {
   }
 
   // manager OR super admin operating inside a company
+  if (isRestaurant) {
+    // ADR-027 — menu do ramo Restaurante & Delivery (sem clientes operacionais de limpeza).
+    const restaurantGroups: Group[] = [
+      {
+        id: "operacao",
+        label: "Operação",
+        items: [
+          { to: "/app", label: "Dashboard", icon: LayoutDashboard },
+          { to: "/app/restaurante/pedidos", label: "Pedidos", icon: ShoppingBag, module: "restaurant_orders" },
+          { to: "/app/restaurante/mesas", label: "Mesas", icon: UtensilsCrossed, module: "restaurant_tables" },
+          { to: "/app/restaurante/cozinha", label: "Cozinha", icon: ChefHat, module: "restaurant_kitchen" },
+          { to: "/app/restaurante/delivery", label: "Delivery", icon: Truck, module: "restaurant_delivery" },
+          { to: "/app/notificacoes", label: "Notificações", icon: Bell },
+        ],
+      },
+      {
+        id: "restaurante",
+        label: "Restaurante",
+        items: [
+          { to: "/app/restaurante/menu", label: "Menu", icon: BookOpen, module: "restaurant_menu" },
+          { to: "/app/restaurante/entregadores", label: "Entregadores", icon: Bike, module: "restaurant_couriers" },
+          {
+            to: "/app/restaurante/zonas",
+            label: "Zonas de Entrega",
+            icon: MapPin,
+            module: "restaurant_delivery_zones",
+          },
+        ],
+      },
+      {
+        id: "ponto",
+        label: "Ponto",
+        items: [
+          { to: "/app/ponto", label: "Folha de Ponto", icon: Clock, module: "time_clock" },
+          { to: "/app/ponto/gestao", label: "Ponto · Gestão", icon: ListChecks, module: "time_clock" },
+        ],
+      },
+      {
+        id: "rh",
+        label: "RH",
+        items: [
+          { to: "/app/equipe", label: "Usuários", icon: Users, module: "hr" },
+          { to: "/app/ferias", label: "Férias", icon: Plane, module: "hr" },
+          { to: "/app/despesas", label: "Despesas", icon: CreditCard, module: "finance" },
+        ],
+      },
+      {
+        id: "administracao",
+        label: "Administração",
+        items: [{ to: "/app/empresa", label: "Empresa", icon: Building2 }],
+      },
+      {
+        id: "suporte",
+        label: "Suporte",
+        items: [{ to: "/app/suporte", label: "Central de Suporte", icon: LifeBuoy, module: "support" }],
+      },
+      {
+        id: "conta",
+        label: "Conta",
+        items: [{ to: "/app/perfil", label: "Perfil", icon: UserCircle }],
+      },
+    ];
+
+    if (superAdminOperating) {
+      restaurantGroups.splice(restaurantGroups.length - 1, 0, {
+        id: "superadmin",
+        label: "Super Admin",
+        items: [
+          { to: "/app/admin", label: "Empresas (Super Admin)", icon: Shield },
+          { to: "/app/admin/suporte", label: "Todos os Tickets", icon: LifeBuoy },
+        ],
+      });
+    }
+
+    return restaurantGroups;
+  }
+
   const groups: Group[] = [
     {
       id: "operacao",
@@ -335,12 +423,21 @@ export function AppLayout({ children }: { children?: ReactNode }) {
     queryFn: async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data } = await (supabase.from("companies" as any) as any)
-        .select("id, name, enabled_modules")
+        .select("id, name, enabled_modules, business_vertical")
         .eq("id", currentCompanyId!)
         .maybeSingle();
-      return data as { id: string; name: string; enabled_modules?: string[] | null } | null;
+      return data as {
+        id: string;
+        name: string;
+        enabled_modules?: string[] | null;
+        business_vertical?: string | null;
+      } | null;
     },
   });
+  const businessVertical = useMemo(
+    () => normalizeBusinessVertical(activeCompany?.business_vertical ?? null),
+    [activeCompany],
+  );
   const enabledModules = useMemo(
     () =>
       normalizeModules(
@@ -399,6 +496,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
       role: role as "super_admin" | "manager" | "employee",
       superAdminOperating,
       employeeHasVehicle: hasVehicle,
+      vertical: businessVertical,
     })
       .map((group) => ({
         ...group,
@@ -407,7 +505,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
           .map((item) => (item.to === "/app/notificacoes" ? { ...item, badge: unreadNotifications } : item)),
       }))
       .filter((group) => group.items.length > 0);
-  }, [effectiveRole, superAdminOperating, hasVehicle, unreadNotifications, enabledModules]);
+  }, [effectiveRole, superAdminOperating, hasVehicle, unreadNotifications, enabledModules, businessVertical]);
 
   useEffect(() => {
     if (!currentCompanyId || path === "/app" || path.startsWith("/app/admin")) return;

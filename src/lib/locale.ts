@@ -35,7 +35,46 @@ export type ModuleKey =
   | "whatsapp_ai"
   | "bi_advanced"
   | "ai_automations"
-  | "notes";
+  | "notes"
+  | "restaurant_dashboard"
+  | "restaurant_menu"
+  | "restaurant_tables"
+  | "restaurant_orders"
+  | "restaurant_kitchen"
+  | "restaurant_delivery"
+  | "restaurant_couriers"
+  | "restaurant_delivery_zones";
+
+/** ADR-027 — Ramo de atividade da empresa (business vertical). */
+export type BusinessVertical = "cleaning_services" | "restaurant_delivery" | "generic";
+
+export const BUSINESS_VERTICALS: { value: BusinessVertical; label: string }[] = [
+  { value: "cleaning_services", label: "Serviços de Limpeza" },
+  { value: "restaurant_delivery", label: "Restaurante & Delivery" },
+  { value: "generic", label: "Genérico" },
+];
+
+export function normalizeBusinessVertical(value: string | null | undefined): BusinessVertical {
+  return value === "restaurant_delivery" || value === "generic" ? value : "cleaning_services";
+}
+
+/** Módulos ativados automaticamente ao marcar a empresa como Restaurante & Delivery. */
+export const RESTAURANT_ENABLED_MODULES: ModuleKey[] = [
+  "core",
+  "tasks",
+  "time_clock",
+  "hr",
+  "finance",
+  "support",
+  "restaurant_dashboard",
+  "restaurant_menu",
+  "restaurant_tables",
+  "restaurant_orders",
+  "restaurant_kitchen",
+  "restaurant_delivery",
+  "restaurant_couriers",
+  "restaurant_delivery_zones",
+];
 
 export type CompanyBilling = {
   billing_plan?: BillingPlan | null;
@@ -147,6 +186,54 @@ export const MODULE_CATALOG: Record<
     addonMonthly: 0,
     included: false,
   },
+  restaurant_dashboard: {
+    label: "Restaurante · Dashboard",
+    description: "Visao geral da operacao do restaurante.",
+    addonMonthly: 0,
+    included: false,
+  },
+  restaurant_menu: {
+    label: "Restaurante · Menu",
+    description: "Cardapio, categorias e itens.",
+    addonMonthly: 0,
+    included: false,
+  },
+  restaurant_tables: {
+    label: "Restaurante · Mesas",
+    description: "Gestao de mesas e salas.",
+    addonMonthly: 0,
+    included: false,
+  },
+  restaurant_orders: {
+    label: "Restaurante · Pedidos",
+    description: "Pedidos de balcao, mesa e delivery.",
+    addonMonthly: 0,
+    included: false,
+  },
+  restaurant_kitchen: {
+    label: "Restaurante · Cozinha",
+    description: "Painel de producao da cozinha.",
+    addonMonthly: 0,
+    included: false,
+  },
+  restaurant_delivery: {
+    label: "Restaurante · Delivery",
+    description: "Entregas e acompanhamento.",
+    addonMonthly: 0,
+    included: false,
+  },
+  restaurant_couriers: {
+    label: "Restaurante · Entregadores",
+    description: "Gestao de entregadores.",
+    addonMonthly: 0,
+    included: false,
+  },
+  restaurant_delivery_zones: {
+    label: "Restaurante · Zonas de Entrega",
+    description: "Zonas, raios e taxas.",
+    addonMonthly: 0,
+    included: false,
+  },
 };
 
 export const DEFAULT_ENABLED_MODULES: ModuleKey[] = [
@@ -174,6 +261,17 @@ export const ROUTE_MODULES: Array<{ prefix: string; module: ModuleKey }> = [
   { prefix: "/app/assistente", module: "whatsapp_ai" },
   { prefix: "/app/notas", module: "notes" },
   { prefix: "/app/suporte", module: "support" },
+];
+
+export const RESTAURANT_ROUTE_MODULES: Array<{ prefix: string; module: ModuleKey }> = [
+  { prefix: "/app/restaurante/pedidos", module: "restaurant_orders" },
+  { prefix: "/app/restaurante/mesas", module: "restaurant_tables" },
+  { prefix: "/app/restaurante/cozinha", module: "restaurant_kitchen" },
+  { prefix: "/app/restaurante/delivery", module: "restaurant_delivery" },
+  { prefix: "/app/restaurante/menu", module: "restaurant_menu" },
+  { prefix: "/app/restaurante/entregadores", module: "restaurant_couriers" },
+  { prefix: "/app/restaurante/zonas", module: "restaurant_delivery_zones" },
+  { prefix: "/app/restaurante", module: "restaurant_dashboard" },
 ];
 
 export function normalizeBillingCountry(country: string | null | undefined): BillingCountry {
