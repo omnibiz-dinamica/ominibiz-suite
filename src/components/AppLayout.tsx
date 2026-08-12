@@ -206,6 +206,83 @@ function buildGroups(args: {
   }
 
   // manager OR super admin operating inside a company
+  if (isRestaurant) {
+    // ADR-027 — menu do ramo Restaurante & Delivery (sem clientes operacionais de limpeza).
+    const restaurantGroups: Group[] = [
+      {
+        id: "operacao",
+        label: "Operação",
+        items: [
+          { to: "/app", label: "Dashboard", icon: LayoutDashboard },
+          { to: "/app/restaurante/pedidos", label: "Pedidos", icon: ShoppingBag, module: "restaurant_orders" },
+          { to: "/app/restaurante/mesas", label: "Mesas", icon: UtensilsCrossed, module: "restaurant_tables" },
+          { to: "/app/restaurante/cozinha", label: "Cozinha", icon: ChefHat, module: "restaurant_kitchen" },
+          { to: "/app/restaurante/delivery", label: "Delivery", icon: Truck, module: "restaurant_delivery" },
+          { to: "/app/notificacoes", label: "Notificações", icon: Bell },
+        ],
+      },
+      {
+        id: "restaurante",
+        label: "Restaurante",
+        items: [
+          { to: "/app/restaurante/menu", label: "Menu", icon: BookOpen, module: "restaurant_menu" },
+          { to: "/app/restaurante/entregadores", label: "Entregadores", icon: Bike, module: "restaurant_couriers" },
+          {
+            to: "/app/restaurante/zonas",
+            label: "Zonas de Entrega",
+            icon: MapPin,
+            module: "restaurant_delivery_zones",
+          },
+        ],
+      },
+      {
+        id: "ponto",
+        label: "Ponto",
+        items: [
+          { to: "/app/ponto", label: "Folha de Ponto", icon: Clock, module: "time_clock" },
+          { to: "/app/ponto/gestao", label: "Ponto · Gestão", icon: ListChecks, module: "time_clock" },
+        ],
+      },
+      {
+        id: "rh",
+        label: "RH",
+        items: [
+          { to: "/app/equipe", label: "Usuários", icon: Users, module: "hr" },
+          { to: "/app/ferias", label: "Férias", icon: Plane, module: "hr" },
+          { to: "/app/despesas", label: "Despesas", icon: CreditCard, module: "finance" },
+        ],
+      },
+      {
+        id: "administracao",
+        label: "Administração",
+        items: [{ to: "/app/empresa", label: "Empresa", icon: Building2 }],
+      },
+      {
+        id: "suporte",
+        label: "Suporte",
+        items: [{ to: "/app/suporte", label: "Central de Suporte", icon: LifeBuoy, module: "support" }],
+      },
+      {
+        id: "conta",
+        label: "Conta",
+        items: [{ to: "/app/perfil", label: "Perfil", icon: UserCircle }],
+      },
+    ];
+
+    if (superAdminOperating) {
+      restaurantGroups.splice(restaurantGroups.length - 1, 0, {
+        id: "superadmin",
+        label: "Super Admin",
+        items: [
+          { to: "/app/admin", label: "Empresas (Super Admin)", icon: Shield },
+          { to: "/app/admin/suporte", label: "Todos os Tickets", icon: LifeBuoy },
+        ],
+      });
+    }
+
+    return restaurantGroups;
+  }
+
   const groups: Group[] = [
     {
       id: "operacao",
