@@ -301,6 +301,7 @@ export type Database = {
           billing_notes: string | null
           billing_plan: string
           billing_trial_ends_at: string | null
+          business_vertical: string
           country: string
           created_at: string
           created_by: string | null
@@ -331,6 +332,7 @@ export type Database = {
           billing_notes?: string | null
           billing_plan?: string
           billing_trial_ends_at?: string | null
+          business_vertical?: string
           country?: string
           created_at?: string
           created_by?: string | null
@@ -361,6 +363,7 @@ export type Database = {
           billing_notes?: string | null
           billing_plan?: string
           billing_trial_ends_at?: string | null
+          business_vertical?: string
           country?: string
           created_at?: string
           created_by?: string | null
