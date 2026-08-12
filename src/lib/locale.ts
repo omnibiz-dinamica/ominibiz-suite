@@ -247,6 +247,70 @@ export const DEFAULT_ENABLED_MODULES: ModuleKey[] = [
   "finance",
 ];
 
+/** ADR-028 — agrupamento dos módulos por aba na configuração da empresa (UI). */
+export type ModuleTabKey = "general" | "cleaning" | "restaurant" | "hospitality" | "auto_repair";
+
+export const MODULE_TABS: Array<{
+  key: ModuleTabKey;
+  label: string;
+  vertical: BusinessVertical | null;
+  modules: ModuleKey[];
+}> = [
+  {
+    key: "general",
+    label: "Geral",
+    vertical: null,
+    modules: [
+      "core",
+      "tasks",
+      "time_clock",
+      "hr",
+      "support",
+      "finance",
+      "crm",
+      "fleet",
+      "whatsapp_ai",
+      "bi_advanced",
+      "ai_automations",
+      "notes",
+    ],
+  },
+  {
+    key: "cleaning",
+    label: "Limpeza",
+    vertical: "cleaning_services",
+    modules: ["tasks", "crm", "time_clock", "fleet"],
+  },
+  {
+    key: "restaurant",
+    label: "Restaurante",
+    vertical: "restaurant_delivery",
+    modules: [
+      "restaurant_dashboard",
+      "restaurant_menu",
+      "restaurant_tables",
+      "restaurant_orders",
+      "restaurant_kitchen",
+      "restaurant_delivery",
+      "restaurant_couriers",
+      "restaurant_delivery_zones",
+    ],
+  },
+  { key: "hospitality", label: "Hotelaria", vertical: null, modules: [] },
+  { key: "auto_repair", label: "Oficina", vertical: null, modules: [] },
+];
+
+const LEGACY_DEFAULT_ENABLED_MODULES: ModuleKey[] = [
+  "core",
+  "tasks",
+  "time_clock",
+  "hr",
+  "support",
+  "crm",
+  "fleet",
+  "finance",
+];
+
 export const ROUTE_MODULES: Array<{ prefix: string; module: ModuleKey }> = [
   { prefix: "/app/tarefas", module: "tasks" },
   { prefix: "/app/ponto", module: "time_clock" },
