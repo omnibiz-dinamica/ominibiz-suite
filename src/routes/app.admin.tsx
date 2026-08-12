@@ -15,6 +15,7 @@ import {
   COUNTRIES,
   COUNTRY_CURRENCY,
   MODULE_CATALOG,
+  MODULE_TABS,
   PLAN_OPTIONS,
   BUSINESS_VERTICALS,
   RESTAURANT_ENABLED_MODULES,
@@ -33,6 +34,7 @@ import {
   type CountryCode,
   type ModuleKey,
   type BusinessVertical,
+  type ModuleTabKey,
 } from "@/lib/locale";
 import { RoleGuard } from "@/components/RoleGuard";
 import { sendInviteEmail } from "@/lib/invites/send-invite-email";
@@ -374,6 +376,9 @@ function BillingControls({ company }: { company: AdminCompany }) {
   const [modules, setModules] = useState<ModuleKey[]>(normalizeModules(company.enabled_modules));
   const [notes, setNotes] = useState(company.billing_notes ?? "");
   const [vertical, setVertical] = useState<BusinessVertical>(normalizeBusinessVertical(company.business_vertical));
+  const [activeTab, setActiveTab] = useState<ModuleTabKey>(
+    normalizeBusinessVertical(company.business_vertical) === "restaurant_delivery" ? "restaurant" : "general",
+  );
 
   /**
    * ADR-027 — ao marcar a empresa como Restaurante & Delivery, ativa o pacote
@@ -385,6 +390,15 @@ function BillingControls({ company }: { company: AdminCompany }) {
       setModules((current) => Array.from(new Set([...current, ...RESTAURANT_ENABLED_MODULES])));
     }
   };
+
+  /** ADR-028 — clicar numa aba de ramo também define o ramo principal da empresa. */
+  const selectTab = (key: ModuleTabKey) => {
+    setActiveTab(key);
+    const tab = MODULE_TABS.find((t) => t.key === key);
+    if (tab?.vertical) changeVertical(tab.vertical);
+  };
+
+  const currentTab = MODULE_TABS.find((t) => t.key === activeTab) ?? MODULE_TABS[0];
 
   const currency = COUNTRY_CURRENCY[country];
   const effectiveCompany = {
@@ -505,8 +519,31 @@ function BillingControls({ company }: { company: AdminCompany }) {
         </div>
       </div>
 
+      <div className="mt-4 flex flex-wrap gap-1 rounded-xl border border-border bg-background p-1">
+        {MODULE_TABS.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => selectTab(tab.key)}
+            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+              activeTab === tab.key
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {currentTab.modules.length === 0 && (
+        <p className="mt-4 rounded-lg border border-dashed border-border bg-background p-4 text-sm text-muted-foreground">
+          Ramo preparado para futuras funcionalidades.
+        </p>
+      )}
+
       <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-        {(Object.keys(MODULE_CATALOG) as ModuleKey[]).map((module) => {
+        {currentTab.modules.map((module) => {
           const item = MODULE_CATALOG[module];
           const checked = modules.includes(module);
           return (
