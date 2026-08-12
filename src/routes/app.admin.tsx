@@ -391,12 +391,11 @@ function BillingControls({ company }: { company: AdminCompany }) {
     }
   };
 
-  /** ADR-028 — clicar numa aba de ramo também define o ramo principal da empresa. */
-  const selectTab = (key: ModuleTabKey) => {
-    setActiveTab(key);
-    const tab = MODULE_TABS.find((t) => t.key === key);
-    if (tab?.vertical) changeVertical(tab.vertical);
-  };
+  /**
+   * ADR-028 (revisto) — as abas são apenas filtro visual: não alteram o ramo
+   * principal da empresa nem marcam módulos automaticamente.
+   */
+  const selectTab = (key: ModuleTabKey) => setActiveTab(key);
 
   const currentTab = MODULE_TABS.find((t) => t.key === activeTab) ?? MODULE_TABS[0];
 
