@@ -263,6 +263,17 @@ export const ROUTE_MODULES: Array<{ prefix: string; module: ModuleKey }> = [
   { prefix: "/app/suporte", module: "support" },
 ];
 
+export const RESTAURANT_ROUTE_MODULES: Array<{ prefix: string; module: ModuleKey }> = [
+  { prefix: "/app/restaurante/pedidos", module: "restaurant_orders" },
+  { prefix: "/app/restaurante/mesas", module: "restaurant_tables" },
+  { prefix: "/app/restaurante/cozinha", module: "restaurant_kitchen" },
+  { prefix: "/app/restaurante/delivery", module: "restaurant_delivery" },
+  { prefix: "/app/restaurante/menu", module: "restaurant_menu" },
+  { prefix: "/app/restaurante/entregadores", module: "restaurant_couriers" },
+  { prefix: "/app/restaurante/zonas", module: "restaurant_delivery_zones" },
+  { prefix: "/app/restaurante", module: "restaurant_dashboard" },
+];
+
 export function normalizeBillingCountry(country: string | null | undefined): BillingCountry {
   if (country === "BR" || country === "BE" || country === "ES") return country;
   return "PT";
