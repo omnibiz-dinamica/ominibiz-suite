@@ -16,6 +16,9 @@ import {
   COUNTRY_CURRENCY,
   MODULE_CATALOG,
   PLAN_OPTIONS,
+  BUSINESS_VERTICALS,
+  RESTAURANT_ENABLED_MODULES,
+  normalizeBusinessVertical,
   billingAnnualTotal,
   billingMonthlyTotal,
   countryDefaults,
@@ -29,6 +32,7 @@ import {
   type BillingPlan,
   type CountryCode,
   type ModuleKey,
+  type BusinessVertical,
 } from "@/lib/locale";
 import { RoleGuard } from "@/components/RoleGuard";
 import { sendInviteEmail } from "@/lib/invites/send-invite-email";
