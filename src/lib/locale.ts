@@ -186,22 +186,55 @@ export const MODULE_CATALOG: Record<
     addonMonthly: 0,
     included: false,
   },
+  restaurant_dashboard: {
+    label: "Restaurante · Dashboard",
+    description: "Visao geral da operacao do restaurante.",
+    addonMonthly: 0,
+    included: false,
+  },
+  restaurant_menu: {
+    label: "Restaurante · Menu",
+    description: "Cardapio, categorias e itens.",
+    addonMonthly: 0,
+    included: false,
+  },
+  restaurant_tables: {
+    label: "Restaurante · Mesas",
+    description: "Gestao de mesas e salas.",
+    addonMonthly: 0,
+    included: false,
+  },
+  restaurant_orders: {
+    label: "Restaurante · Pedidos",
+    description: "Pedidos de balcao, mesa e delivery.",
+    addonMonthly: 0,
+    included: false,
+  },
+  restaurant_kitchen: {
+    label: "Restaurante · Cozinha",
+    description: "Painel de producao da cozinha.",
+    addonMonthly: 0,
+    included: false,
+  },
+  restaurant_delivery: {
+    label: "Restaurante · Delivery",
+    description: "Entregas e acompanhamento.",
+    addonMonthly: 0,
+    included: false,
+  },
+  restaurant_couriers: {
+    label: "Restaurante · Entregadores",
+    description: "Gestao de entregadores.",
+    addonMonthly: 0,
+    included: false,
+  },
+  restaurant_delivery_zones: {
+    label: "Restaurante · Zonas de Entrega",
+    description: "Zonas, raios e taxas.",
+    addonMonthly: 0,
+    included: false,
+  },
 };
-
-const RESTAURANT_MODULE_META: Record<string, { label: string; description: string }> = {
-  restaurant_dashboard: { label: "Restaurante · Dashboard", description: "Visao geral da operacao do restaurante." },
-  restaurant_menu: { label: "Restaurante · Menu", description: "Cardapio, categorias e itens." },
-  restaurant_tables: { label: "Restaurante · Mesas", description: "Gestao de mesas e salas." },
-  restaurant_orders: { label: "Restaurante · Pedidos", description: "Pedidos de balcao, mesa e delivery." },
-  restaurant_kitchen: { label: "Restaurante · Cozinha", description: "Painel de producao da cozinha." },
-  restaurant_delivery: { label: "Restaurante · Delivery", description: "Entregas e acompanhamento." },
-  restaurant_couriers: { label: "Restaurante · Entregadores", description: "Gestao de entregadores." },
-  restaurant_delivery_zones: { label: "Restaurante · Zonas de Entrega", description: "Zonas, raios e taxas." },
-};
-
-for (const [key, meta] of Object.entries(RESTAURANT_MODULE_META)) {
-  MODULE_CATALOG[key as ModuleKey] = { ...meta, addonMonthly: 0, included: false };
-}
 
 export const DEFAULT_ENABLED_MODULES: ModuleKey[] = [
   "core",
