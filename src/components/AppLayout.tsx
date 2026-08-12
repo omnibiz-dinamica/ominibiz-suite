@@ -27,6 +27,13 @@ import {
   Repeat,
   CreditCard,
   LifeBuoy,
+  UtensilsCrossed,
+  ShoppingBag,
+  ChefHat,
+  Truck,
+  BookOpen,
+  Bike,
+  MapPin,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
@@ -40,7 +47,9 @@ import {
   isModuleEnabled,
   moduleForPath,
   normalizeModules,
+  normalizeBusinessVertical,
   type ModuleKey,
+  type BusinessVertical,
 } from "@/lib/locale";
 
 function detectBrowser(): { name: string; version: string } {
@@ -122,8 +131,10 @@ function buildGroups(args: {
   role: "super_admin" | "manager" | "employee";
   superAdminOperating: boolean;
   employeeHasVehicle: boolean;
+  vertical: BusinessVertical;
 }): Group[] {
-  const { role, superAdminOperating, employeeHasVehicle } = args;
+  const { role, superAdminOperating, employeeHasVehicle, vertical } = args;
+  const isRestaurant = vertical === "restaurant_delivery";
 
   if (role === "super_admin" && !superAdminOperating) {
     return [
