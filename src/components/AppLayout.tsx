@@ -423,12 +423,21 @@ export function AppLayout({ children }: { children?: ReactNode }) {
     queryFn: async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data } = await (supabase.from("companies" as any) as any)
-        .select("id, name, enabled_modules")
+        .select("id, name, enabled_modules, business_vertical")
         .eq("id", currentCompanyId!)
         .maybeSingle();
-      return data as { id: string; name: string; enabled_modules?: string[] | null } | null;
+      return data as {
+        id: string;
+        name: string;
+        enabled_modules?: string[] | null;
+        business_vertical?: string | null;
+      } | null;
     },
   });
+  const businessVertical = useMemo(
+    () => normalizeBusinessVertical(activeCompany?.business_vertical ?? null),
+    [activeCompany],
+  );
   const enabledModules = useMemo(
     () =>
       normalizeModules(
@@ -487,6 +496,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
       role: role as "super_admin" | "manager" | "employee",
       superAdminOperating,
       employeeHasVehicle: hasVehicle,
+      vertical: businessVertical,
     })
       .map((group) => ({
         ...group,
@@ -495,7 +505,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
           .map((item) => (item.to === "/app/notificacoes" ? { ...item, badge: unreadNotifications } : item)),
       }))
       .filter((group) => group.items.length > 0);
-  }, [effectiveRole, superAdminOperating, hasVehicle, unreadNotifications, enabledModules]);
+  }, [effectiveRole, superAdminOperating, hasVehicle, unreadNotifications, enabledModules, businessVertical]);
 
   useEffect(() => {
     if (!currentCompanyId || path === "/app" || path.startsWith("/app/admin")) return;
