@@ -300,17 +300,6 @@ export const MODULE_TABS: Array<{
   { key: "auto_repair", label: "Oficina", vertical: null, modules: [] },
 ];
 
-const LEGACY_DEFAULT_ENABLED_MODULES: ModuleKey[] = [
-  "core",
-  "tasks",
-  "time_clock",
-  "hr",
-  "support",
-  "crm",
-  "fleet",
-  "finance",
-];
-
 export const ROUTE_MODULES: Array<{ prefix: string; module: ModuleKey }> = [
   { prefix: "/app/tarefas", module: "tasks" },
   { prefix: "/app/ponto", module: "time_clock" },
