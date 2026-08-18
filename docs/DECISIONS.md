@@ -461,3 +461,10 @@ Os helpers legados de `src/lib/utils.ts` foram removidos.
 `docs/UI_MODAL_GUIDELINES.md`. Em modais com abas, o rodapé é único e submete o
 formulário da aba ativa via `form="<id>"` (padrão aplicado no `EmployeeEditor`).
 Nenhuma regra de negócio, RBAC ou RLS foi alterada.
+
+## ADR-029 — Reabertura de tickets é atómica e com destino explícito
+Reabrir um ticket encerrado passa por uma única RPC `SECURITY DEFINER`
+(`reopen_support_ticket_with_message`), que valida permissões e estado, grava a
+mensagem, define destino (`employee` | `technical`), atualiza nível/owner,
+registra o evento append-only e notifica — sem duplicação no frontend.
+O Gestor nunca escolhe status manualmente; escolhe apenas o destino.
