@@ -630,7 +630,16 @@ function SupportDetailPage() {
             </ul>
           )}
 
-          {!["fechado"].includes(t.status) && (
+          {isClosed ? (
+            <div className="space-y-2 rounded-xl border border-dashed border-border bg-card p-3">
+              <p className="text-sm text-muted-foreground">
+                Este ticket está encerrado. Para responder, reabra o ticket e escolha o destino.
+              </p>
+              <Button variant="outline" onClick={() => setReopenOpen(true)}>
+                <RotateCcw className="mr-1 h-4 w-4" /> Responder / reabrir
+              </Button>
+            </div>
+          ) : (
             <div className="space-y-2 rounded-xl border border-border bg-card p-3">
               {isSuperAdmin && (
                 <div className="flex flex-wrap items-center gap-1.5">
