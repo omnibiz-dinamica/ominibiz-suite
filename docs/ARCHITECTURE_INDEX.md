@@ -158,3 +158,4 @@
 ---
 
 **Fim do documento — versão 1.0**
+- `docs/homologacoes/HOMOLOGACAO_REABERTURA_TICKETS.md` — homologação da reabertura/encaminhamento de tickets (ADR-029).
