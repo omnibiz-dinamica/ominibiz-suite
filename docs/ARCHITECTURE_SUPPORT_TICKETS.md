@@ -250,3 +250,10 @@ Notas internas (`is_internal = true`) nunca notificam.
 Homologação executada em 2026-07-26 (dry-run, cenários negativos, duplicidade,
 multiempresa, retry/backoff, envio real HTTP 200) — ver
 `docs/HOMOLOGACAO_SUPORTE_V1.md`.
+
+## Reabertura com encaminhamento (ADR-029)
+- Estados encerrados: `resolvido`, `fechado`, `rejeitado`, `resolved_by_manager` (`isClosedTicketStatus`).
+- Ticket encerrado não exibe caixa de resposta; exibe "Responder / reabrir" → modal canónico.
+- RPC: `public.reopen_support_ticket_with_message(_ticket_id, _message, _destination_type, _assigned_user_id, _technical_context)`.
+- Se o solicitante é Funcionário, o destino é sempre a devolução ao próprio solicitante.
+- Coluna `destination_type` (`employee` | `technical` | `manager`) indica quem deve agir.

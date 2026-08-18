@@ -1954,6 +1954,7 @@ export type Database = {
           created_by_role: string | null
           current_owner_role: string
           description: string
+          destination_type: string | null
           escalated_at: string | null
           escalated_by: string | null
           escalated_to_super_admin: boolean
@@ -1987,6 +1988,7 @@ export type Database = {
           created_by_role?: string | null
           current_owner_role?: string
           description: string
+          destination_type?: string | null
           escalated_at?: string | null
           escalated_by?: string | null
           escalated_to_super_admin?: boolean
@@ -2020,6 +2022,7 @@ export type Database = {
           created_by_role?: string | null
           current_owner_role?: string
           description?: string
+          destination_type?: string | null
           escalated_at?: string | null
           escalated_by?: string | null
           escalated_to_super_admin?: boolean
@@ -3294,6 +3297,7 @@ export type Database = {
           created_by_role: string | null
           current_owner_role: string
           description: string
+          destination_type: string | null
           escalated_at: string | null
           escalated_by: string | null
           escalated_to_super_admin: boolean
@@ -4315,6 +4319,16 @@ export type Database = {
       reopen_support_ticket: {
         Args: { _reason: string; _ticket_id: string }
         Returns: undefined
+      }
+      reopen_support_ticket_with_message: {
+        Args: {
+          _assigned_user_id?: string
+          _destination_type: string
+          _message: string
+          _technical_context?: Json
+          _ticket_id: string
+        }
+        Returns: string
       }
       resend_invite: {
         Args: { _invite_id: string }

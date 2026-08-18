@@ -614,3 +614,9 @@ queries, mutations ou fluxos funcionais.**
   overflow horizontal e full-screen no mobile.
 - Documentação: `docs/ARCHITECTURE_MODAL_DESIGN_SYSTEM.md` e
   `docs/UI_MODAL_GUIDELINES.md`.
+
+## Central de Suporte — Reabertura com encaminhamento (P1)
+- Nova RPC atómica `public.reopen_support_ticket_with_message` (mensagem + reabertura + encaminhamento + evento append-only + notificação).
+- Nova coluna `support_tickets.destination_type` (nullable) e normalização dos tickets `aberto` sem destino.
+- Modal canónico `src/components/support/ReopenTicketDialog.tsx` substitui o `window.prompt` (fecha KI-025 no fluxo de reabertura).
+- Ticket encerrado deixa de mostrar a caixa de resposta normal; passa a exibir "Responder / reabrir".

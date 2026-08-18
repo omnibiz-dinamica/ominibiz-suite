@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { RoleGuard } from "@/components/RoleGuard";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { ReopenTicketDialog } from "@/components/support/ReopenTicketDialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
@@ -33,14 +34,14 @@ import {
   TICKET_STATUS_LIST,
   TICKET_STATUS_TONE,
   TICKET_TYPE_LABEL,
-  ticketReopenableByManager,
+  isClosedTicketStatus,
   type SupportTicketPriority,
   type SupportTicketStatus,
 } from "@/lib/support/constants";
 import {
   postMessage,
   closeTicket,
-  reopenTicket,
+  reopenTicketWithMessage,
   signedAttachmentUrl,
   updatePriority,
   updateStatus,
@@ -180,6 +181,7 @@ function SupportDetailPage() {
   const qc = useQueryClient();
   const [reply, setReply] = useState("");
   const [isInternal, setIsInternal] = useState(false);
+  const [reopenOpen, setReopenOpen] = useState(false);
 
   const ticketQ = useQuery<TicketDetail | null>({
     queryKey: ["support-ticket", id],
@@ -241,6 +243,50 @@ function SupportDetailPage() {
     },
   });
 
+  const ticket = ticketQ.data ?? null;
+
+  /** Papéis da empresa (para saber se o solicitante é Funcionário e listar funcionários ativos). */
+  const rolesQ = useQuery<{ user_id: string; role: string }[]>({
+    queryKey: ["support-company-roles", ticket?.company_id ?? null],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("user_id, role")
+        .eq("company_id", ticket!.company_id);
+      if (error) throw error;
+      return (data ?? []) as { user_id: string; role: string }[];
+    },
+    enabled: !!ticket?.company_id,
+  });
+
+  const employeeIds = useMemo(
+    () => (rolesQ.data ?? []).filter((r) => r.role === "employee").map((r) => r.user_id),
+    [rolesQ.data],
+  );
+
+  const employeesQ = useQuery<{ id: string; full_name: string | null; job_title: string | null }[]>({
+    queryKey: ["support-company-employees", ticket?.company_id ?? null, employeeIds.length],
+    queryFn: async () => {
+      if (employeeIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, job_title, is_active")
+        .in("id", employeeIds);
+      if (error) throw error;
+      return ((data ?? []) as any[])
+        .filter((p) => p.is_active !== false)
+        .map((p) => ({ id: p.id, full_name: p.full_name, job_title: p.job_title }));
+    },
+    enabled: employeeIds.length > 0,
+  });
+
+  const requesterIsEmployee = useMemo(() => {
+    if (!ticket || !rolesQ.data) return false;
+    const roles = rolesQ.data.filter((r) => r.user_id === ticket.requester_user_id).map((r) => r.role);
+    if (roles.length === 0) return false;
+    return roles.every((r) => r === "employee");
+  }, [ticket, rolesQ.data]);
+
   useRealtimeInvalidate({
     channel: `support-detail-${id}`,
     table: "support_tickets",
@@ -291,19 +337,6 @@ function SupportDetailPage() {
     onSuccess: () => {
       invalidateSupportTicket(qc, id);
       toast.success("Prioridade atualizada.");
-    },
-    onError: (e) => toast.error("Erro: " + (e as Error).message),
-  });
-
-  const reopenMut = useMutation({
-    mutationFn: async () => {
-      const reason = window.prompt("Motivo para reabrir o ticket?") ?? "";
-      if (!reason.trim()) throw new Error("Motivo obrigatório");
-      await reopenTicket(id, reason);
-    },
-    onSuccess: () => {
-      invalidateSupportTicket(qc, id);
-      toast.success("Ticket reaberto.");
     },
     onError: (e) => toast.error("Erro: " + (e as Error).message),
   });
@@ -368,7 +401,7 @@ function SupportDetailPage() {
   if (ticketQ.isLoading) {
     return <div className="text-sm text-muted-foreground">Carregando…</div>;
   }
-  const t = ticketQ.data;
+  const t = ticket;
   if (!t) {
     return (
       <div className="rounded-2xl border border-border bg-card p-8 text-center">
@@ -399,10 +432,7 @@ function SupportDetailPage() {
     ["Viewport", String(tech.viewport ?? "—")],
     ["Timezone", String(tech.timezone ?? "—")],
   ];
-  const canReopen =
-    isSuperAdmin ||
-    (["fechado", "resolvido", "rejeitado"].includes(t.status) &&
-      ticketReopenableByManager(t.closed_at ?? t.resolved_at));
+  const isClosed = isClosedTicketStatus(t.status);
 
   // Timeline unificada: eventos + mensagens (mensagens internas apenas para SA).
   const timeline = [
@@ -598,7 +628,16 @@ function SupportDetailPage() {
             </ul>
           )}
 
-          {!["fechado"].includes(t.status) && (
+          {isClosed ? (
+            <div className="space-y-2 rounded-xl border border-dashed border-border bg-card p-3">
+              <p className="text-sm text-muted-foreground">
+                Este ticket está encerrado. Para responder, reabra o ticket e escolha o destino.
+              </p>
+              <Button variant="outline" onClick={() => setReopenOpen(true)}>
+                <RotateCcw className="mr-1 h-4 w-4" /> Responder / reabrir
+              </Button>
+            </div>
+          ) : (
             <div className="space-y-2 rounded-xl border border-border bg-card p-3">
               {isSuperAdmin && (
                 <div className="flex flex-wrap items-center gap-1.5">
@@ -771,8 +810,8 @@ function SupportDetailPage() {
           )}
         </div>
 
-        {canReopen && ["fechado", "resolvido", "rejeitado"].includes(t.status) && (
-          <Button variant="outline" className="w-full" onClick={() => reopenMut.mutate()}>
+        {isClosed && (
+          <Button variant="outline" className="w-full" onClick={() => setReopenOpen(true)}>
             <RotateCcw className="mr-1 h-4 w-4" /> Reabrir ticket
           </Button>
         )}
@@ -783,6 +822,16 @@ function SupportDetailPage() {
           </Button>
         )}
       </aside>
+
+      <ReopenTicketDialog
+        open={reopenOpen}
+        onOpenChange={setReopenOpen}
+        ticket={{ id: t.id, ticket_number: t.ticket_number, title: t.title, status: t.status }}
+        requesterIsEmployee={requesterIsEmployee}
+        requesterName={requesterQ.data?.requester_full_name ?? requesterQ.data?.requester_email ?? null}
+        employees={employeesQ.data ?? []}
+        onDone={() => invalidateSupportTicket(qc, id)}
+      />
     </div>
   );
 }

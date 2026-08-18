@@ -116,6 +116,28 @@ export async function reopenTicket(ticketId: string, reason: string): Promise<vo
   if (error) throw error;
 }
 
+/**
+ * Reabertura atómica com mensagem + encaminhamento (ADR-029).
+ * Toda a lógica (validação, status, evento append-only e notificação)
+ * vive na RPC public.reopen_support_ticket_with_message.
+ */
+export async function reopenTicketWithMessage(input: {
+  ticketId: string;
+  message: string;
+  destinationType: "employee" | "technical";
+  assignedUserId?: string | null;
+  technicalContext?: Record<string, unknown> | null;
+}): Promise<void> {
+  const { error } = await (supabase as any).rpc("reopen_support_ticket_with_message", {
+    _ticket_id: input.ticketId,
+    _message: input.message.trim(),
+    _destination_type: input.destinationType,
+    _assigned_user_id: input.assignedUserId ?? null,
+    _technical_context: input.technicalContext ?? null,
+  });
+  if (error) throw error;
+}
+
 export async function closeTicket(ticketId: string, reason: string | null = null): Promise<void> {
   const { error } = await (supabase as any).rpc("close_support_ticket", {
     _ticket_id: ticketId,
