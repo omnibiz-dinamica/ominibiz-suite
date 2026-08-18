@@ -812,8 +812,8 @@ function SupportDetailPage() {
           )}
         </div>
 
-        {canReopen && ["fechado", "resolvido", "rejeitado"].includes(t.status) && (
-          <Button variant="outline" className="w-full" onClick={() => reopenMut.mutate()}>
+        {isClosed && (
+          <Button variant="outline" className="w-full" onClick={() => setReopenOpen(true)}>
             <RotateCcw className="mr-1 h-4 w-4" /> Reabrir ticket
           </Button>
         )}
@@ -824,6 +824,16 @@ function SupportDetailPage() {
           </Button>
         )}
       </aside>
+
+      <ReopenTicketDialog
+        open={reopenOpen}
+        onOpenChange={setReopenOpen}
+        ticket={{ id: t.id, ticket_number: t.ticket_number, title: t.title, status: t.status }}
+        requesterIsEmployee={requesterIsEmployee}
+        requesterName={requesterQ.data?.full_name ?? null}
+        employees={employeesQ.data ?? []}
+        onDone={() => invalidateSupportTicket(qc, id)}
+      />
     </div>
   );
 }
