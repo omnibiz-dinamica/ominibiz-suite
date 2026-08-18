@@ -219,6 +219,18 @@ export const SUPPORT_BUCKET = "support-ticket-attachments";
 
 export const REOPEN_WINDOW_DAYS = 7;
 
+/** Estados considerados encerrados (ADR-029). */
+export const CLOSED_TICKET_STATUSES: SupportTicketStatus[] = [
+  "resolvido",
+  "fechado",
+  "rejeitado",
+  "resolved_by_manager",
+];
+
+export function isClosedTicketStatus(status: string): boolean {
+  return (CLOSED_TICKET_STATUSES as string[]).includes(status);
+}
+
 export function ticketReopenableByManager(closedAtIso: string | null): boolean {
   if (!closedAtIso) return false;
   const closed = new Date(closedAtIso).getTime();
