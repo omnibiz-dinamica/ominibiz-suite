@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, ModalHeader, ModalBody, ModalFooter, ModalSection } from "@/components/ui/dialog";
 import { EmployeePicker } from "@/components/common/EmployeePicker";
+import { ReopenTicketDialog } from "@/components/support/ReopenTicketDialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
@@ -830,7 +831,7 @@ function SupportDetailPage() {
         onOpenChange={setReopenOpen}
         ticket={{ id: t.id, ticket_number: t.ticket_number, title: t.title, status: t.status }}
         requesterIsEmployee={requesterIsEmployee}
-        requesterName={requesterQ.data?.full_name ?? null}
+        requesterName={requesterQ.data?.requester_full_name ?? requesterQ.data?.requester_email ?? null}
         employees={employeesQ.data ?? []}
         onDone={() => invalidateSupportTicket(qc, id)}
       />
