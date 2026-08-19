@@ -382,7 +382,15 @@ export function AppLayout({ children }: { children?: ReactNode }) {
         <div className="relative min-h-0 flex-1">
           <div ref={scrollRef} className="h-full overflow-y-auto overscroll-contain px-2 py-3">
             <nav className="space-y-4">
-              {groups.map((group) => {
+              {!navReady && (
+                <div className="space-y-2" aria-busy="true" aria-label="Carregando navegação">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} className="h-9 animate-pulse rounded-lg bg-sidebar-accent/60" />
+                  ))}
+                </div>
+              )}
+              {navReady &&
+                groups.map((group) => {
                 const isCollapsed = collapsed[group.id] ?? false;
                 const groupHasActive = group.items.some(
                   (it) => path === it.to || (it.to !== "/app" && path.startsWith(it.to)),
@@ -444,7 +452,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
                 );
               })}
 
-              {isSuperAdmin && !currentCompanyId && (
+              {navReady && isSuperAdmin && !currentCompanyId && (
                 <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/60 p-3 text-xs text-sidebar-foreground">
                   Abra <strong>Empresas</strong>, crie ou selecione uma para operar usuários, clientes e tarefas.
                 </div>
