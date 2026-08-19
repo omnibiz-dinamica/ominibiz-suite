@@ -477,9 +477,17 @@ export function AppLayout({ children }: { children?: ReactNode }) {
           />
         </div>
 
-        {/* Fixed footer */}
-        <div className="shrink-0 space-y-1 border-t border-sidebar-border p-3">
+        {/* Fixed footer — sempre visível, respeitando a safe area do browser mobile */}
+        <div
+          className="shrink-0 space-y-1 border-t border-sidebar-border bg-sidebar p-3"
+          style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
+        >
           <div className="mb-1 px-2 text-xs text-muted-foreground truncate">{user?.email}</div>
+          <Button variant="ghost" size="sm" className="w-full justify-start md:hidden" asChild>
+            <Link to="/app/perfil" onClick={() => setOpen(false)}>
+              <UserCircle className="mr-2 h-4 w-4" /> Perfil
+            </Link>
+          </Button>
           {superAdminOperating && (
             <Button
               variant="outline"
