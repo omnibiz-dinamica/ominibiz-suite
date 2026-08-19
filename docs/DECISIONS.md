@@ -468,3 +468,16 @@ Reabrir um ticket encerrado passa por uma única RPC `SECURITY DEFINER`
 mensagem, define destino (`employee` | `technical`), atualiza nível/owner,
 registra o evento append-only e notifica — sem duplicação no frontend.
 O Gestor nunca escolhe status manualmente; escolhe apenas o destino.
+
+## ADR-030 — Navegação tem fonte canónica única e o ramo é aditivo
+O menu é resolvido exclusivamente por `resolveAvailableNavigation(context)`
+(`src/lib/navigation.ts`), a partir de `effectiveRole`, `currentCompanyId`,
+`business_vertical` e `enabled_modules`. Desktop e Drawer Mobile consomem a
+mesma lista — é proibido criar listas paralelas.
+
+Regras: (1) o ramo (business vertical) é **aditivo** — acrescenta grupos e
+define ordem, nunca remove módulos gerais/core; (2) itens sem `module` são core
+e não são filtráveis; (3) contexto em carregamento devolve `ready: false` e o
+consumidor mostra skeleton — loading nunca equivale a "sem permissão"; (4)
+menu autorizado ⇒ rota autorizada, com o guard de módulo a correr somente após
+o contexto estar resolvido. RBAC e RLS permanecem inalterados.

@@ -187,3 +187,13 @@ Toda notificação in-app **deve** passar por um dos helpers padronizados abaixo
 ---
 
 **Fim do documento — versão 1.0**
+---
+
+## Navegação (ADR-030)
+
+O menu não é uma decisão local de componente: é resolvido por
+`resolveAvailableNavigation(context)` em `src/lib/navigation.ts`, consumido por
+Desktop e Drawer Mobile. O ramo de atividade é **aditivo** (GERAL + RAMO) e
+nunca remove módulos gerais/core. Contexto em carregamento nunca é interpretado
+como ausência de permissão. Menu autorizado implica rota autorizada; os guards
+(`RoleGuard`, guard de módulo) permanecem obrigatórios no lado da rota.

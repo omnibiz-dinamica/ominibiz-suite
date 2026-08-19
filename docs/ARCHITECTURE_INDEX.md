@@ -159,3 +159,7 @@
 
 **Fim do documento — versão 1.0**
 - `docs/homologacoes/HOMOLOGACAO_REABERTURA_TICKETS.md` — homologação da reabertura/encaminhamento de tickets (ADR-029).
+
+## Navegação
+
+- `src/lib/navigation.ts` — fonte canónica da navegação (`resolveAvailableNavigation`), ADR-030. Ramo aditivo, itens core não filtráveis, skeleton enquanto o contexto carrega. Ver `docs/ARCHITECTURE_RBAC.md`.

@@ -2,38 +2,16 @@ import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-route
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  LayoutDashboard,
-  ClipboardList,
   Shield,
-  Clock,
-  Bell,
-  Users,
-  Building2,
-  Briefcase,
-  Sparkles,
-  FileText,
   LogOut,
   Moon,
   Sun,
   Menu,
   X,
-  UserCircle,
-  ListChecks,
-  Plane,
-  Car,
-  FileSignature,
-  Receipt,
   ChevronDown,
   Repeat,
-  CreditCard,
   LifeBuoy,
-  UtensilsCrossed,
-  ShoppingBag,
-  ChefHat,
-  Truck,
-  BookOpen,
-  Bike,
-  MapPin,
+  UserCircle,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
@@ -48,9 +26,8 @@ import {
   moduleForPath,
   normalizeModules,
   normalizeBusinessVertical,
-  type ModuleKey,
-  type BusinessVertical,
 } from "@/lib/locale";
+import { resolveAvailableNavigation, type NavGroup } from "@/lib/navigation";
 
 function detectBrowser(): { name: string; version: string } {
   if (typeof navigator === "undefined") return { name: "ssr", version: "" };
@@ -112,263 +89,12 @@ function DeploymentDiagnostics() {
   );
 }
 
-type Item = {
-  to: string;
-  label: string;
-  icon: typeof LayoutDashboard;
-  module?: ModuleKey;
-  soon?: boolean;
-  badge?: number;
-};
-
-type Group = { id: string; label: string; items: Item[] };
-
-const GROUPS_STORAGE_KEY = "omnibiz:sidebar:groups:v1";
+const GROUPS_STORAGE_KEY = "omnibiz:sidebar:groups:v2";
 const FORCE_MENU_CLOSED_KEY = "omnibiz:force-mobile-menu-closed";
 const MOBILE_QUERY = "(max-width: 767px)";
 
-function buildGroups(args: {
-  role: "super_admin" | "manager" | "employee";
-  superAdminOperating: boolean;
-  employeeHasVehicle: boolean;
-  vertical: BusinessVertical;
-}): Group[] {
-  const { role, superAdminOperating, employeeHasVehicle, vertical } = args;
-  const isRestaurant = vertical === "restaurant_delivery";
-
-  if (role === "super_admin" && !superAdminOperating) {
-    return [
-      {
-        id: "operacao",
-        label: "Operação",
-        items: [
-          { to: "/app", label: "Dashboard Global", icon: LayoutDashboard },
-          { to: "/app/notificacoes", label: "Notificações", icon: Bell },
-        ],
-      },
-      {
-        id: "administracao",
-        label: "Administração",
-        items: [{ to: "/app/admin", label: "Empresas", icon: Building2 }],
-      },
-      {
-        id: "comercial",
-        label: "Comercial",
-        items: [{ to: "/app/comercial", label: "Comercial", icon: FileSignature }],
-      },
-      {
-        id: "suporte-global",
-        label: "Suporte Global",
-        items: [{ to: "/app/admin/suporte", label: "Todos os Tickets", icon: LifeBuoy }],
-      },
-      {
-        id: "conta",
-        label: "Conta",
-        items: [{ to: "/app/perfil", label: "Perfil", icon: UserCircle }],
-      },
-    ];
-  }
-
-  if (role === "employee") {
-    const operacao: Item[] = [
-      { to: "/app", label: "Minha Operação", icon: LayoutDashboard },
-      { to: "/app/ponto", label: "Folha de Ponto", icon: Clock, module: "time_clock" },
-      { to: "/app/tarefas", label: "Minhas Tarefas", icon: ListChecks, module: "tasks" },
-      { to: "/app/notificacoes", label: "Notificações", icon: Bell },
-    ];
-    const rh: Item[] = [
-      { to: "/app/meus-recibos", label: "Meus Recibos", icon: Receipt, module: "hr" },
-      { to: "/app/ferias", label: "Férias", icon: Plane, module: "hr" },
-      { to: "/app/despesas", label: "Despesas", icon: CreditCard, module: "finance" },
-    ];
-    const groups: Group[] = [
-      { id: "operacao", label: "Operação", items: operacao },
-      { id: "rh", label: "RH", items: rh },
-    ];
-    if (employeeHasVehicle) {
-      groups.push({
-        id: "frota",
-        label: "Frota",
-        items: [{ to: "/app/frota", label: "Frota", icon: Car, module: "fleet" }],
-      });
-    }
-    groups.push({
-      id: "suporte",
-      label: "Suporte",
-      items: [{ to: "/app/suporte", label: "Meu Suporte", icon: LifeBuoy, module: "support" }],
-    });
-    groups.push({
-      id: "conta",
-      label: "Conta",
-      items: [{ to: "/app/perfil", label: "Perfil", icon: UserCircle }],
-    });
-    return groups;
-  }
-
-  // manager OR super admin operating inside a company
-  if (isRestaurant) {
-    // ADR-027 — menu do ramo Restaurante & Delivery (sem clientes operacionais de limpeza).
-    const restaurantGroups: Group[] = [
-      {
-        id: "operacao",
-        label: "Operação",
-        items: [
-          { to: "/app", label: "Dashboard", icon: LayoutDashboard },
-          { to: "/app/restaurante/pedidos", label: "Pedidos", icon: ShoppingBag, module: "restaurant_orders" },
-          { to: "/app/restaurante/mesas", label: "Mesas", icon: UtensilsCrossed, module: "restaurant_tables" },
-          { to: "/app/restaurante/cozinha", label: "Cozinha", icon: ChefHat, module: "restaurant_kitchen" },
-          { to: "/app/restaurante/delivery", label: "Delivery", icon: Truck, module: "restaurant_delivery" },
-          { to: "/app/notificacoes", label: "Notificações", icon: Bell },
-        ],
-      },
-      {
-        id: "restaurante",
-        label: "Restaurante",
-        items: [
-          { to: "/app/restaurante/menu", label: "Menu", icon: BookOpen, module: "restaurant_menu" },
-          { to: "/app/restaurante/entregadores", label: "Entregadores", icon: Bike, module: "restaurant_couriers" },
-          {
-            to: "/app/restaurante/zonas",
-            label: "Zonas de Entrega",
-            icon: MapPin,
-            module: "restaurant_delivery_zones",
-          },
-        ],
-      },
-      {
-        id: "ponto",
-        label: "Ponto",
-        items: [
-          { to: "/app/ponto", label: "Folha de Ponto", icon: Clock, module: "time_clock" },
-          { to: "/app/ponto/gestao", label: "Ponto · Gestão", icon: ListChecks, module: "time_clock" },
-        ],
-      },
-      {
-        id: "rh",
-        label: "RH",
-        items: [
-          { to: "/app/equipe", label: "Usuários", icon: Users, module: "hr" },
-          { to: "/app/ferias", label: "Férias", icon: Plane, module: "hr" },
-          { to: "/app/despesas", label: "Despesas", icon: CreditCard, module: "finance" },
-        ],
-      },
-      {
-        id: "administracao",
-        label: "Administração",
-        items: [{ to: "/app/empresa", label: "Empresa", icon: Building2 }],
-      },
-      {
-        id: "suporte",
-        label: "Suporte",
-        items: [{ to: "/app/suporte", label: "Central de Suporte", icon: LifeBuoy, module: "support" }],
-      },
-      {
-        id: "conta",
-        label: "Conta",
-        items: [{ to: "/app/perfil", label: "Perfil", icon: UserCircle }],
-      },
-    ];
-
-    if (superAdminOperating) {
-      restaurantGroups.splice(restaurantGroups.length - 1, 0, {
-        id: "superadmin",
-        label: "Super Admin",
-        items: [
-          { to: "/app/admin", label: "Empresas (Super Admin)", icon: Shield },
-          { to: "/app/admin/suporte", label: "Todos os Tickets", icon: LifeBuoy },
-        ],
-      });
-    }
-
-    return restaurantGroups;
-  }
-
-  const groups: Group[] = [
-    {
-      id: "operacao",
-      label: "Operação",
-      items: [
-        { to: "/app", label: "Dashboard", icon: LayoutDashboard },
-        { to: "/app/tarefas", label: "Tarefas", icon: ClipboardList, module: "tasks" },
-        { to: "/app/ponto", label: "Folha de Ponto", icon: Clock, module: "time_clock" },
-        { to: "/app/ponto/gestao", label: "Ponto · Gestão", icon: ListChecks, module: "time_clock" },
-        { to: "/app/notificacoes", label: "Notificações", icon: Bell },
-      ],
-    },
-    {
-      id: "rh",
-      label: "RH",
-      items: [
-        { to: "/app/rh", label: "Dashboard RH", icon: LayoutDashboard, module: "hr" },
-        { to: "/app/equipe", label: "Usuários", icon: Users, module: "hr" },
-        { to: "/app/ferias", label: "Férias", icon: Plane, module: "hr" },
-        { to: "/app/despesas", label: "Despesas", icon: CreditCard, module: "finance" },
-        { to: "/app/rh/recibos", label: "Recibos", icon: Receipt, module: "hr" },
-      ],
-    },
-    {
-      id: "comercial",
-      label: "Comercial",
-      items: [
-        { to: "/app/clientes", label: "Clientes", icon: Briefcase, module: "crm" },
-        { to: "/app/comercial", label: "Contratos", icon: FileSignature, module: "crm" },
-      ],
-    },
-    {
-      id: "administracao",
-      label: "Administração",
-      items: [{ to: "/app/empresa", label: "Empresa", icon: Building2 }],
-    },
-    {
-      id: "frota",
-      label: "Frota",
-      items: [{ to: "/app/frota", label: "Frota", icon: Car, module: "fleet" }],
-    },
-    {
-      id: "inteligencia",
-      label: "Inteligência",
-      items: [{ to: "/app/assistente", label: "Assistente IA", icon: Sparkles, module: "whatsapp_ai", soon: true }],
-    },
-    {
-      id: "outros",
-      label: "Outros",
-      items: [
-        { to: "/app/notas", label: "Notas", icon: FileText, module: "notes", soon: true },
-        { to: "/app/perfil", label: "Perfil", icon: UserCircle },
-      ],
-    },
-  ];
-
-  // Central de Suporte — Gestor/Owner. Super Admin operando dentro de empresa
-  // também vê (herança). Super Admin sem empresa acessa Central Global.
-  groups.splice(groups.length - 1, 0, {
-    id: "suporte",
-    label: "Suporte",
-    items: [{ to: "/app/suporte", label: "Central de Suporte", icon: LifeBuoy, module: "support" }],
-  });
-
-  if (superAdminOperating) {
-    // já cai no bloco acima; adicionar entrada global
-    groups.push({
-      id: "suporte-global",
-      label: "Suporte Global",
-      items: [{ to: "/app/admin/suporte", label: "Todos os Tickets", icon: LifeBuoy }],
-    });
-  }
-
-  if (superAdminOperating) {
-    groups.splice(4, 0, {
-      id: "superadmin",
-      label: "Super Admin",
-      items: [{ to: "/app/admin", label: "Empresas (Super Admin)", icon: Shield }],
-    });
-  }
-
-  return groups;
-}
-
 export function AppLayout({ children }: { children?: ReactNode }) {
-  const { user, isSuperAdmin, currentCompanyId, signOut, effectiveRole, switchCompany } = useAuth();
+  const { user, isSuperAdmin, currentCompanyId, signOut, effectiveRole, switchCompany, initialized } = useAuth();
   const { theme, toggle } = useTheme();
   const nav = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
@@ -417,7 +143,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
     };
   }, [breakpointReady, isMobile, open]);
 
-  const { data: activeCompany } = useQuery({
+  const { data: activeCompany, isFetched: companyFetched } = useQuery({
     queryKey: ["active-company-name", currentCompanyId],
     enabled: !!currentCompanyId,
     queryFn: async () => {
@@ -489,31 +215,49 @@ export function AppLayout({ children }: { children?: ReactNode }) {
     }
   }, [unreadNotifications]);
 
-  const groups = useMemo(() => {
-    if (!effectiveRole) return [] as Group[];
-    const role = effectiveRole === "owner" ? "manager" : effectiveRole;
-    return buildGroups({
-      role: role as "super_admin" | "manager" | "employee",
-      superAdminOperating,
-      employeeHasVehicle: hasVehicle,
+  // Contexto necessário para resolver a navegação. Loading NUNCA é tratado
+  // como "sem permissão" (ADR-030).
+  const contextReady =
+    initialized && !!effectiveRole && (!currentCompanyId || companyFetched);
+
+  const { ready: navReady, groups } = useMemo(() => {
+    const resolved = resolveAvailableNavigation({
+      effectiveRole,
+      isSuperAdmin,
+      companyId: currentCompanyId,
       vertical: businessVertical,
-    })
-      .map((group) => ({
+      enabledModules,
+      employeeHasVehicle: hasVehicle,
+      contextReady,
+    });
+    return {
+      ready: resolved.ready,
+      groups: resolved.groups.map((group) => ({
         ...group,
-        items: group.items
-          .filter((item) => !item.module || isModuleEnabled(enabledModules, item.module))
-          .map((item) => (item.to === "/app/notificacoes" ? { ...item, badge: unreadNotifications } : item)),
-      }))
-      .filter((group) => group.items.length > 0);
-  }, [effectiveRole, superAdminOperating, hasVehicle, unreadNotifications, enabledModules, businessVertical]);
+        items: group.items.map((item) =>
+          item.to === "/app/notificacoes" ? { ...item, badge: unreadNotifications } : item,
+        ),
+      })) as NavGroup[],
+    };
+  }, [
+    effectiveRole,
+    isSuperAdmin,
+    currentCompanyId,
+    businessVertical,
+    enabledModules,
+    hasVehicle,
+    contextReady,
+    unreadNotifications,
+  ]);
 
   useEffect(() => {
+    if (!contextReady) return;
     if (!currentCompanyId || path === "/app" || path.startsWith("/app/admin")) return;
     const module = moduleForPath(path);
     if (!module || isModuleEnabled(enabledModules, module)) return;
     toast.error("Módulo desativado para esta empresa.");
     nav({ to: "/app" });
-  }, [currentCompanyId, enabledModules, nav, path]);
+  }, [contextReady, currentCompanyId, enabledModules, nav, path]);
 
   // Collapsible group state, persisted in localStorage.
   // Initialise empty to avoid SSR/client hydration mismatch, then hydrate from storage.
@@ -523,7 +267,14 @@ export function AppLayout({ children }: { children?: ReactNode }) {
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(GROUPS_STORAGE_KEY);
-      if (raw) setCollapsed(JSON.parse(raw) as Record<string, boolean>);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Record<string, boolean>;
+        // Só persistimos estado booleano válido; qualquer lixo é descartado.
+        const clean: Record<string, boolean> = {};
+        for (const [k, v] of Object.entries(parsed ?? {})) if (v === true) clean[k] = true;
+        setCollapsed(clean);
+      }
+      window.localStorage.removeItem("omnibiz:sidebar:groups:v1");
     } catch {
       /* ignore */
     } finally {
@@ -587,7 +338,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex h-screen w-64 flex-col border-r border-sidebar-border bg-sidebar transition-transform md:sticky md:top-0 md:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 flex h-[100dvh] w-64 flex-col border-r border-sidebar-border bg-sidebar transition-transform md:sticky md:top-0 md:h-screen md:translate-x-0",
           "max-w-[85vw] md:max-w-none",
           open ? "translate-x-0" : "-translate-x-full",
         )}
@@ -631,7 +382,15 @@ export function AppLayout({ children }: { children?: ReactNode }) {
         <div className="relative min-h-0 flex-1">
           <div ref={scrollRef} className="h-full overflow-y-auto overscroll-contain px-2 py-3">
             <nav className="space-y-4">
-              {groups.map((group) => {
+              {!navReady && (
+                <div className="space-y-2" aria-busy="true" aria-label="Carregando navegação">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} className="h-9 animate-pulse rounded-lg bg-sidebar-accent/60" />
+                  ))}
+                </div>
+              )}
+              {navReady &&
+                groups.map((group) => {
                 const isCollapsed = collapsed[group.id] ?? false;
                 const groupHasActive = group.items.some(
                   (it) => path === it.to || (it.to !== "/app" && path.startsWith(it.to)),
@@ -693,7 +452,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
                 );
               })}
 
-              {isSuperAdmin && !currentCompanyId && (
+              {navReady && isSuperAdmin && !currentCompanyId && (
                 <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/60 p-3 text-xs text-sidebar-foreground">
                   Abra <strong>Empresas</strong>, crie ou selecione uma para operar usuários, clientes e tarefas.
                 </div>
@@ -718,9 +477,17 @@ export function AppLayout({ children }: { children?: ReactNode }) {
           />
         </div>
 
-        {/* Fixed footer */}
-        <div className="shrink-0 space-y-1 border-t border-sidebar-border p-3">
+        {/* Fixed footer — sempre visível, respeitando a safe area do browser mobile */}
+        <div
+          className="shrink-0 space-y-1 border-t border-sidebar-border bg-sidebar p-3"
+          style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
+        >
           <div className="mb-1 px-2 text-xs text-muted-foreground truncate">{user?.email}</div>
+          <Button variant="ghost" size="sm" className="w-full justify-start md:hidden" asChild>
+            <Link to="/app/perfil" onClick={() => setOpen(false)}>
+              <UserCircle className="mr-2 h-4 w-4" /> Perfil
+            </Link>
+          </Button>
           {superAdminOperating && (
             <Button
               variant="outline"
