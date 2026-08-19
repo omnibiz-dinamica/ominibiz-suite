@@ -7,6 +7,33 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### 🧭 Estabilidade da navegação — fonte canónica única (2026-08-19)
+
+#### Corrigido
+- **Menus autorizados desapareciam em algumas sessões** (Clientes, Tarefas e
+  outros). Causa raiz: o menu do ramo *Restaurante & Delivery* (ADR-027)
+  **substituía** a árvore geral em vez de acrescentar-se a ela. Empresas com
+  `business_vertical = restaurant_delivery` (ex.: Grupo V-clean, Dinâmica
+  Solução) perdiam Tarefas, Clientes, Contratos, RH · Recibos e Frota no menu,
+  embora `enabled_modules` os mantivesse ativos e as rotas continuassem a
+  funcionar por URL direta — inconsistência estrutural menu ↔ rota.
+- **Contexto em carregamento deixou de ser tratado como "sem permissão".**
+  Enquanto empresa/módulos não estão resolvidos (`contextReady === false`), a
+  navegação mostra skeleton; o guard de módulo por rota também só corre depois.
+- **Estado de grupos colapsados** saneado (`omnibiz:sidebar:groups:v2`): apenas
+  valores `true` são persistidos, chave v1 é removida, lixo de sessões antigas
+  já não esconde itens.
+- **Mobile web:** o rodapé da sidebar (Perfil · Trocar empresa · Sair) fica
+  sempre visível — altura `100dvh` em vez de `100vh` e
+  `env(safe-area-inset-bottom)`. Estrutura em três regiões: header fixo,
+  navegação rolável, rodapé fixo.
+
+#### Adicionado
+- `src/lib/navigation.ts` — `resolveAvailableNavigation(context)` e
+  `resolveAuthorizedPaths(context)`: fonte canónica única de navegação para
+  Desktop e Drawer Mobile (ADR-030). Nenhuma lista paralela.
+
+
 ### 📲 Notificações WhatsApp — worker, idempotência e auditoria (2026-07-26)
 
 #### Adicionado

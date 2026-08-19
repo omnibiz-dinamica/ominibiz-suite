@@ -333,3 +333,21 @@ Isso instrui o navegador a não traduzir a UI, preservando textos operacionais (
 **Correção planejada:** ...
 ```
 - KI-025 (parcial): `window.prompt` eliminado no fluxo de reabertura de tickets; outros fluxos de suporte ainda podem usá-lo.
+
+## KI-026 — Menus autorizados desapareciam por causa do ramo (Resolvido)
+- **Severidade:** 🔴 Crítica (navegação)
+- **Módulo:** Navegação · `AppLayout`
+- **Status:** Resolvido em 2026-08-19 (ADR-030)
+
+**Sintoma:** Clientes e Tarefas (entre outros) desapareciam do menu do Gestor em
+determinadas sessões, embora `/app/clientes` e `/app/tarefas` funcionassem por
+URL direta.
+
+**Causa raiz:** o menu do ramo Restaurante & Delivery substituía a árvore geral
+em vez de a complementar; qualquer empresa marcada como `restaurant_delivery`
+perdia os itens gerais. Agravante: durante o carregamento do contexto o menu era
+calculado com dados incompletos.
+
+**Correção:** fonte canónica `resolveAvailableNavigation`, ramo aditivo,
+skeleton enquanto o contexto carrega e saneamento do estado de grupos
+colapsados.
