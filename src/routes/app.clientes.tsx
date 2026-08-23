@@ -34,10 +34,12 @@ interface ClientRow {
   notes: string | null;
   status: "ativo" | "inativo";
   created_at: string;
-  billing_mode: "hourly" | "fixed" | "mixed" | "monthly";
+  billing_mode: "hourly" | "fixed" | "mixed" | "monthly" | "daily";
   hourly_rate: number | null;
   fixed_rate: number | null;
   monthly_rate: number | null;
+  daily_rate: number | null;
+
   timing_mode: "start_stop" | "manual";
   geo_lat: number | null;
   geo_lng: number | null;
