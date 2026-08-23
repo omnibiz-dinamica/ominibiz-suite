@@ -24,6 +24,12 @@ import {
   BookOpen,
   Bike,
   MapPin,
+  Package,
+  Warehouse,
+  Tags,
+  Factory,
+  ShoppingCart,
+
 } from "lucide-react";
 import { isModuleEnabled, type BusinessVertical, type ModuleKey } from "@/lib/locale";
 import type { AppRole } from "@/lib/auth";
