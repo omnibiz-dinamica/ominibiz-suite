@@ -1975,7 +1975,9 @@ function TaskForm({
                 })}
               </div>
               <p className="text-xs text-muted-foreground">
-                Selecione um ou mais funcionários — será criada uma tarefa para cada um.
+                Selecione um ou mais funcionários. Cada responsável recebe a sua própria tarefa, com
+                estado, ponto, recusa e conclusão independentes — a ação de um não altera a do outro.
+
               </p>
             </>
           )}
