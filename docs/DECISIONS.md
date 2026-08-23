@@ -481,3 +481,47 @@ e não são filtráveis; (3) contexto em carregamento devolve `ready: false` e o
 consumidor mostra skeleton — loading nunca equivale a "sem permissão"; (4)
 menu autorizado ⇒ rota autorizada, com o guard de módulo a correr somente após
 o contexto estar resolvido. RBAC e RLS permanecem inalterados.
+
+## ADR-031 — Modelo financeiro V2: pagamento do funcionário por Hora / Dia / Mês
+
+**Contexto.** O sistema tinha `pay_model ∈ {hourly, fixed, mixed}`, onde `fixed`
+significa **valor por tarefa/empreitada** (`clients.fixed_rate`,
+`profiles.manual_fixed_rate`, `company_hr_settings.default_fixed_rate`). Além
+disso, `resolve_billing_rule` era *all-or-nothing*: se o funcionário tinha
+`pay_rate_source='manual'` usava só o funcionário; senão, se havia cliente,
+usava só o cliente; o tipo de pagamento vinha de `clients.billing_mode`.
+Os valores padrão da empresa estavam duplicados em `companies.default_*`
+(usado pela UI) e `company_hr_settings.default_*` (usado pelo motor).
+
+**Decisão.**
+1. **Nada de reaproveitar `fixed` como diário.** Criado conceito explícito
+   `daily`: `clients.daily_rate`, `profiles.manual_daily_rate`,
+   `company_hr_settings.default_daily_rate`. `fixed` mantém o significado
+   histórico (por tarefa) — nenhuma alteração semântica silenciosa.
+2. `profiles.pay_model` aceita `hourly | daily | monthly | fixed | mixed`; o
+   cadastro do Funcionário oferece apenas **Hora / Dia / Mês**, mostrando só o
+   campo de valor relevante (opcional — vazio herda).
+3. **Hierarquia campo a campo:** FUNCIONÁRIO > CLIENTE > EMPRESA. O
+   **tipo de pagamento** é sempre o do funcionário; o **valor** cai para o
+   cliente e depois para a empresa quando vazio. `pay_rate_source` deixa de ser
+   porteiro: basta o valor do funcionário existir.
+4. **Fonte única dos padrões da empresa:** `company_hr_settings.default_*`.
+   Os valores de `companies.default_*` foram migrados para lá e essas colunas
+   ficam legadas (não são mais lidas nem escritas pela UI).
+5. **Cálculo:** `hourly` = tempo real × valor hora (com regra de extras já
+   existente); `daily` = valor do dia **uma única vez por dia trabalhado** por
+   funcionário (nunca multiplicado por horas; segunda tarefa no mesmo dia grava
+   `amount=0` com `breakdown.day_already_paid=true`); `monthly` = remuneração
+   base, `amount=0` por registo de ponto (horas continuam registadas para
+   presença/extras/auditoria).
+6. **Snapshot histórico preservado:** `time_entry_valuations` ganha
+   `daily_applied` e `monthly_applied`; alterar valores hoje não recalcula
+   registos já valorizados.
+7. **Helper canónico:** `public.resolve_effective_compensation(employee, client,
+   company)` (RPC, `authenticated`, valida gestor/próprio/SA) e
+   `src/lib/compensation.ts` no frontend. Proibido reimplementar a hierarquia
+   em telas.
+
+**Consequências.** RBAC/RLS inalterados. `resolve_billing_rule` passa a devolver
+também `*_source` por campo, o que permite exibir a **fonte do valor** na folha
+e nas exportações.
