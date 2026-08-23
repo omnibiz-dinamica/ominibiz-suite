@@ -345,8 +345,14 @@ export const DEFAULT_ENABLED_MODULES: ModuleKey[] = [
   "finance",
 ];
 
-/** ADR-028 — agrupamento dos módulos por aba na configuração da empresa (UI). */
-export type ModuleTabKey = "general" | "cleaning" | "restaurant" | "hospitality" | "auto_repair";
+/** ADR-028 / ADR-033 — agrupamento dos módulos por aba na configuração da empresa (UI). */
+export type ModuleTabKey =
+  | "general"
+  | "cleaning"
+  | "restaurant"
+  | "building_materials"
+  | "hospitality"
+  | "auto_repair";
 
 export const MODULE_TABS: Array<{
   key: ModuleTabKey;
