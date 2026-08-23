@@ -633,6 +633,10 @@ function TabFinanceiro({
   profile: ProfileRow;
   onSave: (p: Record<string, unknown>, msg?: string) => Promise<void>;
 }) {
+  const [payModel, setPayModel] = useState<PaymentType>(() => {
+    const raw = String(profile.pay_model ?? "hourly");
+    return (EMPLOYEE_PAYMENT_TYPES as string[]).includes(raw) ? (raw as PaymentType) : (raw as PaymentType);
+  });
   const [f, setF] = useState({
     iban: str(profile.iban),
     swift: str(profile.swift),
@@ -647,8 +651,10 @@ function TabFinanceiro({
     manual_hourly_rate: num(profile.manual_hourly_rate),
     manual_fixed_rate: num(profile.manual_fixed_rate),
     manual_monthly_rate: num(profile.manual_monthly_rate),
+    manual_daily_rate: num(profile.manual_daily_rate),
   });
   const upd = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((s) => ({ ...s, [k]: e.target.value }));
+
   const [loading, setLoading] = useState(false);
   return (
     <form
