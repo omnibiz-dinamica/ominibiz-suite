@@ -641,57 +641,66 @@ function ClientForm({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="hourly">Por hora</SelectItem>
-              <SelectItem value="fixed">Valor fixo</SelectItem>
+              <SelectItem value="daily">Por dia</SelectItem>
+              <SelectItem value="fixed">Valor fixo por tarefa</SelectItem>
               <SelectItem value="monthly">Mensal</SelectItem>
               <SelectItem value="mixed">Misto (hora + fixo)</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        <div className="grid grid-cols-3 gap-2">
-          {(billingMode === "hourly" || billingMode === "mixed") && (
-            <div className="space-y-1.5">
-              <Label className="text-xs">Valor / hora (€)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                value={hourlyRate}
-                onChange={(e) => setHourlyRate(e.target.value)}
-                placeholder="Herda da empresa"
-              />
-            </div>
-          )}
-          {(billingMode === "fixed" || billingMode === "mixed") && (
-            <div className="space-y-1.5">
-              <Label className="text-xs">Valor fixo (€)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                value={fixedRate}
-                onChange={(e) => setFixedRate(e.target.value)}
-                placeholder="Herda da empresa"
-              />
-            </div>
-          )}
-          {billingMode === "monthly" && (
-            <div className="space-y-1.5 col-span-3">
-              <Label className="text-xs">Valor mensal (€)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                value={monthlyRate}
-                onChange={(e) => setMonthlyRate(e.target.value)}
-                placeholder="Herda da empresa"
-              />
-            </div>
-          )}
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Valor / hora (€)</Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              value={hourlyRate}
+              onChange={(e) => setHourlyRate(e.target.value)}
+              placeholder="Herda da empresa"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Valor / dia (€)</Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              value={dailyRate}
+              onChange={(e) => setDailyRate(e.target.value)}
+              placeholder="Herda da empresa"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Valor mensal (€)</Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              value={monthlyRate}
+              onChange={(e) => setMonthlyRate(e.target.value)}
+              placeholder="Herda da empresa"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Valor fixo por tarefa (€)</Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              value={fixedRate}
+              onChange={(e) => setFixedRate(e.target.value)}
+              placeholder="Herda da empresa"
+            />
+          </div>
         </div>
         <p className="text-[10px] text-muted-foreground">
-          Deixe em branco para herdar o valor padrão da empresa (ADR-017).
+          Todos os valores são opcionais e independentes. Em branco, herda o valor padrão da
+          empresa. A modalidade aplicada ao pagamento é sempre a do funcionário
+          (Funcionário &gt; Cliente &gt; Empresa).
         </p>
+
       </ModalSection>
 
       {members.length > 0 && (
