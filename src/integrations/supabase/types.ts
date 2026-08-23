@@ -2198,6 +2198,7 @@ export type Database = {
           scheduled_time: string | null
           start_date: string
           status: Database["public"]["Enums"]["recurrence_status"]
+          task_group_id: string | null
           title: string
           updated_at: string
           weekdays: number[]
@@ -2224,6 +2225,7 @@ export type Database = {
           scheduled_time?: string | null
           start_date: string
           status?: Database["public"]["Enums"]["recurrence_status"]
+          task_group_id?: string | null
           title: string
           updated_at?: string
           weekdays?: number[]
@@ -2250,6 +2252,7 @@ export type Database = {
           scheduled_time?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["recurrence_status"]
+          task_group_id?: string | null
           title?: string
           updated_at?: string
           weekdays?: number[]
@@ -2291,6 +2294,7 @@ export type Database = {
           scheduled_for: string | null
           started_at: string | null
           status: Database["public"]["Enums"]["task_status"]
+          task_group_id: string | null
           title: string
           updated_at: string
         }
@@ -2328,6 +2332,7 @@ export type Database = {
           scheduled_for?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["task_status"]
+          task_group_id?: string | null
           title: string
           updated_at?: string
         }
@@ -2365,6 +2370,7 @@ export type Database = {
           scheduled_for?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["task_status"]
+          task_group_id?: string | null
           title?: string
           updated_at?: string
         }
@@ -3305,6 +3311,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      client_default_assignees: {
+        Args: { _client_id: string }
+        Returns: {
+          full_name: string
+          is_active: boolean
+          is_primary: boolean
+          user_id: string
+        }[]
       }
       close_support_ticket: {
         Args: { _reason?: string; _ticket_id: string }
@@ -4249,6 +4264,7 @@ export type Database = {
           scheduled_time: string | null
           start_date: string
           status: Database["public"]["Enums"]["recurrence_status"]
+          task_group_id: string | null
           title: string
           updated_at: string
           weekdays: number[]
@@ -4313,6 +4329,7 @@ export type Database = {
           scheduled_for: string | null
           started_at: string | null
           status: Database["public"]["Enums"]["task_status"]
+          task_group_id: string | null
           title: string
           updated_at: string
         }
@@ -4494,6 +4511,7 @@ export type Database = {
           scheduled_for: string | null
           started_at: string | null
           status: Database["public"]["Enums"]["task_status"]
+          task_group_id: string | null
           title: string
           updated_at: string
         }
@@ -4508,6 +4526,7 @@ export type Database = {
         Args: { _task_id: string }
         Returns: Database["public"]["Enums"]["punch_mode"]
       }
+      task_group_progress: { Args: { _task_id: string }; Returns: Json }
       task_request_authorization: {
         Args: { _note?: string; _task_id: string }
         Returns: {
@@ -4544,6 +4563,7 @@ export type Database = {
           scheduled_for: string | null
           started_at: string | null
           status: Database["public"]["Enums"]["task_status"]
+          task_group_id: string | null
           title: string
           updated_at: string
         }
@@ -4590,6 +4610,7 @@ export type Database = {
           scheduled_for: string | null
           started_at: string | null
           status: Database["public"]["Enums"]["task_status"]
+          task_group_id: string | null
           title: string
           updated_at: string
         }
@@ -4637,6 +4658,7 @@ export type Database = {
           scheduled_for: string | null
           started_at: string | null
           status: Database["public"]["Enums"]["task_status"]
+          task_group_id: string | null
           title: string
           updated_at: string
         }
