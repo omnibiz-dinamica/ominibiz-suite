@@ -400,9 +400,16 @@ export const MODULE_TABS: Array<{
       "restaurant_delivery_zones",
     ],
   },
-  { key: "hospitality", label: "Hotelaria", vertical: null, modules: [] },
-  { key: "auto_repair", label: "Oficina", vertical: null, modules: [] },
+  {
+    key: "building_materials",
+    label: "Material de Construção",
+    vertical: "building_materials",
+    modules: BUILDING_MATERIALS_MODULES,
+  },
+  { key: "hospitality", label: "Hotelaria", vertical: "hospitality", modules: [] },
+  { key: "auto_repair", label: "Oficina", vertical: "auto_repair", modules: [] },
 ];
+
 
 export const ROUTE_MODULES: Array<{ prefix: string; module: ModuleKey }> = [
   { prefix: "/app/tarefas", module: "tasks" },
