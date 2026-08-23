@@ -77,6 +77,22 @@ const RESTAURANT_ITEMS: NavItem[] = [
   { to: "/app/restaurante/zonas", label: "Zonas de Entrega", icon: MapPin, module: "restaurant_delivery_zones" },
 ];
 
+/** ADR-033 — Material de Construção. Itens só aparecem com o módulo ativo. */
+const BUILDING_MATERIALS_ITEMS: NavItem[] = [
+  { to: "/app/material-construcao", label: "Visão Geral", icon: LayoutDashboard, module: "building_materials_dashboard" },
+  { to: "/app/material-construcao/produtos", label: "Produtos", icon: Package, module: "building_materials_products" },
+  { to: "/app/material-construcao/estoque", label: "Estoque", icon: Warehouse, module: "building_materials_inventory" },
+  { to: "/app/material-construcao/categorias", label: "Categorias", icon: Tags, module: "building_materials_categories" },
+  { to: "/app/material-construcao/fornecedores", label: "Fornecedores", icon: Factory, module: "building_materials_suppliers" },
+  { to: "/app/material-construcao/compras", label: "Compras", icon: ShoppingCart, module: "building_materials_purchases" },
+  { to: "/app/material-construcao/orcamentos", label: "Orçamentos", icon: FileText, module: "building_materials_quotes" },
+  { to: "/app/material-construcao/vendas", label: "Vendas / PDV", icon: ShoppingBag, module: "building_materials_sales" },
+  { to: "/app/material-construcao/clientes", label: "Clientes", icon: Briefcase, module: "building_materials_customers" },
+  { to: "/app/material-construcao/entregas", label: "Entregas", icon: Truck, module: "building_materials_deliveries" },
+  { to: "/app/material-construcao/financeiro", label: "Financeiro", icon: CreditCard, module: "building_materials_finance" },
+];
+
+
 function superAdminGlobalGroups(): NavGroup[] {
   return [
     {

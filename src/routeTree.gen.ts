@@ -37,6 +37,7 @@ import { Route as AppAssistenteRouteImport } from './routes/app.assistente'
 import { Route as AppAdminRouteImport } from './routes/app.admin'
 import { Route as AppRhIndexRouteImport } from './routes/app.rh.index'
 import { Route as AppRestauranteIndexRouteImport } from './routes/app.restaurante.index'
+import { Route as AppMaterialConstrucaoIndexRouteImport } from './routes/app.material-construcao.index'
 import { Route as AppComercialIndexRouteImport } from './routes/app.comercial.index'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as AppTarefasRecorrentesRouteImport } from './routes/app.tarefas.recorrentes'
@@ -50,6 +51,16 @@ import { Route as AppRestauranteEntregadoresRouteImport } from './routes/app.res
 import { Route as AppRestauranteDeliveryRouteImport } from './routes/app.restaurante.delivery'
 import { Route as AppRestauranteCozinhaRouteImport } from './routes/app.restaurante.cozinha'
 import { Route as AppPontoGestaoRouteImport } from './routes/app.ponto_.gestao'
+import { Route as AppMaterialConstrucaoVendasRouteImport } from './routes/app.material-construcao.vendas'
+import { Route as AppMaterialConstrucaoProdutosRouteImport } from './routes/app.material-construcao.produtos'
+import { Route as AppMaterialConstrucaoOrcamentosRouteImport } from './routes/app.material-construcao.orcamentos'
+import { Route as AppMaterialConstrucaoFornecedoresRouteImport } from './routes/app.material-construcao.fornecedores'
+import { Route as AppMaterialConstrucaoFinanceiroRouteImport } from './routes/app.material-construcao.financeiro'
+import { Route as AppMaterialConstrucaoEstoqueRouteImport } from './routes/app.material-construcao.estoque'
+import { Route as AppMaterialConstrucaoEntregasRouteImport } from './routes/app.material-construcao.entregas'
+import { Route as AppMaterialConstrucaoComprasRouteImport } from './routes/app.material-construcao.compras'
+import { Route as AppMaterialConstrucaoClientesRouteImport } from './routes/app.material-construcao.clientes'
+import { Route as AppMaterialConstrucaoCategoriasRouteImport } from './routes/app.material-construcao.categorias'
 import { Route as AppFrotaCartoesRouteImport } from './routes/app.frota.cartoes'
 import { Route as AppComercialTemplatesRouteImport } from './routes/app.comercial.templates'
 import { Route as AppComercialContratosRouteImport } from './routes/app.comercial.contratos'
@@ -204,6 +215,12 @@ const AppRestauranteIndexRoute = AppRestauranteIndexRouteImport.update({
   path: '/restaurante/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppMaterialConstrucaoIndexRoute =
+  AppMaterialConstrucaoIndexRouteImport.update({
+    id: '/material-construcao/',
+    path: '/material-construcao/',
+    getParentRoute: () => AppRoute,
+  } as any)
 const AppComercialIndexRoute = AppComercialIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -270,6 +287,66 @@ const AppPontoGestaoRoute = AppPontoGestaoRouteImport.update({
   path: '/ponto/gestao',
   getParentRoute: () => AppRoute,
 } as any)
+const AppMaterialConstrucaoVendasRoute =
+  AppMaterialConstrucaoVendasRouteImport.update({
+    id: '/material-construcao/vendas',
+    path: '/material-construcao/vendas',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppMaterialConstrucaoProdutosRoute =
+  AppMaterialConstrucaoProdutosRouteImport.update({
+    id: '/material-construcao/produtos',
+    path: '/material-construcao/produtos',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppMaterialConstrucaoOrcamentosRoute =
+  AppMaterialConstrucaoOrcamentosRouteImport.update({
+    id: '/material-construcao/orcamentos',
+    path: '/material-construcao/orcamentos',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppMaterialConstrucaoFornecedoresRoute =
+  AppMaterialConstrucaoFornecedoresRouteImport.update({
+    id: '/material-construcao/fornecedores',
+    path: '/material-construcao/fornecedores',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppMaterialConstrucaoFinanceiroRoute =
+  AppMaterialConstrucaoFinanceiroRouteImport.update({
+    id: '/material-construcao/financeiro',
+    path: '/material-construcao/financeiro',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppMaterialConstrucaoEstoqueRoute =
+  AppMaterialConstrucaoEstoqueRouteImport.update({
+    id: '/material-construcao/estoque',
+    path: '/material-construcao/estoque',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppMaterialConstrucaoEntregasRoute =
+  AppMaterialConstrucaoEntregasRouteImport.update({
+    id: '/material-construcao/entregas',
+    path: '/material-construcao/entregas',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppMaterialConstrucaoComprasRoute =
+  AppMaterialConstrucaoComprasRouteImport.update({
+    id: '/material-construcao/compras',
+    path: '/material-construcao/compras',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppMaterialConstrucaoClientesRoute =
+  AppMaterialConstrucaoClientesRouteImport.update({
+    id: '/material-construcao/clientes',
+    path: '/material-construcao/clientes',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppMaterialConstrucaoCategoriasRoute =
+  AppMaterialConstrucaoCategoriasRouteImport.update({
+    id: '/material-construcao/categorias',
+    path: '/material-construcao/categorias',
+    getParentRoute: () => AppRoute,
+  } as any)
 const AppFrotaCartoesRoute = AppFrotaCartoesRouteImport.update({
   id: '/cartoes',
   path: '/cartoes',
@@ -373,6 +450,16 @@ export interface FileRoutesByFullPath {
   '/app/comercial/contratos': typeof AppComercialContratosRouteWithChildren
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
+  '/app/material-construcao/categorias': typeof AppMaterialConstrucaoCategoriasRoute
+  '/app/material-construcao/clientes': typeof AppMaterialConstrucaoClientesRoute
+  '/app/material-construcao/compras': typeof AppMaterialConstrucaoComprasRoute
+  '/app/material-construcao/entregas': typeof AppMaterialConstrucaoEntregasRoute
+  '/app/material-construcao/estoque': typeof AppMaterialConstrucaoEstoqueRoute
+  '/app/material-construcao/financeiro': typeof AppMaterialConstrucaoFinanceiroRoute
+  '/app/material-construcao/fornecedores': typeof AppMaterialConstrucaoFornecedoresRoute
+  '/app/material-construcao/orcamentos': typeof AppMaterialConstrucaoOrcamentosRoute
+  '/app/material-construcao/produtos': typeof AppMaterialConstrucaoProdutosRoute
+  '/app/material-construcao/vendas': typeof AppMaterialConstrucaoVendasRoute
   '/app/ponto/gestao': typeof AppPontoGestaoRoute
   '/app/restaurante/cozinha': typeof AppRestauranteCozinhaRoute
   '/app/restaurante/delivery': typeof AppRestauranteDeliveryRoute
@@ -386,6 +473,7 @@ export interface FileRoutesByFullPath {
   '/app/tarefas/recorrentes': typeof AppTarefasRecorrentesRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/app/comercial/': typeof AppComercialIndexRoute
+  '/app/material-construcao/': typeof AppMaterialConstrucaoIndexRoute
   '/app/restaurante/': typeof AppRestauranteIndexRoute
   '/app/rh/': typeof AppRhIndexRoute
   '/api/public/whatsapp/dispatch': typeof ApiPublicWhatsappDispatchRoute
@@ -426,6 +514,16 @@ export interface FileRoutesByTo {
   '/app/comercial/contratos': typeof AppComercialContratosRouteWithChildren
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
+  '/app/material-construcao/categorias': typeof AppMaterialConstrucaoCategoriasRoute
+  '/app/material-construcao/clientes': typeof AppMaterialConstrucaoClientesRoute
+  '/app/material-construcao/compras': typeof AppMaterialConstrucaoComprasRoute
+  '/app/material-construcao/entregas': typeof AppMaterialConstrucaoEntregasRoute
+  '/app/material-construcao/estoque': typeof AppMaterialConstrucaoEstoqueRoute
+  '/app/material-construcao/financeiro': typeof AppMaterialConstrucaoFinanceiroRoute
+  '/app/material-construcao/fornecedores': typeof AppMaterialConstrucaoFornecedoresRoute
+  '/app/material-construcao/orcamentos': typeof AppMaterialConstrucaoOrcamentosRoute
+  '/app/material-construcao/produtos': typeof AppMaterialConstrucaoProdutosRoute
+  '/app/material-construcao/vendas': typeof AppMaterialConstrucaoVendasRoute
   '/app/ponto/gestao': typeof AppPontoGestaoRoute
   '/app/restaurante/cozinha': typeof AppRestauranteCozinhaRoute
   '/app/restaurante/delivery': typeof AppRestauranteDeliveryRoute
@@ -439,6 +537,7 @@ export interface FileRoutesByTo {
   '/app/tarefas/recorrentes': typeof AppTarefasRecorrentesRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/app/comercial': typeof AppComercialIndexRoute
+  '/app/material-construcao': typeof AppMaterialConstrucaoIndexRoute
   '/app/restaurante': typeof AppRestauranteIndexRoute
   '/app/rh': typeof AppRhIndexRoute
   '/api/public/whatsapp/dispatch': typeof ApiPublicWhatsappDispatchRoute
@@ -483,6 +582,16 @@ export interface FileRoutesById {
   '/app/comercial/contratos': typeof AppComercialContratosRouteWithChildren
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
+  '/app/material-construcao/categorias': typeof AppMaterialConstrucaoCategoriasRoute
+  '/app/material-construcao/clientes': typeof AppMaterialConstrucaoClientesRoute
+  '/app/material-construcao/compras': typeof AppMaterialConstrucaoComprasRoute
+  '/app/material-construcao/entregas': typeof AppMaterialConstrucaoEntregasRoute
+  '/app/material-construcao/estoque': typeof AppMaterialConstrucaoEstoqueRoute
+  '/app/material-construcao/financeiro': typeof AppMaterialConstrucaoFinanceiroRoute
+  '/app/material-construcao/fornecedores': typeof AppMaterialConstrucaoFornecedoresRoute
+  '/app/material-construcao/orcamentos': typeof AppMaterialConstrucaoOrcamentosRoute
+  '/app/material-construcao/produtos': typeof AppMaterialConstrucaoProdutosRoute
+  '/app/material-construcao/vendas': typeof AppMaterialConstrucaoVendasRoute
   '/app/ponto_/gestao': typeof AppPontoGestaoRoute
   '/app/restaurante/cozinha': typeof AppRestauranteCozinhaRoute
   '/app/restaurante/delivery': typeof AppRestauranteDeliveryRoute
@@ -496,6 +605,7 @@ export interface FileRoutesById {
   '/app/tarefas/recorrentes': typeof AppTarefasRecorrentesRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/app/comercial/': typeof AppComercialIndexRoute
+  '/app/material-construcao/': typeof AppMaterialConstrucaoIndexRoute
   '/app/restaurante/': typeof AppRestauranteIndexRoute
   '/app/rh/': typeof AppRhIndexRoute
   '/api/public/whatsapp/dispatch': typeof ApiPublicWhatsappDispatchRoute
@@ -541,6 +651,16 @@ export interface FileRouteTypes {
     | '/app/comercial/contratos'
     | '/app/comercial/templates'
     | '/app/frota/cartoes'
+    | '/app/material-construcao/categorias'
+    | '/app/material-construcao/clientes'
+    | '/app/material-construcao/compras'
+    | '/app/material-construcao/entregas'
+    | '/app/material-construcao/estoque'
+    | '/app/material-construcao/financeiro'
+    | '/app/material-construcao/fornecedores'
+    | '/app/material-construcao/orcamentos'
+    | '/app/material-construcao/produtos'
+    | '/app/material-construcao/vendas'
     | '/app/ponto/gestao'
     | '/app/restaurante/cozinha'
     | '/app/restaurante/delivery'
@@ -554,6 +674,7 @@ export interface FileRouteTypes {
     | '/app/tarefas/recorrentes'
     | '/lovable/email/suppression'
     | '/app/comercial/'
+    | '/app/material-construcao/'
     | '/app/restaurante/'
     | '/app/rh/'
     | '/api/public/whatsapp/dispatch'
@@ -594,6 +715,16 @@ export interface FileRouteTypes {
     | '/app/comercial/contratos'
     | '/app/comercial/templates'
     | '/app/frota/cartoes'
+    | '/app/material-construcao/categorias'
+    | '/app/material-construcao/clientes'
+    | '/app/material-construcao/compras'
+    | '/app/material-construcao/entregas'
+    | '/app/material-construcao/estoque'
+    | '/app/material-construcao/financeiro'
+    | '/app/material-construcao/fornecedores'
+    | '/app/material-construcao/orcamentos'
+    | '/app/material-construcao/produtos'
+    | '/app/material-construcao/vendas'
     | '/app/ponto/gestao'
     | '/app/restaurante/cozinha'
     | '/app/restaurante/delivery'
@@ -607,6 +738,7 @@ export interface FileRouteTypes {
     | '/app/tarefas/recorrentes'
     | '/lovable/email/suppression'
     | '/app/comercial'
+    | '/app/material-construcao'
     | '/app/restaurante'
     | '/app/rh'
     | '/api/public/whatsapp/dispatch'
@@ -650,6 +782,16 @@ export interface FileRouteTypes {
     | '/app/comercial/contratos'
     | '/app/comercial/templates'
     | '/app/frota/cartoes'
+    | '/app/material-construcao/categorias'
+    | '/app/material-construcao/clientes'
+    | '/app/material-construcao/compras'
+    | '/app/material-construcao/entregas'
+    | '/app/material-construcao/estoque'
+    | '/app/material-construcao/financeiro'
+    | '/app/material-construcao/fornecedores'
+    | '/app/material-construcao/orcamentos'
+    | '/app/material-construcao/produtos'
+    | '/app/material-construcao/vendas'
     | '/app/ponto_/gestao'
     | '/app/restaurante/cozinha'
     | '/app/restaurante/delivery'
@@ -663,6 +805,7 @@ export interface FileRouteTypes {
     | '/app/tarefas/recorrentes'
     | '/lovable/email/suppression'
     | '/app/comercial/'
+    | '/app/material-construcao/'
     | '/app/restaurante/'
     | '/app/rh/'
     | '/api/public/whatsapp/dispatch'
@@ -891,6 +1034,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRestauranteIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/material-construcao/': {
+      id: '/app/material-construcao/'
+      path: '/material-construcao'
+      fullPath: '/app/material-construcao/'
+      preLoaderRoute: typeof AppMaterialConstrucaoIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/comercial/': {
       id: '/app/comercial/'
       path: '/'
@@ -980,6 +1130,76 @@ declare module '@tanstack/react-router' {
       path: '/ponto/gestao'
       fullPath: '/app/ponto/gestao'
       preLoaderRoute: typeof AppPontoGestaoRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/material-construcao/vendas': {
+      id: '/app/material-construcao/vendas'
+      path: '/material-construcao/vendas'
+      fullPath: '/app/material-construcao/vendas'
+      preLoaderRoute: typeof AppMaterialConstrucaoVendasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/material-construcao/produtos': {
+      id: '/app/material-construcao/produtos'
+      path: '/material-construcao/produtos'
+      fullPath: '/app/material-construcao/produtos'
+      preLoaderRoute: typeof AppMaterialConstrucaoProdutosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/material-construcao/orcamentos': {
+      id: '/app/material-construcao/orcamentos'
+      path: '/material-construcao/orcamentos'
+      fullPath: '/app/material-construcao/orcamentos'
+      preLoaderRoute: typeof AppMaterialConstrucaoOrcamentosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/material-construcao/fornecedores': {
+      id: '/app/material-construcao/fornecedores'
+      path: '/material-construcao/fornecedores'
+      fullPath: '/app/material-construcao/fornecedores'
+      preLoaderRoute: typeof AppMaterialConstrucaoFornecedoresRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/material-construcao/financeiro': {
+      id: '/app/material-construcao/financeiro'
+      path: '/material-construcao/financeiro'
+      fullPath: '/app/material-construcao/financeiro'
+      preLoaderRoute: typeof AppMaterialConstrucaoFinanceiroRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/material-construcao/estoque': {
+      id: '/app/material-construcao/estoque'
+      path: '/material-construcao/estoque'
+      fullPath: '/app/material-construcao/estoque'
+      preLoaderRoute: typeof AppMaterialConstrucaoEstoqueRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/material-construcao/entregas': {
+      id: '/app/material-construcao/entregas'
+      path: '/material-construcao/entregas'
+      fullPath: '/app/material-construcao/entregas'
+      preLoaderRoute: typeof AppMaterialConstrucaoEntregasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/material-construcao/compras': {
+      id: '/app/material-construcao/compras'
+      path: '/material-construcao/compras'
+      fullPath: '/app/material-construcao/compras'
+      preLoaderRoute: typeof AppMaterialConstrucaoComprasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/material-construcao/clientes': {
+      id: '/app/material-construcao/clientes'
+      path: '/material-construcao/clientes'
+      fullPath: '/app/material-construcao/clientes'
+      preLoaderRoute: typeof AppMaterialConstrucaoClientesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/material-construcao/categorias': {
+      id: '/app/material-construcao/categorias'
+      path: '/material-construcao/categorias'
+      fullPath: '/app/material-construcao/categorias'
+      preLoaderRoute: typeof AppMaterialConstrucaoCategoriasRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/frota/cartoes': {
@@ -1188,6 +1408,16 @@ interface AppRouteChildren {
   AppSuporteRoute: typeof AppSuporteRouteWithChildren
   AppTarefasRoute: typeof AppTarefasRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
+  AppMaterialConstrucaoCategoriasRoute: typeof AppMaterialConstrucaoCategoriasRoute
+  AppMaterialConstrucaoClientesRoute: typeof AppMaterialConstrucaoClientesRoute
+  AppMaterialConstrucaoComprasRoute: typeof AppMaterialConstrucaoComprasRoute
+  AppMaterialConstrucaoEntregasRoute: typeof AppMaterialConstrucaoEntregasRoute
+  AppMaterialConstrucaoEstoqueRoute: typeof AppMaterialConstrucaoEstoqueRoute
+  AppMaterialConstrucaoFinanceiroRoute: typeof AppMaterialConstrucaoFinanceiroRoute
+  AppMaterialConstrucaoFornecedoresRoute: typeof AppMaterialConstrucaoFornecedoresRoute
+  AppMaterialConstrucaoOrcamentosRoute: typeof AppMaterialConstrucaoOrcamentosRoute
+  AppMaterialConstrucaoProdutosRoute: typeof AppMaterialConstrucaoProdutosRoute
+  AppMaterialConstrucaoVendasRoute: typeof AppMaterialConstrucaoVendasRoute
   AppPontoGestaoRoute: typeof AppPontoGestaoRoute
   AppRestauranteCozinhaRoute: typeof AppRestauranteCozinhaRoute
   AppRestauranteDeliveryRoute: typeof AppRestauranteDeliveryRoute
@@ -1196,6 +1426,7 @@ interface AppRouteChildren {
   AppRestauranteMesasRoute: typeof AppRestauranteMesasRoute
   AppRestaurantePedidosRoute: typeof AppRestaurantePedidosRoute
   AppRestauranteZonasRoute: typeof AppRestauranteZonasRoute
+  AppMaterialConstrucaoIndexRoute: typeof AppMaterialConstrucaoIndexRoute
   AppRestauranteIndexRoute: typeof AppRestauranteIndexRoute
 }
 
@@ -1218,6 +1449,17 @@ const AppRouteChildren: AppRouteChildren = {
   AppSuporteRoute: AppSuporteRouteWithChildren,
   AppTarefasRoute: AppTarefasRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
+  AppMaterialConstrucaoCategoriasRoute: AppMaterialConstrucaoCategoriasRoute,
+  AppMaterialConstrucaoClientesRoute: AppMaterialConstrucaoClientesRoute,
+  AppMaterialConstrucaoComprasRoute: AppMaterialConstrucaoComprasRoute,
+  AppMaterialConstrucaoEntregasRoute: AppMaterialConstrucaoEntregasRoute,
+  AppMaterialConstrucaoEstoqueRoute: AppMaterialConstrucaoEstoqueRoute,
+  AppMaterialConstrucaoFinanceiroRoute: AppMaterialConstrucaoFinanceiroRoute,
+  AppMaterialConstrucaoFornecedoresRoute:
+    AppMaterialConstrucaoFornecedoresRoute,
+  AppMaterialConstrucaoOrcamentosRoute: AppMaterialConstrucaoOrcamentosRoute,
+  AppMaterialConstrucaoProdutosRoute: AppMaterialConstrucaoProdutosRoute,
+  AppMaterialConstrucaoVendasRoute: AppMaterialConstrucaoVendasRoute,
   AppPontoGestaoRoute: AppPontoGestaoRoute,
   AppRestauranteCozinhaRoute: AppRestauranteCozinhaRoute,
   AppRestauranteDeliveryRoute: AppRestauranteDeliveryRoute,
@@ -1226,6 +1468,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppRestauranteMesasRoute: AppRestauranteMesasRoute,
   AppRestaurantePedidosRoute: AppRestaurantePedidosRoute,
   AppRestauranteZonasRoute: AppRestauranteZonasRoute,
+  AppMaterialConstrucaoIndexRoute: AppMaterialConstrucaoIndexRoute,
   AppRestauranteIndexRoute: AppRestauranteIndexRoute,
 }
 

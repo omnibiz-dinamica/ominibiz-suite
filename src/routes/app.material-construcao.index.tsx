@@ -3,7 +3,7 @@ import { RoleGuard } from "@/components/RoleGuard";
 import { ModuleGuard } from "@/components/ModuleGuard";
 import { ComingSoon } from "@/components/ComingSoon";
 
-export const Route = createFileRoute("/app/material-construcao")({
+export const Route = createFileRoute("/app/material-construcao/")({
   component: () => (
     <RoleGuard allow={["manager", "owner", "super_admin", "employee"]}>
       <ModuleGuard module="building_materials_dashboard">
