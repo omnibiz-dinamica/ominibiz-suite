@@ -265,7 +265,74 @@ export const MODULE_CATALOG: Record<
     addonMonthly: 0,
     included: false,
   },
+  building_materials_dashboard: {
+    label: "Material · Visão Geral",
+    description: "Indicadores da operação de material de construção.",
+    addonMonthly: 0,
+    included: false,
+  },
+  building_materials_products: {
+    label: "Material · Produtos",
+    description: "Catálogo de produtos e unidades.",
+    addonMonthly: 0,
+    included: false,
+  },
+  building_materials_inventory: {
+    label: "Material · Estoque",
+    description: "Saldos, entradas e saídas de estoque.",
+    addonMonthly: 0,
+    included: false,
+  },
+  building_materials_categories: {
+    label: "Material · Categorias",
+    description: "Categorias e famílias de produtos.",
+    addonMonthly: 0,
+    included: false,
+  },
+  building_materials_suppliers: {
+    label: "Material · Fornecedores",
+    description: "Cadastro de fornecedores.",
+    addonMonthly: 0,
+    included: false,
+  },
+  building_materials_purchases: {
+    label: "Material · Compras",
+    description: "Pedidos de compra e recebimentos.",
+    addonMonthly: 0,
+    included: false,
+  },
+  building_materials_quotes: {
+    label: "Material · Orçamentos",
+    description: "Orçamentos e propostas de venda.",
+    addonMonthly: 0,
+    included: false,
+  },
+  building_materials_sales: {
+    label: "Material · Vendas / PDV",
+    description: "Vendas de balcão e ponto de venda.",
+    addonMonthly: 0,
+    included: false,
+  },
+  building_materials_customers: {
+    label: "Material · Clientes",
+    description: "Clientes do balcão e obra.",
+    addonMonthly: 0,
+    included: false,
+  },
+  building_materials_deliveries: {
+    label: "Material · Entregas",
+    description: "Entregas, rotas e comprovativos.",
+    addonMonthly: 0,
+    included: false,
+  },
+  building_materials_finance: {
+    label: "Material · Financeiro",
+    description: "Contas a receber e a pagar do vertical.",
+    addonMonthly: 0,
+    included: false,
+  },
 };
+
 
 export const DEFAULT_ENABLED_MODULES: ModuleKey[] = [
   "core",
