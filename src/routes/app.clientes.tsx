@@ -164,7 +164,9 @@ function ClientsPage() {
     fixed: "Valor fixo",
     mixed: "Misto",
     monthly: "Mensal",
+    daily: "Por dia",
   };
+
 
   const buildExportColumns = (): ExportColumn<ClientRow>[] => [
     { header: "Nome", accessor: (c) => c.name, width: 140 },
@@ -192,10 +194,16 @@ function ClientsPage() {
       width: 70,
     },
     {
+      header: "Valor / dia",
+      accessor: (c) => (c.daily_rate != null ? `€ ${Number(c.daily_rate).toFixed(2)}` : ""),
+      width: 70,
+    },
+    {
       header: "Mensal",
       accessor: (c) => (c.monthly_rate != null ? `€ ${Number(c.monthly_rate).toFixed(2)}` : ""),
       width: 70,
     },
+
     {
       header: "Apontamento",
       accessor: () => "Start/Stop",
