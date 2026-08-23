@@ -552,3 +552,36 @@ cria uma tarefa por responsável (fan-out), todas com o mesmo `task_group_id`.
 **Consequências.** Relatórios por tarefa continuam válidos sem migração de
 dados; tarefas legadas ficam com `task_group_id = NULL` e comportam-se como
 individuais.
+
+## ADR-033 — Vertical `building_materials` (Material de Construção) e ModuleGuard canónico
+
+**Data.** 2026-08-23 · **Estado.** Aceite (Fase A)
+
+**Contexto.** Necessidade de um novo ramo técnico (Material de Construção) sem
+qualquer regressão nos ramos Limpeza e Restaurante & Delivery. Auditoria da Fase A
+revelou que as rotas de Restaurante só usam `RoleGuard` + `ComingSoon`: esconder o
+item de menu não impede acesso por URL direta.
+
+**Decisão.**
+1. `companies.business_vertical` passa a aceitar `building_materials`, `hospitality`
+   e `auto_repair`. A migration é idempotente, valida os valores existentes antes de
+   recriar o CHECK e **não executa nenhum UPDATE** de dados.
+2. Os 11 módulos `building_materials_*` **nunca** entram em `DEFAULT_ENABLED_MODULES`
+   nem são ativados automaticamente ao mudar o ramo (ao contrário de
+   `RESTAURANT_ENABLED_MODULES`, mantido por retrocompatibilidade — ADR-027).
+   Ativação é sempre manual, módulo a módulo, pelo Super Admin.
+3. Novo componente canónico `src/components/ModuleGuard.tsx`: resolve
+   `companies.enabled_modules` da empresa ativa e devolve estado 403 quando o módulo
+   não está ativo. Contexto em carregamento nunca equivale a "sem permissão" (ADR-030).
+4. O `ModuleGuard` é aplicado obrigatoriamente a **todas** as rotas
+   `/app/material-construcao/*`.
+5. **Rotas de Restaurante ficam intencionalmente fora desta alteração.** Grupo V-clean
+   e Dinâmica Solução estão marcadas como `restaurant_delivery` sem qualquer módulo
+   `restaurant_*` ativo (anomalia pré-existente); aplicar o guard mudaria o
+   comportamento atual (ComingSoon → 403) sem necessidade nesta fase. Gap registado
+   em KNOWN_ISSUES para auditoria dedicada.
+6. `hospitality` e `auto_repair` ficam apenas como verticais preparados: aparecem no
+   seletor de ramo e como abas vazias, sem menus nem rotas operacionais.
+
+**Consequências.** O menu é aditivo (o grupo Material de Construção só aparece com
+módulos ativos) e o acesso por URL é bloqueado no componente, não apenas no menu.

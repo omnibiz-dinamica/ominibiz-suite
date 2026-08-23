@@ -368,3 +368,15 @@ as linhas.
 
 **Correção:** vencedor determinístico — só a linha com o menor `id` do grupo
 notifica gestores. Confirmado por teste em base real (dados de teste removidos).
+
+## KI-028 — Rotas `/app/restaurante/*` sem ModuleGuard (gap conhecido)
+
+**Severidade.** Média · **Estado.** Aberto (intencional, ADR-033)
+
+As rotas de Restaurante só têm `RoleGuard` e não constam de `ROUTE_MODULES`, pelo que
+o acesso por URL direta não é bloqueado quando os módulos `restaurant_*` estão
+desativados (as páginas são placeholders "Em breve"). Grupo V-clean e Dinâmica Solução
+estão marcadas como `restaurant_delivery` sem nenhum módulo `restaurant_*` ativo
+(anomalia pré-existente). Aplicar o `ModuleGuard` mudaria o comportamento dessas
+empresas (ComingSoon → 403); fica para auditoria dedicada, fora da Fase A do vertical
+Material de Construção.
