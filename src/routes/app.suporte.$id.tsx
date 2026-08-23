@@ -341,18 +341,6 @@ function SupportDetailPage() {
     onError: (e) => toast.error("Erro: " + (e as Error).message),
   });
 
-  const closeMut = useMutation({
-    mutationFn: async () => {
-      const reason = window.prompt("Confirme o motivo do arquivamento:", "Validado como resolvido") ?? "";
-      if (!reason.trim()) throw new Error("Motivo obrigatorio");
-      await closeTicket(id, reason);
-    },
-    onSuccess: () => {
-      invalidateSupportTicket(qc, id);
-      toast.success("Ticket arquivado.");
-    },
-    onError: (e) => toast.error("Erro: " + (e as Error).message),
-  });
 
   const uploadMut = useMutation({
     mutationFn: async (file: File) => {
