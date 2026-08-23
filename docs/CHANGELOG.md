@@ -7,6 +7,40 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### 🧪 Homologação de tickets — SUP-000065 e SUP-000077 (2026-08-23)
+
+#### Corrigido
+- **SUP-2026-000077 — funcionário não conseguia recusar tarefa.** A RPC
+  `task_transition` grava `cancelled_by` na recusa, e o trigger
+  `tasks_restrict_employee_update` bloqueava essa coluna para o responsável
+  (`Sem permissao para alterar estes campos da tarefa`). O trigger passa a
+  permitir exclusivamente a **auto-recusa** (`pendente|autorizado → cancelado`
+  com `refusal_reason`, `refused_by = auth.uid()` e `cancelled_by = auth.uid()`).
+  Todas as restantes colunas protegidas mantêm-se bloqueadas.
+
+#### Adicionado
+- **SUP-2026-000065 — reforço servidor:** trigger
+  `trg_tasks_require_assignee` (`tasks_require_assignee_on_insert`) recusa
+  criação manual de tarefa sem responsável (`auth.uid() IS NOT NULL AND
+  recurrence_id IS NULL AND assigned_to IS NULL`), com a mesma mensagem da UI.
+  Recorrências e rotinas internas não são afetadas; tarefas legadas sem
+  responsável (29) permanecem intactas. `EXECUTE` revogado de `anon`/`authenticated`.
+
+#### Validado (testes reais de interface)
+- Gestor: criar tarefa sem responsável → toast «Atribua a tarefa a um
+  funcionario antes de salvar.», sem `POST /rest/v1/tasks`, modal permanece aberto.
+- Bypass da UI (token do gestor, insert direto) → **HTTP 400** `P0001`
+  «Atribua a tarefa a um funcionário antes de salvar.».
+- Regressão: criar tarefa **com** responsável → «Tarefa criada» (contador do
+  funcionário 7 → 8).
+- Funcionário: recusa com motivo → «Tarefa atualizada», estado **Cancelado**.
+- RBAC inalterado: políticas de `tasks` continuam a permitir INSERT apenas a
+  `is_company_manager` / `is_super_admin`; funcionário mantém SELECT/UPDATE
+  restritos a `assigned_to = auth.uid()`.
+
+---
+
+
 ### 👥 Fase B — Vínculos Cliente ↔ Responsável e multi-responsável (2026-08-23)
 
 #### Adicionado

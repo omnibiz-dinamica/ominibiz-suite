@@ -159,6 +159,7 @@
 
 **Fim do documento — versão 1.0**
 - `docs/homologacoes/HOMOLOGACAO_REABERTURA_TICKETS.md` — homologação da reabertura/encaminhamento de tickets (ADR-029).
+- `docs/homologacoes/HOMOLOGACAO_TAREFAS_SUP065_SUP077.md` — homologação de tarefa sem responsável (SUP-000065) e recusa pelo funcionário (SUP-000077).
 
 ## Navegação
 
