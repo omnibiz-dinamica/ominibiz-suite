@@ -676,10 +676,15 @@ function TabFinanceiro({
               allowance_transport: toNullableNumber(f.allowance_transport),
               allowance_rent: toNullableNumber(f.allowance_rent),
               allowance_other: toNullableNumber(f.allowance_other),
+              pay_model: payModel,
               manual_hourly_rate: toNullableNumber(f.manual_hourly_rate),
+              // O motor de valorização lê `manual_hour_rate`; mantemos os dois em sincronia.
+              manual_hour_rate: toNullableNumber(f.manual_hourly_rate),
               manual_fixed_rate: toNullableNumber(f.manual_fixed_rate),
               manual_monthly_rate: toNullableNumber(f.manual_monthly_rate),
+              manual_daily_rate: toNullableNumber(f.manual_daily_rate),
             },
+
             "Financeiro salvo",
           );
         } catch (err) {
