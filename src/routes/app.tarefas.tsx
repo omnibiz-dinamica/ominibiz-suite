@@ -1284,11 +1284,22 @@ function CalendarTaskCard({
           {STATUS_LABELS[task.status]}
         </span>
       </div>
-      {late && (
-        <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-destructive">
-          <Clock className="h-3 w-3" /> atrasado
-        </span>
-      )}
+      <div className="flex flex-wrap items-center gap-1">
+        {late && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-destructive">
+            <Clock className="h-3 w-3" /> atrasado
+          </span>
+        )}
+        {task.task_group_id && (
+          <span
+            className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+            title="Tarefa criada em equipe: cada responsável tem a sua própria tarefa, com ponto e conclusão independentes."
+          >
+            <Users className="h-3 w-3" /> em equipe
+          </span>
+        )}
+      </div>
+
       <div className="flex flex-wrap justify-end gap-1">
         {isManager && (
           <>
@@ -1534,8 +1545,11 @@ function TaskForm({
   const [description, setDescription] = useState(initial?.description ?? "");
   const [assignees, setAssignees] = useState<string[]>(initial?.assigned_to ? [initial.assigned_to] : []);
   const assignedTo = assignees[0] ?? "";
-  const toggleAssignee = (id: string) =>
+  const toggleAssignee = (id: string) => {
+    setTouchedAssignees(true);
     setAssignees((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
   const [assigneeQuery, setAssigneeQuery] = useState("");
   const filteredAssignees = useMemo(() => {
     const q = assigneeQuery
@@ -1567,6 +1581,56 @@ function TaskForm({
   const [pendingDocs, setPendingDocs] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const timingMode: "start_stop" = "start_stop";
+
+  // ---------------------------------------------------------------
+  // Fase B — equipe responsável do cliente (client_assignees).
+  // Ao escolher o cliente, sugerimos os colaboradores ativos vinculados.
+  // A seleção do Gestor NUNCA é sobrescrita em silêncio: se ele já mexeu,
+  // pedimos decisão explícita (usar equipe do novo cliente / manter).
+  // ---------------------------------------------------------------
+  const [touchedAssignees, setTouchedAssignees] = useState(false);
+  const [teamPrompt, setTeamPrompt] = useState<{ clientName: string; team: string[] } | null>(null);
+  const [teamHint, setTeamHint] = useState<string | null>(null);
+
+  const fetchClientTeam = async (cid: string): Promise<string[]> => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase.rpc as any)("client_default_assignees", { _client_id: cid });
+    if (error) throw error;
+    const rows = (data ?? []) as { user_id: string; is_active: boolean }[];
+    // Só colaboradores ativos e que ainda pertencem à empresa (lista `members`).
+    const memberIds = new Set(members.map((m) => m.id));
+    return rows.filter((r) => r.is_active && memberIds.has(r.user_id)).map((r) => r.user_id);
+  };
+
+  const applyClient = async (cid: string) => {
+    setClientId(cid);
+    setTeamPrompt(null);
+    if (initial || !cid) return;
+    let team: string[] = [];
+    try {
+      team = await fetchClientTeam(cid);
+    } catch (e) {
+      toast.error((e as Error).message);
+      return;
+    }
+    const clientName = clients.find((c) => c.id === cid)?.name ?? "cliente";
+    if (team.length === 0) {
+      setTeamHint(`${clientName} não tem responsáveis cadastrados. Selecione manualmente.`);
+      return;
+    }
+    if (!touchedAssignees || assignees.length === 0) {
+      setAssignees(team);
+      setTouchedAssignees(false);
+      setTeamHint(
+        team.length === 1
+          ? `Responsável do cliente carregado automaticamente.`
+          : `${team.length} responsáveis do cliente carregados automaticamente.`,
+      );
+      return;
+    }
+    setTeamPrompt({ clientName, team });
+  };
+
   const uploadCreationDocs = async (taskId: string) => {
     for (const file of pendingDocs) {
       if (file.size > TASK_DOC_MAX_SIZE) {
@@ -1687,6 +1751,9 @@ function TaskForm({
         };
         let error: { message: string } | null = null;
         const createdTaskIds: string[] = [];
+        // Fase B: lote multi-responsável. Cada responsável mantém a SUA tarefa
+        // (estado, ponto, recusa e conclusão próprios); o grupo só correlaciona.
+        const groupId = assignees.length > 1 ? crypto.randomUUID() : null;
         if (initial) {
           ({ error } = await supabase.from("tasks").update(payload).eq("id", initial.id));
         } else if (recurrence.enabled) {
@@ -1720,6 +1787,7 @@ function TaskForm({
               end_date: recurrence.endDate || null,
               scheduled_time: derivedTime,
               duration_minutes: derivedDuration,
+              task_group_id: groupId,
             })),
           );
           error = ins.error;
@@ -1740,6 +1808,7 @@ function TaskForm({
                 assigned_to: memberId,
                 company_id: companyId,
                 created_by: userId,
+                task_group_id: groupId,
               })),
             )
             .select("id")
@@ -1747,6 +1816,7 @@ function TaskForm({
           error = inserted.error;
           for (const row of inserted.data ?? []) createdTaskIds.push(row.id);
         }
+
         if (error) {
           setLoading(false);
           toast.error(error.message);
@@ -1770,7 +1840,7 @@ function TaskForm({
     >
       <div className="space-y-1.5">
         <Label>Cliente</Label>
-        <Select value={clientId} onValueChange={setClientId}>
+        <Select value={clientId} onValueChange={(v) => void applyClient(v)}>
           <SelectTrigger>
             <SelectValue placeholder="Selecione o cliente" />
           </SelectTrigger>
@@ -1782,7 +1852,42 @@ function TaskForm({
             ))}
           </SelectContent>
         </Select>
+        {teamPrompt && (
+          <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs">
+            <p className="font-medium">
+              Você já escolheu responsáveis. Usar a equipe padrão de {teamPrompt.clientName} (
+              {teamPrompt.team.length}) ou manter a sua seleção?
+            </p>
+            <div className="mt-2 flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  setAssignees(teamPrompt.team);
+                  setTouchedAssignees(false);
+                  setTeamHint("Equipe padrão do novo cliente aplicada.");
+                  setTeamPrompt(null);
+                }}
+              >
+                Usar equipe do cliente
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setTeamHint("Seleção manual mantida.");
+                  setTeamPrompt(null);
+                }}
+              >
+                Manter seleção atual
+              </Button>
+            </div>
+          </div>
+        )}
+        {!teamPrompt && teamHint && <p className="text-xs text-muted-foreground">{teamHint}</p>}
       </div>
+
       <div className="space-y-1.5">
         <Label>Descrição</Label>
         <Textarea maxLength={1000} value={description} onChange={(e) => setDescription(e.target.value)} />
@@ -1881,7 +1986,9 @@ function TaskForm({
                 })}
               </div>
               <p className="text-xs text-muted-foreground">
-                Selecione um ou mais funcionários — será criada uma tarefa para cada um.
+                Selecione um ou mais funcionários. Cada responsável recebe a sua própria tarefa, com
+                estado, ponto, recusa e conclusão independentes — a ação de um não altera a do outro.
+
               </p>
             </>
           )}

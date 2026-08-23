@@ -53,6 +53,12 @@ export interface TaskRow {
   updated_at: string;
   punch_mode_override?: PunchMode | null;
   recurrence_id?: string | null;
+  /**
+   * Fase B — lote de criação multi-responsável. Cada responsável tem a SUA
+   * tarefa (estado, ponto, recusa e conclusão próprios). NULL = individual/legada.
+   */
+  task_group_id?: string | null;
+
   recurrence_date?: string | null;
   archived_at?: string | null;
   archived_by?: string | null;

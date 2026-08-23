@@ -525,3 +525,30 @@ Os valores padrão da empresa estavam duplicados em `companies.default_*`
 **Consequências.** RBAC/RLS inalterados. `resolve_billing_rule` passa a devolver
 também `*_source` por campo, o que permite exibir a **fonte do valor** na folha
 e nas exportações.
+
+
+## ADR-032 — Multi-responsável por fan-out com `task_group_id`
+
+**Data:** 2026-08-23 · **Estado:** Aceite · **Contexto:** Fase B do Pacote
+Operacional V2.
+
+**Decisão.** Atribuir vários responsáveis **não** cria uma tarefa partilhada:
+cria uma tarefa por responsável (fan-out), todas com o mesmo `task_group_id`.
+
+1. **Independência total:** estado, ponto, recusa, ausência e conclusão são por
+   tarefa. A ação de um responsável nunca altera a de outro.
+2. **`task_group_id` é rastreio, não regra de negócio:** serve para dedup de
+   notificações, progresso consolidado e auditoria. Nunca é usado para bloquear
+   transições de estado.
+3. **Notificações:** cada responsável é notificado individualmente; gestores
+   recebem **uma** notificação por lote, escolhida de forma determinística
+   (menor `id` do grupo) — ver KI-027.
+4. **Equipa do cliente é sugestão, não imposição:** `client_default_assignees`
+   pré-preenche os responsáveis; se o gestor já editou a seleção, a troca de
+   cliente exige confirmação explícita.
+5. **Sem alteração de schema em `tasks` além da coluna de grupo:** RBAC e RLS
+   mantêm-se inalterados (`assigned_to` continua a ser a chave de visibilidade).
+
+**Consequências.** Relatórios por tarefa continuam válidos sem migração de
+dados; tarefas legadas ficam com `task_group_id = NULL` e comportam-se como
+individuais.
