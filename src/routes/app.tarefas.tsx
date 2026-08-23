@@ -1534,8 +1534,11 @@ function TaskForm({
   const [description, setDescription] = useState(initial?.description ?? "");
   const [assignees, setAssignees] = useState<string[]>(initial?.assigned_to ? [initial.assigned_to] : []);
   const assignedTo = assignees[0] ?? "";
-  const toggleAssignee = (id: string) =>
+  const toggleAssignee = (id: string) => {
+    setTouchedAssignees(true);
     setAssignees((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
   const [assigneeQuery, setAssigneeQuery] = useState("");
   const filteredAssignees = useMemo(() => {
     const q = assigneeQuery
