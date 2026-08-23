@@ -40,7 +40,7 @@ import {
 } from "@/lib/support/constants";
 import {
   postMessage,
-  closeTicket,
+  
   reopenTicketWithMessage,
   signedAttachmentUrl,
   updatePriority,
