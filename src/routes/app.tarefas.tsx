@@ -1284,11 +1284,22 @@ function CalendarTaskCard({
           {STATUS_LABELS[task.status]}
         </span>
       </div>
-      {late && (
-        <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-destructive">
-          <Clock className="h-3 w-3" /> atrasado
-        </span>
-      )}
+      <div className="flex flex-wrap items-center gap-1">
+        {late && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-destructive">
+            <Clock className="h-3 w-3" /> atrasado
+          </span>
+        )}
+        {task.task_group_id && (
+          <span
+            className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+            title="Tarefa criada em equipe: cada responsável tem a sua própria tarefa, com ponto e conclusão independentes."
+          >
+            <Users className="h-3 w-3" /> em equipe
+          </span>
+        )}
+      </div>
+
       <div className="flex flex-wrap justify-end gap-1">
         {isManager && (
           <>
