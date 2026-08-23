@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.tasks_require_assignee_on_insert() FROM PUBLIC, anon, authenticated;
