@@ -182,6 +182,7 @@ function SupportDetailPage() {
   const [reply, setReply] = useState("");
   const [isInternal, setIsInternal] = useState(false);
   const [reopenOpen, setReopenOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
 
   const ticketQ = useQuery<TicketDetail | null>({
     queryKey: ["support-ticket", id],
