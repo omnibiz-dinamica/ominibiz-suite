@@ -1740,6 +1740,9 @@ function TaskForm({
         };
         let error: { message: string } | null = null;
         const createdTaskIds: string[] = [];
+        // Fase B: lote multi-responsável. Cada responsável mantém a SUA tarefa
+        // (estado, ponto, recusa e conclusão próprios); o grupo só correlaciona.
+        const groupId = assignees.length > 1 ? crypto.randomUUID() : null;
         if (initial) {
           ({ error } = await supabase.from("tasks").update(payload).eq("id", initial.id));
         } else if (recurrence.enabled) {
@@ -1773,6 +1776,7 @@ function TaskForm({
               end_date: recurrence.endDate || null,
               scheduled_time: derivedTime,
               duration_minutes: derivedDuration,
+              task_group_id: groupId,
             })),
           );
           error = ins.error;
@@ -1793,6 +1797,7 @@ function TaskForm({
                 assigned_to: memberId,
                 company_id: companyId,
                 created_by: userId,
+                task_group_id: groupId,
               })),
             )
             .select("id")
@@ -1800,6 +1805,7 @@ function TaskForm({
           error = inserted.error;
           for (const row of inserted.data ?? []) createdTaskIds.push(row.id);
         }
+
         if (error) {
           setLoading(false);
           toast.error(error.message);
