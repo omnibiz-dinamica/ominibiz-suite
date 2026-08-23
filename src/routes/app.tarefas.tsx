@@ -1567,6 +1567,56 @@ function TaskForm({
   const [pendingDocs, setPendingDocs] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const timingMode: "start_stop" = "start_stop";
+
+  // ---------------------------------------------------------------
+  // Fase B — equipe responsável do cliente (client_assignees).
+  // Ao escolher o cliente, sugerimos os colaboradores ativos vinculados.
+  // A seleção do Gestor NUNCA é sobrescrita em silêncio: se ele já mexeu,
+  // pedimos decisão explícita (usar equipe do novo cliente / manter).
+  // ---------------------------------------------------------------
+  const [touchedAssignees, setTouchedAssignees] = useState(false);
+  const [teamPrompt, setTeamPrompt] = useState<{ clientName: string; team: string[] } | null>(null);
+  const [teamHint, setTeamHint] = useState<string | null>(null);
+
+  const fetchClientTeam = async (cid: string): Promise<string[]> => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase.rpc as any)("client_default_assignees", { _client_id: cid });
+    if (error) throw error;
+    const rows = (data ?? []) as { user_id: string; is_active: boolean }[];
+    // Só colaboradores ativos e que ainda pertencem à empresa (lista `members`).
+    const memberIds = new Set(members.map((m) => m.id));
+    return rows.filter((r) => r.is_active && memberIds.has(r.user_id)).map((r) => r.user_id);
+  };
+
+  const applyClient = async (cid: string) => {
+    setClientId(cid);
+    setTeamPrompt(null);
+    if (initial || !cid) return;
+    let team: string[] = [];
+    try {
+      team = await fetchClientTeam(cid);
+    } catch (e) {
+      toast.error((e as Error).message);
+      return;
+    }
+    const clientName = clients.find((c) => c.id === cid)?.name ?? "cliente";
+    if (team.length === 0) {
+      setTeamHint(`${clientName} não tem responsáveis cadastrados. Selecione manualmente.`);
+      return;
+    }
+    if (!touchedAssignees || assignees.length === 0) {
+      setAssignees(team);
+      setTouchedAssignees(false);
+      setTeamHint(
+        team.length === 1
+          ? `Responsável do cliente carregado automaticamente.`
+          : `${team.length} responsáveis do cliente carregados automaticamente.`,
+      );
+      return;
+    }
+    setTeamPrompt({ clientName, team });
+  };
+
   const uploadCreationDocs = async (taskId: string) => {
     for (const file of pendingDocs) {
       if (file.size > TASK_DOC_MAX_SIZE) {
