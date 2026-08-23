@@ -472,11 +472,15 @@ function ClientForm({
             const n = Number(s.replace(",", "."));
             return Number.isFinite(n) && s.trim() !== "" ? n : null;
           };
+          // Pacote V2 §6: os três valores do cliente são independentes e opcionais.
+          // Nunca são apagados por causa da forma de cobrança selecionada.
           const rates = {
-            hourly_rate: billingMode === "hourly" || billingMode === "mixed" ? parseRate(hourlyRate) : null,
-            fixed_rate: billingMode === "fixed" || billingMode === "mixed" ? parseRate(fixedRate) : null,
-            monthly_rate: billingMode === "monthly" ? parseRate(monthlyRate) : null,
+            hourly_rate: parseRate(hourlyRate),
+            fixed_rate: parseRate(fixedRate),
+            monthly_rate: parseRate(monthlyRate),
+            daily_rate: parseRate(dailyRate),
           };
+
           let clientId = initial?.id;
           if (initial) {
             const { error } = await (supabase.from("clients" as never) as any)
