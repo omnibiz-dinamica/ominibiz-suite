@@ -345,6 +345,40 @@ export const DEFAULT_ENABLED_MODULES: ModuleKey[] = [
   "finance",
 ];
 
+/**
+ * ADR-033 — Módulos do vertical Material de Construção.
+ * IMPORTANTE: nunca são incluídos em DEFAULT_ENABLED_MODULES nem ativados
+ * automaticamente. Só o Super Admin os ativa, empresa a empresa.
+ */
+export const BUILDING_MATERIALS_MODULES: ModuleKey[] = [
+  "building_materials_dashboard",
+  "building_materials_products",
+  "building_materials_inventory",
+  "building_materials_categories",
+  "building_materials_suppliers",
+  "building_materials_purchases",
+  "building_materials_quotes",
+  "building_materials_sales",
+  "building_materials_customers",
+  "building_materials_deliveries",
+  "building_materials_finance",
+];
+
+/** Rota → módulo exigido pelo ModuleGuard no vertical Material de Construção. */
+export const BUILDING_MATERIALS_ROUTE_MODULES: Array<{ prefix: string; module: ModuleKey }> = [
+  { prefix: "/app/material-construcao/produtos", module: "building_materials_products" },
+  { prefix: "/app/material-construcao/estoque", module: "building_materials_inventory" },
+  { prefix: "/app/material-construcao/categorias", module: "building_materials_categories" },
+  { prefix: "/app/material-construcao/fornecedores", module: "building_materials_suppliers" },
+  { prefix: "/app/material-construcao/compras", module: "building_materials_purchases" },
+  { prefix: "/app/material-construcao/orcamentos", module: "building_materials_quotes" },
+  { prefix: "/app/material-construcao/vendas", module: "building_materials_sales" },
+  { prefix: "/app/material-construcao/clientes", module: "building_materials_customers" },
+  { prefix: "/app/material-construcao/entregas", module: "building_materials_deliveries" },
+  { prefix: "/app/material-construcao/financeiro", module: "building_materials_finance" },
+  { prefix: "/app/material-construcao", module: "building_materials_dashboard" },
+];
+
 /** ADR-028 / ADR-033 — agrupamento dos módulos por aba na configuração da empresa (UI). */
 export type ModuleTabKey =
   | "general"
