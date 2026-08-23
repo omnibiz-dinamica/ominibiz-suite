@@ -43,20 +43,51 @@ export type ModuleKey =
   | "restaurant_kitchen"
   | "restaurant_delivery"
   | "restaurant_couriers"
-  | "restaurant_delivery_zones";
+  | "restaurant_delivery_zones"
+  // ADR-033 — Vertical Material de Construção (inativo por omissão).
+  | "building_materials_dashboard"
+  | "building_materials_products"
+  | "building_materials_inventory"
+  | "building_materials_categories"
+  | "building_materials_suppliers"
+  | "building_materials_purchases"
+  | "building_materials_quotes"
+  | "building_materials_sales"
+  | "building_materials_customers"
+  | "building_materials_deliveries"
+  | "building_materials_finance";
 
-/** ADR-027 — Ramo de atividade da empresa (business vertical). */
-export type BusinessVertical = "cleaning_services" | "restaurant_delivery" | "generic";
+/** ADR-027 / ADR-033 — Ramo de atividade da empresa (business vertical). */
+export type BusinessVertical =
+  | "cleaning_services"
+  | "restaurant_delivery"
+  | "building_materials"
+  | "hospitality"
+  | "auto_repair"
+  | "generic";
 
 export const BUSINESS_VERTICALS: { value: BusinessVertical; label: string }[] = [
   { value: "cleaning_services", label: "Serviços de Limpeza" },
   { value: "restaurant_delivery", label: "Restaurante & Delivery" },
+  { value: "building_materials", label: "Material de Construção" },
+  { value: "hospitality", label: "Hotelaria (preparado)" },
+  { value: "auto_repair", label: "Oficina Mecânica (preparado)" },
   { value: "generic", label: "Genérico" },
 ];
 
+const KNOWN_VERTICALS: BusinessVertical[] = [
+  "cleaning_services",
+  "restaurant_delivery",
+  "building_materials",
+  "hospitality",
+  "auto_repair",
+  "generic",
+];
+
 export function normalizeBusinessVertical(value: string | null | undefined): BusinessVertical {
-  return value === "restaurant_delivery" || value === "generic" ? value : "cleaning_services";
+  return KNOWN_VERTICALS.includes(value as BusinessVertical) ? (value as BusinessVertical) : "cleaning_services";
 }
+
 
 /** Módulos ativados automaticamente ao marcar a empresa como Restaurante & Delivery. */
 export const RESTAURANT_ENABLED_MODULES: ModuleKey[] = [
@@ -234,7 +265,74 @@ export const MODULE_CATALOG: Record<
     addonMonthly: 0,
     included: false,
   },
+  building_materials_dashboard: {
+    label: "Material · Visão Geral",
+    description: "Indicadores da operação de material de construção.",
+    addonMonthly: 0,
+    included: false,
+  },
+  building_materials_products: {
+    label: "Material · Produtos",
+    description: "Catálogo de produtos e unidades.",
+    addonMonthly: 0,
+    included: false,
+  },
+  building_materials_inventory: {
+    label: "Material · Estoque",
+    description: "Saldos, entradas e saídas de estoque.",
+    addonMonthly: 0,
+    included: false,
+  },
+  building_materials_categories: {
+    label: "Material · Categorias",
+    description: "Categorias e famílias de produtos.",
+    addonMonthly: 0,
+    included: false,
+  },
+  building_materials_suppliers: {
+    label: "Material · Fornecedores",
+    description: "Cadastro de fornecedores.",
+    addonMonthly: 0,
+    included: false,
+  },
+  building_materials_purchases: {
+    label: "Material · Compras",
+    description: "Pedidos de compra e recebimentos.",
+    addonMonthly: 0,
+    included: false,
+  },
+  building_materials_quotes: {
+    label: "Material · Orçamentos",
+    description: "Orçamentos e propostas de venda.",
+    addonMonthly: 0,
+    included: false,
+  },
+  building_materials_sales: {
+    label: "Material · Vendas / PDV",
+    description: "Vendas de balcão e ponto de venda.",
+    addonMonthly: 0,
+    included: false,
+  },
+  building_materials_customers: {
+    label: "Material · Clientes",
+    description: "Clientes do balcão e obra.",
+    addonMonthly: 0,
+    included: false,
+  },
+  building_materials_deliveries: {
+    label: "Material · Entregas",
+    description: "Entregas, rotas e comprovativos.",
+    addonMonthly: 0,
+    included: false,
+  },
+  building_materials_finance: {
+    label: "Material · Financeiro",
+    description: "Contas a receber e a pagar do vertical.",
+    addonMonthly: 0,
+    included: false,
+  },
 };
+
 
 export const DEFAULT_ENABLED_MODULES: ModuleKey[] = [
   "core",
@@ -247,8 +345,48 @@ export const DEFAULT_ENABLED_MODULES: ModuleKey[] = [
   "finance",
 ];
 
-/** ADR-028 — agrupamento dos módulos por aba na configuração da empresa (UI). */
-export type ModuleTabKey = "general" | "cleaning" | "restaurant" | "hospitality" | "auto_repair";
+/**
+ * ADR-033 — Módulos do vertical Material de Construção.
+ * IMPORTANTE: nunca são incluídos em DEFAULT_ENABLED_MODULES nem ativados
+ * automaticamente. Só o Super Admin os ativa, empresa a empresa.
+ */
+export const BUILDING_MATERIALS_MODULES: ModuleKey[] = [
+  "building_materials_dashboard",
+  "building_materials_products",
+  "building_materials_inventory",
+  "building_materials_categories",
+  "building_materials_suppliers",
+  "building_materials_purchases",
+  "building_materials_quotes",
+  "building_materials_sales",
+  "building_materials_customers",
+  "building_materials_deliveries",
+  "building_materials_finance",
+];
+
+/** Rota → módulo exigido pelo ModuleGuard no vertical Material de Construção. */
+export const BUILDING_MATERIALS_ROUTE_MODULES: Array<{ prefix: string; module: ModuleKey }> = [
+  { prefix: "/app/material-construcao/produtos", module: "building_materials_products" },
+  { prefix: "/app/material-construcao/estoque", module: "building_materials_inventory" },
+  { prefix: "/app/material-construcao/categorias", module: "building_materials_categories" },
+  { prefix: "/app/material-construcao/fornecedores", module: "building_materials_suppliers" },
+  { prefix: "/app/material-construcao/compras", module: "building_materials_purchases" },
+  { prefix: "/app/material-construcao/orcamentos", module: "building_materials_quotes" },
+  { prefix: "/app/material-construcao/vendas", module: "building_materials_sales" },
+  { prefix: "/app/material-construcao/clientes", module: "building_materials_customers" },
+  { prefix: "/app/material-construcao/entregas", module: "building_materials_deliveries" },
+  { prefix: "/app/material-construcao/financeiro", module: "building_materials_finance" },
+  { prefix: "/app/material-construcao", module: "building_materials_dashboard" },
+];
+
+/** ADR-028 / ADR-033 — agrupamento dos módulos por aba na configuração da empresa (UI). */
+export type ModuleTabKey =
+  | "general"
+  | "cleaning"
+  | "restaurant"
+  | "building_materials"
+  | "hospitality"
+  | "auto_repair";
 
 export const MODULE_TABS: Array<{
   key: ModuleTabKey;
@@ -296,9 +434,16 @@ export const MODULE_TABS: Array<{
       "restaurant_delivery_zones",
     ],
   },
-  { key: "hospitality", label: "Hotelaria", vertical: null, modules: [] },
-  { key: "auto_repair", label: "Oficina", vertical: null, modules: [] },
+  {
+    key: "building_materials",
+    label: "Material de Construção",
+    vertical: "building_materials",
+    modules: BUILDING_MATERIALS_MODULES,
+  },
+  { key: "hospitality", label: "Hotelaria", vertical: "hospitality", modules: [] },
+  { key: "auto_repair", label: "Oficina", vertical: "auto_repair", modules: [] },
 ];
+
 
 export const ROUTE_MODULES: Array<{ prefix: string; module: ModuleKey }> = [
   { prefix: "/app/tarefas", module: "tasks" },

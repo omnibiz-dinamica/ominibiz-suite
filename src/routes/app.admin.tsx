@@ -376,13 +376,20 @@ function BillingControls({ company }: { company: AdminCompany }) {
   const [modules, setModules] = useState<ModuleKey[]>(normalizeModules(company.enabled_modules));
   const [notes, setNotes] = useState(company.billing_notes ?? "");
   const [vertical, setVertical] = useState<BusinessVertical>(normalizeBusinessVertical(company.business_vertical));
-  const [activeTab, setActiveTab] = useState<ModuleTabKey>(
-    normalizeBusinessVertical(company.business_vertical) === "restaurant_delivery" ? "restaurant" : "general",
-  );
+  const [activeTab, setActiveTab] = useState<ModuleTabKey>(() => {
+    const v = normalizeBusinessVertical(company.business_vertical);
+    if (v === "restaurant_delivery") return "restaurant";
+    if (v === "building_materials") return "building_materials";
+    return "general";
+  });
 
   /**
    * ADR-027 — ao marcar a empresa como Restaurante & Delivery, ativa o pacote
    * de módulos do restaurante (sem remover os módulos já ativos).
+   *
+   * ADR-033 — Material de Construção (e Hotelaria/Oficina) NÃO têm pacote
+   * automático: os módulos começam sempre desmarcados e só o Super Admin os
+   * ativa manualmente, módulo a módulo.
    */
   const changeVertical = (next: BusinessVertical) => {
     setVertical(next);
@@ -390,6 +397,7 @@ function BillingControls({ company }: { company: AdminCompany }) {
       setModules((current) => Array.from(new Set([...current, ...RESTAURANT_ENABLED_MODULES])));
     }
   };
+
 
   /**
    * ADR-028 (revisto) — as abas são apenas filtro visual: não alteram o ramo

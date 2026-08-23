@@ -724,3 +724,18 @@ queries, mutations ou fluxos funcionais.**
 - Folha: hora usa tempo real; dia paga 1× por dia trabalhado; mensal é base e não
   é multiplicada por horas. Snapshot histórico preservado.
 - Ver ADR-031.
+
+## Novo vertical: Material de Construção — Fase A · 2026-08-23
+
+- `companies.business_vertical` aceita agora `building_materials`, `hospitality` e
+  `auto_repair` (migration idempotente, sem qualquer UPDATE de dados).
+- 11 novos módulos `building_materials_*` no catálogo — **todos desativados** por
+  omissão; `DEFAULT_ENABLED_MODULES` inalterado.
+- Novo componente canónico `src/components/ModuleGuard.tsx` (403 por URL direta).
+- 11 novas rotas `/app/material-construcao/*`, todas com `RoleGuard` + `ModuleGuard`.
+- Grupo de menu "Material de Construção" em `src/lib/navigation.ts` (aditivo; só
+  mostra itens de módulos ativos).
+- Super Admin: nova aba "Material de Construção" na configuração de módulos, com
+  todos os checkboxes desmarcados e sem ativação automática ao mudar o ramo.
+- Hotelaria e Oficina: apenas verticais preparados (sem menus nem rotas).
+- Ver ADR-033 e `docs/release-notes/RELEASE_NOTES_BUILDING_MATERIALS_FASE_A.md`.
