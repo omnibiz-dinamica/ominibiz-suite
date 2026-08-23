@@ -36,6 +36,7 @@ import {
   TICKET_STATUS_TONE,
   TICKET_TYPE_LABEL,
   isClosedTicketStatus,
+  ARCHIVABLE_STATUSES,
   type SupportTicketPriority,
   type SupportTicketStatus,
 } from "@/lib/support/constants";
