@@ -12,6 +12,8 @@ import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { Download, Trash2, Upload, IdCard, Building2, MapPin } from "lucide-react";
 import { ModalSection } from "@/components/ui/dialog";
+import { EMPLOYEE_PAYMENT_TYPES, PAYMENT_TYPE_LABEL, type PaymentType } from "@/lib/compensation";
+
 
 /**
  * Tabbed employee editor (Aba 1-6) for the Equipe module.
