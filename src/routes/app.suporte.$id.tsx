@@ -804,9 +804,9 @@ function SupportDetailPage() {
           </Button>
         )}
 
-        {t.status === "resolvido" && (
-          <Button className="w-full" onClick={() => closeMut.mutate()} disabled={closeMut.isPending}>
-            <Archive className="mr-1 h-4 w-4" /> Arquivar como resolvido
+        {ARCHIVABLE_STATUSES.includes(t.status) && (
+          <Button className="w-full" onClick={() => setArchiveOpen(true)}>
+            <Archive className="mr-1 h-4 w-4" /> Arquivar ticket
           </Button>
         )}
       </aside>
@@ -818,6 +818,13 @@ function SupportDetailPage() {
         requesterIsEmployee={requesterIsEmployee}
         requesterName={requesterQ.data?.requester_full_name ?? requesterQ.data?.requester_email ?? null}
         employees={employeesQ.data ?? []}
+        onDone={() => invalidateSupportTicket(qc, id)}
+      />
+
+      <ArchiveTicketDialog
+        open={archiveOpen}
+        onOpenChange={setArchiveOpen}
+        ticket={{ id: t.id, ticket_number: t.ticket_number, title: t.title, status: t.status }}
         onDone={() => invalidateSupportTicket(qc, id)}
       />
     </div>
