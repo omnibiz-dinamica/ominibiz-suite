@@ -231,6 +231,12 @@ export function isClosedTicketStatus(status: string): boolean {
   return (CLOSED_TICKET_STATUSES as string[]).includes(status);
 }
 
+/**
+ * Estados a partir dos quais o arquivamento é permitido (SUP-2026-000070).
+ * Inclui os encerramentos do fluxo de 2 níveis (ADR-021); `fechado` já está arquivado.
+ */
+export const ARCHIVABLE_STATUSES: string[] = ["resolvido", "resolved_by_manager", "rejeitado"];
+
 export function ticketReopenableByManager(closedAtIso: string | null): boolean {
   if (!closedAtIso) return false;
   const closed = new Date(closedAtIso).getTime();

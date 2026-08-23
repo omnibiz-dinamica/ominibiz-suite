@@ -7,6 +7,7 @@ import { RoleGuard } from "@/components/RoleGuard";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ReopenTicketDialog } from "@/components/support/ReopenTicketDialog";
+import { ArchiveTicketDialog } from "@/components/support/ArchiveTicketDialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
@@ -35,12 +36,13 @@ import {
   TICKET_STATUS_TONE,
   TICKET_TYPE_LABEL,
   isClosedTicketStatus,
+  ARCHIVABLE_STATUSES,
   type SupportTicketPriority,
   type SupportTicketStatus,
 } from "@/lib/support/constants";
 import {
   postMessage,
-  closeTicket,
+  
   reopenTicketWithMessage,
   signedAttachmentUrl,
   updatePriority,
@@ -182,6 +184,7 @@ function SupportDetailPage() {
   const [reply, setReply] = useState("");
   const [isInternal, setIsInternal] = useState(false);
   const [reopenOpen, setReopenOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
 
   const ticketQ = useQuery<TicketDetail | null>({
     queryKey: ["support-ticket", id],
@@ -341,18 +344,6 @@ function SupportDetailPage() {
     onError: (e) => toast.error("Erro: " + (e as Error).message),
   });
 
-  const closeMut = useMutation({
-    mutationFn: async () => {
-      const reason = window.prompt("Confirme o motivo do arquivamento:", "Validado como resolvido") ?? "";
-      if (!reason.trim()) throw new Error("Motivo obrigatorio");
-      await closeTicket(id, reason);
-    },
-    onSuccess: () => {
-      invalidateSupportTicket(qc, id);
-      toast.success("Ticket arquivado.");
-    },
-    onError: (e) => toast.error("Erro: " + (e as Error).message),
-  });
 
   const uploadMut = useMutation({
     mutationFn: async (file: File) => {
@@ -816,9 +807,9 @@ function SupportDetailPage() {
           </Button>
         )}
 
-        {t.status === "resolvido" && (
-          <Button className="w-full" onClick={() => closeMut.mutate()} disabled={closeMut.isPending}>
-            <Archive className="mr-1 h-4 w-4" /> Arquivar como resolvido
+        {ARCHIVABLE_STATUSES.includes(t.status) && (
+          <Button className="w-full" onClick={() => setArchiveOpen(true)}>
+            <Archive className="mr-1 h-4 w-4" /> Arquivar ticket
           </Button>
         )}
       </aside>
@@ -830,6 +821,13 @@ function SupportDetailPage() {
         requesterIsEmployee={requesterIsEmployee}
         requesterName={requesterQ.data?.requester_full_name ?? requesterQ.data?.requester_email ?? null}
         employees={employeesQ.data ?? []}
+        onDone={() => invalidateSupportTicket(qc, id)}
+      />
+
+      <ArchiveTicketDialog
+        open={archiveOpen}
+        onOpenChange={setArchiveOpen}
+        ticket={{ id: t.id, ticket_number: t.ticket_number, title: t.title, status: t.status }}
         onDone={() => invalidateSupportTicket(qc, id)}
       />
     </div>
