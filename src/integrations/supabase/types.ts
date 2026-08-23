@@ -105,6 +105,7 @@ export type Database = {
           company_id: string
           created_at: string
           created_by: string | null
+          daily_rate: number | null
           email: string | null
           fixed_rate: number | null
           geo_address: string | null
@@ -130,6 +131,7 @@ export type Database = {
           company_id: string
           created_at?: string
           created_by?: string | null
+          daily_rate?: number | null
           email?: string | null
           fixed_rate?: number | null
           geo_address?: string | null
@@ -155,6 +157,7 @@ export type Database = {
           company_id?: string
           created_at?: string
           created_by?: string | null
+          daily_rate?: number | null
           email?: string | null
           fixed_rate?: number | null
           geo_address?: string | null
@@ -391,11 +394,13 @@ export type Database = {
         Row: {
           billing_active: boolean
           company_id: string
+          default_daily_rate: number
           default_fixed_rate: number
           default_hour_rate: number
           default_mixed_base_fixed: number
           default_mixed_extra_hour_rate: number
           default_mixed_included_minutes: number
+          default_monthly_rate: number
           default_punch_mode: Database["public"]["Enums"]["punch_mode"]
           default_support_manager_id: string | null
           employee_approver_kind: Database["public"]["Enums"]["employee_approver_kind"]
@@ -419,11 +424,13 @@ export type Database = {
         Insert: {
           billing_active?: boolean
           company_id: string
+          default_daily_rate?: number
           default_fixed_rate?: number
           default_hour_rate?: number
           default_mixed_base_fixed?: number
           default_mixed_extra_hour_rate?: number
           default_mixed_included_minutes?: number
+          default_monthly_rate?: number
           default_punch_mode?: Database["public"]["Enums"]["punch_mode"]
           default_support_manager_id?: string | null
           employee_approver_kind?: Database["public"]["Enums"]["employee_approver_kind"]
@@ -447,11 +454,13 @@ export type Database = {
         Update: {
           billing_active?: boolean
           company_id?: string
+          default_daily_rate?: number
           default_fixed_rate?: number
           default_hour_rate?: number
           default_mixed_base_fixed?: number
           default_mixed_extra_hour_rate?: number
           default_mixed_included_minutes?: number
+          default_monthly_rate?: number
           default_punch_mode?: Database["public"]["Enums"]["punch_mode"]
           default_support_manager_id?: string | null
           employee_approver_kind?: Database["public"]["Enums"]["employee_approver_kind"]
@@ -1588,6 +1597,7 @@ export type Database = {
           main_doc_expires_at: string | null
           main_doc_number: string | null
           main_doc_type: string | null
+          manual_daily_rate: number | null
           manual_fixed_rate: number | null
           manual_hour_rate: number | null
           manual_hourly_rate: number | null
@@ -1654,6 +1664,7 @@ export type Database = {
           main_doc_expires_at?: string | null
           main_doc_number?: string | null
           main_doc_type?: string | null
+          manual_daily_rate?: number | null
           manual_fixed_rate?: number | null
           manual_hour_rate?: number | null
           manual_hourly_rate?: number | null
@@ -1720,6 +1731,7 @@ export type Database = {
           main_doc_expires_at?: string | null
           main_doc_number?: string | null
           main_doc_type?: string | null
+          manual_daily_rate?: number | null
           manual_fixed_rate?: number | null
           manual_hour_rate?: number | null
           manual_hourly_rate?: number | null
@@ -2740,12 +2752,14 @@ export type Database = {
           computed_at: string
           computed_by: string | null
           currency: string
+          daily_applied: number | null
           effective_minutes: number
           fixed_applied: number
           id: string
           mixed_base_applied: number
           mixed_extra_rate_applied: number
           mixed_included_minutes_applied: number
+          monthly_applied: number | null
           pay_model_used: string
           rate_applied: number
           rate_source: string
@@ -2760,12 +2774,14 @@ export type Database = {
           computed_at?: string
           computed_by?: string | null
           currency?: string
+          daily_applied?: number | null
           effective_minutes?: number
           fixed_applied?: number
           id?: string
           mixed_base_applied?: number
           mixed_extra_rate_applied?: number
           mixed_included_minutes_applied?: number
+          monthly_applied?: number | null
           pay_model_used: string
           rate_applied?: number
           rate_source: string
@@ -2780,12 +2796,14 @@ export type Database = {
           computed_at?: string
           computed_by?: string | null
           currency?: string
+          daily_applied?: number | null
           effective_minutes?: number
           fixed_applied?: number
           id?: string
           mixed_base_applied?: number
           mixed_extra_rate_applied?: number
           mixed_included_minutes_applied?: number
+          monthly_applied?: number | null
           pay_model_used?: string
           rate_applied?: number
           rate_source?: string
@@ -3267,12 +3285,14 @@ export type Database = {
           computed_at: string
           computed_by: string | null
           currency: string
+          daily_applied: number | null
           effective_minutes: number
           fixed_applied: number
           id: string
           mixed_base_applied: number
           mixed_extra_rate_applied: number
           mixed_included_minutes_applied: number
+          monthly_applied: number | null
           pay_model_used: string
           rate_applied: number
           rate_source: string
@@ -3509,11 +3529,13 @@ export type Database = {
         Returns: {
           billing_active: boolean
           company_id: string
+          default_daily_rate: number
           default_fixed_rate: number
           default_hour_rate: number
           default_mixed_base_fixed: number
           default_mixed_extra_hour_rate: number
           default_mixed_included_minutes: number
+          default_monthly_rate: number
           default_punch_mode: Database["public"]["Enums"]["punch_mode"]
           default_support_manager_id: string | null
           employee_approver_kind: Database["public"]["Enums"]["employee_approver_kind"]
@@ -4346,6 +4368,14 @@ export type Database = {
         }[]
       }
       resolve_billing_rule: { Args: { _time_entry_id: string }; Returns: Json }
+      resolve_effective_compensation: {
+        Args: {
+          _client_id?: string
+          _company_id?: string
+          _employee_id: string
+        }
+        Returns: Json
+      }
       resolve_support_ticket_by_manager: {
         Args: { _resolution: string; _ticket_id: string }
         Returns: undefined
@@ -4633,6 +4663,7 @@ export type Database = {
           company_id: string
           created_at: string
           created_by: string | null
+          daily_rate: number | null
           email: string | null
           fixed_rate: number | null
           geo_address: string | null
@@ -4664,11 +4695,13 @@ export type Database = {
         Returns: {
           billing_active: boolean
           company_id: string
+          default_daily_rate: number
           default_fixed_rate: number
           default_hour_rate: number
           default_mixed_base_fixed: number
           default_mixed_extra_hour_rate: number
           default_mixed_included_minutes: number
+          default_monthly_rate: number
           default_punch_mode: Database["public"]["Enums"]["punch_mode"]
           default_support_manager_id: string | null
           employee_approver_kind: Database["public"]["Enums"]["employee_approver_kind"]
@@ -4733,6 +4766,7 @@ export type Database = {
           main_doc_expires_at: string | null
           main_doc_number: string | null
           main_doc_type: string | null
+          manual_daily_rate: number | null
           manual_fixed_rate: number | null
           manual_hour_rate: number | null
           manual_hourly_rate: number | null

@@ -12,6 +12,8 @@ import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { Download, Trash2, Upload, IdCard, Building2, MapPin } from "lucide-react";
 import { ModalSection } from "@/components/ui/dialog";
+import { EMPLOYEE_PAYMENT_TYPES, PAYMENT_TYPE_LABEL, type PaymentType } from "@/lib/compensation";
+
 
 /**
  * Tabbed employee editor (Aba 1-6) for the Equipe module.
@@ -633,6 +635,10 @@ function TabFinanceiro({
   profile: ProfileRow;
   onSave: (p: Record<string, unknown>, msg?: string) => Promise<void>;
 }) {
+  const [payModel, setPayModel] = useState<PaymentType>(() => {
+    const raw = String(profile.pay_model ?? "hourly");
+    return (EMPLOYEE_PAYMENT_TYPES as string[]).includes(raw) ? (raw as PaymentType) : (raw as PaymentType);
+  });
   const [f, setF] = useState({
     iban: str(profile.iban),
     swift: str(profile.swift),
@@ -647,8 +653,10 @@ function TabFinanceiro({
     manual_hourly_rate: num(profile.manual_hourly_rate),
     manual_fixed_rate: num(profile.manual_fixed_rate),
     manual_monthly_rate: num(profile.manual_monthly_rate),
+    manual_daily_rate: num(profile.manual_daily_rate),
   });
   const upd = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((s) => ({ ...s, [k]: e.target.value }));
+
   const [loading, setLoading] = useState(false);
   return (
     <form
@@ -670,10 +678,15 @@ function TabFinanceiro({
               allowance_transport: toNullableNumber(f.allowance_transport),
               allowance_rent: toNullableNumber(f.allowance_rent),
               allowance_other: toNullableNumber(f.allowance_other),
+              pay_model: payModel,
               manual_hourly_rate: toNullableNumber(f.manual_hourly_rate),
+              // O motor de valorização lê `manual_hour_rate`; mantemos os dois em sincronia.
+              manual_hour_rate: toNullableNumber(f.manual_hourly_rate),
               manual_fixed_rate: toNullableNumber(f.manual_fixed_rate),
               manual_monthly_rate: toNullableNumber(f.manual_monthly_rate),
+              manual_daily_rate: toNullableNumber(f.manual_daily_rate),
             },
+
             "Financeiro salvo",
           );
         } catch (err) {
@@ -724,41 +737,82 @@ function TabFinanceiro({
         </Field>
       </div>
       <div className="rounded-xl border border-dashed border-border bg-muted/20 p-4">
-        <div className="mb-1 text-sm font-semibold">Sobrescrever valores de faturação</div>
+        <div className="mb-1 text-sm font-semibold">Pagamento do funcionário</div>
         <p className="mb-3 text-xs text-muted-foreground">
-          ADR-017 — Hierarquia: <strong>funcionário</strong> &gt; cliente &gt; empresa. Deixe em branco para herdar.
-          Estes valores são usados pelas rotinas de valorização quando o cliente não define valor próprio.
+          Hierarquia oficial: <strong>funcionário</strong> &gt; cliente &gt; empresa. Deixe o valor em
+          branco para herdar. A modalidade escolhida aqui é a que a folha aplica.
         </p>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Field label="Valor/hora (override)">
-            <Input
-              type="number"
-              step="0.01"
-              placeholder="herda"
-              value={f.manual_hourly_rate}
-              onChange={upd("manual_hourly_rate")}
-            />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Tipo de pagamento">
+            <Select value={payModel} onValueChange={(v) => setPayModel(v as PaymentType)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {EMPLOYEE_PAYMENT_TYPES.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {PAYMENT_TYPE_LABEL[t]}
+                  </SelectItem>
+                ))}
+                {!EMPLOYEE_PAYMENT_TYPES.includes(payModel) && (
+                  <SelectItem value={payModel}>{PAYMENT_TYPE_LABEL[payModel] ?? payModel}</SelectItem>
+                )}
+              </SelectContent>
+            </Select>
           </Field>
-          <Field label="Valor fixo por tarefa (override)">
-            <Input
-              type="number"
-              step="0.01"
-              placeholder="herda"
-              value={f.manual_fixed_rate}
-              onChange={upd("manual_fixed_rate")}
-            />
-          </Field>
-          <Field label="Mensalidade (override)">
-            <Input
-              type="number"
-              step="0.01"
-              placeholder="herda"
-              value={f.manual_monthly_rate}
-              onChange={upd("manual_monthly_rate")}
-            />
-          </Field>
+
+          {payModel === "hourly" && (
+            <Field label="Valor Hora (€ / hora)">
+              <Input
+                type="number"
+                step="0.01"
+                placeholder="herda cliente/empresa"
+                value={f.manual_hourly_rate}
+                onChange={upd("manual_hourly_rate")}
+              />
+            </Field>
+          )}
+          {payModel === "daily" && (
+            <Field label="Valor Diário / Fixo (€ / dia)">
+              <Input
+                type="number"
+                step="0.01"
+                placeholder="herda cliente/empresa"
+                value={f.manual_daily_rate}
+                onChange={upd("manual_daily_rate")}
+              />
+            </Field>
+          )}
+          {payModel === "monthly" && (
+            <Field label="Valor Mensal (€ / mês)">
+              <Input
+                type="number"
+                step="0.01"
+                placeholder="herda cliente/empresa"
+                value={f.manual_monthly_rate}
+                onChange={upd("manual_monthly_rate")}
+              />
+            </Field>
+          )}
+          {(payModel === "fixed" || payModel === "mixed") && (
+            <Field label="Valor fixo por tarefa (€ / tarefa)">
+              <Input
+                type="number"
+                step="0.01"
+                placeholder="herda cliente/empresa"
+                value={f.manual_fixed_rate}
+                onChange={upd("manual_fixed_rate")}
+              />
+            </Field>
+          )}
         </div>
+        <p className="mt-3 text-[11px] text-muted-foreground">
+          Por Hora usa o tempo real do ponto. Por Dia / Fixo paga o valor do dia uma única vez por
+          dia trabalhado — nunca multiplicado pelas horas. Por Mês é remuneração base; as horas
+          continuam registadas para presença, extras e auditoria.
+        </p>
       </div>
+
     </form>
   );
 }

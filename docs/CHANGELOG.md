@@ -647,3 +647,20 @@ queries, mutations ou fluxos funcionais.**
 - Nova coluna `support_tickets.destination_type` (nullable) e normalização dos tickets `aberto` sem destino.
 - Modal canónico `src/components/support/ReopenTicketDialog.tsx` substitui o `window.prompt` (fecha KI-025 no fluxo de reabertura).
 - Ticket encerrado deixa de mostrar a caixa de resposta normal; passa a exibir "Responder / reabrir".
+
+## Pacote Operacional V2 — Fase A (financeiro) · 2026-08-23
+
+- Funcionário passa a ter **Tipo de pagamento**: Por Hora, Por Dia / Fixo, Por Mês
+  (`profiles.pay_model`), com apenas o campo de valor relevante visível e opcional.
+- Novo valor diário explícito em funcionário, cliente e empresa
+  (`manual_daily_rate`, `clients.daily_rate`, `company_hr_settings.default_daily_rate`).
+  O antigo "fixo" (por tarefa) manteve o significado.
+- Cliente: os quatro valores (hora, dia, mês, fixo) são independentes e opcionais
+  e já não são apagados ao mudar a forma de cobrança.
+- Empresa: seção **Valores Padrão de Pagamento** com fonte única
+  (`company_hr_settings`); valores anteriores migrados automaticamente.
+- Hierarquia oficial implementada no servidor (FUNCIONÁRIO > CLIENTE > EMPRESA)
+  em `resolve_billing_rule`, com nova RPC `resolve_effective_compensation`.
+- Folha: hora usa tempo real; dia paga 1× por dia trabalhado; mensal é base e não
+  é multiplicada por horas. Snapshot histórico preservado.
+- Ver ADR-031.

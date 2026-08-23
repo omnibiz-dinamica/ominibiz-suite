@@ -76,58 +76,62 @@ function Field({ label, value, highlight }: { label: string; value: string; high
 }
 
 /**
- * ADR-017 — Valores padrão da empresa.
- * Servem como fallback quando o cliente e o funcionário não sobrescrevem.
- * Hierarquia efetiva:
- *   1) profiles.manual_* (override do funcionário)
- *   2) clients.hourly_rate / fixed_rate / monthly_rate (valor do cliente)
- *   3) companies.default_* (este card)
+ * Valores Padrão de Pagamento (Pacote Operacional V2 · ADR-031).
+ * Fonte única: `company_hr_settings.default_*` — é o que o motor de valorização lê.
+ * Hierarquia efetiva: funcionário > cliente > empresa.
  */
 function DefaultRatesCard({ companyId }: { companyId: string }) {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ["company-default-rates", companyId],
     queryFn: async () => {
-      const { data, error } = await (supabase.from("companies") as any)
-        .select("default_hourly_rate,default_fixed_rate,default_monthly_rate")
-        .eq("id", companyId)
+      const { data, error } = await (supabase.from("company_hr_settings") as any)
+        .select("default_hour_rate,default_daily_rate,default_monthly_rate,default_fixed_rate")
+        .eq("company_id", companyId)
         .maybeSingle();
       if (error) throw error;
       return (data ?? {}) as {
-        default_hourly_rate: number | null;
-        default_fixed_rate: number | null;
+        default_hour_rate: number | null;
+        default_daily_rate: number | null;
         default_monthly_rate: number | null;
+        default_fixed_rate: number | null;
       };
     },
   });
 
   const [hourly, setHourly] = useState("");
-  const [fixed, setFixed] = useState("");
+  const [daily, setDaily] = useState("");
   const [monthly, setMonthly] = useState("");
+  const [fixed, setFixed] = useState("");
 
   useEffect(() => {
     if (data) {
-      setHourly(data.default_hourly_rate == null ? "" : String(data.default_hourly_rate));
-      setFixed(data.default_fixed_rate == null ? "" : String(data.default_fixed_rate));
-      setMonthly(data.default_monthly_rate == null ? "" : String(data.default_monthly_rate));
+      const s = (v: number | null | undefined) => (v == null ? "" : String(v));
+      setHourly(s(data.default_hour_rate));
+      setDaily(s(data.default_daily_rate));
+      setMonthly(s(data.default_monthly_rate));
+      setFixed(s(data.default_fixed_rate));
     }
   }, [data]);
 
-  const toNum = (s: string): number | null => {
-    if (s.trim() === "") return null;
+  const toNum = (s: string): number => {
+    if (s.trim() === "") return 0;
     const n = Number(s.replace(",", "."));
-    return Number.isFinite(n) ? n : null;
+    return Number.isFinite(n) ? n : 0;
   };
 
   const save = useMutation({
     mutationFn: async () => {
-      const { error } = await (supabase.from("companies") as any)
-        .update({
-          default_hourly_rate: toNum(hourly),
-          default_fixed_rate: toNum(fixed),
+      const { error } = await (supabase.from("company_hr_settings") as any).upsert(
+        {
+          company_id: companyId,
+          default_hour_rate: toNum(hourly),
+          default_daily_rate: toNum(daily),
           default_monthly_rate: toNum(monthly),
-        })
-        .eq("id", companyId);
+          default_fixed_rate: toNum(fixed),
+        },
+        { onConflict: "company_id" },
+      );
       if (error) throw error;
     },
     onSuccess: () => {
@@ -137,56 +141,39 @@ function DefaultRatesCard({ companyId }: { companyId: string }) {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const fields: { id: string; label: string; value: string; set: (v: string) => void }[] = [
+    { id: "def-hourly", label: "Valor Hora Padrão (€ / hora)", value: hourly, set: setHourly },
+    { id: "def-daily", label: "Valor Diário / Fixo Padrão (€ / dia)", value: daily, set: setDaily },
+    { id: "def-monthly", label: "Valor Mensal Padrão (€ / mês)", value: monthly, set: setMonthly },
+    { id: "def-fixed", label: "Valor fixo por tarefa (€ / tarefa)", value: fixed, set: setFixed },
+  ];
+
   return (
     <div className="rounded-2xl border border-border bg-card p-6">
-      <h2 className="font-display text-lg font-semibold">Valores padrão</h2>
+      <h2 className="font-display text-lg font-semibold">Valores Padrão de Pagamento</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Usados quando o cliente e o funcionário não têm valor próprio. Deixe em branco para não aplicar.
+        Usados quando o funcionário e o cliente não têm valor próprio. Deixe em 0 para não aplicar.
       </p>
 
       {isLoading ? (
         <div className="mt-4 text-sm text-muted-foreground">Carregando…</div>
       ) : (
-        <div className="mt-5 grid gap-4 sm:grid-cols-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="def-hourly">Valor/hora padrão</Label>
-            <input
-              id="def-hourly"
-              type="number"
-              step="0.01"
-              inputMode="decimal"
-              placeholder="0,00"
-              value={hourly}
-              onChange={(e) => setHourly(e.target.value)}
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="def-fixed">Valor fixo padrão (por tarefa)</Label>
-            <input
-              id="def-fixed"
-              type="number"
-              step="0.01"
-              inputMode="decimal"
-              placeholder="0,00"
-              value={fixed}
-              onChange={(e) => setFixed(e.target.value)}
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="def-monthly">Mensalidade padrão</Label>
-            <input
-              id="def-monthly"
-              type="number"
-              step="0.01"
-              inputMode="decimal"
-              placeholder="0,00"
-              value={monthly}
-              onChange={(e) => setMonthly(e.target.value)}
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-            />
-          </div>
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          {fields.map((fld) => (
+            <div key={fld.id} className="space-y-1.5">
+              <Label htmlFor={fld.id}>{fld.label}</Label>
+              <input
+                id={fld.id}
+                type="number"
+                step="0.01"
+                inputMode="decimal"
+                placeholder="0,00"
+                value={fld.value}
+                onChange={(e) => fld.set(e.target.value)}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              />
+            </div>
+          ))}
         </div>
       )}
 
@@ -196,11 +183,13 @@ function DefaultRatesCard({ companyId }: { companyId: string }) {
         </Button>
       </div>
       <p className="mt-3 text-xs text-muted-foreground">
-        Hierarquia: funcionário &gt; cliente &gt; empresa. Alterar aqui não afeta clientes/funcionários com valor próprio.
+        Hierarquia: funcionário &gt; cliente &gt; empresa. Alterar aqui não afeta funcionários ou
+        clientes com valor próprio, nem recalcula registos já valorizados (snapshot histórico).
       </p>
     </div>
   );
 }
+
 
 type EmployeeApproverKind = "manager" | "supervisor" | "owner" | "specific_user";
 type ManagerApproverKind = "owner" | "other_manager" | "specific_user" | "self_allowed";
