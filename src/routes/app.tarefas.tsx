@@ -1829,7 +1829,7 @@ function TaskForm({
     >
       <div className="space-y-1.5">
         <Label>Cliente</Label>
-        <Select value={clientId} onValueChange={setClientId}>
+        <Select value={clientId} onValueChange={(v) => void applyClient(v)}>
           <SelectTrigger>
             <SelectValue placeholder="Selecione o cliente" />
           </SelectTrigger>
@@ -1841,7 +1841,42 @@ function TaskForm({
             ))}
           </SelectContent>
         </Select>
+        {teamPrompt && (
+          <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs">
+            <p className="font-medium">
+              Você já escolheu responsáveis. Usar a equipe padrão de {teamPrompt.clientName} (
+              {teamPrompt.team.length}) ou manter a sua seleção?
+            </p>
+            <div className="mt-2 flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  setAssignees(teamPrompt.team);
+                  setTouchedAssignees(false);
+                  setTeamHint("Equipe padrão do novo cliente aplicada.");
+                  setTeamPrompt(null);
+                }}
+              >
+                Usar equipe do cliente
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setTeamHint("Seleção manual mantida.");
+                  setTeamPrompt(null);
+                }}
+              >
+                Manter seleção atual
+              </Button>
+            </div>
+          </div>
+        )}
+        {!teamPrompt && teamHint && <p className="text-xs text-muted-foreground">{teamHint}</p>}
       </div>
+
       <div className="space-y-1.5">
         <Label>Descrição</Label>
         <Textarea maxLength={1000} value={description} onChange={(e) => setDescription(e.target.value)} />
