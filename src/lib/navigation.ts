@@ -212,10 +212,18 @@ function managerGroups(args: { superAdminOperating: boolean; vertical: BusinessV
 
   // Ramo é ADITIVO: acrescenta o grupo do ramo. Nunca remove grupos gerais.
   const verticalGroup: NavGroup = { id: "restaurante", label: "Restaurante & Delivery", items: RESTAURANT_ITEMS };
+  const materialsGroup: NavGroup = {
+    id: "material-construcao",
+    label: "Material de Construção",
+    items: BUILDING_MATERIALS_ITEMS,
+  };
   const groups =
     vertical === "restaurant_delivery"
-      ? [general[0], verticalGroup, ...general.slice(1)]
-      : [...general, verticalGroup];
+      ? [general[0], verticalGroup, ...general.slice(1), materialsGroup]
+      : vertical === "building_materials"
+        ? [general[0], materialsGroup, ...general.slice(1), verticalGroup]
+        : [...general, verticalGroup, materialsGroup];
+
 
   if (superAdminOperating) {
     groups.push({
