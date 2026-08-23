@@ -426,6 +426,10 @@ function ClientForm({
   const [monthlyRate, setMonthlyRate] = useState<string>(
     initial?.monthly_rate != null ? String(initial.monthly_rate) : "",
   );
+  const [dailyRate, setDailyRate] = useState<string>(
+    initial?.daily_rate != null ? String(initial.daily_rate) : "",
+  );
+
   const [geo, setGeo] = useState<ClientGeoValue>({
     lat: initial?.geo_lat ?? null,
     lng: initial?.geo_lng ?? null,
