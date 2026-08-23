@@ -164,3 +164,12 @@
 ## Navegação
 
 - `src/lib/navigation.ts` — fonte canónica da navegação (`resolveAvailableNavigation`), ADR-030. Ramo aditivo, itens core não filtráveis, skeleton enquanto o contexto carrega. Ver `docs/ARCHITECTURE_RBAC.md`.
+- `src/components/ModuleGuard.tsx` — guard canónico de módulo por rota (ADR-033). Bloqueia acesso por URL direta com 403 quando o módulo não está em `companies.enabled_modules`. Obrigatório em `/app/material-construcao/*`.
+
+## Verticais (ramos de atividade)
+
+- `companies.business_vertical`: `cleaning_services`, `restaurant_delivery`, `building_materials`, `hospitality`, `auto_repair`, `generic`.
+- `src/lib/locale.ts` — catálogo de módulos, `MODULE_TABS` (abas do Super Admin), `BUILDING_MATERIALS_MODULES` e `BUILDING_MATERIALS_ROUTE_MODULES` (ADR-033).
+- Material de Construção: 11 rotas `src/routes/app.material-construcao.*.tsx`, todas com `RoleGuard` + `ModuleGuard`; módulos sempre desativados por omissão.
+- Hotelaria e Oficina: verticais preparados, sem menus nem rotas operacionais.
+- Release notes: `docs/release-notes/RELEASE_NOTES_BUILDING_MATERIALS_FASE_A.md`.
