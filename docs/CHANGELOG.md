@@ -7,6 +7,32 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### 👥 Fase B — Vínculos Cliente ↔ Responsável e multi-responsável (2026-08-23)
+
+#### Adicionado
+- **`tasks.task_group_id` / `task_recurrences.task_group_id`**: lote de criação
+  multi-responsável. O fan-out mantém-se **uma tarefa por responsável** — estado,
+  ponto, recusa e conclusão independentes; o grupo é apenas rastreio.
+- **RPC `client_default_assignees(_client_id)`**: equipa ativa do cliente
+  (`client_assignees` × `profiles.is_active`), com `is_primary` respeitado.
+- **RPC `task_group_progress`**: progresso consolidado do lote para gestores.
+- **Sugestão de equipa por cliente** no modal Nova Tarefa: ao escolher o cliente,
+  os responsáveis são pré-carregados. Se o utilizador já tinha mexido na seleção,
+  aparece confirmação explícita (*Usar equipa do cliente* / *Manter seleção*) —
+  nunca há sobrescrita silenciosa. Cliente sem responsáveis mostra aviso.
+- **Selo "em equipe"** nos cartões de tarefa, com explicação de independência.
+
+#### Corrigido
+- **Notificações de gestores duplicadas/ausentes em lotes.**
+  `tasks_notify_insert` passa a notificar gestores **uma vez por lote**. A
+  primeira tentativa usava `NOT EXISTS` sobre irmãos do grupo, mas triggers
+  `AFTER ... FOR EACH ROW` de um `INSERT` multi-linha veem todas as linhas já
+  inseridas — resultado: nenhum gestor era notificado. O critério passou a ser
+  determinístico (menor `id` do grupo). Validado em base real: 1 notificação por
+  responsável + exatamente 1 para o gestor.
+
+---
+
 ### 🧭 Estabilidade da navegação — fonte canónica única (2026-08-19)
 
 #### Corrigido

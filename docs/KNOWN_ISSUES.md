@@ -351,3 +351,20 @@ calculado com dados incompletos.
 **Correção:** fonte canónica `resolveAvailableNavigation`, ramo aditivo,
 skeleton enquanto o contexto carrega e saneamento do estado de grupos
 colapsados.
+
+
+## KI-027 — Dedup de notificações em lote falhou com `NOT EXISTS` (Resolvido)
+- **Severidade:** 🟠 Alta (notificações)
+- **Módulo:** Tarefas · `tasks_notify_insert`
+- **Status:** Resolvido em 2026-08-23 (Fase B)
+
+**Sintoma:** ao criar uma tarefa para vários responsáveis, os gestores não
+recebiam qualquer notificação.
+
+**Causa raiz:** a dedup por lote testava a inexistência de irmãos com o mesmo
+`task_group_id`. Em `INSERT` multi-linha, os triggers `AFTER ... FOR EACH ROW`
+correm com **todas** as linhas já visíveis, logo a condição era falsa em todas
+as linhas.
+
+**Correção:** vencedor determinístico — só a linha com o menor `id` do grupo
+notifica gestores. Confirmado por teste em base real (dados de teste removidos).
