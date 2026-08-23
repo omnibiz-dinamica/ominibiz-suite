@@ -43,20 +43,51 @@ export type ModuleKey =
   | "restaurant_kitchen"
   | "restaurant_delivery"
   | "restaurant_couriers"
-  | "restaurant_delivery_zones";
+  | "restaurant_delivery_zones"
+  // ADR-033 — Vertical Material de Construção (inativo por omissão).
+  | "building_materials_dashboard"
+  | "building_materials_products"
+  | "building_materials_inventory"
+  | "building_materials_categories"
+  | "building_materials_suppliers"
+  | "building_materials_purchases"
+  | "building_materials_quotes"
+  | "building_materials_sales"
+  | "building_materials_customers"
+  | "building_materials_deliveries"
+  | "building_materials_finance";
 
-/** ADR-027 — Ramo de atividade da empresa (business vertical). */
-export type BusinessVertical = "cleaning_services" | "restaurant_delivery" | "generic";
+/** ADR-027 / ADR-033 — Ramo de atividade da empresa (business vertical). */
+export type BusinessVertical =
+  | "cleaning_services"
+  | "restaurant_delivery"
+  | "building_materials"
+  | "hospitality"
+  | "auto_repair"
+  | "generic";
 
 export const BUSINESS_VERTICALS: { value: BusinessVertical; label: string }[] = [
   { value: "cleaning_services", label: "Serviços de Limpeza" },
   { value: "restaurant_delivery", label: "Restaurante & Delivery" },
+  { value: "building_materials", label: "Material de Construção" },
+  { value: "hospitality", label: "Hotelaria (preparado)" },
+  { value: "auto_repair", label: "Oficina Mecânica (preparado)" },
   { value: "generic", label: "Genérico" },
 ];
 
+const KNOWN_VERTICALS: BusinessVertical[] = [
+  "cleaning_services",
+  "restaurant_delivery",
+  "building_materials",
+  "hospitality",
+  "auto_repair",
+  "generic",
+];
+
 export function normalizeBusinessVertical(value: string | null | undefined): BusinessVertical {
-  return value === "restaurant_delivery" || value === "generic" ? value : "cleaning_services";
+  return KNOWN_VERTICALS.includes(value as BusinessVertical) ? (value as BusinessVertical) : "cleaning_services";
 }
+
 
 /** Módulos ativados automaticamente ao marcar a empresa como Restaurante & Delivery. */
 export const RESTAURANT_ENABLED_MODULES: ModuleKey[] = [
