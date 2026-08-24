@@ -7,6 +7,26 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### 🕒 Ponto — Recuperação de Ponto Aberto (2026-08-24)
+
+#### Adicionado
+- **Fluxo oficial de recuperação** para funcionários bloqueados por um ponto antigo
+  em aberto: modal canónico com «Voltar à tarefa», «Encerrar ponto anterior»
+  (data/hora + motivo obrigatórios) e «Solicitar ajuda ao gestor».
+- **Painel «Pontos em aberto»** em `/app/ponto/gestao`, com severidade
+  (Normal/Aviso/Crítico), deteção de inconsistências (tarefa concluída com ponto
+  aberto) e regularização direta pelo gestor.
+- RPCs `punch_open_entry_self`, `punch_open_entries_list`,
+  `punch_recover_open_entry`, `punch_open_entry_request_help`.
+- Eventos de notificação `punch_open_help_requested` e `punch_regularized`.
+
+#### Notas
+- A constraint de um único ponto aberto permanece ativa; nenhum registo é apagado
+  nem fechado silenciosamente. Toda regularização exige motivo e gera auditoria em
+  `time_entries_audit` (ADR-034).
+- Validado em homologação (OMNIBIZ TESTES): regularização pelo gestor encerrou o
+  ponto inconsistente, gravou auditoria e notificou o funcionário.
+
 ### 🐛 Ponto — erro genérico ao iniciar tarefa (2026-08-24)
 
 #### Corrigido
