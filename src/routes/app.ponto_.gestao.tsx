@@ -34,6 +34,7 @@ import {
 import { PunchEditorDrawer } from "@/components/ponto/PunchEditorDrawer";
 import { PunchAuditDrawer } from "@/components/ponto/PunchAuditDrawer";
 import { PunchGeoDrawer } from "@/components/ponto/PunchGeoDrawer";
+import { OpenPunchPanel } from "@/components/ponto/OpenPunchPanel";
 import { ORIGIN_LABEL, ORIGIN_TONE, punchAdminVoidForRedo, type AdminTimeEntry } from "@/lib/punch-admin";
 import { formatDuration } from "@/lib/tasks";
 import { formatWallDate, formatWallTime } from "@/lib/wall-clock";
@@ -441,6 +442,9 @@ function GestaoPonto() {
           </Button>
         </div>
       </div>
+
+      {/* Pontos em aberto */}
+      <OpenPunchPanel companyId={currentCompanyId} />
 
       {/* Filtros */}
       <section className="rounded-2xl border border-border bg-card p-4">

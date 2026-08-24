@@ -51,6 +51,8 @@ import { usePunchFlow } from "@/hooks/use-punch-flow";
 import { PunchFlowOverlay } from "@/components/ponto/PunchFlowOverlay";
 import type { PunchV2Response } from "@/lib/punch/v2";
 import { formatWallDate, formatWallTime } from "@/lib/wall-clock";
+import { OpenPunchRecoveryDialog } from "@/components/ponto/OpenPunchRecoveryDialog";
+import { fetchOpenEntrySelf } from "@/lib/punch/recovery";
 
 export const Route = createFileRoute("/app/ponto")({ component: PontoPage });
 
@@ -90,7 +92,17 @@ function PontoPage() {
   const [manualEndAt, setManualEndAt] = useState("");
   const [manualEndReason, setManualEndReason] = useState("");
   const [manualEndRequiresReason, setManualEndRequiresReason] = useState(false);
+  const [recoveryOpen, setRecoveryOpen] = useState(false);
+  const [recoveryAttemptedTaskId, setRecoveryAttemptedTaskId] = useState<string | null>(null);
   const punch = usePunchFlow();
+
+  // Detalhe do ponto aberto (tarefa, cliente, tempo em aberto) para o modal
+  // de Recuperação de Ponto Aberto.
+  const { data: recoveryEntry } = useQuery({
+    queryKey: ["punch-open-self", user?.id, recoveryOpen],
+    queryFn: fetchOpenEntrySelf,
+    enabled: !!user && recoveryOpen,
+  });
 
   // Toast único por retorno de RPC v2 — sempre baseado no código do servidor.
   function handleV2Toast(res: PunchV2Response) {
@@ -284,6 +296,15 @@ function PontoPage() {
   const startMut = useMutation({
     mutationFn: async (taskId: string) => {
       const res = await punch.run({ op: "start", taskId });
+      // Ponto anterior em aberto → não deixar o funcionário preso num toast:
+      // abre o fluxo oficial de Recuperação de Ponto Aberto.
+      if (!res.success && res.code === "ENTRY_ALREADY_OPEN") {
+        setRecoveryAttemptedTaskId(taskId);
+        setRecoveryOpen(true);
+        void qc.invalidateQueries({ queryKey: ["punch-open"] });
+        void qc.invalidateQueries({ queryKey: ["punch-open-task"] });
+        throw new Error("ENTRY_ALREADY_OPEN");
+      }
       handleV2Toast(res);
       if (!res.success) throw new Error(res.message ?? res.code);
       return res;
@@ -468,6 +489,31 @@ function PontoPage() {
           </ul>
         )}
       </section>
+
+      {/* Recuperação de Ponto Aberto */}
+      <OpenPunchRecoveryDialog
+        open={recoveryOpen}
+        onOpenChange={(o) => {
+          setRecoveryOpen(o);
+          if (!o) setRecoveryAttemptedTaskId(null);
+        }}
+        mode="employee"
+        entry={recoveryEntry ?? null}
+        attemptedTaskId={recoveryAttemptedTaskId}
+        onGoToEntry={() => {
+          qc.invalidateQueries({ queryKey: ["punch-open"] });
+          qc.invalidateQueries({ queryKey: ["punch-open-task"] });
+          if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+        }}
+        onResolved={() => {
+          qc.invalidateQueries({ queryKey: ["punch-open"] });
+          qc.invalidateQueries({ queryKey: ["punch-open-task"] });
+          qc.invalidateQueries({ queryKey: ["punch-history"] });
+          qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
+          qc.invalidateQueries({ queryKey: ["tasks"] });
+          toast.info("Ponto anterior encerrado. Toque em \u201cIniciar tarefa\u201d para começar a próxima.");
+        }}
+      />
 
       {/* Dialog de escolha de método (modo "ambos") */}
       <Dialog open={!!modeChoice} onOpenChange={(o) => !o && setModeChoice(null)}>
