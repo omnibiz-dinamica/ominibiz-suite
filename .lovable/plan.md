@@ -1,52 +1,39 @@
-## Objetivo
+# Publicar resposta e resolver SUP-2026-000077
 
-Corrigir os 7 bloqueios encontrados na validação e tornar o módulo de notificações WhatsApp de tickets Production Ready.
+Registar no ticket **SUP-2026-000077 — "recusar tarefa"** a mensagem de resolução
+e mudar o estado para resolvido, usando o fluxo oficial da Central de Suporte
+(nenhum update manual na base de dados).
 
-## Bloqueio 1 — Idempotência da fila
+## Estado atual do ticket
 
-- Adicionar `dedupe_key text` em `whatsapp_notifications` com índice único parcial (`WHERE status IN ('pending','sent')`).
-- Chave = `ticket_id + event + hash do payload relevante`.
-- `enqueue_ticket_whatsapp` passa a usar `ON CONFLICT DO NOTHING`, eliminando duplicados por retry de RPC, dupla execução ou concorrência.
+- Número: SUP-2026-000077 · Título: "recusar tarefa"
+- Estado: **Aberto** · Nível: suporte da empresa · Responsável: sem atribuição
+- Empresa: OMNIBIZ TESTES · Sem data de resolução registada
 
-## Bloqueio 2 — Cobertura de eventos
+## O que será feito
 
-- Adicionar `ticket_priority_changed`.
-- Substituir a cadeia `ELSIF` do trigger por avaliações independentes, para que responsável + status alterados na mesma transação gerem os dois eventos.
-- Distinguir `ticket_resolved` e `ticket_reopened` a partir da transição de status, em vez de um genérico `ticket_status_changed`.
+1. **Publicar a mensagem pública de resolução** no histórico do ticket (visível ao
+   solicitante), com o descritivo já aprovado: causa raiz, correção aplicada,
+   validações server-side, melhorias entregues (histórico de recusas, notificação
+   ao gestor, filtro "Recusadas", reatribuição) e resultado dos testes.
+2. **Marcar como resolvido** através da resolução pelo gestor, registando também o
+   resumo interno da correção (referência ADR-035).
+3. **Confirmar o resultado**: reler o ticket e o histórico de mensagens/eventos
+   para verificar estado resolvido, data de resolução e a mensagem visível.
 
-## Bloqueio 3 — Máquina de estados da fila
+## Regras respeitadas
 
-- Ampliar o `CHECK` de `status` para `pending | sending | sent | failed | skipped`.
-- Novas colunas: `next_attempt_at timestamptz`, `max_attempts int default 5`, `locked_at`, `http_status`, `response_body`.
-- RPC `whatsapp_claim_batch(_limit)` — marca `pending → sending` com `FOR UPDATE SKIP LOCKED` (seguro sob concorrência).
-- RPCs `whatsapp_mark_sent` e `whatsapp_mark_failed` (aplica backoff exponencial; ao esgotar tentativas fixa `failed` definitivo).
+- Nada é apagado; o histórico de mensagens e eventos do ticket é preservado.
+- A notificação ao solicitante é a do próprio fluxo de suporte — sem envio manual.
+- Nenhum outro ticket é alterado.
 
-## Bloqueio 4 — Worker de disparo
+## Detalhes técnicos
 
-- Rota TanStack `src/routes/api/public/whatsapp/dispatch.ts`, autenticada por `apikey` (chave publicável), nunca exposta no frontend.
-- Fluxo: claim do lote → POST para a URL do ActivePieces (secret de servidor) → marca `sent` ou `failed`.
-- Timeout por requisição (10s) e tratamento explícito de 401, 5xx, rede indisponível.
-- Agendamento por `pg_cron` a cada minuto chamando o endpoint.
-- Secret necessário: `ACTIVEPIECES_WEBHOOK_URL` (solicitado ao utilizador no momento da implementação).
-
-## Bloqueio 5 — Painel de auditoria da fila
-
-- Bloco em `/app/admin/suporte`: últimas notificações com evento, destinatário, status, tentativas, `last_error` e ação de reenfileirar linhas `failed`.
-
-## Bloqueio 6 — Dívida de segurança pré-existente
-
-- Adicionar `SET search_path = public` em `delete_email`, `enqueue_email`, `move_to_dlq`, `read_email_batch`.
-
-## Bloqueio 7 — Dry-run real e relatório
-
-Executado em empresa de homologação, nunca em dados de clientes reais:
-
-1. Configurar WhatsApp do gestor e do super admin de homologação, `default_support_manager_id` e `default_support_super_admin_id`.
-2. Percorrer criar → atribuir → status → prioridade → escalonar → devolver → resolver → reabrir → mensagem, conferindo em cada passo: evento em `support_ticket_events`, linha em `whatsapp_notifications`, destinatário, payload e status.
-3. Cenários negativos: responsável inativo, sem WhatsApp, WhatsApp inválido, papel incorreto, configurações vazias — todos devem produzir `skipped` com motivo.
-4. Cenários de retry: 401, 500, timeout e webhook indisponível.
-5. Relatório final com payload real enviado e exemplos de log de sucesso, falha e skipped.
-
-## Documentação
-
-`docs/ARCHITECTURE_SUPPORT_TICKETS.md` (seção de notificações WhatsApp), ADR-025 (idempotência + máquina de estados do outbox), CHANGELOG e `docs/KNOWN_ISSUES.md`.
+- Mensagem pública via `post_support_ticket_message(_ticket_id, _message, _is_internal := false)`.
+- Resolução via `resolve_support_ticket_by_manager(_ticket_id, _resolution)`, que
+  grava `internal_resolution`, `resolved_at`, o evento de auditoria em
+  `support_ticket_events` e dispara a notificação ao solicitante.
+- Execução com a sessão do gestor/super admin da empresa do ticket, para que RLS e
+  as guardas das RPCs se apliquem normalmente.
+- Verificação final por leitura de `support_tickets`, `support_ticket_messages` e
+  `support_ticket_events`.
