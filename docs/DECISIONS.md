@@ -617,3 +617,33 @@ o registo antigo, e o gestor não tinha ferramenta dedicada para resolver em nom
 
 **Consequências.** O desbloqueio é sempre auditado e atribuível. Novos eventos em
 `notification_event`: `punch_open_help_requested`, `punch_regularized`.
+
+---
+
+## ADR-035 — Recusa de tarefa é transição autorizada, nunca UPDATE livre do funcionário
+
+**Data:** 2026-08-24 · **Estado:** Aceite · **Contexto:** SUP-2026-000077
+
+**Problema.** O funcionário recebia «Sem permissão para alterar estes campos da
+tarefa» ao recusar. O trigger `tasks_restrict_employee_update` protege colunas
+operacionais e a exceção de auto-recusa era demasiado estreita (dependência de
+`cancelled_by`/`refused_by` e sem idempotência).
+
+**Decisão.**
+1. A recusa passa **exclusivamente** pela RPC `task_transition(_task_id,'recusar',_reason)`
+   (`SECURITY DEFINER`), nunca por UPDATE direto do cliente. O funcionário
+   continua **sem** permissão genérica de edição de tarefas.
+2. Validação server-side: motivo obrigatório (não vazio), tarefa atribuída ao
+   próprio (`assigned_to = auth.uid()`), estado em `pendente`/`autorizado`, e
+   bloqueio quando a tarefa já foi iniciada / tem ponto aberto.
+3. Histórico permanente em `public.task_refusals` (nunca apagado); a operação é
+   **idempotente** — recusar duas vezes não duplica auditoria nem notificação.
+4. Notificação `task_rejected` dirigida a gestores/owners da empresa
+   (`notifyManagers`), com motivo e deep-link para a tarefa.
+5. Reativação apenas pelo gestor via `task_reassign_from_refusal`, que limpa os
+   campos de recusa, devolve o estado a `pendente` e preserva o histórico.
+
+**Consequências.** O funcionário nunca fica bloqueado sem saída, o gestor tem
+rasto completo (quem, quando, porquê) e a superfície de escrita do funcionário
+mantém-se mínima. UI: filtro «Recusadas» em `/app/tarefas` e destaque do motivo
+no cartão/lista.
