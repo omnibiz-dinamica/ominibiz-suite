@@ -647,3 +647,26 @@ operacionais e a exceção de auto-recusa era demasiado estreita (dependência d
 rasto completo (quem, quando, porquê) e a superfície de escrita do funcionário
 mantém-se mínima. UI: filtro «Recusadas» em `/app/tarefas` e destaque do motivo
 no cartão/lista.
+
+
+## ADR-036 — Arquivamento é visibilidade, nunca status; cancelamento é auditado
+
+**Contexto.** Tarefas antigas em `ausente` ocupavam indefinidamente a fila
+operacional da Folha de Ponto, e não havia forma de o funcionário tratar o caso.
+
+**Decisão.**
+1. `status` (operacional) e `archived_at` (visibilidade) são dimensões
+   independentes. Arquivar **não** altera o status.
+2. Arquivamento é sempre **manual e explícito** — nunca automático, nunca por
+   cron, nunca por antiguidade. Ausente permanece visível até ser tratada.
+3. Cancelamento passa pela RPC `public.task_cancel` com motivo obrigatório;
+   funcionário só cancela a tarefa atribuída a si, gestor cancela na empresa.
+   Sem `UPDATE` genérico em `tasks` para funcionários.
+4. Ponto aberto bloqueia cancelamento e arquivamento (`TASK_HAS_OPEN_PUNCH`),
+   reencaminhando para a Recuperação de Ponto Aberto (ADR-034).
+5. Auditoria permanente em `public.task_audit_events`; nada é apagado.
+6. Apenas um `time_entry` realmente aberto impede novo início — ausente,
+   atrasada, cancelada ou arquivada nunca bloqueiam a tarefa seguinte.
+
+**Consequências.** Fila limpa para o funcionário, histórico íntegro para a
+gestão («Ver arquivados» com desarquivamento) e superfície de escrita mínima.

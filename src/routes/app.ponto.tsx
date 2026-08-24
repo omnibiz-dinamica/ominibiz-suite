@@ -26,6 +26,8 @@ import {
   Timer,
   LogIn as LogInIcon,
   UserX,
+  Ban,
+  Archive,
 } from "lucide-react";
 import { TaskDocuments } from "@/components/tasks/TaskDocuments";
 import { Dialog, DialogContent, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/dialog";
@@ -46,12 +48,16 @@ import {
   STATUS_TONE,
   isVisuallyLate,
   canBecomeAbsent,
+  canArchiveBy,
+  canCancelTask,
 } from "@/lib/tasks";
 import { usePunchFlow } from "@/hooks/use-punch-flow";
 import { PunchFlowOverlay } from "@/components/ponto/PunchFlowOverlay";
 import type { PunchV2Response } from "@/lib/punch/v2";
 import { formatWallDate, formatWallTime } from "@/lib/wall-clock";
 import { OpenPunchRecoveryDialog } from "@/components/ponto/OpenPunchRecoveryDialog";
+import { CancelTaskDialog } from "@/components/tasks/CancelTaskDialog";
+import { ArchiveTaskDialog } from "@/components/tasks/ArchiveTaskDialog";
 import { fetchOpenEntrySelf } from "@/lib/punch/recovery";
 
 export const Route = createFileRoute("/app/ponto")({ component: PontoPage });
@@ -94,6 +100,8 @@ function PontoPage() {
   const [manualEndRequiresReason, setManualEndRequiresReason] = useState(false);
   const [recoveryOpen, setRecoveryOpen] = useState(false);
   const [recoveryAttemptedTaskId, setRecoveryAttemptedTaskId] = useState<string | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<TaskRow | null>(null);
+  const [archiveTarget, setArchiveTarget] = useState<TaskRow | null>(null);
   const punch = usePunchFlow();
 
   // Detalhe do ponto aberto (tarefa, cliente, tempo em aberto) para o modal
@@ -171,10 +179,13 @@ function PontoPage() {
       let q = supabase
         .from("tasks")
         .select("*")
-        .in("status", ["pendente", "autorizado", "ausente", "em_andamento"])
+        // ADR-036: "arquivado" é visibilidade, não status. Tarefas arquivadas
+        // saem da fila operacional; o status original permanece intacto.
+        .is("archived_at", null)
+        .in("status", ["pendente", "autorizado", "ausente", "em_andamento", "cancelado"])
         .order("due_at", { ascending: true, nullsFirst: false })
         .order("scheduled_for", { ascending: true, nullsFirst: false })
-        .limit(12);
+        .limit(20);
       // Gestor/super admin: vê tarefas da empresa (toda a operação).
       // Funcionário: vê apenas as suas.
       if (isManager) {
@@ -459,6 +470,8 @@ function PontoPage() {
           onMarkAbsent={(id) => markAbsentMut.mutate(id)}
           markingAbsent={markAbsentMut.isPending}
           markingAbsentId={markAbsentMut.variables ?? null}
+          onCancelTask={(t) => setCancelTarget(t)}
+          onArchiveTask={(t) => setArchiveTarget(t)}
         />
       )}
 
@@ -514,6 +527,31 @@ function PontoPage() {
           toast.info("Ponto anterior encerrado. Toque em \u201cIniciar tarefa\u201d para começar a próxima.");
         }}
       />
+
+      {/* ADR-036 — cancelamento com motivo e arquivamento manual */}
+      <CancelTaskDialog
+        task={cancelTarget}
+        clientName={cancelTarget?.client_id ? clientsMap?.[cancelTarget.client_id] : undefined}
+        open={!!cancelTarget}
+        onOpenChange={(o) => !o && setCancelTarget(null)}
+        onOpenPunch={() => setRecoveryOpen(true)}
+        onDone={() => {
+          qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
+          qc.invalidateQueries({ queryKey: ["tasks"] });
+        }}
+      />
+      <ArchiveTaskDialog
+        task={archiveTarget}
+        open={!!archiveTarget}
+        onOpenChange={(o) => !o && setArchiveTarget(null)}
+        onOpenPunch={() => setRecoveryOpen(true)}
+        onDone={() => {
+          qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
+          qc.invalidateQueries({ queryKey: ["tasks"] });
+        }}
+      />
+
+
 
       {/* Dialog de escolha de método (modo "ambos") */}
       <Dialog open={!!modeChoice} onOpenChange={(o) => !o && setModeChoice(null)}>
@@ -820,6 +858,8 @@ function UpcomingTasks({
   onMarkAbsent,
   markingAbsent,
   markingAbsentId,
+  onCancelTask,
+  onArchiveTask,
 }: {
   tasks: TaskRow[];
   clientsMap: Record<string, string>;
@@ -836,6 +876,8 @@ function UpcomingTasks({
   onMarkAbsent: (id: string) => void;
   markingAbsent: boolean;
   markingAbsentId: string | null;
+  onCancelTask: (t: TaskRow) => void;
+  onArchiveTask: (t: TaskRow) => void;
 }) {
   if (tasks.length === 0) {
     return (
@@ -866,7 +908,13 @@ function UpcomingTasks({
   // Prioriza tarefa pronta para iniciar; senão a primeira da fila.
   const nextStartable =
     tasks.find((t) => t.status === "autorizado" || t.status === "pendente" || t.status === "em_andamento") ?? tasks[0];
-  const rest = tasks.filter((t) => t.id !== nextStartable.id);
+  // Fila limpa: primeiro o que exige ação; ausentes/canceladas ainda não
+  // arquivadas ficam no fim, de forma compacta (ADR-036).
+  const queueWeight = (t: TaskRow) => (t.status === "ausente" || t.status === "cancelado" ? 1 : 0);
+  const rest = tasks
+    .filter((t) => t.id !== nextStartable.id)
+    .slice()
+    .sort((a, b) => queueWeight(a) - queueWeight(b));
   const nextIsStartable =
     nextStartable.status === "autorizado" ||
     nextStartable.status === "pendente" ||
@@ -985,6 +1033,28 @@ function UpcomingTasks({
               <UserX className="mr-2 h-5 w-5" /> Marcar falta
             </Button>
           )}
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {currentUserId && canCancelTask(nextStartable, { userId: currentUserId, isManager }) && (
+              <Button
+                size="lg"
+                variant="outline"
+                className="h-12 w-full text-base"
+                onClick={() => onCancelTask(nextStartable)}
+              >
+                <Ban className="mr-2 h-5 w-5" /> Cancelar tarefa
+              </Button>
+            )}
+            {currentUserId && canArchiveBy(nextStartable, { userId: currentUserId, isManager }) && (
+              <Button
+                size="lg"
+                variant="ghost"
+                className="h-12 w-full text-base"
+                onClick={() => onArchiveTask(nextStartable)}
+              >
+                <Archive className="mr-2 h-5 w-5" /> Arquivar
+              </Button>
+            )}
+          </div>
         </div>
       </section>
 
@@ -1044,46 +1114,71 @@ function UpcomingTasks({
                           : "Sem horário definido"}
                     </div>
                   </div>
-                  <Button
-                    size="lg"
-                    className="h-12 w-full sm:w-auto"
-                    variant={t.status === "ausente" ? "outline" : "default"}
-                    disabled={
-                      isStarting ||
-                      (t.status !== "ausente" && !canStart) ||
-                      (t.status === "ausente" && requestingAuth && requestingAuthId === t.id)
-                    }
-                    onClick={() => (t.status === "ausente" ? onRequestAuth(t.id) : onStart(t))}
-                  >
-                    {t.status === "ausente" ? (
-                      <>
-                        <Send className="mr-2 h-5 w-5" />
-                        Solicitar autorização
-                      </>
-                    ) : tMode === "manual" || t.status === "em_andamento" ? (
-                      <>
-                        <LogIn className="mr-2 h-5 w-5" />
-                        Bater entrada
-                      </>
-                    ) : (
-                      <>
-                        <Play className="mr-2 h-5 w-5" />
-                        Iniciar
-                      </>
+                  <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                    {t.status !== "cancelado" && (
+                      <Button
+                        size="lg"
+                        className="h-12 w-full sm:w-auto"
+                        variant={t.status === "ausente" ? "outline" : "default"}
+                        disabled={
+                          isStarting ||
+                          (t.status !== "ausente" && !canStart) ||
+                          (t.status === "ausente" && requestingAuth && requestingAuthId === t.id)
+                        }
+                        onClick={() => (t.status === "ausente" ? onRequestAuth(t.id) : onStart(t))}
+                      >
+                        {t.status === "ausente" ? (
+                          <>
+                            <Send className="mr-2 h-5 w-5" />
+                            Solicitar autorização
+                          </>
+                        ) : tMode === "manual" || t.status === "em_andamento" ? (
+                          <>
+                            <LogIn className="mr-2 h-5 w-5" />
+                            Bater entrada
+                          </>
+                        ) : (
+                          <>
+                            <Play className="mr-2 h-5 w-5" />
+                            Iniciar
+                          </>
+                        )}
+                      </Button>
                     )}
-                  </Button>
-                  {canMarkAbsent && canBecomeAbsent(t) && (
-                    <Button
-                      size="lg"
-                      variant="outline"
-                      className="h-12 w-full sm:w-auto"
-                      disabled={markingAbsent && markingAbsentId === t.id}
-                      onClick={() => onMarkAbsent(t.id)}
-                    >
-                      <UserX className="mr-2 h-5 w-5" /> Marcar falta
-                    </Button>
-                  )}
+                    {canMarkAbsent && canBecomeAbsent(t) && (
+                      <Button
+                        size="lg"
+                        variant="outline"
+                        className="h-12 w-full sm:w-auto"
+                        disabled={markingAbsent && markingAbsentId === t.id}
+                        onClick={() => onMarkAbsent(t.id)}
+                      >
+                        <UserX className="mr-2 h-5 w-5" /> Marcar falta
+                      </Button>
+                    )}
+                    {currentUserId && canCancelTask(t, { userId: currentUserId, isManager }) && (
+                      <Button
+                        size="lg"
+                        variant="outline"
+                        className="h-12 w-full sm:w-auto"
+                        onClick={() => onCancelTask(t)}
+                      >
+                        <Ban className="mr-2 h-5 w-5" /> Cancelar tarefa
+                      </Button>
+                    )}
+                    {currentUserId && canArchiveBy(t, { userId: currentUserId, isManager }) && (
+                      <Button
+                        size="lg"
+                        variant="ghost"
+                        className="h-12 w-full sm:w-auto"
+                        onClick={() => onArchiveTask(t)}
+                      >
+                        <Archive className="mr-2 h-5 w-5" /> Arquivar
+                      </Button>
+                    )}
+                  </div>
                 </li>
+
               );
             })}
           </ul>

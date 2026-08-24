@@ -404,6 +404,57 @@ export function canArchive(t: Pick<TaskRow, "status" | "archived_at">): boolean 
 }
 
 /**
+ * ADR-036 — "Arquivado" é dimensão de visibilidade, NUNCA status operacional.
+ * Cancelamento auditado com motivo obrigatório (gestor ou responsável).
+ */
+export const CANCEL_REASONS = [
+  "Cliente cancelou",
+  "Não será realizado",
+  "Alteração de programação",
+  "Problema de acesso ao local",
+  "Falta de material",
+  "Problema pessoal",
+  "Outro",
+] as const;
+
+export async function cancelTask(taskId: string, reason: string): Promise<TaskRow> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("task_cancel", {
+    _task_id: taskId,
+    _reason: reason,
+  });
+  if (error) throw error;
+  return data as TaskRow;
+}
+
+/** Gestor cancela qualquer tarefa não finalizada; responsável cancela a sua. */
+export function canCancelTask(
+  t: Pick<TaskRow, "status" | "assigned_to">,
+  ctx: { userId: string; isManager: boolean },
+): boolean {
+  if (t.status === "cancelado" || t.status === "concluido") return false;
+  if (ctx.isManager) return true;
+  if (t.assigned_to !== ctx.userId) return false;
+  return t.status !== "ausente";
+}
+
+/** Erro canónico do backend quando existe ponto aberto na tarefa. */
+export function isOpenPunchError(e: unknown): boolean {
+  const msg = e instanceof Error ? e.message : String((e as { message?: string } | null)?.message ?? "");
+  return msg.includes("TASK_HAS_OPEN_PUNCH");
+}
+
+/** Funcionário pode arquivar apenas a própria tarefa em estado terminal. */
+export function canArchiveBy(
+  t: Pick<TaskRow, "status" | "archived_at" | "assigned_to">,
+  ctx: { userId: string; isManager: boolean },
+): boolean {
+  if (!canArchive(t)) return false;
+  return ctx.isManager || t.assigned_to === ctx.userId;
+}
+
+
+/**
  * Processa ausências por evento (chamado no carregamento da tela
  * ou após ações pontuais). NUNCA em loop.
  */

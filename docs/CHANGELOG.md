@@ -7,6 +7,36 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### 🗂️ Folha de Ponto — Ausentes, cancelamento e arquivamento manual (ADR-036)
+
+#### Adicionado
+- `public.task_audit_events` — auditoria permanente de cancelamento,
+  arquivamento e desarquivamento (ator, papel, estado anterior, motivo).
+- RPC `public.task_cancel` — cancelamento com **motivo obrigatório** por gestor
+  ou pelo responsável da tarefa; bloqueado quando existe ponto aberto
+  (`TASK_HAS_OPEN_PUNCH`), remetendo para o fluxo oficial de Recuperação de Ponto.
+- Coluna `public.tasks.cancellation_reason`.
+- `CancelTaskDialog` e `ArchiveTaskDialog` (modais canónicos, sem `window.prompt`).
+- Ações «Cancelar tarefa» e «Arquivar» na Folha de Ponto do funcionário
+  (`/app/ponto`), na tarefa em destaque e na fila.
+
+#### Alterado
+- `public.task_archive` passou a permitir que o **responsável** arquive/desarquive
+  a sua própria tarefa em estado terminal (ausente, cancelada, concluída);
+  bloqueia com ponto aberto.
+- `/app/tarefas`: ação «Cancelar» abre o modal com motivo em vez de transição direta.
+- Fila da Folha de Ponto: primeiro o que exige ação; ausentes/canceladas ainda
+  não arquivadas ficam no fim, de forma compacta. Arquivadas saem da fila.
+
+#### Não alterado (por decisão)
+- «Arquivado» **não** é status: `status` permanece intacto ao arquivar.
+- Nunca há arquivamento automático nem por cron; ausência continua visível até
+  ser tratada. Nada é apagado fisicamente.
+- Auditoria de dados existentes: 61 ausentes, 17 canceladas e 18 arquivadas —
+  nenhuma alteração em massa executada.
+
+---
+
 ### 🚫 Tarefas — recusa pelo funcionário (SUP-2026-000077) (2026-08-24)
 
 #### Corrigido

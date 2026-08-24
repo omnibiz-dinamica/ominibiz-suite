@@ -2121,6 +2121,66 @@ export type Database = {
         }
         Relationships: []
       }
+      task_audit_events: {
+        Row: {
+          actor_role: string
+          actor_user_id: string
+          company_id: string
+          created_at: string
+          event: string
+          id: string
+          new_archived: boolean | null
+          new_status: Database["public"]["Enums"]["task_status"] | null
+          previous_archived: boolean | null
+          previous_status: Database["public"]["Enums"]["task_status"] | null
+          reason: string | null
+          task_id: string
+        }
+        Insert: {
+          actor_role: string
+          actor_user_id: string
+          company_id: string
+          created_at?: string
+          event: string
+          id?: string
+          new_archived?: boolean | null
+          new_status?: Database["public"]["Enums"]["task_status"] | null
+          previous_archived?: boolean | null
+          previous_status?: Database["public"]["Enums"]["task_status"] | null
+          reason?: string | null
+          task_id: string
+        }
+        Update: {
+          actor_role?: string
+          actor_user_id?: string
+          company_id?: string
+          created_at?: string
+          event?: string
+          id?: string
+          new_archived?: boolean | null
+          new_status?: Database["public"]["Enums"]["task_status"] | null
+          previous_archived?: boolean | null
+          previous_status?: Database["public"]["Enums"]["task_status"] | null
+          reason?: string | null
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_audit_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_audit_events_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_documents: {
         Row: {
           company_id: string
@@ -2311,6 +2371,7 @@ export type Database = {
           assigned_to: string | null
           authorized_at: string | null
           authorized_by: string | null
+          cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
           client_id: string | null
@@ -2349,6 +2410,7 @@ export type Database = {
           assigned_to?: string | null
           authorized_at?: string | null
           authorized_by?: string | null
+          cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
           client_id?: string | null
@@ -2387,6 +2449,7 @@ export type Database = {
           assigned_to?: string | null
           authorized_at?: string | null
           authorized_by?: string | null
+          cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
           client_id?: string | null
@@ -4366,6 +4429,7 @@ export type Database = {
           assigned_to: string | null
           authorized_at: string | null
           authorized_by: string | null
+          cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
           client_id: string | null
@@ -4548,6 +4612,55 @@ export type Database = {
           assigned_to: string | null
           authorized_at: string | null
           authorized_by: string | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          client_id: string | null
+          company_id: string
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          deleted_at: string | null
+          deleted_by: string | null
+          description: string | null
+          due_at: string | null
+          id: string
+          late_notified_at: string | null
+          location: string | null
+          marked_absent_at: string | null
+          notes: string | null
+          priority: Database["public"]["Enums"]["task_priority"]
+          punch_mode_override: Database["public"]["Enums"]["punch_mode"] | null
+          recurrence_date: string | null
+          recurrence_id: string | null
+          refusal_reason: string | null
+          refused_at: string | null
+          refused_by: string | null
+          scheduled_end: string | null
+          scheduled_for: string | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["task_status"]
+          task_group_id: string | null
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tasks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      task_cancel: {
+        Args: { _reason: string; _task_id: string }
+        Returns: {
+          absence_grace_minutes: number
+          archived_at: string | null
+          archived_by: string | null
+          assigned_to: string | null
+          authorized_at: string | null
+          authorized_by: string | null
+          cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
           client_id: string | null
@@ -4600,6 +4713,7 @@ export type Database = {
           assigned_to: string | null
           authorized_at: string | null
           authorized_by: string | null
+          cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
           client_id: string | null
@@ -4647,6 +4761,7 @@ export type Database = {
           assigned_to: string | null
           authorized_at: string | null
           authorized_by: string | null
+          cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
           client_id: string | null
@@ -4694,6 +4809,7 @@ export type Database = {
           assigned_to: string | null
           authorized_at: string | null
           authorized_by: string | null
+          cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
           client_id: string | null
@@ -4742,6 +4858,7 @@ export type Database = {
           assigned_to: string | null
           authorized_at: string | null
           authorized_by: string | null
+          cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
           client_id: string | null

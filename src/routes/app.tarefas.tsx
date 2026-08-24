@@ -75,6 +75,7 @@ import { ReassignDialog } from "@/components/tasks/ReassignDialog";
 import { EditRecurrenceDialog } from "@/components/tasks/EditRecurrenceDialog";
 import type { RecurrenceRow } from "@/lib/tasks";
 import { isRefused } from "@/lib/tasks";
+import { CancelTaskDialog } from "@/components/tasks/CancelTaskDialog";
 
 import { EmployeePicker } from "@/components/common/EmployeePicker";
 import {
@@ -134,6 +135,8 @@ function TasksPage() {
   const [seriesRow, setSeriesRow] = useState<RecurrenceRow | null>(null);
   const [deleting, setDeleting] = useState<TaskRow | null>(null);
   const [refusing, setRefusing] = useState<TaskRow | null>(null);
+  // ADR-036 — cancelamento sempre com motivo obrigatório e auditado.
+  const [cancelling, setCancelling] = useState<TaskRow | null>(null);
   const [refusalReason, setRefusalReason] = useState("");
   const [view, setView] = useState<"active" | "archived">("active");
   const [taskView, setTaskView] = useState<"list" | "calendar">("list");
@@ -307,6 +310,10 @@ function TasksPage() {
     setDeleting(t);
   };
   const handleTransition = (task: TaskRow, action: TaskAction) => {
+    if (action === "cancelar") {
+      setCancelling(task);
+      return;
+    }
     if (action === "recusar") {
       setRefusing(task);
       setRefusalReason("");
@@ -504,6 +511,17 @@ function TasksPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <CancelTaskDialog
+        task={cancelling}
+        clientName={cancelling?.client_id ? clientsList?.find((c) => c.id === cancelling.client_id)?.name : undefined}
+        open={!!cancelling}
+        onOpenChange={(o) => !o && setCancelling(null)}
+        onDone={() => {
+          setCancelling(null);
+          qc.invalidateQueries({ queryKey: ["tasks"] });
+        }}
+      />
 
       <Dialog open={!!refusing} onOpenChange={(v) => !v && !transition.isPending && setRefusing(null)}>
         <DialogContent size="sm">
