@@ -578,6 +578,7 @@ function TasksPage() {
                 ["em_andamento", "Em andamento"],
                 ["concluido", "Concluídas"],
                 ["atrasadas", "Atrasadas"],
+                ["recusadas", refusedCount > 0 ? `Recusadas (${refusedCount})` : "Recusadas"],
               ] as const
             ).map(([key, label]) => (
               <FilterChip
@@ -587,6 +588,7 @@ function TasksPage() {
                 onClick={() => setStatusFilter(search.status === key ? undefined : (key as StatusFilter))}
               />
             ))}
+
           </div>
           <div className="ml-auto grid w-full gap-2 sm:w-auto sm:grid-cols-2">
             <EmployeePicker
