@@ -1312,6 +1312,15 @@ function CalendarTaskCard({
           </span>
         )}
       </div>
+      {isRefused(task) && (
+        <div className="space-y-0.5 rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1.5 text-[11px]">
+          <div className="font-semibold uppercase tracking-wide text-destructive">
+            Recusada · {members.find((m) => m.id === task.refused_by)?.full_name ?? memberName}
+          </div>
+          <div>Motivo: {task.refusal_reason || "-"}</div>
+        </div>
+      )}
+
 
       <div className="flex flex-wrap justify-end gap-1">
         {isManager && (
