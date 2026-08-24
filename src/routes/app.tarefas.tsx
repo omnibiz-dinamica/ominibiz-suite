@@ -335,12 +335,19 @@ function TasksPage() {
       if (search.status === "atrasadas") {
         return isVisuallyLate(t);
       }
+      if (search.status === "recusadas") {
+        return isRefused(t);
+      }
       if (search.status === "pendente") {
         return t.status === "pendente" && !isVisuallyLate(t);
       }
       return t.status === search.status;
     });
   }, [tasks, search.status, search.employee, search.client, search.task]);
+
+  // Contador de recusas pendentes de decisão do gestor (SUP-2026-000077).
+  const refusedCount = useMemo(() => (tasks ?? []).filter((t) => isRefused(t)).length, [tasks]);
+
 
   const setStatusFilter = (next: StatusFilter | undefined) => {
     void navigate({
