@@ -1442,6 +1442,25 @@ function TaskRowItem({
             </span>
           )}
         </div>
+        {isRefused(t) && (
+          <div className="mt-2 space-y-0.5 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs">
+            <div className="font-semibold uppercase tracking-wide text-destructive">Recusada pelo funcionário</div>
+            <div>Motivo: {t.refusal_reason || "-"}</div>
+            {t.refused_at && (
+              <div className="text-muted-foreground">Recusada em: {formatLocalTime(t.refused_at)}</div>
+            )}
+            {isManager && (
+              <button
+                type="button"
+                className="mt-1 font-medium text-primary underline underline-offset-2"
+                onClick={() => onReassign(t)}
+              >
+                Reatribuir tarefa
+              </button>
+            )}
+          </div>
+        )}
+
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
           {date && <span>{date}</span>}
           {start || end ? (
