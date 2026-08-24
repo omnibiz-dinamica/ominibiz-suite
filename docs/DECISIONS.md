@@ -585,3 +585,35 @@ item de menu não impede acesso por URL direta.
 
 **Consequências.** O menu é aditivo (o grupo Material de Construção só aparece com
 módulos ativos) e o acesso por URL é bloqueado no componente, não apenas no menu.
+
+---
+
+## ADR-034 — Recuperação de Ponto Aberto (nunca fechar ponto silenciosamente)
+
+**Data.** 2026-08-24 · **Estado.** Aceite
+
+**Contexto.** A constraint `uniq_open_punch_per_user` (um único ponto aberto por
+utilizador) é correta, mas deixava o funcionário bloqueado: ao tentar iniciar uma
+nova tarefa recebia apenas `ENTRY_ALREADY_OPEN` sem forma de localizar ou encerrar
+o registo antigo, e o gestor não tinha ferramenta dedicada para resolver em nome dele.
+
+**Decisão.**
+1. A regra de **um único ponto aberto permanece ativa**. Nenhum `time_entries` é
+   apagado e nenhum ponto é fechado automaticamente/silenciosamente.
+2. Novas RPCs canónicas: `punch_open_entry_self()`,
+   `punch_open_entries_list(_company_id)`,
+   `punch_recover_open_entry(_time_entry_id, _ended_at, _reason_code, _reason_text, _complete_task)`
+   e `punch_open_entry_request_help(_time_entry_id, _attempted_task_id, _correlation_id)`.
+3. A regularização exige sempre `reason_code` + `reason_text`, valida que a saída não
+   é futura nem se sobrepõe a registos posteriores, grava `origin='manager_correction'`,
+   `last_edit_reason` e uma linha em `time_entries_audit` com `source`, `actor_role` e
+   `original_started_at`.
+4. Fluxo do funcionário (`OpenPunchRecoveryDialog`, aberto pelo bloqueio em
+   `/app/ponto`): voltar à tarefa em curso · encerrar o ponto anterior com hora e
+   motivo · pedir ajuda ao gestor (notificação `punch_open_help_requested`).
+5. Fluxo do gestor (`OpenPunchPanel` em `/app/ponto/gestao`): lista de pontos em
+   aberto com severidade (Normal/Aviso/Crítico) e inconsistências (tarefa concluída
+   com ponto aberto); resolução direta notifica o funcionário (`punch_regularized`).
+
+**Consequências.** O desbloqueio é sempre auditado e atribuível. Novos eventos em
+`notification_event`: `punch_open_help_requested`, `punch_regularized`.
