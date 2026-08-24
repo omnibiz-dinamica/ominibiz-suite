@@ -2259,6 +2259,50 @@ export type Database = {
         }
         Relationships: []
       }
+      task_refusals: {
+        Row: {
+          actor_id: string
+          company_id: string
+          created_at: string
+          employee_id: string
+          id: string
+          new_status: Database["public"]["Enums"]["task_status"]
+          previous_status: Database["public"]["Enums"]["task_status"]
+          reason: string
+          task_id: string
+        }
+        Insert: {
+          actor_id: string
+          company_id: string
+          created_at?: string
+          employee_id: string
+          id?: string
+          new_status: Database["public"]["Enums"]["task_status"]
+          previous_status: Database["public"]["Enums"]["task_status"]
+          reason: string
+          task_id: string
+        }
+        Update: {
+          actor_id?: string
+          company_id?: string
+          created_at?: string
+          employee_id?: string
+          id?: string
+          new_status?: Database["public"]["Enums"]["task_status"]
+          previous_status?: Database["public"]["Enums"]["task_status"]
+          reason?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_refusals_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
           absence_grace_minutes: number
@@ -4547,6 +4591,53 @@ export type Database = {
         Returns: Database["public"]["Enums"]["punch_mode"]
       }
       task_group_progress: { Args: { _task_id: string }; Returns: Json }
+      task_reassign_from_refusal: {
+        Args: { _new_user: string; _task_id: string }
+        Returns: {
+          absence_grace_minutes: number
+          archived_at: string | null
+          archived_by: string | null
+          assigned_to: string | null
+          authorized_at: string | null
+          authorized_by: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          client_id: string | null
+          company_id: string
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          deleted_at: string | null
+          deleted_by: string | null
+          description: string | null
+          due_at: string | null
+          id: string
+          late_notified_at: string | null
+          location: string | null
+          marked_absent_at: string | null
+          notes: string | null
+          priority: Database["public"]["Enums"]["task_priority"]
+          punch_mode_override: Database["public"]["Enums"]["punch_mode"] | null
+          recurrence_date: string | null
+          recurrence_id: string | null
+          refusal_reason: string | null
+          refused_at: string | null
+          refused_by: string | null
+          scheduled_end: string | null
+          scheduled_for: string | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["task_status"]
+          task_group_id: string | null
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tasks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       task_request_authorization: {
         Args: { _note?: string; _task_id: string }
         Returns: {

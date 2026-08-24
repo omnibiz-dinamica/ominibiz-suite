@@ -74,6 +74,8 @@ import { TaskDocuments } from "@/components/tasks/TaskDocuments";
 import { ReassignDialog } from "@/components/tasks/ReassignDialog";
 import { EditRecurrenceDialog } from "@/components/tasks/EditRecurrenceDialog";
 import type { RecurrenceRow } from "@/lib/tasks";
+import { isRefused } from "@/lib/tasks";
+
 import { EmployeePicker } from "@/components/common/EmployeePicker";
 import {
   wallISOToDateInput,
@@ -94,7 +96,9 @@ const STATUS_FILTERS = [
   "cancelado",
   "ausente",
   "atrasadas",
+  "recusadas",
 ] as const;
+
 type StatusFilter = (typeof STATUS_FILTERS)[number];
 type TasksSearch = { status?: StatusFilter; employee?: string; client?: string; task?: string };
 type ClientOption = { id: string; name: string; timing_mode?: "start_stop" | "manual" | null };
@@ -331,12 +335,19 @@ function TasksPage() {
       if (search.status === "atrasadas") {
         return isVisuallyLate(t);
       }
+      if (search.status === "recusadas") {
+        return isRefused(t);
+      }
       if (search.status === "pendente") {
         return t.status === "pendente" && !isVisuallyLate(t);
       }
       return t.status === search.status;
     });
   }, [tasks, search.status, search.employee, search.client, search.task]);
+
+  // Contador de recusas pendentes de decisão do gestor (SUP-2026-000077).
+  const refusedCount = useMemo(() => (tasks ?? []).filter((t) => isRefused(t)).length, [tasks]);
+
 
   const setStatusFilter = (next: StatusFilter | undefined) => {
     void navigate({
@@ -567,6 +578,7 @@ function TasksPage() {
                 ["em_andamento", "Em andamento"],
                 ["concluido", "Concluídas"],
                 ["atrasadas", "Atrasadas"],
+                ["recusadas", refusedCount > 0 ? `Recusadas (${refusedCount})` : "Recusadas"],
               ] as const
             ).map(([key, label]) => (
               <FilterChip
@@ -576,6 +588,7 @@ function TasksPage() {
                 onClick={() => setStatusFilter(search.status === key ? undefined : (key as StatusFilter))}
               />
             ))}
+
           </div>
           <div className="ml-auto grid w-full gap-2 sm:w-auto sm:grid-cols-2">
             <EmployeePicker
@@ -1299,6 +1312,15 @@ function CalendarTaskCard({
           </span>
         )}
       </div>
+      {isRefused(task) && (
+        <div className="space-y-0.5 rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1.5 text-[11px]">
+          <div className="font-semibold uppercase tracking-wide text-destructive">
+            Recusada · {members.find((m) => m.id === task.refused_by)?.full_name ?? memberName}
+          </div>
+          <div>Motivo: {task.refusal_reason || "-"}</div>
+        </div>
+      )}
+
 
       <div className="flex flex-wrap justify-end gap-1">
         {isManager && (
@@ -1429,6 +1451,25 @@ function TaskRowItem({
             </span>
           )}
         </div>
+        {isRefused(t) && (
+          <div className="mt-2 space-y-0.5 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs">
+            <div className="font-semibold uppercase tracking-wide text-destructive">Recusada pelo funcionário</div>
+            <div>Motivo: {t.refusal_reason || "-"}</div>
+            {t.refused_at && (
+              <div className="text-muted-foreground">Recusada em: {formatLocalTime(t.refused_at)}</div>
+            )}
+            {isManager && (
+              <button
+                type="button"
+                className="mt-1 font-medium text-primary underline underline-offset-2"
+                onClick={() => onReassign(t)}
+              >
+                Reatribuir tarefa
+              </button>
+            )}
+          </div>
+        )}
+
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
           {date && <span>{date}</span>}
           {start || end ? (

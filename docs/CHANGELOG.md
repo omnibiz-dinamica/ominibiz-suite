@@ -7,6 +7,27 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### 🚫 Tarefas — recusa pelo funcionário (SUP-2026-000077) (2026-08-24)
+
+#### Corrigido
+- Recusa de tarefa deixou de falhar com «Sem permissão para alterar estes campos
+  da tarefa». A recusa é agora uma transição autorizada (`task_transition` com
+  ação `recusar`), sem conceder ao funcionário permissão genérica de edição.
+
+#### Adicionado
+- Tabela `public.task_refusals` — histórico permanente das recusas (motivo, autor,
+  data), com operação idempotente (sem duplicar auditoria ou notificação).
+- Notificação `task_rejected` para gestores/owners com motivo e deep-link.
+- RPC `task_reassign_from_refusal` e reatribuição pelo diálogo «Reatribuir tarefa»,
+  que devolve a tarefa a `pendente` preservando o histórico.
+- Filtro «Recusadas» (com contador) em `/app/tarefas` e destaque do motivo da
+  recusa no cartão e na lista, com ação direta de reatribuição para o gestor.
+
+#### Notas
+- Guardas server-side validadas: motivo obrigatório, apenas o próprio responsável,
+  apenas em `pendente`/`autorizado`, bloqueio com ponto aberto, negado para outro
+  funcionário e para outra empresa (ADR-035).
+
 ### 🕒 Ponto — Recuperação de Ponto Aberto (2026-08-24)
 
 #### Adicionado
