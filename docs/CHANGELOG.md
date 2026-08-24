@@ -7,6 +7,24 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### 🐛 Ponto — erro genérico ao iniciar tarefa (2026-08-24)
+
+#### Corrigido
+- **Causa raiz comprovada:** `punch_start_v2` só verificava ponto aberto na
+  *mesma* tarefa. Com um ponto aberto noutra tarefa, o `INSERT` violava
+  `uniq_open_punch_per_user` (SQLSTATE 23505) e o frontend exibia apenas
+  «Nao foi possivel registrar o ponto… Codigo: <correlation-id>».
+  A RPC passa a devolver `ENTRY_ALREADY_OPEN` com o título da tarefa aberta,
+  e a UI recarrega o ponto aberto no erro para exibir a tarefa a finalizar.
+  Reproduzido (409/23505) e validado (200 + `ENTRY_ALREADY_OPEN`) em homologação.
+- **`task_transition`:** chamada inválida `effective_minutes_round(v_total_sec/60.0)`
+  (função tem assinatura `(numeric, numeric)`), que gerava
+  `function public.effective_minutes_round(numeric) does not exist` ao
+  concluir/cancelar/marcar ausência com ponto aberto. Corrigido para
+  `effective_minutes_round(v_total_sec, 0)` — sem dupla divisão por 60.
+
+---
+
 ### 🧪 Homologação de tickets — SUP-000065 e SUP-000077 (2026-08-23)
 
 #### Corrigido

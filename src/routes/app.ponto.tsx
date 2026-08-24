@@ -293,6 +293,12 @@ function PontoPage() {
       qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
       qc.invalidateQueries({ queryKey: ["tasks"] });
     },
+    onError: () => {
+      // Ex.: ENTRY_ALREADY_OPEN — recarrega o ponto aberto para a UI
+      // mostrar imediatamente a tarefa que precisa ser finalizada.
+      qc.invalidateQueries({ queryKey: ["punch-open"] });
+      qc.invalidateQueries({ queryKey: ["punch-open-task"] });
+    },
   });
   const manualStartMut = useMutation({
     mutationFn: async ({ taskId, startedAt }: { taskId: string; startedAt: string }) => {
