@@ -61,6 +61,17 @@ export function ReassignDialog({
         />
 
         <ModalBody className="space-y-4">
+          {refused && (
+            <div className="space-y-1 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs">
+              <div className="font-semibold uppercase tracking-wide text-destructive">Recusada</div>
+              <div>Motivo: {task?.refusal_reason || "-"}</div>
+              {task?.refused_at && (
+                <div className="text-muted-foreground">
+                  Recusada em: {new Date(task.refused_at).toLocaleString("pt-PT")}
+                </div>
+              )}
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label>Novo responsável</Label>
             <EmployeePicker
@@ -71,7 +82,8 @@ export function ReassignDialog({
               ariaLabel="Selecionar novo responsável pela tarefa"
             />
           </div>
-          {isRecurring && (
+          {isRecurring && !refused && (
+
             <div className="space-y-1.5">
               <Label>Aplicar em</Label>
               <Select value={scope} onValueChange={(v) => setScope(v as ReassignScope)}>
