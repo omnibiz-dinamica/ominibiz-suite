@@ -25,13 +25,19 @@ export function ReassignDialog({
   const [scope, setScope] = useState<ReassignScope>("this");
   const [saving, setSaving] = useState(false);
   const isRecurring = !!task?.recurrence_id;
+  const refused = !!task && isRefused(task);
 
   const submit = async () => {
     if (!task || !user) return;
     setSaving(true);
     try {
-      const n = await recurrenceReassign(task.id, user, isRecurring ? scope : "this");
-      toast.success(`${n} ocorrência(s) atualizada(s)`);
+      if (refused) {
+        await reassignFromRefusal(task.id, user);
+        toast.success("Tarefa reatribuída — o histórico da recusa foi preservado.");
+      } else {
+        const n = await recurrenceReassign(task.id, user, isRecurring ? scope : "this");
+        toast.success(`${n} ocorrência(s) atualizada(s)`);
+      }
       onDone();
       onOpenChange(false);
     } catch (e) {
@@ -44,7 +50,16 @@ export function ReassignDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="sm">
-        <ModalHeader icon={UserCog} title="Reatribuir tarefa" description="Escolha o novo responsável pela tarefa." />
+        <ModalHeader
+          icon={UserCog}
+          title={refused ? "Reatribuir tarefa recusada" : "Reatribuir tarefa"}
+          description={
+            refused
+              ? "A tarefa volta a pendente para o novo responsável. A recusa fica registada no histórico."
+              : "Escolha o novo responsável pela tarefa."
+          }
+        />
+
         <ModalBody className="space-y-4">
           <div className="space-y-1.5">
             <Label>Novo responsável</Label>
