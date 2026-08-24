@@ -1840,6 +1840,8 @@ function TaskForm({
               absence_grace_minutes: payload.absence_grace_minutes,
               punch_mode_override: payload.punch_mode_override,
               frequency: recurrence.frequency,
+              // RRULE FREQ=WEEKLY;INTERVAL=n — 2 = "semana sim, semana não" (âncora = start_date).
+              interval_weeks: recurrence.frequency === "weekly" ? Math.max(1, recurrence.intervalWeeks || 1) : 1,
               weekdays: recurrence.frequency === "weekly" ? recurrence.weekdays : [],
               monthly_rule: recurrence.frequency === "monthly" ? { day_of_month: recurrence.dayOfMonth } : {},
               start_date: recurrence.startDate,

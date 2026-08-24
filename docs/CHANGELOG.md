@@ -7,6 +7,24 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### 🔁 Tarefas recorrentes — «Semana sim, semana não» (ADR-037)
+
+#### Adicionado
+- Nova opção de frequência **«Semana sim, semana não (a cada 2 semanas)»** na
+  criação/edição de tarefas recorrentes.
+- Coluna `public.task_recurrences.interval_weeks` (default `1`) — semântica
+  RRULE `FREQ=WEEKLY;INTERVAL=n`.
+
+#### Alterado
+- `public.recurrence_materialize` passou a respeitar `interval_weeks`, usando a
+  **semana da `start_date` como âncora** (`date_trunc('week', ...)`) em vez de
+  somar 14 dias — imune a viradas de mês, ano e horário de verão.
+- Listagem de recorrências mostra o rótulo correto da frequência quinzenal.
+
+#### Notas
+- Não existia opção «Quinzenal» antes: só `daily`, `weekly`, `monthly`, `custom`.
+- Séries existentes ficam com `interval_weeks = 1` — comportamento inalterado.
+
 ### 🗂️ Folha de Ponto — Ausentes, cancelamento e arquivamento manual (ADR-036)
 
 #### Adicionado

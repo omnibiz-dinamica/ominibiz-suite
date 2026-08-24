@@ -2251,6 +2251,7 @@ export type Database = {
           ended_reason: string | null
           frequency: Database["public"]["Enums"]["recurrence_frequency"]
           id: string
+          interval_weeks: number
           location: string | null
           monthly_rule: Json
           priority: string
@@ -2278,6 +2279,7 @@ export type Database = {
           ended_reason?: string | null
           frequency: Database["public"]["Enums"]["recurrence_frequency"]
           id?: string
+          interval_weeks?: number
           location?: string | null
           monthly_rule?: Json
           priority?: string
@@ -2305,6 +2307,7 @@ export type Database = {
           ended_reason?: string | null
           frequency?: Database["public"]["Enums"]["recurrence_frequency"]
           id?: string
+          interval_weeks?: number
           location?: string | null
           monthly_rule?: Json
           priority?: string
@@ -4384,6 +4387,7 @@ export type Database = {
           ended_reason: string | null
           frequency: Database["public"]["Enums"]["recurrence_frequency"]
           id: string
+          interval_weeks: number
           location: string | null
           monthly_rule: Json
           priority: string
