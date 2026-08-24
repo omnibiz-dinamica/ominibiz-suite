@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ArrowLeft, Pause, Play, Square, RefreshCcw, Pencil } from "lucide-react";
 import {
-  FREQUENCY_LABELS,
   WEEKDAY_LABELS,
   recurrenceEnd,
+  recurrenceFrequencyLabel,
   recurrenceMaterialize,
   type RecurrenceRow,
 } from "@/lib/tasks";
@@ -136,7 +136,7 @@ function RecurrencesPage() {
                   </span>
                 </div>
                 <div className="mt-0.5 text-xs text-muted-foreground">
-                  {FREQUENCY_LABELS[r.frequency]}
+                  {recurrenceFrequencyLabel(r.frequency, r.interval_weeks)}
                   {r.frequency === "weekly" && r.weekdays.length > 0 && (
                     <> · {r.weekdays.map((d) => WEEKDAY_LABELS[d]).join("")}</>
                   )}

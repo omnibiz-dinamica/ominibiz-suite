@@ -4,14 +4,19 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import {
-  FREQUENCY_LABELS,
+  UI_FREQUENCY_LABELS,
   WEEKDAY_LABELS,
+  storedToUiFrequency,
+  uiFrequencyToStored,
   type RecurrenceFrequency,
+  type RecurrenceUiFrequency,
 } from "@/lib/tasks";
 
 export interface RecurrenceFormValue {
   enabled: boolean;
   frequency: RecurrenceFrequency;
+  /** RRULE FREQ=WEEKLY;INTERVAL=n — 2 = "semana sim, semana não". */
+  intervalWeeks: number;
   weekdays: number[];
   dayOfMonth: number;
   startDate: string;
@@ -23,6 +28,7 @@ export interface RecurrenceFormValue {
 export const emptyRecurrence = (): RecurrenceFormValue => ({
   enabled: false,
   frequency: "weekly",
+  intervalWeeks: 1,
   weekdays: [1, 2, 3, 4, 5],
   dayOfMonth: 1,
   startDate: new Date().toISOString().slice(0, 10),
@@ -54,6 +60,7 @@ export function RecurrenceForm({
     onChange({ ...value, [k]: v });
 
   const [open, setOpen] = useState(value.enabled);
+  const uiFrequency = storedToUiFrequency(value.frequency, value.intervalWeeks);
   // Recorrência opera apenas com datas.
   // • start_stop: horário e duração herdados do topo do formulário (Início/Fim).
   // • manual:     horário preenchido pelo funcionário no apontamento.
@@ -88,14 +95,35 @@ export function RecurrenceForm({
         <div className="space-y-3 border-t border-border pt-3">
           <div className="space-y-1.5">
             <Label>Frequência</Label>
-            <Select value={value.frequency} onValueChange={(v) => set("frequency", v as RecurrenceFrequency)}>
+            <Select
+              value={uiFrequency}
+              onValueChange={(v) => {
+                const stored = uiFrequencyToStored(v as RecurrenceUiFrequency);
+                // "Semana sim, semana não" ancora no dia da semana da data inicial.
+                const anchorDow = value.startDate
+                  ? new Date(`${value.startDate}T12:00:00`).getDay()
+                  : new Date().getDay();
+                onChange({
+                  ...value,
+                  frequency: stored.frequency,
+                  intervalWeeks: stored.intervalWeeks,
+                  weekdays: v === "biweekly" ? [anchorDow] : value.weekdays,
+                });
+              }}
+            >
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {(Object.keys(FREQUENCY_LABELS) as RecurrenceFrequency[]).map((f) => (
-                  <SelectItem key={f} value={f}>{FREQUENCY_LABELS[f]}</SelectItem>
+                {(["daily", "weekly", "biweekly", "monthly", "custom"] as RecurrenceUiFrequency[]).map((f) => (
+                  <SelectItem key={f} value={f}>{UI_FREQUENCY_LABELS[f]}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {uiFrequency === "biweekly" && (
+              <p className="text-[11px] text-muted-foreground">
+                A semana da data inicial é a âncora: repete no mesmo dia da semana, saltando uma semana
+                (semana sim → semana não → semana sim).
+              </p>
+            )}
           </div>
 
           {value.frequency === "weekly" && (

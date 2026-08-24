@@ -145,6 +145,12 @@ export interface RecurrenceRow {
   punch_mode_override: PunchMode | null;
   frequency: RecurrenceFrequency;
   weekdays: number[];
+  /**
+   * Intervalo em semanas para `frequency = weekly` (RRULE FREQ=WEEKLY;INTERVAL=n).
+   * Ancorado na semana de `start_date`, preservando o dia da semana (BYDAY).
+   * 1 = todas as semanas; 2 = "semana sim, semana não".
+   */
+  interval_weeks: number;
   monthly_rule: { day_of_month?: number };
   start_date: string;
   end_date: string | null;
@@ -161,6 +167,35 @@ export const FREQUENCY_LABELS: Record<RecurrenceFrequency, string> = {
   monthly: "Mensal",
   custom: "Personalizada",
 };
+
+/** Frequência apresentada ao Gestor (biweekly = weekly + interval_weeks 2). */
+export type RecurrenceUiFrequency = RecurrenceFrequency | "biweekly";
+
+export const UI_FREQUENCY_LABELS: Record<RecurrenceUiFrequency, string> = {
+  daily: "Diariamente",
+  weekly: "Semanalmente",
+  biweekly: "Semana sim, semana não (a cada 2 semanas)",
+  monthly: "Mensalmente",
+  custom: "Personalizada",
+};
+
+/** Converte a seleção da UI em (frequency, interval_weeks) persistidos. */
+export function uiFrequencyToStored(f: RecurrenceUiFrequency): {
+  frequency: RecurrenceFrequency;
+  intervalWeeks: number;
+} {
+  return f === "biweekly" ? { frequency: "weekly", intervalWeeks: 2 } : { frequency: f, intervalWeeks: 1 };
+}
+
+/** Converte o par persistido na opção exibida ao Gestor. */
+export function storedToUiFrequency(frequency: RecurrenceFrequency, intervalWeeks?: number | null): RecurrenceUiFrequency {
+  return frequency === "weekly" && (intervalWeeks ?? 1) >= 2 ? "biweekly" : frequency;
+}
+
+/** Rótulo humano de uma série já gravada. */
+export function recurrenceFrequencyLabel(frequency: RecurrenceFrequency, intervalWeeks?: number | null): string {
+  return UI_FREQUENCY_LABELS[storedToUiFrequency(frequency, intervalWeeks)];
+}
 
 export const WEEKDAY_LABELS = ["D", "S", "T", "Q", "Q", "S", "S"];
 export const WEEKDAY_FULL = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];

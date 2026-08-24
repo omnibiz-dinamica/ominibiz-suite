@@ -670,3 +670,30 @@ operacional da Folha de Ponto, e não havia forma de o funcionário tratar o cas
 
 **Consequências.** Fila limpa para o funcionário, histórico íntegro para a
 gestão («Ver arquivados» com desarquivamento) e superfície de escrita mínima.
+
+---
+
+## ADR-037 — Recorrência quinzenal ancorada na semana (`interval_weeks`)
+
+**Estado.** Aceite.
+
+**Contexto.** O motor de recorrência suportava apenas `daily`, `weekly`,
+`monthly` e `custom`, sempre com intervalo 1. Não havia «Quinzenal». A abordagem
+ingénua («data + 14 dias») acumula desvio ao atravessar meses de 31 dias,
+mudanças de horário de verão e viragens de ano.
+
+**Decisão.**
+1. Modelar o intervalo como `public.task_recurrences.interval_weeks`
+   (default `1`), com a semântica do RRULE `FREQ=WEEKLY;INTERVAL=n` + `BYDAY`.
+2. `public.recurrence_materialize` calcula o offset em semanas entre
+   `date_trunc('week', dia)` e `date_trunc('week', start_date)`; a ocorrência só
+   é gerada quando `offset % interval_weeks = 0`. O dia da semana é preservado
+   por construção.
+3. A UI não expõe `interval_weeks` como número: apresenta a opção
+   «Semana sim, semana não», mapeada para `weekly` + `interval_weeks = 2`.
+   Ao escolhê-la, o dia da semana é ancorado no da data inicial.
+
+**Consequências.** Quinzenal estável a longo prazo (validado até 2027 com
+travessia de mês e ano), séries antigas intactas (`interval_weeks = 1`) e espaço
+para intervalos futuros (3, 4 semanas) sem nova migração.
+
