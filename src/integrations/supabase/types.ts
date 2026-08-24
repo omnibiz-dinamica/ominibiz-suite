@@ -4087,6 +4087,16 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      punch_open_entries_list: { Args: { _company_id?: string }; Returns: Json }
+      punch_open_entry_request_help: {
+        Args: {
+          _attempted_task_id?: string
+          _correlation_id?: string
+          _time_entry_id: string
+        }
+        Returns: Json
+      }
+      punch_open_entry_self: { Args: never; Returns: Json }
       punch_paid_leave_create: {
         Args: { _payload: Json; _reason: string }
         Returns: {
@@ -4176,6 +4186,16 @@ export type Database = {
         }
       }
       punch_pause_v2: { Args: { p_input: Json }; Returns: Json }
+      punch_recover_open_entry: {
+        Args: {
+          _complete_task?: boolean
+          _ended_at: string
+          _reason_code: string
+          _reason_text?: string
+          _time_entry_id: string
+        }
+        Returns: Json
+      }
       punch_resume: {
         Args: never
         Returns: {
@@ -5037,6 +5057,8 @@ export type Database = {
         | "ticket_status_changed"
         | "ticket_resolved"
         | "ticket_reopened"
+        | "punch_open_help_requested"
+        | "punch_regularized"
       notification_priority: "baixa" | "media" | "alta" | "urgente"
       payslip_status: "unassigned" | "assigned" | "sent" | "failed" | "archived"
       punch_event_kind:
@@ -5334,6 +5356,8 @@ export const Constants = {
         "ticket_status_changed",
         "ticket_resolved",
         "ticket_reopened",
+        "punch_open_help_requested",
+        "punch_regularized",
       ],
       notification_priority: ["baixa", "media", "alta", "urgente"],
       payslip_status: ["unassigned", "assigned", "sent", "failed", "archived"],
