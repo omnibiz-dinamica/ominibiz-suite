@@ -199,6 +199,29 @@ export async function recurrenceReassign(taskId: string, newUser: string, scope:
   return (data as number) ?? 0;
 }
 
+/**
+ * Tarefa recusada pelo responsável (SUP-2026-000077).
+ * A recusa é uma transição operacional autorizada — nunca um UPDATE livre.
+ */
+export function isRefused(t: Pick<TaskRow, "status" | "refused_by">): boolean {
+  return t.status === "cancelado" && !!t.refused_by;
+}
+
+/**
+ * Reatribuição explícita de uma tarefa recusada. O histórico da recusa
+ * permanece em `public.task_refusals` — a tarefa volta a `pendente`.
+ */
+export async function reassignFromRefusal(taskId: string, newUser: string): Promise<TaskRow> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("task_reassign_from_refusal", {
+    _task_id: taskId,
+    _new_user: newUser,
+  });
+  if (error) throw error;
+  return data as TaskRow;
+}
+
+
 export type EditableSeriesPayload = Partial<{
   title: string;
   description: string | null;
