@@ -96,7 +96,9 @@ const STATUS_FILTERS = [
   "cancelado",
   "ausente",
   "atrasadas",
+  "recusadas",
 ] as const;
+
 type StatusFilter = (typeof STATUS_FILTERS)[number];
 type TasksSearch = { status?: StatusFilter; employee?: string; client?: string; task?: string };
 type ClientOption = { id: string; name: string; timing_mode?: "start_stop" | "manual" | null };
