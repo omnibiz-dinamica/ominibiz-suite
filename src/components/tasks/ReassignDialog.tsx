@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EmployeePicker, type EmployeeOption } from "@/components/common/EmployeePicker";
-import { recurrenceReassign, type ReassignScope, type TaskRow } from "@/lib/tasks";
+import { recurrenceReassign, reassignFromRefusal, isRefused, type ReassignScope, type TaskRow } from "@/lib/tasks";
 import { toast } from "sonner";
 import { UserCog } from "lucide-react";
 
