@@ -74,6 +74,8 @@ import { TaskDocuments } from "@/components/tasks/TaskDocuments";
 import { ReassignDialog } from "@/components/tasks/ReassignDialog";
 import { EditRecurrenceDialog } from "@/components/tasks/EditRecurrenceDialog";
 import type { RecurrenceRow } from "@/lib/tasks";
+import { isRefused } from "@/lib/tasks";
+
 import { EmployeePicker } from "@/components/common/EmployeePicker";
 import {
   wallISOToDateInput,
