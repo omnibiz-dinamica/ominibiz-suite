@@ -128,6 +128,7 @@ function employeeGroups(employeeHasVehicle: boolean): NavGroup[] {
       items: [
         { to: "/app", label: "Minha Operação", icon: LayoutDashboard },
         { to: "/app/ponto", label: "Folha de Ponto", icon: Clock, module: "time_clock" },
+        { to: "/app/ponto/meus-relatorios", label: "Meus Relatórios", icon: FileText, module: "time_clock" },
         { to: "/app/tarefas", label: "Minhas Tarefas", icon: ListChecks, module: "tasks" },
         { to: "/app/notificacoes", label: "Notificações", icon: Bell },
       ],
@@ -166,6 +167,7 @@ function managerGroups(args: { superAdminOperating: boolean; vertical: BusinessV
         { to: "/app/tarefas", label: "Tarefas", icon: ClipboardList, module: "tasks" },
         { to: "/app/ponto", label: "Folha de Ponto", icon: Clock, module: "time_clock" },
         { to: "/app/ponto/gestao", label: "Ponto · Gestão", icon: ListChecks, module: "time_clock" },
+        { to: "/app/ponto/fechamento", label: "Fechamento Mensal", icon: FileText, module: "time_clock" },
         { to: "/app/notificacoes", label: "Notificações", icon: Bell },
       ],
     },
