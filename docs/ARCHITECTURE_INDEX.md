@@ -173,3 +173,7 @@
 - Material de Construção: 11 rotas `src/routes/app.material-construcao.*.tsx`, todas com `RoleGuard` + `ModuleGuard`; módulos sempre desativados por omissão.
 - Hotelaria e Oficina: verticais preparados, sem menus nem rotas operacionais.
 - Release notes: `docs/release-notes/RELEASE_NOTES_BUILDING_MATERIALS_FASE_A.md`.
+- `src/lib/timesheet.ts` — porta única para as RPCs do Fechamento Mensal (ADR-038): snapshot, assinatura, fecho, liberação, upload/hash de PDF e auditoria de acesso.
+- `src/lib/timesheet-pdf.ts` / `src/lib/timesheet-batch.ts` — geração A4 do relatório e pacote mensal (reutiliza PDFs arquivados; só gera prévia para períodos sem versão assinada).
+- `src/components/perfil/SignatureVistoCard.tsx` — captura de assinatura e visto no bucket `employee-signatures` (ADR-038).
+- Rotas: `/app/ponto/meus-relatorios` (funcionário), `/app/ponto/fechamento` (gestor), `/app/contabilidade/folhas-ponto` (contabilista, papel `accountant`).
