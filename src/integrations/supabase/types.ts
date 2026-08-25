@@ -2957,6 +2957,219 @@ export type Database = {
           },
         ]
       }
+      timesheet_audit_events: {
+        Row: {
+          actor_user_id: string | null
+          company_id: string
+          created_at: string
+          employee_id: string
+          event: string
+          id: string
+          metadata: Json
+          period_id: string | null
+          version: number | null
+        }
+        Insert: {
+          actor_user_id?: string | null
+          company_id: string
+          created_at?: string
+          employee_id: string
+          event: string
+          id?: string
+          metadata?: Json
+          period_id?: string | null
+          version?: number | null
+        }
+        Update: {
+          actor_user_id?: string | null
+          company_id?: string
+          created_at?: string
+          employee_id?: string
+          event?: string
+          id?: string
+          metadata?: Json
+          period_id?: string | null
+          version?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timesheet_audit_events_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "timesheet_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      timesheet_day_confirmations: {
+        Row: {
+          company_id: string
+          confirmed_at: string
+          confirmed_by: string
+          employee_id: string
+          id: string
+          work_date: string
+        }
+        Insert: {
+          company_id: string
+          confirmed_at?: string
+          confirmed_by: string
+          employee_id: string
+          id?: string
+          work_date: string
+        }
+        Update: {
+          company_id?: string
+          confirmed_at?: string
+          confirmed_by?: string
+          employee_id?: string
+          id?: string
+          work_date?: string
+        }
+        Relationships: []
+      }
+      timesheet_period_versions: {
+        Row: {
+          company_id: string
+          content_hash: string | null
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          id: string
+          pdf_path: string | null
+          period_id: string
+          signed_at: string | null
+          snapshot: Json
+          version: number
+        }
+        Insert: {
+          company_id: string
+          content_hash?: string | null
+          created_at?: string
+          created_by?: string | null
+          employee_id: string
+          id?: string
+          pdf_path?: string | null
+          period_id: string
+          signed_at?: string | null
+          snapshot: Json
+          version: number
+        }
+        Update: {
+          company_id?: string
+          content_hash?: string | null
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string
+          id?: string
+          pdf_path?: string | null
+          period_id?: string
+          signed_at?: string | null
+          snapshot?: Json
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timesheet_period_versions_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "timesheet_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      timesheet_periods: {
+        Row: {
+          calculated_amount: number | null
+          closed_at: string | null
+          closed_by: string | null
+          company_id: string
+          correction_reason: string | null
+          correction_requested_at: string | null
+          created_at: string
+          currency: string
+          current_version: number
+          employee_id: string
+          id: string
+          monthly_amount: number | null
+          paid_days: number | null
+          payment_type_used: string | null
+          period_month: number
+          period_year: number
+          rate_source: string | null
+          rate_used: number | null
+          released_at: string | null
+          released_by: string | null
+          signed_at: string | null
+          signed_by: string | null
+          status: Database["public"]["Enums"]["timesheet_status"]
+          updated_at: string
+          worked_minutes: number | null
+        }
+        Insert: {
+          calculated_amount?: number | null
+          closed_at?: string | null
+          closed_by?: string | null
+          company_id: string
+          correction_reason?: string | null
+          correction_requested_at?: string | null
+          created_at?: string
+          currency?: string
+          current_version?: number
+          employee_id: string
+          id?: string
+          monthly_amount?: number | null
+          paid_days?: number | null
+          payment_type_used?: string | null
+          period_month: number
+          period_year: number
+          rate_source?: string | null
+          rate_used?: number | null
+          released_at?: string | null
+          released_by?: string | null
+          signed_at?: string | null
+          signed_by?: string | null
+          status?: Database["public"]["Enums"]["timesheet_status"]
+          updated_at?: string
+          worked_minutes?: number | null
+        }
+        Update: {
+          calculated_amount?: number | null
+          closed_at?: string | null
+          closed_by?: string | null
+          company_id?: string
+          correction_reason?: string | null
+          correction_requested_at?: string | null
+          created_at?: string
+          currency?: string
+          current_version?: number
+          employee_id?: string
+          id?: string
+          monthly_amount?: number | null
+          paid_days?: number | null
+          payment_type_used?: string | null
+          period_month?: number
+          period_year?: number
+          rate_source?: string | null
+          rate_used?: number | null
+          released_at?: string | null
+          released_by?: string | null
+          signed_at?: string | null
+          signed_by?: string | null
+          status?: Database["public"]["Enums"]["timesheet_status"]
+          updated_at?: string
+          worked_minutes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timesheet_periods_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           company_id: string | null
@@ -3726,6 +3939,10 @@ export type Database = {
       invite_email_audit: {
         Args: { _company_id: string; _email: string }
         Returns: Json
+      }
+      is_company_accountant: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: boolean
       }
       is_company_manager: {
         Args: { _company_id: string; _user_id: string }
@@ -4913,6 +5130,128 @@ export type Database = {
           timing_mode: string
         }[]
       }
+      timesheet_build_snapshot: {
+        Args: {
+          _company_id: string
+          _employee_id: string
+          _month: number
+          _year: number
+        }
+        Returns: Json
+      }
+      timesheet_day_confirm: {
+        Args: { _company_id: string; _confirm?: boolean; _work_date: string }
+        Returns: undefined
+      }
+      timesheet_list: {
+        Args: { _company_id: string; _month: number; _year: number }
+        Returns: {
+          calculated_amount: number
+          closed_at: string
+          currency: string
+          current_version: number
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          has_signature: boolean
+          job_title: string
+          paid_days: number
+          payment_type: string
+          pdf_path: string
+          period_id: string
+          released_at: string
+          signed_at: string
+          status: Database["public"]["Enums"]["timesheet_status"]
+          worked_minutes: number
+        }[]
+      }
+      timesheet_log_access: {
+        Args: { _event: string; _period_id: string }
+        Returns: undefined
+      }
+      timesheet_manager_close: {
+        Args: { _period_id: string }
+        Returns: undefined
+      }
+      timesheet_open_month: {
+        Args: { _company_id: string; _month: number; _year: number }
+        Returns: number
+      }
+      timesheet_period_ensure: {
+        Args: {
+          _company_id: string
+          _employee_id: string
+          _month: number
+          _year: number
+        }
+        Returns: {
+          calculated_amount: number | null
+          closed_at: string | null
+          closed_by: string | null
+          company_id: string
+          correction_reason: string | null
+          correction_requested_at: string | null
+          created_at: string
+          currency: string
+          current_version: number
+          employee_id: string
+          id: string
+          monthly_amount: number | null
+          paid_days: number | null
+          payment_type_used: string | null
+          period_month: number
+          period_year: number
+          rate_source: string | null
+          rate_used: number | null
+          released_at: string | null
+          released_by: string | null
+          signed_at: string | null
+          signed_by: string | null
+          status: Database["public"]["Enums"]["timesheet_status"]
+          updated_at: string
+          worked_minutes: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "timesheet_periods"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      timesheet_register_pdf: {
+        Args: { _content_hash: string; _pdf_path: string; _version_id: string }
+        Returns: undefined
+      }
+      timesheet_request_correction: {
+        Args: { _period_id: string; _reason: string }
+        Returns: undefined
+      }
+      timesheet_send_to_accounting: {
+        Args: { _period_id: string }
+        Returns: undefined
+      }
+      timesheet_sign: {
+        Args: { _period_id: string }
+        Returns: {
+          company_id: string
+          content_hash: string | null
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          id: string
+          pdf_path: string | null
+          period_id: string
+          signed_at: string | null
+          snapshot: Json
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "timesheet_period_versions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       update_client_billing: {
         Args: { _client_id: string; _patch: Json; _reason: string }
         Returns: {
@@ -5188,7 +5527,7 @@ export type Database = {
       whatsapp_requeue: { Args: { _id: string }; Returns: undefined }
     }
     Enums: {
-      app_role: "super_admin" | "manager" | "employee" | "owner"
+      app_role: "super_admin" | "manager" | "employee" | "owner" | "accountant"
       client_status: "ativo" | "inativo"
       commercial_client_status: "lead" | "negotiation" | "active" | "inactive"
       company_status: "pending" | "active" | "suspended"
@@ -5275,6 +5614,11 @@ export type Database = {
         | "ticket_reopened"
         | "punch_open_help_requested"
         | "punch_regularized"
+        | "timesheet_report_available"
+        | "timesheet_employee_signed"
+        | "timesheet_correction_requested"
+        | "timesheet_manager_closed"
+        | "timesheet_sent_to_accounting"
       notification_priority: "baixa" | "media" | "alta" | "urgente"
       payslip_status: "unassigned" | "assigned" | "sent" | "failed" | "archived"
       punch_event_kind:
@@ -5329,6 +5673,14 @@ export type Database = {
         | "cancelado"
         | "ausente"
         | "autorizado"
+      timesheet_status:
+        | "em_aberto"
+        | "aguardando_funcionario"
+        | "aguardando_correcao"
+        | "assinado_funcionario"
+        | "em_conferencia"
+        | "fechado_gestor"
+        | "disponivel_contabilidade"
       vacation_status:
         | "pendente"
         | "aprovado"
@@ -5481,7 +5833,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["super_admin", "manager", "employee", "owner"],
+      app_role: ["super_admin", "manager", "employee", "owner", "accountant"],
       client_status: ["ativo", "inativo"],
       commercial_client_status: ["lead", "negotiation", "active", "inactive"],
       company_status: ["pending", "active", "suspended"],
@@ -5574,6 +5926,11 @@ export const Constants = {
         "ticket_reopened",
         "punch_open_help_requested",
         "punch_regularized",
+        "timesheet_report_available",
+        "timesheet_employee_signed",
+        "timesheet_correction_requested",
+        "timesheet_manager_closed",
+        "timesheet_sent_to_accounting",
       ],
       notification_priority: ["baixa", "media", "alta", "urgente"],
       payslip_status: ["unassigned", "assigned", "sent", "failed", "archived"],
@@ -5632,6 +5989,15 @@ export const Constants = {
         "cancelado",
         "ausente",
         "autorizado",
+      ],
+      timesheet_status: [
+        "em_aberto",
+        "aguardando_funcionario",
+        "aguardando_correcao",
+        "assinado_funcionario",
+        "em_conferencia",
+        "fechado_gestor",
+        "disponivel_contabilidade",
       ],
       vacation_status: [
         "pendente",
