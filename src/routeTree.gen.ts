@@ -52,6 +52,7 @@ import { Route as AppRestauranteDeliveryRouteImport } from './routes/app.restaur
 import { Route as AppRestauranteCozinhaRouteImport } from './routes/app.restaurante.cozinha'
 import { Route as AppPontoMeusRelatoriosRouteImport } from './routes/app.ponto_.meus-relatorios'
 import { Route as AppPontoGestaoRouteImport } from './routes/app.ponto_.gestao'
+import { Route as AppPontoFechamentoRouteImport } from './routes/app.ponto_.fechamento'
 import { Route as AppMaterialConstrucaoVendasRouteImport } from './routes/app.material-construcao.vendas'
 import { Route as AppMaterialConstrucaoProdutosRouteImport } from './routes/app.material-construcao.produtos'
 import { Route as AppMaterialConstrucaoOrcamentosRouteImport } from './routes/app.material-construcao.orcamentos'
@@ -63,6 +64,7 @@ import { Route as AppMaterialConstrucaoComprasRouteImport } from './routes/app.m
 import { Route as AppMaterialConstrucaoClientesRouteImport } from './routes/app.material-construcao.clientes'
 import { Route as AppMaterialConstrucaoCategoriasRouteImport } from './routes/app.material-construcao.categorias'
 import { Route as AppFrotaCartoesRouteImport } from './routes/app.frota.cartoes'
+import { Route as AppContabilidadeFolhasPontoRouteImport } from './routes/app.contabilidade.folhas-ponto'
 import { Route as AppComercialTemplatesRouteImport } from './routes/app.comercial.templates'
 import { Route as AppComercialContratosRouteImport } from './routes/app.comercial.contratos'
 import { Route as AppComercialClientesRouteImport } from './routes/app.comercial.clientes'
@@ -293,6 +295,11 @@ const AppPontoGestaoRoute = AppPontoGestaoRouteImport.update({
   path: '/ponto/gestao',
   getParentRoute: () => AppRoute,
 } as any)
+const AppPontoFechamentoRoute = AppPontoFechamentoRouteImport.update({
+  id: '/ponto_/fechamento',
+  path: '/ponto/fechamento',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppMaterialConstrucaoVendasRoute =
   AppMaterialConstrucaoVendasRouteImport.update({
     id: '/material-construcao/vendas',
@@ -358,6 +365,12 @@ const AppFrotaCartoesRoute = AppFrotaCartoesRouteImport.update({
   path: '/cartoes',
   getParentRoute: () => AppFrotaRoute,
 } as any)
+const AppContabilidadeFolhasPontoRoute =
+  AppContabilidadeFolhasPontoRouteImport.update({
+    id: '/contabilidade/folhas-ponto',
+    path: '/contabilidade/folhas-ponto',
+    getParentRoute: () => AppRoute,
+  } as any)
 const AppComercialTemplatesRoute = AppComercialTemplatesRouteImport.update({
   id: '/templates',
   path: '/templates',
@@ -455,6 +468,7 @@ export interface FileRoutesByFullPath {
   '/app/comercial/clientes': typeof AppComercialClientesRoute
   '/app/comercial/contratos': typeof AppComercialContratosRouteWithChildren
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
+  '/app/contabilidade/folhas-ponto': typeof AppContabilidadeFolhasPontoRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
   '/app/material-construcao/categorias': typeof AppMaterialConstrucaoCategoriasRoute
   '/app/material-construcao/clientes': typeof AppMaterialConstrucaoClientesRoute
@@ -466,6 +480,7 @@ export interface FileRoutesByFullPath {
   '/app/material-construcao/orcamentos': typeof AppMaterialConstrucaoOrcamentosRoute
   '/app/material-construcao/produtos': typeof AppMaterialConstrucaoProdutosRoute
   '/app/material-construcao/vendas': typeof AppMaterialConstrucaoVendasRoute
+  '/app/ponto/fechamento': typeof AppPontoFechamentoRoute
   '/app/ponto/gestao': typeof AppPontoGestaoRoute
   '/app/ponto/meus-relatorios': typeof AppPontoMeusRelatoriosRoute
   '/app/restaurante/cozinha': typeof AppRestauranteCozinhaRoute
@@ -520,6 +535,7 @@ export interface FileRoutesByTo {
   '/app/comercial/clientes': typeof AppComercialClientesRoute
   '/app/comercial/contratos': typeof AppComercialContratosRouteWithChildren
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
+  '/app/contabilidade/folhas-ponto': typeof AppContabilidadeFolhasPontoRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
   '/app/material-construcao/categorias': typeof AppMaterialConstrucaoCategoriasRoute
   '/app/material-construcao/clientes': typeof AppMaterialConstrucaoClientesRoute
@@ -531,6 +547,7 @@ export interface FileRoutesByTo {
   '/app/material-construcao/orcamentos': typeof AppMaterialConstrucaoOrcamentosRoute
   '/app/material-construcao/produtos': typeof AppMaterialConstrucaoProdutosRoute
   '/app/material-construcao/vendas': typeof AppMaterialConstrucaoVendasRoute
+  '/app/ponto/fechamento': typeof AppPontoFechamentoRoute
   '/app/ponto/gestao': typeof AppPontoGestaoRoute
   '/app/ponto/meus-relatorios': typeof AppPontoMeusRelatoriosRoute
   '/app/restaurante/cozinha': typeof AppRestauranteCozinhaRoute
@@ -589,6 +606,7 @@ export interface FileRoutesById {
   '/app/comercial/clientes': typeof AppComercialClientesRoute
   '/app/comercial/contratos': typeof AppComercialContratosRouteWithChildren
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
+  '/app/contabilidade/folhas-ponto': typeof AppContabilidadeFolhasPontoRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
   '/app/material-construcao/categorias': typeof AppMaterialConstrucaoCategoriasRoute
   '/app/material-construcao/clientes': typeof AppMaterialConstrucaoClientesRoute
@@ -600,6 +618,7 @@ export interface FileRoutesById {
   '/app/material-construcao/orcamentos': typeof AppMaterialConstrucaoOrcamentosRoute
   '/app/material-construcao/produtos': typeof AppMaterialConstrucaoProdutosRoute
   '/app/material-construcao/vendas': typeof AppMaterialConstrucaoVendasRoute
+  '/app/ponto_/fechamento': typeof AppPontoFechamentoRoute
   '/app/ponto_/gestao': typeof AppPontoGestaoRoute
   '/app/ponto_/meus-relatorios': typeof AppPontoMeusRelatoriosRoute
   '/app/restaurante/cozinha': typeof AppRestauranteCozinhaRoute
@@ -659,6 +678,7 @@ export interface FileRouteTypes {
     | '/app/comercial/clientes'
     | '/app/comercial/contratos'
     | '/app/comercial/templates'
+    | '/app/contabilidade/folhas-ponto'
     | '/app/frota/cartoes'
     | '/app/material-construcao/categorias'
     | '/app/material-construcao/clientes'
@@ -670,6 +690,7 @@ export interface FileRouteTypes {
     | '/app/material-construcao/orcamentos'
     | '/app/material-construcao/produtos'
     | '/app/material-construcao/vendas'
+    | '/app/ponto/fechamento'
     | '/app/ponto/gestao'
     | '/app/ponto/meus-relatorios'
     | '/app/restaurante/cozinha'
@@ -724,6 +745,7 @@ export interface FileRouteTypes {
     | '/app/comercial/clientes'
     | '/app/comercial/contratos'
     | '/app/comercial/templates'
+    | '/app/contabilidade/folhas-ponto'
     | '/app/frota/cartoes'
     | '/app/material-construcao/categorias'
     | '/app/material-construcao/clientes'
@@ -735,6 +757,7 @@ export interface FileRouteTypes {
     | '/app/material-construcao/orcamentos'
     | '/app/material-construcao/produtos'
     | '/app/material-construcao/vendas'
+    | '/app/ponto/fechamento'
     | '/app/ponto/gestao'
     | '/app/ponto/meus-relatorios'
     | '/app/restaurante/cozinha'
@@ -792,6 +815,7 @@ export interface FileRouteTypes {
     | '/app/comercial/clientes'
     | '/app/comercial/contratos'
     | '/app/comercial/templates'
+    | '/app/contabilidade/folhas-ponto'
     | '/app/frota/cartoes'
     | '/app/material-construcao/categorias'
     | '/app/material-construcao/clientes'
@@ -803,6 +827,7 @@ export interface FileRouteTypes {
     | '/app/material-construcao/orcamentos'
     | '/app/material-construcao/produtos'
     | '/app/material-construcao/vendas'
+    | '/app/ponto_/fechamento'
     | '/app/ponto_/gestao'
     | '/app/ponto_/meus-relatorios'
     | '/app/restaurante/cozinha'
@@ -1151,6 +1176,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPontoGestaoRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/ponto_/fechamento': {
+      id: '/app/ponto_/fechamento'
+      path: '/ponto/fechamento'
+      fullPath: '/app/ponto/fechamento'
+      preLoaderRoute: typeof AppPontoFechamentoRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/material-construcao/vendas': {
       id: '/app/material-construcao/vendas'
       path: '/material-construcao/vendas'
@@ -1227,6 +1259,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/frota/cartoes'
       preLoaderRoute: typeof AppFrotaCartoesRouteImport
       parentRoute: typeof AppFrotaRoute
+    }
+    '/app/contabilidade/folhas-ponto': {
+      id: '/app/contabilidade/folhas-ponto'
+      path: '/contabilidade/folhas-ponto'
+      fullPath: '/app/contabilidade/folhas-ponto'
+      preLoaderRoute: typeof AppContabilidadeFolhasPontoRouteImport
+      parentRoute: typeof AppRoute
     }
     '/app/comercial/templates': {
       id: '/app/comercial/templates'
@@ -1427,6 +1466,7 @@ interface AppRouteChildren {
   AppSuporteRoute: typeof AppSuporteRouteWithChildren
   AppTarefasRoute: typeof AppTarefasRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
+  AppContabilidadeFolhasPontoRoute: typeof AppContabilidadeFolhasPontoRoute
   AppMaterialConstrucaoCategoriasRoute: typeof AppMaterialConstrucaoCategoriasRoute
   AppMaterialConstrucaoClientesRoute: typeof AppMaterialConstrucaoClientesRoute
   AppMaterialConstrucaoComprasRoute: typeof AppMaterialConstrucaoComprasRoute
@@ -1437,6 +1477,7 @@ interface AppRouteChildren {
   AppMaterialConstrucaoOrcamentosRoute: typeof AppMaterialConstrucaoOrcamentosRoute
   AppMaterialConstrucaoProdutosRoute: typeof AppMaterialConstrucaoProdutosRoute
   AppMaterialConstrucaoVendasRoute: typeof AppMaterialConstrucaoVendasRoute
+  AppPontoFechamentoRoute: typeof AppPontoFechamentoRoute
   AppPontoGestaoRoute: typeof AppPontoGestaoRoute
   AppPontoMeusRelatoriosRoute: typeof AppPontoMeusRelatoriosRoute
   AppRestauranteCozinhaRoute: typeof AppRestauranteCozinhaRoute
@@ -1469,6 +1510,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppSuporteRoute: AppSuporteRouteWithChildren,
   AppTarefasRoute: AppTarefasRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
+  AppContabilidadeFolhasPontoRoute: AppContabilidadeFolhasPontoRoute,
   AppMaterialConstrucaoCategoriasRoute: AppMaterialConstrucaoCategoriasRoute,
   AppMaterialConstrucaoClientesRoute: AppMaterialConstrucaoClientesRoute,
   AppMaterialConstrucaoComprasRoute: AppMaterialConstrucaoComprasRoute,
@@ -1480,6 +1522,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppMaterialConstrucaoOrcamentosRoute: AppMaterialConstrucaoOrcamentosRoute,
   AppMaterialConstrucaoProdutosRoute: AppMaterialConstrucaoProdutosRoute,
   AppMaterialConstrucaoVendasRoute: AppMaterialConstrucaoVendasRoute,
+  AppPontoFechamentoRoute: AppPontoFechamentoRoute,
   AppPontoGestaoRoute: AppPontoGestaoRoute,
   AppPontoMeusRelatoriosRoute: AppPontoMeusRelatoriosRoute,
   AppRestauranteCozinhaRoute: AppRestauranteCozinhaRoute,
