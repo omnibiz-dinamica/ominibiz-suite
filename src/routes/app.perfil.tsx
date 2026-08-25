@@ -155,6 +155,8 @@ function ProfilePage() {
           {save.isPending ? "Salvando..." : "Salvar"}
         </Button>
       </form>
+
+      <SignatureVistoCard />
     </div>
   );
 }
