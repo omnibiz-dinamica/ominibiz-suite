@@ -3810,6 +3810,10 @@ export type Database = {
         Args: { _detail?: Json; _id: string; _status: string }
         Returns: undefined
       }
+      payslip_storage_readable: {
+        Args: { _path: string; _user_id: string }
+        Returns: boolean
+      }
       post_support_ticket_message: {
         Args: { _is_internal: boolean; _message: string; _ticket_id: string }
         Returns: string
