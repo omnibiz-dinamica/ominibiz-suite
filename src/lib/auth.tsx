@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-export type AppRole = "super_admin" | "owner" | "manager" | "employee";
+export type AppRole = "super_admin" | "owner" | "manager" | "accountant" | "employee";
 
 export interface AuthProfile {
   id: string;
@@ -26,6 +26,7 @@ export interface AuthContextValue {
   isOwner: boolean;
   isSuperAdmin: boolean;
   isEmployee: boolean;
+  isAccountant: boolean;
   effectiveRole: AppRole | null;
 }
 
