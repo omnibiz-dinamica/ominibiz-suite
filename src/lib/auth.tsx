@@ -237,6 +237,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           (!currentCompanyId || r.company_id === currentCompanyId),
       ) &&
       roles.some((r) => r.role === "employee"),
+    isAccountant:
+      roles.some((r) => r.role === "super_admin") ||
+      roles.some(
+        (r) =>
+          r.role === "accountant" && (!currentCompanyId || r.company_id === currentCompanyId),
+      ),
     effectiveRole: roles.some((r) => r.role === "super_admin")
       ? "super_admin"
       : roles.some(
@@ -249,6 +255,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             r.role === "manager" && (!currentCompanyId || r.company_id === currentCompanyId),
         )
       ? "manager"
+      : roles.some(
+          (r) =>
+            r.role === "accountant" && (!currentCompanyId || r.company_id === currentCompanyId),
+        )
+      ? "accountant"
       : roles.some((r) => r.role === "employee")
       ? "employee"
       : null,
