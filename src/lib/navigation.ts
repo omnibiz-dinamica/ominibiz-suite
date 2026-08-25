@@ -128,6 +128,7 @@ function employeeGroups(employeeHasVehicle: boolean): NavGroup[] {
       items: [
         { to: "/app", label: "Minha Operação", icon: LayoutDashboard },
         { to: "/app/ponto", label: "Folha de Ponto", icon: Clock, module: "time_clock" },
+        { to: "/app/ponto/meus-relatorios", label: "Meus Relatórios", icon: FileText, module: "time_clock" },
         { to: "/app/tarefas", label: "Minhas Tarefas", icon: ListChecks, module: "tasks" },
         { to: "/app/notificacoes", label: "Notificações", icon: Bell },
       ],
@@ -154,6 +155,21 @@ function employeeGroups(employeeHasVehicle: boolean): NavGroup[] {
   return groups;
 }
 
+/** Contabilista: acesso restrito e somente leitura aos documentos liberados. */
+function accountantGroups(): NavGroup[] {
+  return [
+    {
+      id: "contabilidade",
+      label: "Contabilidade",
+      items: [
+        { to: "/app/contabilidade/folhas-ponto", label: "Folhas de Ponto", icon: FileText, module: "time_clock" },
+        { to: "/app/notificacoes", label: "Notificações", icon: Bell },
+      ],
+    },
+    { id: "conta", label: "Conta", items: [{ to: "/app/perfil", label: "Perfil", icon: UserCircle }] },
+  ];
+}
+
 function managerGroups(args: { superAdminOperating: boolean; vertical: BusinessVertical }): NavGroup[] {
   const { superAdminOperating, vertical } = args;
 
@@ -166,6 +182,7 @@ function managerGroups(args: { superAdminOperating: boolean; vertical: BusinessV
         { to: "/app/tarefas", label: "Tarefas", icon: ClipboardList, module: "tasks" },
         { to: "/app/ponto", label: "Folha de Ponto", icon: Clock, module: "time_clock" },
         { to: "/app/ponto/gestao", label: "Ponto · Gestão", icon: ListChecks, module: "time_clock" },
+        { to: "/app/ponto/fechamento", label: "Fechamento Mensal", icon: FileText, module: "time_clock" },
         { to: "/app/notificacoes", label: "Notificações", icon: Bell },
       ],
     },
@@ -249,9 +266,11 @@ export function resolveAvailableNavigation(ctx: NavContext): NavResolution {
   const raw =
     role === "super_admin" && !superAdminOperating
       ? superAdminGlobalGroups()
-      : role === "employee"
-        ? employeeGroups(ctx.employeeHasVehicle)
-        : managerGroups({ superAdminOperating, vertical: ctx.vertical });
+      : role === "accountant"
+        ? accountantGroups()
+        : role === "employee"
+          ? employeeGroups(ctx.employeeHasVehicle)
+          : managerGroups({ superAdminOperating, vertical: ctx.vertical });
 
   return {
     ready: true,

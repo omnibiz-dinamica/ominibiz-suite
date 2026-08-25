@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { SignatureVistoCard } from "@/components/perfil/SignatureVistoCard";
 
 export const Route = createFileRoute("/app/perfil")({ component: ProfilePage });
 
@@ -154,6 +155,8 @@ function ProfilePage() {
           {save.isPending ? "Salvando..." : "Salvar"}
         </Button>
       </form>
+
+      <SignatureVistoCard />
     </div>
   );
 }

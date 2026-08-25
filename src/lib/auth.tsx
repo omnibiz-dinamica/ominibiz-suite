@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-export type AppRole = "super_admin" | "owner" | "manager" | "employee";
+export type AppRole = "super_admin" | "owner" | "manager" | "accountant" | "employee";
 
 export interface AuthProfile {
   id: string;
@@ -26,6 +26,7 @@ export interface AuthContextValue {
   isOwner: boolean;
   isSuperAdmin: boolean;
   isEmployee: boolean;
+  isAccountant: boolean;
   effectiveRole: AppRole | null;
 }
 
@@ -236,6 +237,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           (!currentCompanyId || r.company_id === currentCompanyId),
       ) &&
       roles.some((r) => r.role === "employee"),
+    isAccountant:
+      roles.some((r) => r.role === "super_admin") ||
+      roles.some(
+        (r) =>
+          r.role === "accountant" && (!currentCompanyId || r.company_id === currentCompanyId),
+      ),
     effectiveRole: roles.some((r) => r.role === "super_admin")
       ? "super_admin"
       : roles.some(
@@ -248,6 +255,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             r.role === "manager" && (!currentCompanyId || r.company_id === currentCompanyId),
         )
       ? "manager"
+      : roles.some(
+          (r) =>
+            r.role === "accountant" && (!currentCompanyId || r.company_id === currentCompanyId),
+        )
+      ? "accountant"
       : roles.some((r) => r.role === "employee")
       ? "employee"
       : null,

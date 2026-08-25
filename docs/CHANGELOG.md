@@ -7,6 +7,38 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### 🗓️ Fechamento Mensal da Folha de Ponto (ADR-038)
+
+#### Adicionado
+- Papel **`accountant`** (Contabilista) em `app_role`, com navegação própria e
+  acesso somente leitura às folhas liberadas.
+- Tabelas `timesheet_periods`, `timesheet_period_versions` (append-only),
+  `timesheet_day_confirmations` e `timesheet_audit_events`; bucket privado
+  `timesheets` (25 MB).
+- RPCs `timesheet_build_snapshot`, `timesheet_period_ensure`,
+  `timesheet_open_month`, `timesheet_day_confirm`, `timesheet_sign`,
+  `timesheet_register_pdf`, `timesheet_request_correction`,
+  `timesheet_manager_close`, `timesheet_send_to_accounting`, `timesheet_list`,
+  `timesheet_log_access`.
+- Perfil: `SignatureVistoCard` para capturar assinatura e visto (rubrica),
+  guardados no bucket `employee-signatures`.
+- Funcionário: `/app/ponto/meus-relatorios` — prévia completa dos registos,
+  visto diário, declaração de conferência, assinatura (gera versão imutável +
+  PDF arquivado), pedido de correção, impressão e download.
+- Gestor: `/app/ponto/fechamento` — abertura do mês, acompanhamento de
+  assinaturas, fecho e liberação (individual ou em lote), impressão/download em
+  lote num único PDF.
+- Contabilista: `/app/contabilidade/folhas-ponto` — apenas períodos
+  `disponivel_contabilidade`, com visualização e pacote mensal.
+
+#### Notas
+- Fechar/liberar **não recalcula** remuneração: usa a versão assinada. Snapshots
+  existentes nunca são regenerados; PDFs arquivados são reutilizados no lote.
+- Todo acesso a relatório registra `REPORT_VIEWED` / `REPORT_DOWNLOADED` em
+  `timesheet_audit_events`.
+
+
+
 ### 🔁 Tarefas recorrentes — «Semana sim, semana não» (ADR-037)
 
 #### Adicionado

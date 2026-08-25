@@ -697,3 +697,39 @@ mudanças de horário de verão e viragens de ano.
 travessia de mês e ano), séries antigas intactas (`interval_weeks = 1`) e espaço
 para intervalos futuros (3, 4 semanas) sem nova migração.
 
+
+---
+
+## ADR-038 — Fechamento Mensal da Folha de Ponto (snapshots imutáveis)
+
+**Estado.** Aceite.
+
+**Contexto.** O ponto vivia apenas em `time_entries` + `time_entry_valuations`,
+sem nenhum documento mensal conferível, assinável ou entregável à contabilidade.
+Regularizações posteriores alteravam retroactivamente aquilo que o funcionário
+já tinha visto, e não existia papel para o contabilista.
+
+**Decisão.**
+1. **Nada de duplicar o ponto.** `time_entries` continua a ser a única fonte de
+   verdade operacional. O fechamento cria um **snapshot JSON imutável** em
+   `timesheet_period_versions` (append-only por trigger), calculado por
+   `timesheet_build_snapshot` a partir do ponto e do motor financeiro existente
+   (`resolve_effective_compensation`, `finance_summary`).
+2. **Estado no período, história nas versões.** `timesheet_periods` guarda um
+   registo por (empresa, funcionário, ano, mês) com `status` e `current_version`;
+   cada assinatura incrementa a versão. Assinar é o único evento que cria versão.
+3. **Assinatura é do funcionário, fecho é do gestor, leitura é do contabilista.**
+   `timesheet_sign` exige conferência prévia; `timesheet_manager_close` e
+   `timesheet_send_to_accounting` **não recalculam valores** — consomem a versão
+   assinada. O novo papel `accountant` só vê `disponivel_contabilidade`.
+4. **PDF é derivado e arquivado.** Gerado no cliente (jsPDF), guardado no bucket
+   privado `timesheets` com hash SHA-256 em `timesheet_period_versions`. O lote
+   reutiliza os ficheiros arquivados (merge via pdf-lib) e só gera prévia para
+   períodos ainda não assinados.
+5. **Auditoria de acesso.** Cada visualização/download escreve
+   `REPORT_VIEWED`/`REPORT_DOWNLOADED` em `timesheet_audit_events`.
+
+**Consequências.** O documento que o funcionário assinou é reproduzível
+byte-a-byte; correcções não reescrevem o passado (geram nova versão); a
+contabilidade recebe um pacote estável; e a superfície de escrita fica confinada
+a RPCs `security definer` com RLS por `company_id`.
