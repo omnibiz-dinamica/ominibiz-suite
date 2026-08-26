@@ -431,6 +431,8 @@ function SupportDetailPage() {
     ["Timezone", String(tech.timezone ?? "—")],
   ];
   const isClosed = isClosedTicketStatus(t.status);
+  const awaitingValidation = !isSuperAdmin && AWAITING_VALIDATION_STATUSES.includes(t.status);
+
 
   // Timeline unificada: eventos + mensagens (mensagens internas apenas para SA).
   const timeline = [
