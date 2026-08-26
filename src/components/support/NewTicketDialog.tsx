@@ -47,6 +47,9 @@ import {
   uploadAttachment,
 } from "@/lib/support/tickets";
 import { invalidateSupportCache } from "@/lib/cache/support";
+import { findSimilarTickets, type SimilarResult } from "@/lib/support/similar";
+import { SimilarTicketsDialog } from "@/components/support/SimilarTicketsDialog";
+
 
 const schema = z.object({
   type: z.string().min(1),
