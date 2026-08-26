@@ -942,3 +942,28 @@ acidental provável.
 acidental ou por caminho não auditado; cada cancelamento tem ator, motivo e
 timestamp de servidor. O histórico do pedido restaurado permanece visível em vez
 de ser apagado.
+
+## ADR-047 — Piso mínimo de módulos essenciais (SUP-2026-000075)
+
+**Contexto.** Um Gestor do "Grupo V-clean" reportou o desaparecimento do menu
+"Tarefas". A navegação canónica (ADR-030) filtra itens por
+`companies.enabled_modules`; o array da empresa tinha sido gravado sem `tasks`,
+`crm` e `fleet`. O resultado é uma falha silenciosa: o item desaparece sem
+qualquer explicação e o Super Admin não o consegue restaurar, porque
+`toggleModule` ignora módulos com `included: true`.
+
+**Decisão.**
+1. Módulos com `included: true` no `MODULE_CATALOG` passam a constituir
+   `ESSENTIAL_MODULES` e são sempre adicionados por `normalizeModules` — logo
+   nunca faltam à navegação nem ao `ModuleGuard`.
+2. O banco garante o mesmo invariante: trigger
+   `public.companies_enforce_essential_modules` (BEFORE INSERT/UPDATE OF
+   `enabled_modules`) reacrescenta `core`, `tasks`, `time_clock`, `hr` e
+   `support`.
+3. A UI de administração mostra estes módulos marcados, bloqueados e com selo
+   "incluído · sempre ativo", deixando claro que fazem parte do plano.
+
+**Consequências.** Nenhuma empresa pode perder módulos incluídos no plano por
+gravação parcial de dados, e nenhuma funcionalidade base desaparece do menu sem
+uma decisão explícita. Módulos opcionais e de vertical mantêm-se totalmente
+sob controlo do Super Admin.

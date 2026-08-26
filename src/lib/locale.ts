@@ -346,6 +346,21 @@ export const DEFAULT_ENABLED_MODULES: ModuleKey[] = [
 ];
 
 /**
+ * ADR-047 (SUP-2026-000075) — Módulos essenciais (`included: true` no catálogo).
+ *
+ * Estão incluídos no plano e NÃO podem ser desativados. Se o array
+ * `companies.enabled_modules` for gravado sem eles (empresas antigas ou
+ * atualizações parciais), o menu do Gestor perdia itens em silêncio
+ * (ex.: "Tarefas" desaparecia) e o Super Admin não conseguia reativá-los
+ * porque o toggle ignora módulos incluídos. A normalização passa a garantir
+ * sempre este piso mínimo.
+ */
+export const ESSENTIAL_MODULES: ModuleKey[] = (
+  Object.keys(MODULE_CATALOG) as ModuleKey[]
+).filter((m) => MODULE_CATALOG[m].included);
+
+
+/**
  * ADR-033 — Módulos do vertical Material de Construção.
  * IMPORTANTE: nunca são incluídos em DEFAULT_ENABLED_MODULES nem ativados
  * automaticamente. Só o Super Admin os ativa, empresa a empresa.
@@ -480,9 +495,14 @@ export function normalizeBillingCountry(country: string | null | undefined): Bil
 export function normalizeModules(modules: CompanyBilling["enabled_modules"]): ModuleKey[] {
   const values = Array.isArray(modules) && modules.length > 0 ? modules : DEFAULT_ENABLED_MODULES;
   return Array.from(
-    new Set(values.filter((m): m is ModuleKey => Object.prototype.hasOwnProperty.call(MODULE_CATALOG, m))),
+    new Set([
+      // ADR-047 — piso mínimo: módulos essenciais nunca somem do menu.
+      ...ESSENTIAL_MODULES,
+      ...values.filter((m): m is ModuleKey => Object.prototype.hasOwnProperty.call(MODULE_CATALOG, m)),
+    ]),
   );
 }
+
 
 export function isModuleEnabled(modules: CompanyBilling["enabled_modules"], module: ModuleKey): boolean {
   return normalizeModules(modules).includes(module);
