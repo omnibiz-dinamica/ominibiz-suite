@@ -1,5 +1,22 @@
 # OmniBiz — Known Issues
 
+## KI-026 — `task_audit_events.event`: constraint precisa acompanhar novas RPCs (2026-08-26) — RESOLVIDO
+
+**Sintoma.** Exclusão de tarefa recorrente devolvia
+`new row for relation "task_audit_events" violates check constraint
+"task_audit_events_event_check"`.
+
+**Causa raiz.** A RPC `task_series_delete` (ADR-051) introduziu o evento
+`delete` sem estender a constraint criada com apenas
+`cancel|archive|unarchive|absence`.
+
+**Correção.** Migration aditiva incluindo `delete` e `series_end` (ADR-052).
+
+**Prevenção.** Qualquer nova RPC que insira em `task_audit_events` deve
+estender a constraint na MESMA migration, sempre de forma aditiva.
+
+---
+
 ## KI-025 — Suporte N1/N2: ações via `window.prompt` (2026-07-23)
 
 **Sintoma.** Ações de escalonamento, resolução interna, solicitação de

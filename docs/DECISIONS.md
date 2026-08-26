@@ -1129,3 +1129,29 @@ operacional e auditoria.
 
 **Consequências.** Séries limpáveis com precisão, histórico e auditoria
 preservados, tarefas únicas com o fluxo anterior inalterado.
+
+---
+
+## ADR-052 — Vocabulário de eventos de auditoria de tarefas (2026-08-26)
+
+**Contexto.** A exclusão de séries (ADR-051) registava o evento `delete`, mas a
+constraint `task_audit_events_event_check` só aceitava
+`cancel|archive|unarchive|absence`, quebrando a operação em P0.
+
+**Decisão.** O vocabulário de `task_audit_events.event` é um conjunto fechado e
+**apenas extensível**: mantivemos todos os valores existentes e adicionámos
+`delete` (exclusão lógica de uma ocorrência) e `series_end` (encerramento da
+série na data de corte). Nenhum registo histórico é alterado e a constraint
+continua a validar o domínio — não há texto livre nem enum novo.
+
+**Regra.** Reutilizar sempre o evento canónico existente; criar valor novo só
+quando a semântica não existir, e sempre na mesma migration que introduz a RPC.
+
+**Alternativas rejeitadas.** (1) Remover a constraint — perderia validação.
+(2) Reutilizar `cancel` para soft-delete — confundiria cancelamento operacional
+com exclusão. (3) Um evento por ocorrência para o fim da série — ruído; o
+encerramento é um único `series_end`.
+
+**Consequências.** «Apenas esta» e «Esta e futuras» concluem sem erro, com
+auditoria completa e sem regressão nos eventos anteriores.
+
