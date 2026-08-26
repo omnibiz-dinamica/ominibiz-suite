@@ -261,7 +261,10 @@ function SupportAdminPage() {
         ))}
       </div>
 
+      <DuplicateClustersPanel companyNames={companyNameMap} />
+
       <section className="rounded-xl border border-border bg-card p-4">
+
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="font-display text-base font-semibold">Empresas clientes</h2>
