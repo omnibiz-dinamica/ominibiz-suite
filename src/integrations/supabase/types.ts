@@ -3266,10 +3266,62 @@ export type Database = {
           },
         ]
       }
+      vacation_audit: {
+        Row: {
+          action: string
+          actor_id: string | null
+          company_id: string
+          created_at: string
+          from_status: string | null
+          id: string
+          metadata: Json
+          reason: string | null
+          source: string
+          to_status: string | null
+          vacation_request_id: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          company_id: string
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          metadata?: Json
+          reason?: string | null
+          source?: string
+          to_status?: string | null
+          vacation_request_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          company_id?: string
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          metadata?: Json
+          reason?: string | null
+          source?: string
+          to_status?: string | null
+          vacation_request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vacation_audit_vacation_request_id_fkey"
+            columns: ["vacation_request_id"]
+            isOneToOne: false
+            referencedRelation: "vacation_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vacation_requests: {
         Row: {
           assigned_approver_id: string | null
+          cancellation_reason: string | null
           cancelled_at: string | null
+          cancelled_by: string | null
           company_id: string
           created_at: string
           created_by: string | null
@@ -3289,7 +3341,9 @@ export type Database = {
         }
         Insert: {
           assigned_approver_id?: string | null
+          cancellation_reason?: string | null
           cancelled_at?: string | null
+          cancelled_by?: string | null
           company_id: string
           created_at?: string
           created_by?: string | null
@@ -3309,7 +3363,9 @@ export type Database = {
         }
         Update: {
           assigned_approver_id?: string | null
+          cancellation_reason?: string | null
           cancelled_at?: string | null
+          cancelled_by?: string | null
           company_id?: string
           created_at?: string
           created_by?: string | null
@@ -5588,7 +5644,9 @@ export type Database = {
         Args: { _action: string; _id: string; _reason?: string }
         Returns: {
           assigned_approver_id: string | null
+          cancellation_reason: string | null
           cancelled_at: string | null
+          cancelled_by: string | null
           company_id: string
           created_at: string
           created_by: string | null
@@ -5617,7 +5675,9 @@ export type Database = {
         Args: { _action: string; _id: string; _reason?: string }
         Returns: {
           assigned_approver_id: string | null
+          cancellation_reason: string | null
           cancelled_at: string | null
+          cancelled_by: string | null
           company_id: string
           created_at: string
           created_by: string | null

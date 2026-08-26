@@ -25,6 +25,7 @@ import { Switch } from "@/components/ui/switch";
 import { sendTransactionalEmail } from "@/lib/email/send";
 import { exportToExcel, exportToPdf } from "@/lib/exports";
 import { buildAppUrl } from "@/lib/app-url";
+import { CancelVacationDialog, type VacationCancelTarget } from "@/components/ferias/CancelVacationDialog";
 
 export const Route = createFileRoute("/app/ferias")({ component: FeriasPage });
 
@@ -333,11 +334,19 @@ function FeriasPage() {
         await sendVacationEmail(vars.id, "vacation_rejected", "vacation_rejected", "reject");
       }
     },
-    onSuccess: () => {
+    onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["vacations"] });
+      if (vars.action === "cancelar") {
+        setCancelTarget(null);
+        toast.success("Pedido de férias cancelado. O histórico foi preservado.");
+      }
     },
     onError: (e: any) => toast.error(e.message ?? "Falha na operação"),
   });
+
+  /** ADR-046: cancelamento de férias exige confirmação explícita + motivo. */
+  const [cancelTarget, setCancelTarget] = useState<VacationCancelTarget | null>(null);
+
 
   const confirmMutation = useMutation({
     mutationFn: async (vars: { id: string; action: "confirmar" | "solicitar_alteracao"; reason?: string }) => {
@@ -785,7 +794,18 @@ function FeriasPage() {
                 <div className="flex items-center gap-2">
                   <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_TONE.aprovado}`}>aprovado</span>
                   {(r.user_id === user?.id || isManager) && (
-                    <Button size="sm" variant="ghost" onClick={() => decide.mutate({ id: r.id, action: "cancelar" })}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() =>
+                        setCancelTarget({
+                          id: r.id,
+                          employeeName: r.user_id === user?.id ? "Você" : nameOf(r.user_id),
+                          periodLabel: `${fmt(r.start_date)} → ${fmt(r.end_date)}`,
+                          statusLabel: STATUS_LABEL[r.status],
+                        })
+                      }
+                    >
                       Cancelar
                     </Button>
                   )}
@@ -814,7 +834,18 @@ function FeriasPage() {
                     </div>
                     {r.note && <div className="text-xs text-muted-foreground">{r.note}</div>}
                   </div>
-                  <Button size="sm" variant="ghost" onClick={() => decide.mutate({ id: r.id, action: "cancelar" })}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() =>
+                      setCancelTarget({
+                        id: r.id,
+                        employeeName: "Você",
+                        periodLabel: `${fmt(r.start_date)} → ${fmt(r.end_date)}`,
+                        statusLabel: STATUS_LABEL[r.status],
+                      })
+                    }
+                  >
                     Cancelar
                   </Button>
                 </li>
@@ -850,6 +881,14 @@ function FeriasPage() {
           </ul>
         )}
       </section>
+
+      <CancelVacationDialog
+        target={cancelTarget}
+        open={!!cancelTarget}
+        onOpenChange={(v) => !v && setCancelTarget(null)}
+        saving={decide.isPending}
+        onConfirm={(id, reason) => decide.mutate({ id, action: "cancelar", reason })}
+      />
     </div>
   );
 }

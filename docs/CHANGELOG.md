@@ -10,6 +10,15 @@
 ### 🎫 Correção sequencial de tickets abertos
 
 #### Corrigido
+- **Férias canceladas indevidamente — cancelamento passa a exigir confirmação (ADR-046).**
+  Um pedido de férias podia ser cancelado com um único clique, sem motivo e sem
+  registo de quem cancelou (causa da perda do pedido de 29/09→05/10 da Keila
+  Oliveira, cancelado 17 s após a criação). Agora: novo diálogo com motivo
+  obrigatório e dupla confirmação, colunas `cancelled_by`/`cancellation_reason`,
+  tabela de auditoria `vacation_audit` com todas as transições e trigger que
+  bloqueia qualquer cancelamento fora da ação oficial. O pedido afetado foi
+  restaurado para "pendente", com histórico preservado e o gestor notificado
+  novamente; nenhum outro pedido foi alterado.
 - **SUP-2026-000074 (Urgente) — concluir tarefa com ponto esquecido (ADR-045).**
   Quando o funcionário esquecia a saída, a conclusão da tarefa falhava (ou
   fecharia o ponto em `now()`, inflando horas). O ecrã de Tarefas passa a
