@@ -1639,6 +1639,13 @@ function TaskForm({
   const [recurrence, setRecurrence] = useState<RecurrenceFormValue>(emptyRecurrence());
   const [pendingDocs, setPendingDocs] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
+  /**
+   * ADR-041 — guarda síncrona contra duplo clique/retry. O estado `loading`
+   * só reflete no próximo render; o ref bloqueia a segunda submissão já no
+   * mesmo tick, antes de qualquer INSERT.
+   */
+  const submittingRef = useRef(false);
+
   const timingMode: "start_stop" = "start_stop";
 
   // ---------------------------------------------------------------
