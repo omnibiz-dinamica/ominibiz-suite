@@ -48,7 +48,13 @@ export interface TaskRow {
   refused_at?: string | null;
   refused_by?: string | null;
   marked_absent_at: string | null;
+  /** ADR-044 — registo formal de falta pelo gestor. */
+  marked_absent_by?: string | null;
+  absence_reason?: string | null;
+  absence_justified?: boolean | null;
+  absence_source?: "manual" | "automatica" | string | null;
   absence_grace_minutes: number;
+
   created_at: string;
   updated_at: string;
   punch_mode_override?: PunchMode | null;
