@@ -79,6 +79,11 @@ import type { RecurrenceRow } from "@/lib/tasks";
 import { isRefused } from "@/lib/tasks";
 import { CancelTaskDialog } from "@/components/tasks/CancelTaskDialog";
 import { MarkAbsentDialog } from "@/components/tasks/MarkAbsentDialog";
+import {
+  OpenPunchRecoveryDialog,
+  type RecoveryEntry,
+} from "@/components/ponto/OpenPunchRecoveryDialog";
+import { fetchOpenEntries, fetchOpenEntrySelf } from "@/lib/punch/recovery";
 
 
 import { EmployeePicker } from "@/components/common/EmployeePicker";
