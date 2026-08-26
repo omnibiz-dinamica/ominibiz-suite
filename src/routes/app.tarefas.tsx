@@ -68,7 +68,9 @@ import {
   transitionTask,
   archiveTask,
   canArchive,
+  canMarkAbsent,
 } from "@/lib/tasks";
+
 import { RecurrenceForm, emptyRecurrence, type RecurrenceFormValue } from "@/components/tasks/RecurrenceForm";
 import { TaskDocuments } from "@/components/tasks/TaskDocuments";
 import { ReassignDialog } from "@/components/tasks/ReassignDialog";
@@ -76,6 +78,8 @@ import { EditRecurrenceDialog } from "@/components/tasks/EditRecurrenceDialog";
 import type { RecurrenceRow } from "@/lib/tasks";
 import { isRefused } from "@/lib/tasks";
 import { CancelTaskDialog } from "@/components/tasks/CancelTaskDialog";
+import { MarkAbsentDialog } from "@/components/tasks/MarkAbsentDialog";
+
 
 import { EmployeePicker } from "@/components/common/EmployeePicker";
 import {
@@ -135,6 +139,9 @@ function TasksPage() {
   const [seriesRow, setSeriesRow] = useState<RecurrenceRow | null>(null);
   const [deleting, setDeleting] = useState<TaskRow | null>(null);
   const [refusing, setRefusing] = useState<TaskRow | null>(null);
+  // ADR-044 — registo formal de falta pelo gestor (motivo obrigatório).
+  const [absenceTarget, setAbsenceTarget] = useState<TaskRow | null>(null);
+
   // ADR-036 — cancelamento sempre com motivo obrigatório e auditado.
   const [cancelling, setCancelling] = useState<TaskRow | null>(null);
   const [refusalReason, setRefusalReason] = useState("");
@@ -319,6 +326,11 @@ function TasksPage() {
       setRefusalReason("");
       return;
     }
+    if (action === "marcar_ausente") {
+      setAbsenceTarget(task);
+      return;
+    }
+
     transition.mutate({ id: task.id, action });
   };
   const submitRefusal = () => {
@@ -522,6 +534,26 @@ function TasksPage() {
           qc.invalidateQueries({ queryKey: ["tasks"] });
         }}
       />
+
+      <MarkAbsentDialog
+        task={absenceTarget}
+        employeeName={
+          absenceTarget?.assigned_to
+            ? ((members ?? []).find((m) => m.id === absenceTarget.assigned_to)?.full_name ?? undefined)
+            : undefined
+        }
+        clientName={
+          absenceTarget?.client_id ? clientsList?.find((c) => c.id === absenceTarget.client_id)?.name : undefined
+        }
+        open={!!absenceTarget}
+        onOpenChange={(o) => !o && setAbsenceTarget(null)}
+        onDone={() => {
+          setAbsenceTarget(null);
+          qc.invalidateQueries({ queryKey: ["tasks"] });
+        }}
+      />
+
+
 
       <Dialog open={!!refusing} onOpenChange={(v) => !v && !transition.isPending && setRefusing(null)}>
         <DialogContent size="sm">
@@ -1487,6 +1519,26 @@ function TaskRowItem({
             )}
           </div>
         )}
+        {t.status === "ausente" && (
+          <div className="mt-2 space-y-0.5 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs">
+            <div className="font-semibold uppercase tracking-wide text-destructive">
+              {t.absence_source === "manual" ? "Falta registada pelo gestor" : "Ausência automática"}
+            </div>
+            {t.absence_reason ? (
+              <div>
+                Motivo: {t.absence_reason}
+                {t.absence_justified != null && (t.absence_justified ? " · justificada" : " · injustificada")}
+              </div>
+            ) : (
+              <div className="text-muted-foreground">Falta ainda sem motivo registado.</div>
+            )}
+            {t.marked_absent_at && (
+              <div className="text-muted-foreground">Marcada em: {formatLocalTime(t.marked_absent_at)}</div>
+            )}
+          </div>
+        )}
+
+
 
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
           {date && <span>{date}</span>}
@@ -1553,9 +1605,22 @@ function TaskRowItem({
             )}
           </>
         )}
+        {/* ADR-044 — falta continua acessível em 'em andamento' e para completar o registo de ausências automáticas. */}
+        {!actions.includes("marcar_ausente") && canMarkAbsent(t, { isManager }) && (
+          <Button
+            size="sm"
+            variant="ghost"
+            title={t.status === "ausente" ? "Registar motivo da falta" : "Marcar falta"}
+            onClick={() => onTransition(t, "marcar_ausente")}
+          >
+            <UserX className="h-3 w-3" />
+            <span className="ml-1 hidden sm:inline">{t.status === "ausente" ? "Registar falta" : "Marcar falta"}</span>
+          </Button>
+        )}
         {actions.map((a) => (
           <ActionButton key={a} action={a} disabled={transitionPending} onClick={() => onTransition(t, a)} />
         ))}
+
       </div>
     </li>
   );

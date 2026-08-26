@@ -48,7 +48,13 @@ export interface TaskRow {
   refused_at?: string | null;
   refused_by?: string | null;
   marked_absent_at: string | null;
+  /** ADR-044 — registo formal de falta pelo gestor. */
+  marked_absent_by?: string | null;
+  absence_reason?: string | null;
+  absence_justified?: boolean | null;
+  absence_source?: "manual" | "automatica" | string | null;
   absence_grace_minutes: number;
+
   created_at: string;
   updated_at: string;
   punch_mode_override?: PunchMode | null;
@@ -382,19 +388,49 @@ export function availableActions(
     out.push("iniciar");
   if ((task.status === "pendente" || task.status === "autorizado") && isAssignee) out.push("recusar");
   if (task.status === "em_andamento" && (isAssignee || ctx.isManager)) out.push("concluir");
-  if (
-    ctx.isManager &&
-    canBecomeAbsent({
-      status: task.status,
-      scheduled_for: task.scheduled_for ?? null,
-      recurrence_date: task.recurrence_date ?? null,
-      due_at: task.due_at ?? null,
-    })
-  )
-    out.push("marcar_ausente");
+  // ADR-044 — o gestor pode registar falta a qualquer momento (motivo obrigatório),
+  // sem esperar pelo limiar de ausência automática.
+  if (ctx.isManager && (task.status === "pendente" || task.status === "autorizado")) out.push("marcar_ausente");
   if (ctx.isManager) out.push("cancelar");
 
   return out;
+}
+
+
+/**
+ * ADR-044 — Registo formal de falta (SUP-2026-000073).
+ *
+ * O gestor marca falta explicitamente, com motivo obrigatório e classificação
+ * (justificada / injustificada). Vale também para tarefas já marcadas como
+ * ausentes automaticamente, permitindo completar o registo.
+ */
+export const ABSENCE_REASONS = [
+  "Não compareceu",
+  "Falta comunicada pelo funcionário",
+  "Doença / atestado",
+  "Motivo pessoal",
+  "Transporte / deslocação",
+  "Outro",
+] as const;
+
+export function canMarkAbsent(
+  t: Pick<TaskRow, "status" | "assigned_to">,
+  ctx: { isManager: boolean },
+): boolean {
+  if (!ctx.isManager) return false;
+  if (!t.assigned_to) return false;
+  return t.status === "pendente" || t.status === "autorizado" || t.status === "em_andamento" || t.status === "ausente";
+}
+
+export async function markTaskAbsent(taskId: string, reason: string, justified: boolean): Promise<TaskRow> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("task_mark_absent", {
+    _task_id: taskId,
+    _reason: reason,
+    _justified: justified,
+  });
+  if (error) throw error;
+  return data as TaskRow;
 }
 
 export const ACTION_LABELS: Record<TaskAction, string> = {
@@ -403,8 +439,9 @@ export const ACTION_LABELS: Record<TaskAction, string> = {
   concluir: "Concluir",
   recusar: "Recusar",
   cancelar: "Cancelar",
-  marcar_ausente: "Marcar ausente",
+  marcar_ausente: "Marcar falta",
 };
+
 
 /**
  * Executa uma transição via RPC central. Toda regra de negócio
