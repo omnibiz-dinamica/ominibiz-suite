@@ -1382,10 +1382,15 @@ export type Database = {
           company_id: string
           created_at: string
           event: Database["public"]["Enums"]["notification_event"]
+          forwarded_to: string | null
           id: string
           metadata: Json
           priority: Database["public"]["Enums"]["notification_priority"]
           read_at: string | null
+          state: Database["public"]["Enums"]["notification_state"]
+          state_changed_at: string | null
+          state_changed_by: string | null
+          state_note: string | null
           task_id: string | null
           title: string
           user_id: string
@@ -1395,10 +1400,15 @@ export type Database = {
           company_id: string
           created_at?: string
           event: Database["public"]["Enums"]["notification_event"]
+          forwarded_to?: string | null
           id?: string
           metadata?: Json
           priority?: Database["public"]["Enums"]["notification_priority"]
           read_at?: string | null
+          state?: Database["public"]["Enums"]["notification_state"]
+          state_changed_at?: string | null
+          state_changed_by?: string | null
+          state_note?: string | null
           task_id?: string | null
           title: string
           user_id: string
@@ -1408,10 +1418,15 @@ export type Database = {
           company_id?: string
           created_at?: string
           event?: Database["public"]["Enums"]["notification_event"]
+          forwarded_to?: string | null
           id?: string
           metadata?: Json
           priority?: Database["public"]["Enums"]["notification_priority"]
           read_at?: string | null
+          state?: Database["public"]["Enums"]["notification_state"]
+          state_changed_at?: string | null
+          state_changed_by?: string | null
+          state_note?: string | null
           task_id?: string | null
           title?: string
           user_id?: string
@@ -4004,6 +4019,15 @@ export type Database = {
         Args: { _all?: boolean; _id?: string }
         Returns: number
       }
+      notification_set_state: {
+        Args: {
+          _forwarded_to?: string
+          _ids: string[]
+          _note?: string
+          _state: Database["public"]["Enums"]["notification_state"]
+        }
+        Returns: number
+      }
       notifications_sweep_late: {
         Args: { _company_id?: string }
         Returns: number
@@ -5666,6 +5690,12 @@ export type Database = {
         | "timesheet_manager_closed"
         | "timesheet_sent_to_accounting"
       notification_priority: "baixa" | "media" | "alta" | "urgente"
+      notification_state:
+        | "nova"
+        | "em_tratamento"
+        | "encaminhada"
+        | "resolvida"
+        | "arquivada"
       payslip_status: "unassigned" | "assigned" | "sent" | "failed" | "archived"
       punch_event_kind:
         | "arrival"
@@ -5979,6 +6009,13 @@ export const Constants = {
         "timesheet_sent_to_accounting",
       ],
       notification_priority: ["baixa", "media", "alta", "urgente"],
+      notification_state: [
+        "nova",
+        "em_tratamento",
+        "encaminhada",
+        "resolvida",
+        "arquivada",
+      ],
       payslip_status: ["unassigned", "assigned", "sent", "failed", "archived"],
       punch_event_kind: [
         "arrival",
