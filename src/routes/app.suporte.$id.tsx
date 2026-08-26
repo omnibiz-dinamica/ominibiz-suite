@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ReopenTicketDialog } from "@/components/support/ReopenTicketDialog";
 import { ArchiveTicketDialog } from "@/components/support/ArchiveTicketDialog";
+import { RelatedTicketsPanel } from "@/components/support/RelatedTicketsPanel";
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
