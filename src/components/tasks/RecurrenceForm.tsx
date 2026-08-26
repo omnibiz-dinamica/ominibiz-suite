@@ -70,7 +70,20 @@ export function RecurrenceForm({
     onChange({ ...value, [k]: v });
 
   const [open, setOpen] = useState(value.enabled);
-  const uiFrequency = storedToUiFrequency(value.frequency, value.intervalWeeks);
+  const monthlyRule =
+    value.monthPosition != null
+      ? { position: value.monthPosition, weekday: value.monthWeekday }
+      : { day_of_month: value.dayOfMonth };
+  const uiFrequency = storedToUiFrequency(value.frequency, value.intervalWeeks, monthlyRule);
+  const previewInput = {
+    frequency: value.frequency,
+    intervalWeeks: value.intervalWeeks,
+    weekdays: value.weekdays,
+    monthlyRule,
+    startDate: value.startDate,
+    endDate: value.endDate || null,
+  };
+  const nextDates = value.enabled ? previewRecurrenceDates(previewInput, 5) : [];
   // Recorrência opera apenas com datas.
   // • start_stop: horário e duração herdados do topo do formulário (Início/Fim).
   // • manual:     horário preenchido pelo funcionário no apontamento.
