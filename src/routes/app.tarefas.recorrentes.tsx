@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ArrowLeft, Pause, Play, Square, RefreshCcw, Pencil } from "lucide-react";
 import {
+  WEEKDAY_FULL,
   WEEKDAY_LABELS,
+  monthPositionLabel,
   recurrenceEnd,
   recurrenceFrequencyLabel,
   recurrenceMaterialize,
