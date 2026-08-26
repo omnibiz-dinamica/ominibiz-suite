@@ -881,6 +881,14 @@ function FeriasPage() {
           </ul>
         )}
       </section>
+
+      <CancelVacationDialog
+        target={cancelTarget}
+        open={!!cancelTarget}
+        onOpenChange={(v) => !v && setCancelTarget(null)}
+        saving={decide.isPending}
+        onConfirm={(id, reason) => decide.mutate({ id, action: "cancelar", reason })}
+      />
     </div>
   );
 }
