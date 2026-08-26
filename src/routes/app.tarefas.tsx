@@ -1837,9 +1837,14 @@ function TaskForm({
             );
           }
           // Uma série (task_recurrence) por funcionário selecionado.
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const ins = await (supabase.from("task_recurrences" as any) as any).insert(
-            assignees.map((memberId) => ({
+          // ADR-041: inserção individual + idempotência. Se o banco recusar por
+          // série ativa equivalente (RECURRENCE_DUPLICATE_ACTIVE), tratamos como
+          // "já existe" — nunca criamos um clone e nunca abortamos os restantes.
+          let duplicates = 0;
+          let created = 0;
+          for (const memberId of assignees) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const ins = await (supabase.from("task_recurrences" as any) as any).insert({
               company_id: companyId,
               created_by: userId,
               title: payload.title,
@@ -1859,15 +1864,32 @@ function TaskForm({
               scheduled_time: derivedTime,
               duration_minutes: derivedDuration,
               task_group_id: groupId,
-            })),
-          );
-          error = ins.error;
-          if (!error) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            await (supabase.rpc as any)("recurrence_materialize", {
-              _days_ahead: 14,
-              _company_id: companyId,
             });
+            if (ins.error) {
+              if (String(ins.error.message ?? "").includes("RECURRENCE_DUPLICATE_ACTIVE")) {
+                duplicates += 1;
+                continue;
+              }
+              error = ins.error;
+              break;
+            }
+            created += 1;
+          }
+          if (!error) {
+            if (created > 0) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              await (supabase.rpc as any)("recurrence_materialize", {
+                _days_ahead: 14,
+                _company_id: companyId,
+              });
+            }
+            if (duplicates > 0) {
+              toast.info(
+                created > 0
+                  ? `${duplicates} recorrência(s) já existiam e não foram duplicadas.`
+                  : "Esta recorrência já existe e não foi duplicada.",
+              );
+            }
           }
         } else {
           // Uma tarefa por funcionário selecionado (tasks.assigned_to segue único).
