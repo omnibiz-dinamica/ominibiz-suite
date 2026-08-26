@@ -703,8 +703,11 @@ function SupportDetailPage() {
           </section>
         )}
 
+        <RelatedTicketsPanel ticketId={t.id} isSuperAdmin={isSuperAdmin} />
+
         <section className="space-y-3">
           <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Timeline</h2>
+
           <ol className="relative space-y-2 border-l border-border pl-4 text-xs">
             {timeline.map((it) => (
               <li key={it.id} className="relative">
