@@ -129,14 +129,16 @@ export function OpenPunchRecoveryDialog({
         endedAtIso: localInputToIso(endedAt),
         reasonCode,
         reasonText: reasonText.trim() || null,
-        completeTask: false,
+        completeTask,
       });
       if (!res.success) {
         toast.error(res.message ?? res.code);
         setStep("form");
         return;
       }
-      toast.success(res.message ?? "Ponto regularizado.");
+      toast.success(
+        completeTask ? "Ponto regularizado e tarefa concluída." : (res.message ?? "Ponto regularizado."),
+      );
       onOpenChange(false);
       onResolved?.();
     } catch (e) {
