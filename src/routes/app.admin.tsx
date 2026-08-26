@@ -552,7 +552,8 @@ function BillingControls({ company }: { company: AdminCompany }) {
       <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
         {currentTab.modules.map((module) => {
           const item = MODULE_CATALOG[module];
-          const checked = modules.includes(module);
+          // ADR-047 — módulos essenciais aparecem sempre ativos e bloqueados.
+          const checked = item.included || modules.includes(module);
           return (
             <label key={module} className="flex gap-3 rounded-lg border border-border bg-background p-3 text-sm">
               <input
@@ -565,12 +566,18 @@ function BillingControls({ company }: { company: AdminCompany }) {
               <span className="min-w-0">
                 <span className="flex items-center gap-2 font-medium">
                   {item.label}
+                  {item.included && (
+                    <span className="rounded bg-success/10 px-1.5 py-0.5 text-[10px] text-success">
+                      incluído · sempre ativo
+                    </span>
+                  )}
                   {item.addonMonthly > 0 && (
                     <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">
                       +{formatBillingAmount(item.addonMonthly, currency)}/mês
                     </span>
                   )}
                 </span>
+
                 <span className="mt-1 block text-xs text-muted-foreground">{item.description}</span>
               </span>
             </label>
