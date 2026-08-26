@@ -223,6 +223,51 @@ function TasksPage() {
     enabled: !!currentCompanyId,
   });
 
+  /**
+   * SUP-2026-000074 — pontos ainda em aberto (esquecimento de saída).
+   * Gestor vê os da empresa; funcionário apenas o seu.
+   */
+  const { data: openPunches } = useQuery({
+    queryKey: ["tasks-open-punches", currentCompanyId, user?.id, isManager],
+    queryFn: async (): Promise<RecoveryEntry[]> => {
+      if (isManager) {
+        const rows = await fetchOpenEntries(currentCompanyId);
+        return rows.map((r) => ({
+          time_entry_id: r.time_entry_id,
+          task_id: r.task_id,
+          task_title: r.task_title,
+          task_status: r.task_status,
+          client_name: r.client_name,
+          company_name: r.company_name,
+          started_at: r.started_at,
+          notes: r.notes,
+          user_name: r.user_name,
+        }));
+      }
+      const self = await fetchOpenEntrySelf();
+      if (!self) return [];
+      return [
+        {
+          time_entry_id: self.time_entry_id,
+          task_id: self.task_id,
+          task_title: self.task_title,
+          task_status: self.task_status,
+          client_name: self.client_name,
+          company_name: self.company_name,
+          started_at: self.started_at,
+          notes: self.notes,
+        },
+      ];
+    },
+    enabled: !!user,
+  });
+
+  const openPunchByTask = useMemo(() => {
+    const map = new Map<string, RecoveryEntry>();
+    for (const e of openPunches ?? []) if (e.task_id) map.set(e.task_id, e);
+    return map;
+  }, [openPunches]);
+
   // Varredura de ausentes por evento: ao carregar a tela. Nunca em loop.
   useEffect(() => {
     if (!user || !isManager) return;
