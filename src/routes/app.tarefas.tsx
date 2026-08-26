@@ -326,6 +326,11 @@ function TasksPage() {
       setRefusalReason("");
       return;
     }
+    if (action === "marcar_ausente") {
+      setAbsenceTarget(task);
+      return;
+    }
+
     transition.mutate({ id: task.id, action });
   };
   const submitRefusal = () => {
