@@ -56,6 +56,9 @@ type NotificationEvent =
 
 type NotificationPriority = "baixa" | "media" | "alta" | "urgente";
 
+/** ADR-043 — estados de gestão da notificação (SUP-2026-000095). */
+type NotificationState = "nova" | "em_tratamento" | "encaminhada" | "resolvida" | "arquivada";
+
 type NotificationRow = {
   id: string;
   company_id: string;
@@ -68,7 +71,40 @@ type NotificationRow = {
   read_at: string | null;
   created_at: string;
   metadata: Record<string, unknown>;
+  state: NotificationState;
+  forwarded_to: string | null;
+  state_note: string | null;
+  state_changed_at: string | null;
 };
+
+const STATE_LABEL: Record<NotificationState, string> = {
+  nova: "Nova",
+  em_tratamento: "Em tratamento",
+  encaminhada: "Encaminhada",
+  resolvida: "Resolvida",
+  arquivada: "Arquivada",
+};
+
+const STATE_TONE: Record<NotificationState, string> = {
+  nova: "bg-primary/15 text-primary",
+  em_tratamento: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
+  encaminhada: "bg-violet-500/15 text-violet-700 dark:text-violet-300",
+  resolvida: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
+  arquivada: "bg-muted text-muted-foreground",
+};
+
+type TabKey = "ativas" | "tratamento" | "resolvidas" | "arquivadas" | "todas";
+
+const TABS: { key: TabKey; label: string; states: NotificationState[] | null }[] = [
+  { key: "ativas", label: "Caixa de entrada", states: ["nova"] },
+  { key: "tratamento", label: "Em tratamento", states: ["em_tratamento", "encaminhada"] },
+  { key: "resolvidas", label: "Resolvidas", states: ["resolvida"] },
+  { key: "arquivadas", label: "Arquivadas", states: ["arquivada"] },
+  { key: "todas", label: "Todas", states: null },
+];
+
+/** Sugestões rápidas de destinatário no encaminhamento. */
+const FORWARD_SUGGESTIONS = ["Contabilista", "Gestor", "Recursos Humanos", "Direção"];
 
 const EVENT_LABEL: Record<NotificationEvent, string> = {
   task_created: "Nova tarefa",
