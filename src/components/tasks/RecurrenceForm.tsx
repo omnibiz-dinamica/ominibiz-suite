@@ -184,7 +184,7 @@ export function RecurrenceForm({
             </div>
           )}
 
-          {value.frequency === "monthly" && (
+          {uiFrequency === "monthly" && (
             <div className="space-y-1.5">
               <Label>Dia do mês</Label>
               <Input
@@ -196,6 +196,37 @@ export function RecurrenceForm({
               />
             </div>
           )}
+
+          {uiFrequency === "monthly_pos" && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Posição</Label>
+                <Select
+                  value={String(value.monthPosition ?? -1)}
+                  onValueChange={(v) => set("monthPosition", Number(v))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {MONTH_POSITIONS.map((p) => (
+                      <SelectItem key={p.value} value={String(p.value)}>{p.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Dia da semana</Label>
+                <Select value={String(value.monthWeekday)} onValueChange={(v) => set("monthWeekday", Number(v))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {WEEKDAY_FULL.map((lbl, i) => (
+                      <SelectItem key={i} value={String(i)}>{lbl}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
