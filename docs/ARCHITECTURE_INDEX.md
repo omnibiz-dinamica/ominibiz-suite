@@ -189,3 +189,9 @@
 - `src/components/support/DuplicateClustersPanel.tsx` — painel de possíveis
   duplicados em `/app/admin/suporte` (Super Admin).
 - Detalhe completo: `docs/ARCHITECTURE_SUPPORT_TICKETS.md`.
+
+## Tarefas recorrentes — exclusão segura (ADR-051)
+
+- `public.task_series_delete(_task_id, _scope, _reason)` — âmbito `single` (soft-delete da ocorrência, série continua) ou `future` (ocorrências ≥ data de corte + encerramento da série). Ocorrências com histórico são canceladas, nunca apagadas.
+- `src/components/tasks/DeleteRecurrenceDialog.tsx` — modal de escolha do âmbito; usado em `/app/tarefas` apenas quando a tarefa tem `recurrence_id`.
+- `src/lib/tasks.ts` → `deleteTaskSeries()` é a porta única para a RPC. Tarefas únicas continuam em `task_soft_delete`.
