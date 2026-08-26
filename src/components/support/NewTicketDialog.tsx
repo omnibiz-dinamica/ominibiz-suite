@@ -334,21 +334,42 @@ export function NewTicketDialog({
         </ModalBody>
 
         <ModalFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
             Cancelar
           </Button>
-          <Button
-            onClick={() => mutation.mutate()}
-            disabled={mutation.isPending || !currentCompanyId}
-          >
-            {mutation.isPending ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando…</>
+          <Button onClick={() => void handleSubmit()} disabled={busy || !currentCompanyId}>
+            {busy ? (
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {checkMut.isPending ? "Verificando…" : "Enviando…"}</>
             ) : (
               "Enviar solicitação"
             )}
           </Button>
         </ModalFooter>
       </DialogContent>
+
+      <SimilarTicketsDialog
+        open={similarOpen}
+        onOpenChange={setSimilarOpen}
+        result={similar}
+        creating={mutation.isPending}
+        onCreateAnyway={() => {
+          setSimilarOpen(false);
+          mutation.mutate();
+        }}
+        onOpenTicket={(id) => {
+          setSimilarOpen(false);
+          onOpenChange(false);
+          clearDraft();
+          nav({ to: "/app/suporte/$id", params: { id } }).catch(() => {
+            nav({ to: "/app/suporte" });
+          });
+        }}
+        onReported={() => {
+          clearDraft();
+          invalidateSupportCache(qc);
+          onOpenChange(false);
+        }}
+      />
     </Dialog>
   );
 }
