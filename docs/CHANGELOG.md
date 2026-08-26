@@ -7,6 +7,16 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### 🐞 P0 — Erro ao excluir tarefas recorrentes corrigido (ADR-052)
+
+#### Corrigido
+- `task_series_delete` falhava com `task_audit_events_event_check` porque registava o evento `delete`, ausente da constraint (que só aceitava `cancel`, `archive`, `unarchive`, `absence`).
+- Constraint recriada de forma **aditiva** aceitando também `delete` (exclusão lógica de ocorrência) e `series_end` (encerramento da série). Nenhum valor histórico removido; nenhum registo alterado.
+- Âmbito «esta e todas as futuras» passa a registar **um** evento `series_end` na ocorrência de corte, além dos eventos `delete`/`cancel` por ocorrência.
+
+#### Preservado
+- Auditoria ativa; soft-delete/cancelamento mantidos (sem delete físico); bloqueio `TASK_HAS_OPEN_PUNCH`; tarefas únicas e ocorrências passadas intactas.
+
 ### 🗑️ Exclusão segura de tarefas recorrentes (ADR-051)
 
 #### Adicionado
