@@ -7,6 +7,23 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### 🔁 Motor de recorrência v2 (ADR-050)
+
+#### Corrigido
+- «Semana sim, semana não» passa a repetir a cada 2 semanas até a data final. A âncora semanal agora é o domingo da semana de `start_date` (antes `date_trunc('week')`, base segunda-feira, deslocava séries que começavam ao domingo).
+- Horizonte de materialização deixa de ser fixo em 14 dias: a criação de uma série gera as ocorrências até a data final (cap 400 dias) e a tela de Recorrências gera 60 dias. Novo job diário `tasks-recurrence-materialize-daily` mantém a fila abastecida.
+
+#### Adicionado
+- Frequência **Mensalmente (posição no mês)** — Primeira/Segunda/Terceira/Quarta/Última + dia da semana (ex.: última sexta-feira), persistida em `task_recurrences.monthly_rule` como `{ position, weekday }`.
+- Frase-exemplo dinâmica e lista das **próximas 5 ocorrências** no formulário de recorrência, calculadas com a mesma lógica do motor no banco.
+- Rótulo da regra mensal por posição na listagem de Recorrências.
+
+#### Preservado
+- Regra mensal legada `{ day_of_month }`, séries e tarefas já materializadas, RLS e a proteção de duplicidade por `(recurrence_id, recurrence_date)`.
+
+---
+
+
 ### 🎯 Destino obrigatório do ticket (ADR-049)
 
 #### Adicionado

@@ -1065,3 +1065,36 @@ como destino — confunde fila com pessoa e quebra a atribuição individual.
 **Consequências.** Encaminhamento correto desde a abertura, tickets internos
 resolvidos sem sair da empresa, filas extensíveis por dados e histórico
 completo de cada reencaminhamento.
+
+
+---
+
+## ADR-050 — Motor de recorrência v2: intervalo semanal correto e posição no mês
+
+**Contexto.** «Semana sim, semana não» gerava poucas ocorrências. Duas causas:
+(1) a âncora de semana usava `date_trunc('week')` (segunda-feira), enquanto os
+dias da semana da série são contados a partir de domingo (`EXTRACT(DOW)`), o que
+podia deslocar a paridade das semanas; (2) a materialização só olhava 14 dias à
+frente e não havia job periódico — uma série de 3 meses aparecia com 1-2 datas.
+Faltava também recorrência por posição no mês (ex.: última sexta-feira).
+
+**Decisão.**
+- `recurrence_materialize` calcula o offset semanal a partir do domingo da
+  semana de `start_date`: `((dia - dow(dia)) - âncora) / 7 % interval_weeks = 0`.
+- Regra mensal por posição no mesmo campo `monthly_rule`: `{ position, weekday }`
+  com `position` 1..4 ou `-1` («última»), equivalente a
+  `FREQ=MONTHLY;BYDAY=<dow>;BYSETPOS=<pos>`. `{ day_of_month }` continua válido
+  e é o fallback quando `position` está ausente.
+- Horizonte padrão da RPC passa a 60 dias; a criação de série materializa até a
+  data final (cap 400 dias) e o job `tasks-recurrence-materialize-daily`
+  (05:10 UTC) gera 60 dias para todas as empresas.
+- `previewRecurrenceDates`/`describeRecurrence` em `src/lib/tasks.ts` espelham a
+  lógica do banco para o exemplo dinâmico e as «Próximas ocorrências» na UI.
+
+**Alternativas rejeitadas.** (1) Nova coluna `by_set_pos`/`by_day` — `monthly_rule`
+já é JSONB e absorve a regra sem migração de dados. (2) Materializar toda a
+série de uma vez — cria milhares de tarefas para séries sem data final.
+
+**Consequências.** Séries quinzenais completas até a data final, regras do tipo
+«última sexta-feira do mês» disponíveis, previsibilidade na UI e nenhuma
+alteração em séries ou tarefas já existentes.

@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ArrowLeft, Pause, Play, Square, RefreshCcw, Pencil } from "lucide-react";
 import {
+  WEEKDAY_FULL,
   WEEKDAY_LABELS,
+  monthPositionLabel,
   recurrenceEnd,
   recurrenceFrequencyLabel,
   recurrenceMaterialize,
@@ -79,7 +81,7 @@ function RecurrencesPage() {
   const materialize = async () => {
     setBusy(true);
     try {
-      const n = await recurrenceMaterialize(14, currentCompanyId);
+      const n = await recurrenceMaterialize(60, currentCompanyId);
       toast.success(`${n} ocorrência(s) geradas`);
       qc.invalidateQueries({ queryKey: ["tasks"] });
     } catch (e) {
@@ -106,7 +108,7 @@ function RecurrencesPage() {
           </p>
         </div>
         <Button onClick={materialize} disabled={busy} variant="outline">
-          <RefreshCcw className="mr-2 h-4 w-4" /> {busy ? "Gerando..." : "Gerar próximas 14d"}
+          <RefreshCcw className="mr-2 h-4 w-4" /> {busy ? "Gerando..." : "Gerar próximas 60d"}
         </Button>
       </div>
 
@@ -136,11 +138,17 @@ function RecurrencesPage() {
                   </span>
                 </div>
                 <div className="mt-0.5 text-xs text-muted-foreground">
-                  {recurrenceFrequencyLabel(r.frequency, r.interval_weeks)}
+                  {recurrenceFrequencyLabel(r.frequency, r.interval_weeks, r.monthly_rule)}
                   {r.frequency === "weekly" && r.weekdays.length > 0 && (
                     <> · {r.weekdays.map((d) => WEEKDAY_LABELS[d]).join("")}</>
                   )}
-                  {r.frequency === "monthly" && r.monthly_rule?.day_of_month && (
+                  {r.frequency === "monthly" && r.monthly_rule?.position != null && r.monthly_rule?.weekday != null && (
+                    <>
+                      {" · "}
+                      {monthPositionLabel(r.monthly_rule.position)} {WEEKDAY_FULL[r.monthly_rule.weekday]}
+                    </>
+                  )}
+                  {r.frequency === "monthly" && r.monthly_rule?.position == null && r.monthly_rule?.day_of_month && (
                     <> · dia {r.monthly_rule.day_of_month}</>
                   )}
                   {" · "}

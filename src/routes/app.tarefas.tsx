@@ -2014,7 +2014,13 @@ function TaskForm({
               // RRULE FREQ=WEEKLY;INTERVAL=n — 2 = "semana sim, semana não" (âncora = start_date).
               interval_weeks: recurrence.frequency === "weekly" ? Math.max(1, recurrence.intervalWeeks || 1) : 1,
               weekdays: recurrence.frequency === "weekly" ? recurrence.weekdays : [],
-              monthly_rule: recurrence.frequency === "monthly" ? { day_of_month: recurrence.dayOfMonth } : {},
+              // Mensal: dia fixo do mês (legado) OU posição no mês (BYSETPOS/BYDAY).
+              monthly_rule:
+                recurrence.frequency === "monthly"
+                  ? recurrence.monthPosition != null
+                    ? { position: recurrence.monthPosition, weekday: recurrence.monthWeekday }
+                    : { day_of_month: recurrence.dayOfMonth }
+                  : {},
               start_date: recurrence.startDate,
               end_date: recurrence.endDate || null,
               scheduled_time: derivedTime,
@@ -2033,9 +2039,21 @@ function TaskForm({
           }
           if (!error) {
             if (created > 0) {
+              // Horizonte cobre a série até a data final (cap 400d); sem data final, 60d.
+              const horizon = recurrence.endDate
+                ? Math.min(
+                    400,
+                    Math.max(
+                      1,
+                      Math.ceil(
+                        (new Date(`${recurrence.endDate}T12:00:00`).getTime() - Date.now()) / 86_400_000,
+                      ) + 1,
+                    ),
+                  )
+                : 60;
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               await (supabase.rpc as any)("recurrence_materialize", {
-                _days_ahead: 14,
+                _days_ahead: horizon,
                 _company_id: companyId,
               });
             }
