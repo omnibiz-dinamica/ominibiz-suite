@@ -334,11 +334,19 @@ function FeriasPage() {
         await sendVacationEmail(vars.id, "vacation_rejected", "vacation_rejected", "reject");
       }
     },
-    onSuccess: () => {
+    onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["vacations"] });
+      if (vars.action === "cancelar") {
+        setCancelTarget(null);
+        toast.success("Pedido de férias cancelado. O histórico foi preservado.");
+      }
     },
     onError: (e: any) => toast.error(e.message ?? "Falha na operação"),
   });
+
+  /** ADR-046: cancelamento de férias exige confirmação explícita + motivo. */
+  const [cancelTarget, setCancelTarget] = useState<VacationCancelTarget | null>(null);
+
 
   const confirmMutation = useMutation({
     mutationFn: async (vars: { id: string; action: "confirmar" | "solicitar_alteracao"; reason?: string }) => {
