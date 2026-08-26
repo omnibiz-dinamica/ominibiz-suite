@@ -960,3 +960,20 @@ queries, mutations ou fluxos funcionais.**
 - `PunchGeoDrawer`: aviso explicativo quando o cliente não tem coordenadas —
   deixa claro que não é erro de GPS do funcionário e indica onde configurar.
 - Ver ADR-042.
+
+## Menu "Tarefas" desaparecido no Gestor (SUP-2026-000075) · 2026-08-26
+
+- Causa raiz: `companies.enabled_modules` podia ser gravado sem módulos
+  essenciais (`core`, `tasks`, `time_clock`, `hr`, `support`). O menu do Gestor
+  esconde itens por módulo, pelo que "Tarefas" (e outros) desapareciam em
+  silêncio — e o Super Admin não conseguia reativá-los, porque o toggle ignora
+  módulos marcados como incluídos no plano.
+- `normalizeModules` (src/lib/locale.ts) passa a garantir sempre o piso mínimo
+  `ESSENTIAL_MODULES`, pelo que navegação e `ModuleGuard` nunca ficam sem os
+  módulos incluídos no plano.
+- Novo trigger `public.companies_enforce_essential_modules` reacrescenta os
+  módulos essenciais em qualquer INSERT/UPDATE de `enabled_modules`; empresas
+  existentes foram normalizadas na mesma migração.
+- `/app/admin`: módulos incluídos aparecem com selo "incluído · sempre ativo",
+  marcados e bloqueados.
+- Ver ADR-047.
