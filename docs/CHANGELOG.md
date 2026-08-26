@@ -10,6 +10,13 @@
 ### 🎫 Correção sequencial de tickets abertos
 
 #### Corrigido
+- **SUP-2026-000095 (Alta) — notificações sem gestão de estados (ADR-043).**
+  A caixa de notificações só permitia abrir ou marcar como lida, pelo que o menu
+  nunca ficava limpo. Passa a ter estados: **Nova**, **Em tratamento**,
+  **Encaminhada** (com destinatário livre — Contabilista, Lea, Luc…, e nota
+  opcional), **Resolvida** e **Arquivada**, com pastas/filtros e contadores,
+  ação «Restaurar» para o arquivo e badge do menu a ignorar resolvidas/arquivadas.
+  Novos campos em `public.notifications` e RPC `notification_set_state`.
 - **SUP-2026-000070 (Urgente) — gestor sem forma de aceitar ou contestar a resposta
   do suporte.** Tickets devolvidos ao solicitante (`waiting_manager`,
   `waiting_employee`, `aguardando_cliente`, `returned_to_manager`, `em_validacao`)

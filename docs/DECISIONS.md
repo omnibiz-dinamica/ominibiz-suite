@@ -836,3 +836,27 @@ explicá-lo e a indicar onde definir a localização do cliente.
 significar validação real contra o raio; o gestor vê que falta configurar a
 localização do cliente em vez de suspeitar do GPS do funcionário. Registos
 antigos mantêm-se como foram gravados (imutabilidade da auditoria de ponto).
+
+## ADR-043 — Estados de gestão das notificações
+
+**Contexto.** SUP-2026-000095: a lista de notificações só suportava "abrir" e
+"marcar como lida", logo o menu acumulava eventos indefinidamente e não havia
+forma de registar que um assunto foi encaminhado (contabilista, colegas) ou que
+está em tratamento até ser concluído.
+
+**Decisão.** `public.notifications` ganha `state`
+(`nova | em_tratamento | encaminhada | resolvida | arquivada`), `forwarded_to`,
+`state_note`, `state_changed_at/by`. A única porta de escrita é a RPC
+`public.notification_set_state(_ids, _state, _forwarded_to, _note)`
+(`security definer`, restrita a `user_id = auth.uid()`), que exige destinatário
+ao encaminhar e marca a notificação como lida em qualquer estado não-`nova`.
+O destinatário é texto livre com sugestões rápidas — não fixamos nomes de pessoas
+no código, para servir qualquer empresa. A UI expõe pastas (Caixa de entrada,
+Em tratamento, Resolvidas, Arquivadas, Todas) e o badge do menu passa a excluir
+`resolvida`/`arquivada`.
+
+**Consequências.** A caixa de entrada fica limpa sem apagar histórico; itens
+"em tratamento"/"encaminhados" permanecem visíveis até serem resolvidos; o
+arquivo é reversível («Restaurar»). Nenhuma alteração nos gatilhos que criam
+notificações — o valor por omissão `nova` preserva o comportamento anterior.
+
