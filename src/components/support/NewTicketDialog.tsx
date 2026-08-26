@@ -6,7 +6,7 @@
  * Segue as regras: max-height, header/footer fixos, scroll central.
  */
 import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -49,11 +49,18 @@ import {
 import { invalidateSupportCache } from "@/lib/cache/support";
 import { findSimilarTickets, type SimilarResult } from "@/lib/support/similar";
 import { SimilarTicketsDialog } from "@/components/support/SimilarTicketsDialog";
+import {
+  DESTINATION_EMOJI,
+  destinationIcon,
+  fetchSupportDestinations,
+  supportDestinationsQueryKey,
+} from "@/lib/support/destinations";
 
 
 const schema = z.object({
   type: z.string().min(1),
   priority: z.string().min(1),
+  destinationCode: z.string().min(1, "Selecione o destino do ticket"),
   title: z.string().trim().min(3, "Mínimo 3 caracteres").max(200),
   description: z.string().trim().min(5, "Mínimo 5 caracteres").max(10000),
   module: z.string().max(120).optional(),
