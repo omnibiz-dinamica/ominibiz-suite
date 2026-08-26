@@ -1,11 +1,33 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Bell, Check, CheckCheck, ExternalLink, ShieldCheck, X as XIcon } from "lucide-react";
+import {
+  Archive,
+  ArchiveRestore,
+  Bell,
+  CheckCheck,
+  CheckCircle2,
+  ExternalLink,
+  Send,
+  ShieldCheck,
+  Timer,
+  X as XIcon,
+} from "lucide-react";
 import { transitionTask } from "@/lib/tasks";
 import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
 import { invalidateNotificationsCache } from "@/lib/cache/notifications";
@@ -34,6 +56,9 @@ type NotificationEvent =
 
 type NotificationPriority = "baixa" | "media" | "alta" | "urgente";
 
+/** ADR-043 — estados de gestão da notificação (SUP-2026-000095). */
+type NotificationState = "nova" | "em_tratamento" | "encaminhada" | "resolvida" | "arquivada";
+
 type NotificationRow = {
   id: string;
   company_id: string;
@@ -46,7 +71,40 @@ type NotificationRow = {
   read_at: string | null;
   created_at: string;
   metadata: Record<string, unknown>;
+  state: NotificationState;
+  forwarded_to: string | null;
+  state_note: string | null;
+  state_changed_at: string | null;
 };
+
+const STATE_LABEL: Record<NotificationState, string> = {
+  nova: "Nova",
+  em_tratamento: "Em tratamento",
+  encaminhada: "Encaminhada",
+  resolvida: "Resolvida",
+  arquivada: "Arquivada",
+};
+
+const STATE_TONE: Record<NotificationState, string> = {
+  nova: "bg-primary/15 text-primary",
+  em_tratamento: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
+  encaminhada: "bg-violet-500/15 text-violet-700 dark:text-violet-300",
+  resolvida: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
+  arquivada: "bg-muted text-muted-foreground",
+};
+
+type TabKey = "ativas" | "tratamento" | "resolvidas" | "arquivadas" | "todas";
+
+const TABS: { key: TabKey; label: string; states: NotificationState[] | null }[] = [
+  { key: "ativas", label: "Caixa de entrada", states: ["nova"] },
+  { key: "tratamento", label: "Em tratamento", states: ["em_tratamento", "encaminhada"] },
+  { key: "resolvidas", label: "Resolvidas", states: ["resolvida"] },
+  { key: "arquivadas", label: "Arquivadas", states: ["arquivada"] },
+  { key: "todas", label: "Todas", states: null },
+];
+
+/** Sugestões rápidas de destinatário no encaminhamento. */
+const FORWARD_SUGGESTIONS = ["Contabilista", "Gestor", "Recursos Humanos", "Direção"];
 
 const EVENT_LABEL: Record<NotificationEvent, string> = {
   task_created: "Nova tarefa",
@@ -86,6 +144,10 @@ function NotificationsPage() {
   const { user, isManager } = useAuth();
   const qc = useQueryClient();
   const nav = useNavigate();
+  const [tab, setTab] = useState<TabKey>("ativas");
+  const [forwardTarget, setForwardTarget] = useState<NotificationRow | null>(null);
+  const [forwardTo, setForwardTo] = useState("");
+  const [forwardNote, setForwardNote] = useState("");
 
   const { data, isLoading } = useQuery({
     queryKey: ["notifications", user?.id],
@@ -95,7 +157,7 @@ function NotificationsPage() {
         .select("*")
         .eq("user_id", user!.id)
         .order("created_at", { ascending: false })
-        .limit(100);
+        .limit(200);
       if (error) throw error;
       return (data ?? []) as unknown as NotificationRow[];
     },
@@ -125,6 +187,41 @@ function NotificationsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  /** ADR-043 — muda o estado de gestão da notificação. */
+  const setState = useMutation({
+    mutationFn: async (vars: {
+      ids: string[];
+      state: NotificationState;
+      forwardedTo?: string;
+      note?: string;
+    }) => {
+      const { error } = await supabase.rpc(
+        "notification_set_state" as never,
+        {
+          _ids: vars.ids,
+          _state: vars.state,
+          _forwarded_to: vars.forwardedTo ?? null,
+          _note: vars.note ?? null,
+        } as never,
+      );
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      invalidateNotificationsCache(qc);
+      toast.success(
+        vars.state === "encaminhada"
+          ? `Encaminhada a ${vars.forwardedTo}`
+          : `Marcada como ${STATE_LABEL[vars.state].toLowerCase()}`,
+      );
+    },
+    onError: (e: Error) =>
+      toast.error(
+        e.message === "FORWARD_DESTINATION_REQUIRED"
+          ? "Indique para quem está a encaminhar."
+          : e.message,
+      ),
+  });
+
   const transition = useMutation({
     mutationFn: ({ id, action }: { id: string; action: "autorizar" | "cancelar" }) => transitionTask(id, action),
     onSuccess: (_d, vars) => {
@@ -135,7 +232,25 @@ function NotificationsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const unreadCount = useMemo(() => (data ?? []).filter((n) => !n.read_at).length, [data]);
+  const rows = data ?? [];
+  const counts = useMemo(() => {
+    const map = {} as Record<TabKey, number>;
+    for (const t of TABS) {
+      map[t.key] = t.states ? rows.filter((n) => t.states!.includes(n.state ?? "nova")).length : rows.length;
+    }
+    return map;
+  }, [rows]);
+
+  const visible = useMemo(() => {
+    const states = TABS.find((t) => t.key === tab)?.states;
+    if (!states) return rows;
+    return rows.filter((n) => states.includes(n.state ?? "nova"));
+  }, [rows, tab]);
+
+  const unreadCount = useMemo(
+    () => rows.filter((n) => !n.read_at && n.state !== "resolvida" && n.state !== "arquivada").length,
+    [rows],
+  );
 
   const openNotification = async (n: NotificationRow) => {
     if (!n.read_at) markRead.mutate(n.id);
@@ -148,6 +263,29 @@ function NotificationsPage() {
     } else {
       nav({ to: "/app/tarefas" });
     }
+  };
+
+  const openForward = (n: NotificationRow) => {
+    setForwardTarget(n);
+    setForwardTo(n.forwarded_to ?? "");
+    setForwardNote("");
+  };
+
+  const confirmForward = () => {
+    if (!forwardTarget) return;
+    if (!forwardTo.trim()) {
+      toast.error("Indique para quem está a encaminhar.");
+      return;
+    }
+    setState.mutate(
+      {
+        ids: [forwardTarget.id],
+        state: "encaminhada",
+        forwardedTo: forwardTo.trim(),
+        note: forwardNote.trim() || undefined,
+      },
+      { onSuccess: () => setForwardTarget(null) },
+    );
   };
 
   return (
@@ -174,18 +312,37 @@ function NotificationsPage() {
         </Button>
       </div>
 
+      {/* Filtros de estado (ADR-043) */}
+      <div className="flex flex-wrap gap-2">
+        {TABS.map((t) => (
+          <Button
+            key={t.key}
+            size="sm"
+            variant={tab === t.key ? "default" : "outline"}
+            onClick={() => setTab(t.key)}
+          >
+            {t.label}
+            <span className="ml-1.5 text-xs opacity-70">{counts[t.key] ?? 0}</span>
+          </Button>
+        ))}
+      </div>
+
       {isLoading ? (
         <div className="rounded-lg border border-border p-8 text-center text-sm text-muted-foreground">Carregando…</div>
-      ) : (data ?? []).length === 0 ? (
+      ) : visible.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-12 text-center">
           <Bell className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
-          <p className="font-medium">Sem notificações por enquanto</p>
-          <p className="mt-1 text-sm text-muted-foreground">Você será avisado quando uma tarefa exigir sua atenção.</p>
+          <p className="font-medium">Nada por aqui</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Esta pasta está vazia. Use os estados para manter a caixa de entrada limpa.
+          </p>
         </div>
       ) : (
         <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
-          {(data ?? []).map((n) => {
+          {visible.map((n) => {
             const isAuthReq = n.event === "task_authorization_requested" && isManager;
+            const state = n.state ?? "nova";
+            const terminal = state === "resolvida" || state === "arquivada";
             return (
               <li
                 key={n.id}
@@ -212,10 +369,22 @@ function NotificationsPage() {
                       >
                         {EVENT_LABEL[n.event]}
                       </span>
+                      <span
+                        className={
+                          "rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide " +
+                          STATE_TONE[state]
+                        }
+                      >
+                        {STATE_LABEL[state]}
+                        {state === "encaminhada" && n.forwarded_to ? ` · ${n.forwarded_to}` : ""}
+                      </span>
                       <span className="text-xs text-muted-foreground">{new Date(n.created_at).toLocaleString()}</span>
                     </div>
                     <p className="mt-1 font-medium">{n.title}</p>
                     {n.body && <p className="mt-0.5 truncate text-sm text-muted-foreground">{n.body}</p>}
+                    {n.state_note && (
+                      <p className="mt-1 text-xs italic text-muted-foreground">Nota: {n.state_note}</p>
+                    )}
                   </div>
                 </div>
 
@@ -244,15 +413,54 @@ function NotificationsPage() {
                       <ExternalLink className="mr-1.5 h-4 w-4" /> Abrir
                     </Button>
                   )}
-                  {!n.read_at && (
+
+                  {!terminal && state !== "em_tratamento" && (
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => markRead.mutate(n.id)}
-                      disabled={markRead.isPending}
-                      aria-label="Marcar tratada"
+                      disabled={setState.isPending}
+                      onClick={() => setState.mutate({ ids: [n.id], state: "em_tratamento" })}
                     >
-                      <Check className="mr-1.5 h-4 w-4" /> Marcar tratada
+                      <Timer className="mr-1.5 h-4 w-4" /> Tratar
+                    </Button>
+                  )}
+                  {!terminal && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={setState.isPending}
+                      onClick={() => openForward(n)}
+                    >
+                      <Send className="mr-1.5 h-4 w-4" /> Encaminhar
+                    </Button>
+                  )}
+                  {!terminal && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={setState.isPending}
+                      onClick={() => setState.mutate({ ids: [n.id], state: "resolvida" })}
+                    >
+                      <CheckCircle2 className="mr-1.5 h-4 w-4" /> Resolvida
+                    </Button>
+                  )}
+                  {state !== "arquivada" ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={setState.isPending}
+                      onClick={() => setState.mutate({ ids: [n.id], state: "arquivada" })}
+                    >
+                      <Archive className="mr-1.5 h-4 w-4" /> Arquivar
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={setState.isPending}
+                      onClick={() => setState.mutate({ ids: [n.id], state: "nova" })}
+                    >
+                      <ArchiveRestore className="mr-1.5 h-4 w-4" /> Restaurar
                     </Button>
                   )}
                 </div>
@@ -261,6 +469,53 @@ function NotificationsPage() {
           })}
         </ul>
       )}
+
+      <Dialog open={!!forwardTarget} onOpenChange={(o) => !o && setForwardTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Encaminhar notificação</DialogTitle>
+            <DialogDescription>
+              Registe para quem enviou este assunto. A notificação fica em “Em tratamento” até ser resolvida.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="forward-to">Enviada a</Label>
+              <Input
+                id="forward-to"
+                value={forwardTo}
+                onChange={(e) => setForwardTo(e.target.value)}
+                placeholder="Ex.: Contabilista, Lea, Luc…"
+              />
+              <div className="flex flex-wrap gap-1.5">
+                {FORWARD_SUGGESTIONS.map((s) => (
+                  <Button key={s} type="button" size="sm" variant="outline" onClick={() => setForwardTo(s)}>
+                    {s}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="forward-note">Nota (opcional)</Label>
+              <Textarea
+                id="forward-note"
+                value={forwardNote}
+                onChange={(e) => setForwardNote(e.target.value)}
+                rows={3}
+                placeholder="Contexto do encaminhamento"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setForwardTarget(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={confirmForward} disabled={setState.isPending}>
+              <Send className="mr-1.5 h-4 w-4" /> Encaminhar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

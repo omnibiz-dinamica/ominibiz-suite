@@ -192,7 +192,8 @@ export function AppLayout({ children }: { children?: ReactNode }) {
         .from("notifications" as never)
         .select("*", { count: "exact", head: true })
         .eq("user_id", user!.id)
-        .is("read_at", null);
+        .is("read_at", null)
+        .not("state", "in", "(resolvida,arquivada)");
       if (error) throw error;
       return count ?? 0;
     },
