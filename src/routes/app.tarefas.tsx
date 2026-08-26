@@ -629,6 +629,21 @@ function TasksPage() {
         }}
       />
 
+      {/* SUP-2026-000074 — regularizar ponto esquecido e concluir a tarefa. */}
+      <OpenPunchRecoveryDialog
+        open={!!recovering}
+        onOpenChange={(o) => !o && setRecovering(null)}
+        mode={isManager ? "manager" : "employee"}
+        entry={recovering}
+        completeTask
+        onResolved={() => {
+          setRecovering(null);
+          qc.invalidateQueries({ queryKey: ["tasks"] });
+          qc.invalidateQueries({ queryKey: ["tasks-open-punches"] });
+          qc.invalidateQueries({ queryKey: ["notifications"] });
+        }}
+      />
+
 
 
       <Dialog open={!!refusing} onOpenChange={(v) => !v && !transition.isPending && setRefusing(null)}>
