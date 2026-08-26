@@ -185,6 +185,13 @@ function SupportDetailPage() {
   const [isInternal, setIsInternal] = useState(false);
   const [reopenOpen, setReopenOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
+  const replyRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const focusReply = () => {
+    replyRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    replyRef.current?.focus();
+  };
+
 
   const ticketQ = useQuery<TicketDetail | null>({
     queryKey: ["support-ticket", id],
