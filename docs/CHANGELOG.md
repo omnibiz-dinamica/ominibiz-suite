@@ -895,3 +895,21 @@ queries, mutations ou fluxos funcionais.**
   todos os checkboxes desmarcados e sem ativação automática ao mudar o ramo.
 - Hotelaria e Oficina: apenas verticais preparados (sem menus nem rotas).
 - Ver ADR-033 e `docs/release-notes/RELEASE_NOTES_BUILDING_MATERIALS_FASE_A.md`.
+
+## Limpeza controlada de tarefas duplicadas (P0) · 2026-08-26
+
+- Auditoria por chave canónica (empresa + cliente + responsável + título + ocorrência):
+  85 duplicatas comprovadas (`pendente`, sem qualquer histórico operacional) marcadas
+  com `deleted_at` (soft-delete reversível — nenhum DELETE físico).
+- 53 tarefas principais e 2 casos de `REVISAO_MANUAL` (concluídas / com folha de ponto)
+  preservados sem qualquer alteração.
+- 6 séries de recorrência clones encerradas (`status = 'ended'`), preservando a série
+  principal de cada grupo.
+- Auditoria integral em `public.task_dedupe_audit` (batch `ADR-041`): IDs preservados,
+  duplicados, séries principais e séries clones.
+- Causa raiz corrigida: índice único parcial na chave canónica das séries activas +
+  trigger `trg_task_recurrences_block_duplicate_active` (`RECURRENCE_DUPLICATE_ACTIVE`).
+- Frontend (`src/routes/app.tarefas.tsx`): guarda síncrona contra duplo clique/retry
+  (`submittingRef`) e criação de séries **uma a uma** com tratamento idempotente do
+  erro de duplicado (avisa "já existe", nunca aborta os restantes responsáveis).
+- Ver ADR-041.
