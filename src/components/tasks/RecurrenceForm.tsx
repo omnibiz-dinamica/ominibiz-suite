@@ -131,23 +131,28 @@ export function RecurrenceForm({
                   frequency: stored.frequency,
                   intervalWeeks: stored.intervalWeeks,
                   weekdays: v === "biweekly" ? [anchorDow] : value.weekdays,
+                  monthPosition:
+                    v === "monthly_pos" ? (value.monthPosition ?? -1) : null,
+                  monthWeekday: v === "monthly_pos" ? (value.monthPosition != null ? value.monthWeekday : anchorDow) : value.monthWeekday,
                 });
               }}
             >
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {(["daily", "weekly", "biweekly", "monthly", "custom"] as RecurrenceUiFrequency[]).map((f) => (
+                {(["daily", "weekly", "biweekly", "monthly", "monthly_pos", "custom"] as RecurrenceUiFrequency[]).map((f) => (
                   <SelectItem key={f} value={f}>{UI_FREQUENCY_LABELS[f]}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-[11px] text-muted-foreground">{describeRecurrence(previewInput)}</p>
             {uiFrequency === "biweekly" && (
               <p className="text-[11px] text-muted-foreground">
                 A semana da data inicial é a âncora: repete no mesmo dia da semana, saltando uma semana
-                (semana sim → semana não → semana sim).
+                (semana sim → semana não → semana sim), até a data final.
               </p>
             )}
           </div>
+
 
           {value.frequency === "weekly" && (
             <div className="space-y-1.5">
