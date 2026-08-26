@@ -4,8 +4,12 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import {
+  MONTH_POSITIONS,
   UI_FREQUENCY_LABELS,
+  WEEKDAY_FULL,
   WEEKDAY_LABELS,
+  describeRecurrence,
+  previewRecurrenceDates,
   storedToUiFrequency,
   uiFrequencyToStored,
   type RecurrenceFrequency,
@@ -19,6 +23,10 @@ export interface RecurrenceFormValue {
   intervalWeeks: number;
   weekdays: number[];
   dayOfMonth: number;
+  /** Mensal por posição: 1..4 ou -1 (última). Null = regra por dia do mês. */
+  monthPosition: number | null;
+  /** Dia da semana (0=Dom) usado com `monthPosition`. */
+  monthWeekday: number;
   startDate: string;
   endDate: string;
   scheduledTime: string;
@@ -31,6 +39,8 @@ export const emptyRecurrence = (): RecurrenceFormValue => ({
   intervalWeeks: 1,
   weekdays: [1, 2, 3, 4, 5],
   dayOfMonth: 1,
+  monthPosition: null,
+  monthWeekday: 5,
   startDate: new Date().toISOString().slice(0, 10),
   endDate: "",
   // Sem defaults implícitos: horário/duração são derivados do topo do formulário
