@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ReopenTicketDialog } from "@/components/support/ReopenTicketDialog";
 import { ArchiveTicketDialog } from "@/components/support/ArchiveTicketDialog";
+import { RelatedTicketsPanel } from "@/components/support/RelatedTicketsPanel";
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
@@ -703,8 +705,11 @@ function SupportDetailPage() {
           </section>
         )}
 
+        <RelatedTicketsPanel ticketId={t.id} isSuperAdmin={isSuperAdmin} />
+
         <section className="space-y-3">
           <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Timeline</h2>
+
           <ol className="relative space-y-2 border-l border-border pl-4 text-xs">
             {timeline.map((it) => (
               <li key={it.id} className="relative">

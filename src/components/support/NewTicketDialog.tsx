@@ -47,6 +47,9 @@ import {
   uploadAttachment,
 } from "@/lib/support/tickets";
 import { invalidateSupportCache } from "@/lib/cache/support";
+import { findSimilarTickets, type SimilarResult } from "@/lib/support/similar";
+import { SimilarTicketsDialog } from "@/components/support/SimilarTicketsDialog";
+
 
 const schema = z.object({
   type: z.string().min(1),
@@ -117,6 +120,9 @@ export function NewTicketDialog({
   const [module, setModule] = useState(defaultModule ?? "");
   const [files, setFiles] = useState<File[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
+  const [similar, setSimilar] = useState<SimilarResult | null>(null);
+  const [similarOpen, setSimilarOpen] = useState(false);
+
 
   const pageUrl = useMemo(
     () => (typeof window !== "undefined" ? window.location.href : ""),
@@ -133,6 +139,9 @@ export function NewTicketDialog({
       setModule(draft?.module ?? defaultModule ?? "");
       setFiles([]);
       setFormError(null);
+      setSimilar(null);
+      setSimilarOpen(false);
+
     }
   }, [open, defaultType, defaultTitle, defaultModule]);
 
@@ -189,7 +198,52 @@ export function NewTicketDialog({
     },
   });
 
+  /**
+   * Verificação de duplicados (ADR-048): antes da confirmação final, o servidor
+   * procura tickets com o mesmo problema. Só se não houver nada relevante — ou se
+   * o utilizador insistir no modal — é que o ticket é realmente criado.
+   */
+  const checkMut = useMutation({
+    mutationFn: async (): Promise<SimilarResult> => {
+      if (!currentCompanyId) throw new Error("Nenhuma empresa selecionada.");
+      return findSimilarTickets({
+        companyId: currentCompanyId,
+        type,
+        title,
+        description,
+        module: module || null,
+        route,
+      });
+    },
+  });
+
+  async function handleSubmit() {
+    setFormError(null);
+    const parsed = schema.safeParse({ type, priority, title, description, module });
+    if (!parsed.success) {
+      const msg = parsed.error.issues[0]?.message ?? "Dados inválidos";
+      setFormError(msg);
+      toast.error(msg);
+      return;
+    }
+    try {
+      const res = await checkMut.mutateAsync();
+      setSimilar(res);
+      if (res.own.length > 0 || res.others.count > 0) {
+        setSimilarOpen(true);
+        return;
+      }
+    } catch {
+      // A verificação é auxiliar: nunca deve impedir a abertura do ticket.
+    }
+    mutation.mutate();
+  }
+
+
+  const busy = mutation.isPending || checkMut.isPending;
+
   const onFileChange = (list: FileList | null) => {
+
     if (!list) return;
     const arr: File[] = [];
     for (const f of Array.from(list)) {
@@ -334,21 +388,42 @@ export function NewTicketDialog({
         </ModalBody>
 
         <ModalFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
             Cancelar
           </Button>
-          <Button
-            onClick={() => mutation.mutate()}
-            disabled={mutation.isPending || !currentCompanyId}
-          >
-            {mutation.isPending ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando…</>
+          <Button onClick={() => void handleSubmit()} disabled={busy || !currentCompanyId}>
+            {busy ? (
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {checkMut.isPending ? "Verificando…" : "Enviando…"}</>
             ) : (
               "Enviar solicitação"
             )}
           </Button>
         </ModalFooter>
       </DialogContent>
+
+      <SimilarTicketsDialog
+        open={similarOpen}
+        onOpenChange={setSimilarOpen}
+        result={similar}
+        creating={mutation.isPending}
+        onCreateAnyway={() => {
+          setSimilarOpen(false);
+          mutation.mutate();
+        }}
+        onOpenTicket={(id) => {
+          setSimilarOpen(false);
+          onOpenChange(false);
+          clearDraft();
+          nav({ to: "/app/suporte/$id", params: { id } }).catch(() => {
+            nav({ to: "/app/suporte" });
+          });
+        }}
+        onReported={() => {
+          clearDraft();
+          invalidateSupportCache(qc);
+          onOpenChange(false);
+        }}
+      />
     </Dialog>
   );
 }

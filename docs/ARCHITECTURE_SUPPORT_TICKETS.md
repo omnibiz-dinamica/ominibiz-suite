@@ -257,3 +257,24 @@ multiempresa, retry/backoff, envio real HTTP 200) — ver
 - RPC: `public.reopen_support_ticket_with_message(_ticket_id, _message, _destination_type, _assigned_user_id, _technical_context)`.
 - Se o solicitante é Funcionário, o destino é sempre a devolução ao próprio solicitante.
 - Coluna `destination_type` (`employee` | `technical` | `manager`) indica quem deve agir.
+
+## Deteção de duplicados e problemas semelhantes (ADR-048)
+
+- Colunas de assinatura em `support_tickets`: `norm_title`, `search_norm`,
+  `problem_keywords`, `problem_action`, `problem_entity`, `primary_ticket_id`.
+  Mantidas pelo trigger `support_tickets_fill_signature` (assinatura a partir
+  do título + módulo; palavras-chave a partir de título + descrição + módulo).
+- Extensões: `pg_trgm` e `unaccent` (schema `extensions`). Índices GIN trigram
+  em `norm_title` e `search_norm`, GIN em `problem_keywords`, btree em
+  (`problem_action`, `problem_entity`).
+- RPCs: `support_find_similar` (pré-criação; detalhe só da própria empresa,
+  contagem agregada para outras), `support_report_same_problem`,
+  `support_link_tickets` / `support_unlink_tickets`,
+  `support_related_tickets`, `support_duplicate_clusters` (SA),
+  `support_notify_affected` (SA).
+- Frontend: `src/lib/support/similar.ts` (porta única),
+  `src/components/support/SimilarTicketsDialog.tsx` (modal preventivo),
+  `src/components/support/RelatedTicketsPanel.tsx` (detalhe do ticket),
+  `src/components/support/DuplicateClustersPanel.tsx` (Central Mestre).
+- Regra: a verificação é auxiliar — falha na deteção nunca impede a abertura
+  do ticket.

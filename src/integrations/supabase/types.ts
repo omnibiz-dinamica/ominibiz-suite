@@ -1800,6 +1800,48 @@ export type Database = {
           },
         ]
       }
+      support_ticket_affected: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          note: string | null
+          ticket_id: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          ticket_id: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          ticket_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_affected_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_ticket_affected_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_ticket_attachments: {
         Row: {
           company_id: string
@@ -1919,6 +1961,61 @@ export type Database = {
           },
         ]
       }
+      support_ticket_links: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          note: string | null
+          related_ticket_id: string
+          relation: string
+          ticket_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          related_ticket_id: string
+          relation?: string
+          ticket_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          related_ticket_id?: string
+          relation?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_links_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_ticket_links_related_ticket_id_fkey"
+            columns: ["related_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_ticket_links_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_ticket_messages: {
         Row: {
           author_user_id: string
@@ -1990,13 +2087,19 @@ export type Database = {
           id: string
           internal_resolution: string | null
           module: string | null
+          norm_title: string | null
           page_url: string | null
+          primary_ticket_id: string | null
           priority: Database["public"]["Enums"]["support_ticket_priority"]
+          problem_action: string | null
+          problem_entity: string | null
+          problem_keywords: string[]
           requester_user_id: string
           resolved_at: string | null
           returned_to_manager_at: string | null
           returned_to_manager_by: string | null
           route: string | null
+          search_norm: string | null
           status: Database["public"]["Enums"]["support_ticket_status"]
           support_level: string
           technical_context: Json
@@ -2024,13 +2127,19 @@ export type Database = {
           id?: string
           internal_resolution?: string | null
           module?: string | null
+          norm_title?: string | null
           page_url?: string | null
+          primary_ticket_id?: string | null
           priority?: Database["public"]["Enums"]["support_ticket_priority"]
+          problem_action?: string | null
+          problem_entity?: string | null
+          problem_keywords?: string[]
           requester_user_id: string
           resolved_at?: string | null
           returned_to_manager_at?: string | null
           returned_to_manager_by?: string | null
           route?: string | null
+          search_norm?: string | null
           status?: Database["public"]["Enums"]["support_ticket_status"]
           support_level?: string
           technical_context?: Json
@@ -2058,13 +2167,19 @@ export type Database = {
           id?: string
           internal_resolution?: string | null
           module?: string | null
+          norm_title?: string | null
           page_url?: string | null
+          primary_ticket_id?: string | null
           priority?: Database["public"]["Enums"]["support_ticket_priority"]
+          problem_action?: string | null
+          problem_entity?: string | null
+          problem_keywords?: string[]
           requester_user_id?: string
           resolved_at?: string | null
           returned_to_manager_at?: string | null
           returned_to_manager_by?: string | null
           route?: string | null
+          search_norm?: string | null
           status?: Database["public"]["Enums"]["support_ticket_status"]
           support_level?: string
           technical_context?: Json
@@ -2094,6 +2209,13 @@ export type Database = {
             columns: ["escalated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_primary_ticket_id_fkey"
+            columns: ["primary_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
             referencedColumns: ["id"]
           },
           {
@@ -3777,13 +3899,19 @@ export type Database = {
           id: string
           internal_resolution: string | null
           module: string | null
+          norm_title: string | null
           page_url: string | null
+          primary_ticket_id: string | null
           priority: Database["public"]["Enums"]["support_ticket_priority"]
+          problem_action: string | null
+          problem_entity: string | null
+          problem_keywords: string[]
           requester_user_id: string
           resolved_at: string | null
           returned_to_manager_at: string | null
           returned_to_manager_by: string | null
           route: string | null
+          search_norm: string | null
           status: Database["public"]["Enums"]["support_ticket_status"]
           support_level: string
           technical_context: Json
@@ -4901,6 +5029,42 @@ export type Database = {
         }
         Returns: undefined
       }
+      support_detect_action: {
+        Args: { _kw: string[]; _norm: string }
+        Returns: string
+      }
+      support_detect_entity: {
+        Args: { _kw: string[]; _norm: string }
+        Returns: string
+      }
+      support_duplicate_clusters: { Args: { _days?: number }; Returns: Json }
+      support_find_similar: {
+        Args: {
+          _company_id: string
+          _description: string
+          _limit?: number
+          _module?: string
+          _route?: string
+          _title: string
+          _type: Database["public"]["Enums"]["support_ticket_type"]
+        }
+        Returns: Json
+      }
+      support_keywords: { Args: { _t: string }; Returns: string[] }
+      support_link_tickets: {
+        Args: {
+          _note?: string
+          _related_ticket_id: string
+          _relation?: string
+          _ticket_id: string
+        }
+        Returns: string
+      }
+      support_norm: { Args: { _t: string }; Returns: string }
+      support_notify_affected: {
+        Args: { _message: string; _ticket_id: string }
+        Returns: number
+      }
       support_notify_managers: {
         Args: {
           _body: string
@@ -4935,6 +5099,11 @@ export type Database = {
         }
         Returns: string
       }
+      support_related_tickets: { Args: { _ticket_id: string }; Returns: Json }
+      support_report_same_problem: {
+        Args: { _note?: string; _ticket_id: string }
+        Returns: Json
+      }
       support_ticket_log_event: {
         Args: {
           _after: Json
@@ -4946,6 +5115,7 @@ export type Database = {
         }
         Returns: string
       }
+      support_unlink_tickets: { Args: { _link_id: string }; Returns: boolean }
       task_absence_allowed_at: {
         Args: {
           _due_at: string

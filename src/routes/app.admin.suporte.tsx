@@ -22,6 +22,8 @@ import {
 } from "@/lib/support/constants";
 import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
 import { invalidateSupportCache } from "@/lib/cache/support";
+import { DuplicateClustersPanel } from "@/components/support/DuplicateClustersPanel";
+
 
 export const Route = createFileRoute("/app/admin/suporte")({
   component: () => (
@@ -111,6 +113,11 @@ function SupportAdminPage() {
   });
 
   const companyOptions = useMemo(() => companies.map((c) => [c.id, c.name] as const), [companies]);
+  const companyNameMap = useMemo(
+    () => new Map(companies.map((c) => [c.id, c.name] as const)),
+    [companies],
+  );
+
 
   const companySummary = useMemo(() => {
     const stats = new Map<string, { total: number; open: number; urgent: number; latest: string | null }>();
@@ -261,7 +268,10 @@ function SupportAdminPage() {
         ))}
       </div>
 
+      <DuplicateClustersPanel companyNames={companyNameMap} />
+
       <section className="rounded-xl border border-border bg-card p-4">
+
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="font-display text-base font-semibold">Empresas clientes</h2>

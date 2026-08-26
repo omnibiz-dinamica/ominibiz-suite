@@ -977,3 +977,29 @@ queries, mutations ou fluxos funcionais.**
 - `/app/admin`: módulos incluídos aparecem com selo "incluído · sempre ativo",
   marcados e bloqueados.
 - Ver ADR-047.
+
+## Deteção de tickets duplicados / problemas semelhantes · 2026-08-26
+
+- Antes de confirmar a abertura de um ticket, o OmniBiz procura tickets com o
+  mesmo problema (ou significado semelhante) e mostra um modal preventivo com
+  "Ver ticket", "Tenho o mesmo problema" e "Abrir novo ticket mesmo assim".
+- Deteção em dois níveis no servidor: similaridade textual (`pg_trgm` +
+  `unaccent`, texto normalizado com índices trigram) e assinatura semântica
+  (ação + entidade a partir do título/módulo, com léxico determinístico).
+- Isolamento multiempresa: da própria empresa vêm detalhes; de outras contas
+  apenas uma contagem agregada ("já identificámos relatos semelhantes"), sem
+  qualquer dado. Apenas o Super Admin vê tickets de várias empresas.
+- Novas tabelas `support_ticket_links` (duplicado/relacionado) e
+  `support_ticket_affected` (relatos "mesmo problema"), coluna
+  `support_tickets.primary_ticket_id`.
+- Novas RPCs: `support_find_similar`, `support_report_same_problem`,
+  `support_link_tickets`, `support_unlink_tickets`, `support_related_tickets`,
+  `support_duplicate_clusters` (Super Admin), `support_notify_affected`
+  (Super Admin).
+- Detalhe do ticket: secção "Tickets relacionados" com ligações, relatos de
+  afetados, ferramenta de ligação (Gestor na própria empresa, Super Admin
+  global) e "Notificar afetados".
+- `/app/admin/suporte`: painel "Possíveis duplicados (últimos 180 dias)" a
+  agrupar tickets por assinatura, com contagem de tickets, empresas e casos
+  em aberto.
+- Ver ADR-048.
