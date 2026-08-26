@@ -78,6 +78,8 @@ import { EditRecurrenceDialog } from "@/components/tasks/EditRecurrenceDialog";
 import type { RecurrenceRow } from "@/lib/tasks";
 import { isRefused } from "@/lib/tasks";
 import { CancelTaskDialog } from "@/components/tasks/CancelTaskDialog";
+import { MarkAbsentDialog } from "@/components/tasks/MarkAbsentDialog";
+
 
 import { EmployeePicker } from "@/components/common/EmployeePicker";
 import {
