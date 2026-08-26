@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { RoleGuard } from "@/components/RoleGuard";
@@ -37,6 +37,8 @@ import {
   TICKET_TYPE_LABEL,
   isClosedTicketStatus,
   ARCHIVABLE_STATUSES,
+  AWAITING_VALIDATION_STATUSES,
+
   type SupportTicketPriority,
   type SupportTicketStatus,
 } from "@/lib/support/constants";
@@ -185,6 +187,13 @@ function SupportDetailPage() {
   const [isInternal, setIsInternal] = useState(false);
   const [reopenOpen, setReopenOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
+  const replyRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const focusReply = () => {
+    replyRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    replyRef.current?.focus();
+  };
+
 
   const ticketQ = useQuery<TicketDetail | null>({
     queryKey: ["support-ticket", id],
@@ -424,6 +433,8 @@ function SupportDetailPage() {
     ["Timezone", String(tech.timezone ?? "—")],
   ];
   const isClosed = isClosedTicketStatus(t.status);
+  const awaitingValidation = !isSuperAdmin && AWAITING_VALIDATION_STATUSES.includes(t.status);
+
 
   // Timeline unificada: eventos + mensagens (mensagens internas apenas para SA).
   const timeline = [
@@ -648,11 +659,14 @@ function SupportDetailPage() {
                 </div>
               )}
               <Textarea
+                id="support-reply"
+                ref={replyRef}
                 value={reply}
                 onChange={(e) => setReply(e.target.value)}
                 placeholder="Escreva uma resposta…"
                 rows={4}
               />
+
               <div className="flex flex-wrap items-center justify-between gap-2">
                 {isSuperAdmin ? (
                   <label className="flex items-center gap-2 text-sm">
@@ -807,12 +821,28 @@ function SupportDetailPage() {
           </Button>
         )}
 
+        {/* SUP-2026-000070 — ticket devolvido ao solicitante: validar ou contestar. */}
+        {!isClosed && awaitingValidation && (
+          <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
+            <p className="text-xs text-muted-foreground">
+              Este ticket aguarda a sua validação. Confirme a solução para arquivar ou informe que o problema continua.
+            </p>
+            <Button className="w-full" onClick={() => setArchiveOpen(true)}>
+              <Archive className="mr-1 h-4 w-4" /> Confirmar solução e arquivar
+            </Button>
+            <Button variant="outline" className="w-full" onClick={focusReply}>
+              <RotateCcw className="mr-1 h-4 w-4" /> O problema continua
+            </Button>
+          </div>
+        )}
+
         {ARCHIVABLE_STATUSES.includes(t.status) && (
           <Button className="w-full" onClick={() => setArchiveOpen(true)}>
             <Archive className="mr-1 h-4 w-4" /> Arquivar ticket
           </Button>
         )}
       </aside>
+
 
       <ReopenTicketDialog
         open={reopenOpen}

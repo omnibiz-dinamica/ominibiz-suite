@@ -7,6 +7,23 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### 🎫 Correção sequencial de tickets abertos
+
+#### Corrigido
+- **SUP-2026-000070 (Urgente) — gestor sem forma de aceitar ou contestar a resposta
+  do suporte.** Tickets devolvidos ao solicitante (`waiting_manager`,
+  `waiting_employee`, `aguardando_cliente`, `returned_to_manager`, `em_validacao`)
+  não ofereciam nem arquivamento nem reabertura. Agora o detalhe do ticket mostra
+  «Confirmar solução e arquivar» e «O problema continua» (foca a caixa de resposta),
+  e `close_support_ticket` aceita esses estados para o solicitante/gestor da empresa,
+  mantendo o registo em `support_ticket_events`.
+- **SUP-2026-000065 (Urgente) — tarefa gravada sem responsável (ADR-039).**
+  Causa raiz: recorrência legada sem `assigned_to` cujas ocorrências eram
+  materializadas com responsável nulo. Adicionadas as guardas server-side
+  `tasks_require_assignee` e `task_recurrences_require_assignee`;
+  `recurrence_materialize` passa a ignorar recorrências sem responsável; a
+  recorrência legada foi pausada (nenhum dado apagado).
+
 ### 🗓️ Fechamento Mensal da Folha de Ponto (ADR-038)
 
 #### Adicionado

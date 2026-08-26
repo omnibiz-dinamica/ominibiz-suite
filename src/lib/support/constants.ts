@@ -237,6 +237,20 @@ export function isClosedTicketStatus(status: string): boolean {
  */
 export const ARCHIVABLE_STATUSES: string[] = ["resolvido", "resolved_by_manager", "rejeitado"];
 
+/**
+ * SUP-2026-000070 — estados em que o ticket aguarda a validação do solicitante.
+ * Nestes estados o gestor precisa de duas acções explícitas:
+ * «Confirmar solução» (arquiva) ou «Problema continua» (responde e mantém aberto).
+ */
+export const AWAITING_VALIDATION_STATUSES: string[] = [
+  "waiting_manager",
+  "waiting_employee",
+  "aguardando_cliente",
+  "returned_to_manager",
+  "em_validacao",
+];
+
+
 export function ticketReopenableByManager(closedAtIso: string | null): boolean {
   if (!closedAtIso) return false;
   const closed = new Date(closedAtIso).getTime();
