@@ -1519,6 +1519,26 @@ function TaskRowItem({
             )}
           </div>
         )}
+        {t.status === "ausente" && (
+          <div className="mt-2 space-y-0.5 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs">
+            <div className="font-semibold uppercase tracking-wide text-destructive">
+              {t.absence_source === "manual" ? "Falta registada pelo gestor" : "Ausência automática"}
+            </div>
+            {t.absence_reason ? (
+              <div>
+                Motivo: {t.absence_reason}
+                {t.absence_justified != null && (t.absence_justified ? " · justificada" : " · injustificada")}
+              </div>
+            ) : (
+              <div className="text-muted-foreground">Falta ainda sem motivo registado.</div>
+            )}
+            {t.marked_absent_at && (
+              <div className="text-muted-foreground">Marcada em: {formatLocalTime(t.marked_absent_at)}</div>
+            )}
+          </div>
+        )}
+
+
 
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
           {date && <span>{date}</span>}
