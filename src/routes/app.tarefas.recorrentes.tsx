@@ -136,11 +136,17 @@ function RecurrencesPage() {
                   </span>
                 </div>
                 <div className="mt-0.5 text-xs text-muted-foreground">
-                  {recurrenceFrequencyLabel(r.frequency, r.interval_weeks)}
+                  {recurrenceFrequencyLabel(r.frequency, r.interval_weeks, r.monthly_rule)}
                   {r.frequency === "weekly" && r.weekdays.length > 0 && (
                     <> · {r.weekdays.map((d) => WEEKDAY_LABELS[d]).join("")}</>
                   )}
-                  {r.frequency === "monthly" && r.monthly_rule?.day_of_month && (
+                  {r.frequency === "monthly" && r.monthly_rule?.position != null && r.monthly_rule?.weekday != null && (
+                    <>
+                      {" · "}
+                      {monthPositionLabel(r.monthly_rule.position)} {WEEKDAY_FULL[r.monthly_rule.weekday]}
+                    </>
+                  )}
+                  {r.frequency === "monthly" && r.monthly_rule?.position == null && r.monthly_rule?.day_of_month && (
                     <> · dia {r.monthly_rule.day_of_month}</>
                   )}
                   {" · "}
