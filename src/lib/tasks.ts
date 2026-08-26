@@ -427,13 +427,15 @@ export async function markTaskAbsent(taskId: string, reason: string, justified: 
   return data as TaskRow;
 }
 
+export const ACTION_LABELS: Record<TaskAction, string> = {
   autorizar: "Autorizar",
   iniciar: "Iniciar",
   concluir: "Concluir",
   recusar: "Recusar",
   cancelar: "Cancelar",
-  marcar_ausente: "Marcar ausente",
+  marcar_ausente: "Marcar falta",
 };
+
 
 /**
  * Executa uma transição via RPC central. Toda regra de negócio
