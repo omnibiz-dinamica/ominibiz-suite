@@ -177,3 +177,15 @@
 - `src/lib/timesheet-pdf.ts` / `src/lib/timesheet-batch.ts` — geração A4 do relatório e pacote mensal (reutiliza PDFs arquivados; só gera prévia para períodos sem versão assinada).
 - `src/components/perfil/SignatureVistoCard.tsx` — captura de assinatura e visto no bucket `employee-signatures` (ADR-038).
 - Rotas: `/app/ponto/meus-relatorios` (funcionário), `/app/ponto/fechamento` (gestor), `/app/contabilidade/folhas-ponto` (contabilista, papel `accountant`).
+
+## Suporte — deteção de duplicados (ADR-048)
+
+- `src/lib/support/similar.ts` — porta única para as RPCs de semelhança,
+  relação e afetados; inclui as etiquetas de assinatura (ação/entidade).
+- `src/components/support/SimilarTicketsDialog.tsx` — modal preventivo antes da
+  criação do ticket.
+- `src/components/support/RelatedTicketsPanel.tsx` — secção "Tickets
+  relacionados" no detalhe (ligações, afetados, notificar afetados).
+- `src/components/support/DuplicateClustersPanel.tsx` — painel de possíveis
+  duplicados em `/app/admin/suporte` (Super Admin).
+- Detalhe completo: `docs/ARCHITECTURE_SUPPORT_TICKETS.md`.

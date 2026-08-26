@@ -967,3 +967,66 @@ qualquer explicação e o Super Admin não o consegue restaurar, porque
 gravação parcial de dados, e nenhuma funcionalidade base desaparece do menu sem
 uma decisão explícita. Módulos opcionais e de vertical mantêm-se totalmente
 sob controlo do Super Admin.
+
+## ADR-048 · Deteção de tickets duplicados / problemas semelhantes
+
+**Data.** 2026-08-26
+**Estado.** Aceite e implementado.
+
+**Contexto.** A Central de Suporte não tinha qualquer mecanismo de deteção de
+duplicados: o mesmo problema era aberto várias vezes (pelo mesmo utilizador,
+por colegas da mesma empresa e por empresas diferentes), fragmentando o
+histórico e obrigando à resolução repetida do mesmo tema. Não existia
+qualquer relação entre tickets, nem forma de registar "também tenho este
+problema".
+
+**Decisão.** Deteção em dois níveis, calculada **inteiramente no servidor**:
+
+1. **Nível 1 — semelhança textual.** `pg_trgm` + `unaccent`. Cada ticket guarda
+   `norm_title` e `search_norm` (texto normalizado sem acentos nem pontuação),
+   com índices GIN trigram.
+2. **Nível 2 — assinatura semântica.** Léxico determinístico em
+   `support_detect_action` (recusar, aprovar, concluir, iniciar, picagem,
+   atribuir, apagar, criar, editar, enviar, anexar, guardar, acesso, visualizar)
+   e `support_detect_entity` (férias, folha de ponto, despesas, recibos, frota,
+   geolocalização, tarefas, suporte, notificações, navegação, relatórios,
+   clientes, funcionários, acessos, empresa). A assinatura é deduzida do
+   **título + módulo** (a descrição longa introduzia ruído); as palavras-chave
+   (`problem_keywords`, stopwords removidas) usam título + descrição + módulo.
+   Trigger `support_tickets_fill_signature` mantém tudo atualizado.
+
+**Pontuação** (`support_find_similar`): `0.40·similaridade_título +
+0.15·similaridade_corpo + 0.15·sobreposição_palavras + 0.15·(ação igual) +
+0.15·(entidade igual) + 0.05·módulo + 0.05·rota + 0.03·tipo`, com penalização
+×0.60 quando as ações detetadas divergem (evita colar "iniciar tarefa" a
+"concluir tarefa"). `strong` (provável duplicado) quando a similaridade de
+título ≥ 0.72 ou quando ação+entidade coincidem com score ≥ 0.60; `related`
+a partir de 0.32. Janela de 365 dias.
+
+**Isolamento multiempresa (não negociável).** A RPC exige pertença à empresa
+indicada e devolve:
+- `own`: tickets da própria empresa com detalhe (número, título, extrato da
+  descrição, status, contagem de afetados);
+- `others`: **apenas contagem agregada** de tickets semelhantes noutras contas —
+  nunca título, número, descrição, empresa ou autor.
+Só o Super Admin vê tickets de várias empresas, e apenas através das suas
+próprias vistas (`/app/admin/suporte`, agrupamento por assinatura).
+
+**Fluxo.** O botão "Enviar solicitação" faz primeiro `support_find_similar`.
+Havendo resultados, abre-se o modal preventivo com três saídas: abrir o ticket
+existente, "tenho o mesmo problema" (`support_report_same_problem`, com nota
+opcional) ou "abrir novo ticket mesmo assim". A verificação nunca bloqueia: se
+falhar, o ticket é criado normalmente.
+
+**Relações.** `support_ticket_links` (`duplicate` | `related`) +
+`support_tickets.primary_ticket_id` para agrupar duplicados sob o ticket
+original; `support_ticket_affected` (único por ticket+utilizador) para os
+relatos "mesmo problema". Gestores ligam apenas tickets da própria empresa;
+o Super Admin liga entre empresas. Todas as operações registam evento em
+`support_ticket_events` (`same_problem_reported`, `ticket_linked`,
+`ticket_unlinked`, `affected_notified`).
+
+**Consequências.** Menos duplicados abertos, um único ticket como fonte de
+verdade por tema, visibilidade do impacto real (quantas pessoas e empresas),
+e notificação em massa dos afetados quando o tema é resolvido — sem nunca
+expor dados entre empresas.
