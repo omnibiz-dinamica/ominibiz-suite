@@ -2181,6 +2181,36 @@ export type Database = {
           },
         ]
       }
+      task_dedupe_audit: {
+        Row: {
+          batch: string
+          created_at: string
+          details: Json
+          entity: string
+          entity_id: string
+          id: string
+          kind: string
+        }
+        Insert: {
+          batch: string
+          created_at?: string
+          details?: Json
+          entity: string
+          entity_id: string
+          id?: string
+          kind: string
+        }
+        Update: {
+          batch?: string
+          created_at?: string
+          details?: Json
+          entity?: string
+          entity_id?: string
+          id?: string
+          kind?: string
+        }
+        Relationships: []
+      }
       task_documents: {
         Row: {
           company_id: string
@@ -4976,6 +5006,22 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      task_recurrences_canonical_key: {
+        Args: {
+          _assigned_to: string
+          _client_id: string
+          _company_id: string
+          _end_date: string
+          _frequency: Database["public"]["Enums"]["recurrence_frequency"]
+          _interval_weeks: number
+          _monthly_rule: Json
+          _scheduled_time: string
+          _start_date: string
+          _title: string
+          _weekdays: number[]
+        }
+        Returns: string
       }
       task_request_authorization: {
         Args: { _note?: string; _task_id: string }
