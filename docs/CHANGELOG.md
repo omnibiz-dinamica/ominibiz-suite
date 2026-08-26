@@ -7,6 +7,16 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### 🎫 Correção sequencial de tickets abertos
+
+#### Corrigido
+- **SUP-2026-000065 (Urgente) — tarefa gravada sem responsável (ADR-039).**
+  Causa raiz: recorrência legada sem `assigned_to` cujas ocorrências eram
+  materializadas com responsável nulo. Adicionadas as guardas server-side
+  `tasks_require_assignee` e `task_recurrences_require_assignee`;
+  `recurrence_materialize` passa a ignorar recorrências sem responsável; a
+  recorrência legada foi pausada (nenhum dado apagado).
+
 ### 🗓️ Fechamento Mensal da Folha de Ponto (ADR-038)
 
 #### Adicionado

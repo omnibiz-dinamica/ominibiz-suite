@@ -733,3 +733,33 @@ já tinha visto, e não existia papel para o contabilista.
 byte-a-byte; correcções não reescrevem o passado (geram nova versão); a
 contabilidade recebe um pacote estável; e a superfície de escrita fica confinada
 a RPCs `security definer` com RLS por `company_id`.
+
+---
+
+## ADR-039 — Tarefa e recorrência exigem responsável no servidor
+- Data: 2026-08-26
+- Status: Aceite
+- Ticket: SUP-2026-000065
+
+**Contexto.** A validação de "tarefa sem responsável" existia apenas no
+formulário (`app.tarefas.tsx`). Continuavam a aparecer tarefas sem responsável
+porque a origem real era uma **recorrência legada** (`task_recurrences`
+`6ce41f4c`, criada em 2026-07-02) gravada com `assigned_to IS NULL`:
+`recurrence_materialize` propagava o nulo a cada execução (40 tarefas órfãs,
+a última em 2026-08-24).
+
+**Decisão.**
+1. Guarda server-side: triggers `tasks_require_assignee` e
+   `task_recurrences_require_assignee` (BEFORE INSERT OR UPDATE OF
+   `assigned_to`) recusam a gravação com `TASK_REQUIRES_ASSIGNEE` /
+   `RECURRENCE_REQUIRES_ASSIGNEE`.
+2. A guarda dispara apenas quando a linha **passa** a ficar sem responsável:
+   linhas legadas já nulas continuam editáveis, para poderem ser atribuídas.
+3. `recurrence_materialize` ignora recorrências sem `assigned_to` — deixa de
+   gerar ocorrências órfãs.
+4. Dados preservados: a recorrência legada foi apenas **pausada**
+   (`status='paused'`); nenhuma tarefa foi apagada.
+
+**Consequências.** A regra deixa de depender do ecrã (desktop, mobile, RPC ou
+Data API) e a limpeza de dados históricos é feita por atribuição, não por
+eliminação.
