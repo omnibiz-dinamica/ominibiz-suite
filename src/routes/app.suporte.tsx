@@ -22,10 +22,16 @@ import {
 } from "@/lib/support/constants";
 import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
 import { invalidateSupportCache } from "@/lib/cache/support";
+import {
+  DESTINATION_EMOJI,
+  destinationLabel,
+  fetchSupportDestinations,
+  supportDestinationsQueryKey,
+} from "@/lib/support/destinations";
 
 export const Route = createFileRoute("/app/suporte")({
   component: () => (
-    <RoleGuard allow={["super_admin", "owner", "manager", "employee"]}>
+    <RoleGuard allow={["super_admin", "owner", "manager", "accountant", "secretary", "employee"]}>
       <SupportRouteContent />
     </RoleGuard>
   ),
@@ -35,6 +41,7 @@ type TicketRow = {
   id: string;
   ticket_number: string;
   company_id: string;
+  destination_code: string | null;
   type: SupportTicketType;
   priority: SupportTicketPriority;
   status: SupportTicketStatus;
