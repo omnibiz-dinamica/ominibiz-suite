@@ -53,12 +53,19 @@ import {
   updateStatus,
   uploadAttachment,
 } from "@/lib/support/tickets";
+import {
+  DESTINATION_EMOJI,
+  destinationLabel,
+  fetchSupportDestinations,
+  setTicketDestination,
+  supportDestinationsQueryKey,
+} from "@/lib/support/destinations";
 import { invalidateSupportTicket } from "@/lib/cache/support";
 import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
 
 export const Route = createFileRoute("/app/suporte/$id")({
   component: () => (
-    <RoleGuard allow={["super_admin", "owner", "manager"]}>
+    <RoleGuard allow={["super_admin", "owner", "manager", "accountant", "secretary"]}>
       <SupportDetailPage />
     </RoleGuard>
   ),
@@ -76,6 +83,7 @@ type TicketDetail = {
   title: string;
   description: string;
   module: string | null;
+  destination_code: string | null;
   route: string | null;
   page_url: string | null;
   technical_context: Record<string, unknown>;
@@ -183,7 +191,7 @@ function AttachmentThumb({ att, onOpen }: { att: AttachmentRow; onOpen: (a: Atta
 
 function SupportDetailPage() {
   const { id } = useParams({ from: "/app/suporte/$id" });
-  const { user, isSuperAdmin } = useAuth();
+  const { user, isSuperAdmin, isManager } = useAuth();
   const qc = useQueryClient();
   const [reply, setReply] = useState("");
   const [isInternal, setIsInternal] = useState(false);
@@ -205,6 +213,26 @@ function SupportDetailPage() {
       return data as TicketDetail | null;
     },
   });
+
+  // Catálogo de filas (ADR-049) para exibir o destino e permitir reencaminhamento.
+  const destinationsQ = useQuery({
+    queryKey: supportDestinationsQueryKey,
+    queryFn: fetchSupportDestinations,
+    staleTime: 5 * 60 * 1000,
+  });
+  const destinations = destinationsQ.data ?? [];
+  const canRoute = isSuperAdmin || isManager;
+
+  const destinationMut = useMutation({
+    mutationFn: (code: string) => setTicketDestination(id, code),
+    onSuccess: () => {
+      invalidateSupportTicket(qc, id);
+      toast.success("Ticket reencaminhado.");
+    },
+    onError: (err: unknown) =>
+      toast.error("Falha ao reencaminhar: " + (err instanceof Error ? err.message : String(err))),
+  });
+
 
   const messagesQ = useQuery<MessageRow[]>({
     queryKey: ["support-ticket-messages", id],
@@ -486,6 +514,13 @@ function SupportDetailPage() {
             <span className="text-muted-foreground">
               {TICKET_TYPE_LABEL[t.type as keyof typeof TICKET_TYPE_LABEL] ?? t.type}
             </span>
+            <span
+              className="rounded bg-primary/10 px-1.5 py-0.5 text-primary"
+              title="Fila de destino do ticket"
+            >
+              {(DESTINATION_EMOJI[t.destination_code ?? ""] ?? "→") + " "}
+              {destinationLabel(t.destination_code, destinations)}
+            </span>
             <button
               type="button"
               onClick={() => copyText(t.ticket_number, "Número copiado")}
@@ -495,6 +530,28 @@ function SupportDetailPage() {
               <Copy className="h-3 w-3" /> copiar nº
             </button>
           </div>
+          {canRoute && (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="text-xs text-muted-foreground">Reencaminhar para:</span>
+              <Select
+                value={t.destination_code ?? undefined}
+                onValueChange={(v) => destinationMut.mutate(v)}
+                disabled={destinationMut.isPending}
+              >
+                <SelectTrigger className="h-8 w-56 text-xs">
+                  <SelectValue placeholder="Selecionar destino" />
+                </SelectTrigger>
+                <SelectContent>
+                  {destinations.map((d) => (
+                    <SelectItem key={d.code} value={d.code}>
+                      {d.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {destinationMut.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            </div>
+          )}
           <div className="mt-3 flex items-start justify-between gap-2">
             <h1 className="font-display text-xl font-semibold">{t.title}</h1>
             <button

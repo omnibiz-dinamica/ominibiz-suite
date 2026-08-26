@@ -6,7 +6,7 @@
  * Segue as regras: max-height, header/footer fixos, scroll central.
  */
 import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -49,11 +49,18 @@ import {
 import { invalidateSupportCache } from "@/lib/cache/support";
 import { findSimilarTickets, type SimilarResult } from "@/lib/support/similar";
 import { SimilarTicketsDialog } from "@/components/support/SimilarTicketsDialog";
+import {
+  DESTINATION_EMOJI,
+  destinationIcon,
+  fetchSupportDestinations,
+  supportDestinationsQueryKey,
+} from "@/lib/support/destinations";
 
 
 const schema = z.object({
   type: z.string().min(1),
   priority: z.string().min(1),
+  destinationCode: z.string().min(1, "Selecione o destino do ticket"),
   title: z.string().trim().min(3, "Mínimo 3 caracteres").max(200),
   description: z.string().trim().min(5, "Mínimo 5 caracteres").max(10000),
   module: z.string().max(120).optional(),
@@ -64,6 +71,7 @@ const DRAFT_KEY = "omnibiz:support:new-ticket:draft:v1";
 type Draft = {
   type?: string;
   priority?: string;
+  destinationCode?: string;
   title?: string;
   description?: string;
   module?: string;
@@ -115,6 +123,7 @@ export function NewTicketDialog({
 
   const [type, setType] = useState<SupportTicketType>(defaultType ?? "duvida");
   const [priority, setPriority] = useState<SupportTicketPriority>("normal");
+  const [destinationCode, setDestinationCode] = useState<string>("");
   const [title, setTitle] = useState(defaultTitle ?? "");
   const [description, setDescription] = useState("");
   const [module, setModule] = useState(defaultModule ?? "");
@@ -129,11 +138,21 @@ export function NewTicketDialog({
     [open],
   );
 
+  // Catálogo de destinos (ADR-049) — vem da base, permite novas filas sem código.
+  const destinationsQ = useQuery({
+    queryKey: supportDestinationsQueryKey,
+    queryFn: fetchSupportDestinations,
+    staleTime: 5 * 60 * 1000,
+  });
+  const destinations = destinationsQ.data ?? [];
+  const selectedDestination = destinations.find((d) => d.code === destinationCode) ?? null;
+
   useEffect(() => {
     if (open) {
       const draft = readDraft();
       setType((draft?.type as SupportTicketType) ?? defaultType ?? "duvida");
       setPriority((draft?.priority as SupportTicketPriority) ?? "normal");
+      setDestinationCode(draft?.destinationCode ?? "");
       setTitle(draft?.title ?? defaultTitle ?? "");
       setDescription(draft?.description ?? "");
       setModule(draft?.module ?? defaultModule ?? "");
@@ -151,17 +170,17 @@ export function NewTicketDialog({
     try {
       window.sessionStorage.setItem(
         DRAFT_KEY,
-        JSON.stringify({ type, priority, title, description, module }),
+        JSON.stringify({ type, priority, destinationCode, title, description, module }),
       );
     } catch {
       /* ignore */
     }
-  }, [open, type, priority, title, description, module]);
+  }, [open, type, priority, destinationCode, title, description, module]);
 
   const mutation = useMutation({
     mutationFn: async () => {
       if (!currentCompanyId) throw new Error("Nenhuma empresa selecionada.");
-      const parsed = schema.safeParse({ type, priority, title, description, module });
+      const parsed = schema.safeParse({ type, priority, destinationCode, title, description, module });
       if (!parsed.success) {
         throw new Error(parsed.error.issues[0]?.message ?? "Dados inválidos");
       }
@@ -169,6 +188,7 @@ export function NewTicketDialog({
         companyId: currentCompanyId,
         type,
         priority,
+        destinationCode: parsed.data.destinationCode,
         title: parsed.data.title,
         description: parsed.data.description,
         module: parsed.data.module || null,
@@ -213,13 +233,14 @@ export function NewTicketDialog({
         description,
         module: module || null,
         route,
+        destinationCode: destinationCode || null,
       });
     },
   });
 
   async function handleSubmit() {
     setFormError(null);
-    const parsed = schema.safeParse({ type, priority, title, description, module });
+    const parsed = schema.safeParse({ type, priority, destinationCode, title, description, module });
     if (!parsed.success) {
       const msg = parsed.error.issues[0]?.message ?? "Dados inválidos";
       setFormError(msg);
@@ -276,6 +297,42 @@ export function NewTicketDialog({
               <span>Selecione uma empresa antes de abrir um ticket.</span>
             </div>
           )}
+
+          <ModalSection
+            title="Destino do ticket *"
+            description="Para quem deseja enviar este ticket? O destino é a fila de atendimento — o responsável é atribuído depois."
+          >
+            {destinationsQ.isLoading ? (
+              <div className="text-sm text-muted-foreground">Carregando destinos…</div>
+            ) : (
+              <div className="grid gap-2 sm:grid-cols-3">
+                {destinations.map((d) => {
+                  const Icon = destinationIcon(d.icon);
+                  const active = destinationCode === d.code;
+                  return (
+                    <button
+                      key={d.code}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => setDestinationCode(d.code)}
+                      className={
+                        "flex h-full flex-col gap-1 rounded-xl border p-3 text-left transition-colors " +
+                        (active
+                          ? "border-primary bg-primary/10 ring-1 ring-primary"
+                          : "border-border bg-card hover:border-primary/50")
+                      }
+                    >
+                      <span className="flex items-center gap-2 text-sm font-medium">
+                        <Icon className="h-4 w-4 text-primary" />
+                        {d.label}
+                      </span>
+                      <span className="text-xs leading-snug text-muted-foreground">{d.description}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </ModalSection>
 
           <ModalSection title="Dados do ticket">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -380,6 +437,20 @@ export function NewTicketDialog({
             </div>
           </ModalSection>
 
+          <ModalSection title="Resumo" description="Confirme antes de enviar.">
+            <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">Destino</div>
+              <div className="mt-0.5 font-medium">
+                {selectedDestination
+                  ? `${DESTINATION_EMOJI[selectedDestination.code] ?? "•"} ${selectedDestination.label}`
+                  : "Ainda não selecionado"}
+              </div>
+              <div className="mt-2 text-xs text-muted-foreground">
+                Responsável: ainda não atribuído
+              </div>
+            </div>
+          </ModalSection>
+
           {formError && (
             <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
               {formError}
@@ -391,7 +462,10 @@ export function NewTicketDialog({
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
             Cancelar
           </Button>
-          <Button onClick={() => void handleSubmit()} disabled={busy || !currentCompanyId}>
+          <Button
+            onClick={() => void handleSubmit()}
+            disabled={busy || !currentCompanyId || !destinationCode}
+          >
             {busy ? (
               <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {checkMut.isPending ? "Verificando…" : "Enviando…"}</>
             ) : (

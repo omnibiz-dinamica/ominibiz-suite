@@ -1030,3 +1030,38 @@ o Super Admin liga entre empresas. Todas as operações registam evento em
 verdade por tema, visibilidade do impacto real (quantas pessoas e empresas),
 e notificação em massa dos afetados quando o tema é resolvido — sem nunca
 expor dados entre empresas.
+
+---
+
+## ADR-049 — Destino obrigatório do ticket (filas de atendimento)
+
+**Contexto.** Todos os tickets caíam implicitamente na fila técnica. Na prática,
+uma parte significativa é contabilística ("recibo", "IBAN", "IRS") ou
+administrativa ("declaração", "documento", "agendamento") e não deve consumir
+tempo do Desenvolvimento nem viajar para fora da empresa.
+
+**Decisão.** Introduzir o conceito de **destino (fila)**, distinto do
+**responsável (pessoa)**:
+
+- Catálogo em `public.support_destinations` (`code`, `label`, `description`,
+  `icon`, `target_role`, `is_technical`, `sort_order`, `is_active`). Acrescentar
+  RH, Financeiro ou Jurídico é inserir uma linha — o módulo não muda.
+- `support_tickets.destination_code` é obrigatório na criação
+  (`create_support_ticket`) e foi backfillado a partir do tipo do ticket.
+- `support_set_ticket_destination` reencaminha entre filas (Gestor e Super
+  Admin), sempre com evento `destination_changed` em `support_ticket_events`.
+- `support_has_destination_access` alimenta as políticas de RLS: membros de uma
+  fila (ex.: `accountant`, `secretary`) veem e respondem apenas os tickets
+  destinados à sua fila, dentro da própria empresa. O isolamento por
+  `company_id` permanece intacto.
+- Novo papel `secretary` no enum `app_role`.
+- `support_find_similar` usa o destino como reforço de pontuação, nunca como
+  filtro: um ticket pode ter sido encaminhado para a fila errada.
+
+**Alternativas rejeitadas.** (1) Derivar o destino do `type` — ambíguo e sem
+possibilidade de correção pelo utilizador. (2) Reutilizar `assigned_user_id`
+como destino — confunde fila com pessoa e quebra a atribuição individual.
+
+**Consequências.** Encaminhamento correto desde a abertura, tickets internos
+resolvidos sem sair da empresa, filas extensíveis por dados e histórico
+completo de cada reencaminhamento.

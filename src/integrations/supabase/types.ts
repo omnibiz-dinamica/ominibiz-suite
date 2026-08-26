@@ -1800,6 +1800,45 @@ export type Database = {
           },
         ]
       }
+      support_destinations: {
+        Row: {
+          code: string
+          created_at: string
+          description: string
+          icon: string
+          is_active: boolean
+          is_technical: boolean
+          label: string
+          sort_order: number
+          target_role: string | null
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string
+          icon?: string
+          is_active?: boolean
+          is_technical?: boolean
+          label: string
+          sort_order?: number
+          target_role?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string
+          icon?: string
+          is_active?: boolean
+          is_technical?: boolean
+          label?: string
+          sort_order?: number
+          target_role?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       support_ticket_affected: {
         Row: {
           company_id: string
@@ -2078,6 +2117,7 @@ export type Database = {
           created_by_role: string | null
           current_owner_role: string
           description: string
+          destination_code: string
           destination_type: string | null
           escalated_at: string | null
           escalated_by: string | null
@@ -2118,6 +2158,7 @@ export type Database = {
           created_by_role?: string | null
           current_owner_role?: string
           description: string
+          destination_code?: string
           destination_type?: string | null
           escalated_at?: string | null
           escalated_by?: string | null
@@ -2158,6 +2199,7 @@ export type Database = {
           created_by_role?: string | null
           current_owner_role?: string
           description?: string
+          destination_code?: string
           destination_type?: string | null
           escalated_at?: string | null
           escalated_by?: string | null
@@ -2203,6 +2245,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_destination_code_fkey"
+            columns: ["destination_code"]
+            isOneToOne: false
+            referencedRelation: "support_destinations"
+            referencedColumns: ["code"]
           },
           {
             foreignKeyName: "support_tickets_escalated_by_fkey"
@@ -3890,6 +3939,7 @@ export type Database = {
           created_by_role: string | null
           current_owner_role: string
           description: string
+          destination_code: string
           destination_type: string | null
           escalated_at: string | null
           escalated_by: string | null
@@ -3985,6 +4035,7 @@ export type Database = {
         Args: {
           _company_id: string
           _description: string
+          _destination_code?: string
           _module: string
           _page_url: string
           _priority: Database["public"]["Enums"]["support_ticket_priority"]
@@ -5042,6 +5093,7 @@ export type Database = {
         Args: {
           _company_id: string
           _description: string
+          _destination_code?: string
           _limit?: number
           _module?: string
           _route?: string
@@ -5049,6 +5101,14 @@ export type Database = {
           _type: Database["public"]["Enums"]["support_ticket_type"]
         }
         Returns: Json
+      }
+      support_has_destination_access: {
+        Args: {
+          _company_id: string
+          _destination_code: string
+          _user_id: string
+        }
+        Returns: boolean
       }
       support_keywords: { Args: { _t: string }; Returns: string[] }
       support_link_tickets: {
@@ -5063,6 +5123,18 @@ export type Database = {
       support_norm: { Args: { _t: string }; Returns: string }
       support_notify_affected: {
         Args: { _message: string; _ticket_id: string }
+        Returns: number
+      }
+      support_notify_destination: {
+        Args: {
+          _body: string
+          _company_id: string
+          _destination_code: string
+          _event?: Database["public"]["Enums"]["notification_event"]
+          _priority?: Database["public"]["Enums"]["notification_priority"]
+          _ticket_id: string
+          _title: string
+        }
         Returns: number
       }
       support_notify_managers: {
@@ -5103,6 +5175,14 @@ export type Database = {
       support_report_same_problem: {
         Args: { _note?: string; _ticket_id: string }
         Returns: Json
+      }
+      support_set_ticket_destination: {
+        Args: {
+          _destination_code: string
+          _reason?: string
+          _ticket_id: string
+        }
+        Returns: undefined
       }
       support_ticket_log_event: {
         Args: {
@@ -5919,7 +5999,13 @@ export type Database = {
       whatsapp_requeue: { Args: { _id: string }; Returns: undefined }
     }
     Enums: {
-      app_role: "super_admin" | "manager" | "employee" | "owner" | "accountant"
+      app_role:
+        | "super_admin"
+        | "manager"
+        | "employee"
+        | "owner"
+        | "accountant"
+        | "secretary"
       client_status: "ativo" | "inativo"
       commercial_client_status: "lead" | "negotiation" | "active" | "inactive"
       company_status: "pending" | "active" | "suspended"
@@ -6231,7 +6317,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["super_admin", "manager", "employee", "owner", "accountant"],
+      app_role: [
+        "super_admin",
+        "manager",
+        "employee",
+        "owner",
+        "accountant",
+        "secretary",
+      ],
       client_status: ["ativo", "inativo"],
       commercial_client_status: ["lead", "negotiation", "active", "inactive"],
       company_status: ["pending", "active", "suspended"],

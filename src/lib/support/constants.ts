@@ -115,6 +115,7 @@ export const EVENT_TYPE_LABEL: Record<string, string> = {
   super_admin_started_development: "Super Admin iniciou desenvolvimento",
   super_admin_resolved_ticket: "Super Admin resolveu",
   ticket_closed: "Ticket arquivado",
+  destination_changed: "Destino alterado",
 };
 
 export const TICKET_STATUS_LABEL: Record<SupportTicketStatus, string> = {
