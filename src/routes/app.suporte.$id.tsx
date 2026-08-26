@@ -53,6 +53,13 @@ import {
   updateStatus,
   uploadAttachment,
 } from "@/lib/support/tickets";
+import {
+  DESTINATION_EMOJI,
+  destinationLabel,
+  fetchSupportDestinations,
+  setTicketDestination,
+  supportDestinationsQueryKey,
+} from "@/lib/support/destinations";
 import { invalidateSupportTicket } from "@/lib/cache/support";
 import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
 
