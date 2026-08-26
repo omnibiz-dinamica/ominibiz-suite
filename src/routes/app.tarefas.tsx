@@ -535,6 +535,26 @@ function TasksPage() {
         }}
       />
 
+      <MarkAbsentDialog
+        task={absenceTarget}
+        employeeName={
+          absenceTarget?.assigned_to
+            ? ((members ?? []).find((m) => m.id === absenceTarget.assigned_to)?.full_name ?? undefined)
+            : undefined
+        }
+        clientName={
+          absenceTarget?.client_id ? clientsList?.find((c) => c.id === absenceTarget.client_id)?.name : undefined
+        }
+        open={!!absenceTarget}
+        onOpenChange={(o) => !o && setAbsenceTarget(null)}
+        onDone={() => {
+          setAbsenceTarget(null);
+          qc.invalidateQueries({ queryKey: ["tasks"] });
+        }}
+      />
+
+
+
       <Dialog open={!!refusing} onOpenChange={(v) => !v && !transition.isPending && setRefusing(null)}>
         <DialogContent size="sm">
           <ModalHeader icon={XCircle} title="Recusar tarefa?" description="Confirme a recusa e informe o motivo." />
