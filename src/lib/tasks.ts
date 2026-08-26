@@ -391,7 +391,42 @@ export function availableActions(
 }
 
 
-export const ACTION_LABELS: Record<TaskAction, string> = {
+/**
+ * ADR-044 — Registo formal de falta (SUP-2026-000073).
+ *
+ * O gestor marca falta explicitamente, com motivo obrigatório e classificação
+ * (justificada / injustificada). Vale também para tarefas já marcadas como
+ * ausentes automaticamente, permitindo completar o registo.
+ */
+export const ABSENCE_REASONS = [
+  "Não compareceu",
+  "Falta comunicada pelo funcionário",
+  "Doença / atestado",
+  "Motivo pessoal",
+  "Transporte / deslocação",
+  "Outro",
+] as const;
+
+export function canMarkAbsent(
+  t: Pick<TaskRow, "status" | "assigned_to">,
+  ctx: { isManager: boolean },
+): boolean {
+  if (!ctx.isManager) return false;
+  if (!t.assigned_to) return false;
+  return t.status === "pendente" || t.status === "autorizado" || t.status === "em_andamento" || t.status === "ausente";
+}
+
+export async function markTaskAbsent(taskId: string, reason: string, justified: boolean): Promise<TaskRow> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("task_mark_absent", {
+    _task_id: taskId,
+    _reason: reason,
+    _justified: justified,
+  });
+  if (error) throw error;
+  return data as TaskRow;
+}
+
   autorizar: "Autorizar",
   iniciar: "Iniciar",
   concluir: "Concluir",
