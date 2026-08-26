@@ -296,11 +296,20 @@ function TasksPage() {
       transitionTask(id, action, reason),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["tasks-open-punches"] });
       toast.success("Tarefa atualizada");
       setRefusing(null);
       setRefusalReason("");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error, vars) => {
+      // SUP-2026-000074 — ponto esquecido: oferecer regularização em vez de erro seco.
+      const entry = openPunchByTask.get(vars.id);
+      if (entry && /ponto/i.test(e.message)) {
+        setRecovering(entry);
+        return;
+      }
+      toast.error(e.message);
+    },
   });
 
   const deleteTask = useMutation({
