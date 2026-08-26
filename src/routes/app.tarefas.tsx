@@ -2014,7 +2014,13 @@ function TaskForm({
               // RRULE FREQ=WEEKLY;INTERVAL=n — 2 = "semana sim, semana não" (âncora = start_date).
               interval_weeks: recurrence.frequency === "weekly" ? Math.max(1, recurrence.intervalWeeks || 1) : 1,
               weekdays: recurrence.frequency === "weekly" ? recurrence.weekdays : [],
-              monthly_rule: recurrence.frequency === "monthly" ? { day_of_month: recurrence.dayOfMonth } : {},
+              // Mensal: dia fixo do mês (legado) OU posição no mês (BYSETPOS/BYDAY).
+              monthly_rule:
+                recurrence.frequency === "monthly"
+                  ? recurrence.monthPosition != null
+                    ? { position: recurrence.monthPosition, weekday: recurrence.monthWeekday }
+                    : { day_of_month: recurrence.dayOfMonth }
+                  : {},
               start_date: recurrence.startDate,
               end_date: recurrence.endDate || null,
               scheduled_time: derivedTime,
