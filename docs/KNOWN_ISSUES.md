@@ -380,3 +380,14 @@ estão marcadas como `restaurant_delivery` sem nenhum módulo `restaurant_*` ati
 (anomalia pré-existente). Aplicar o `ModuleGuard` mudaria o comportamento dessas
 empresas (ComingSoon → 403); fica para auditoria dedicada, fora da Fase A do vertical
 Material de Construção.
+
+## KI-029 — 8 ocorrências históricas duplicadas fora do âmbito da limpeza P0
+
+**Severidade.** Baixa · **Estado.** Aberto (intencional, ADR-041)
+
+Após a limpeza, restam 8 ocorrências com mais de uma tarefa activa (Julho/Agosto:
+COIFA, Escritório, Escritório Life Tidy (PT), Escritório Sara). Todas em estado
+terminal (`concluido`, `cancelado`, `ausente`) e com histórico operacional, pelo
+que ficaram deliberadamente fora do critério `EXCLUIR_SEGURO`. Não existe qualquer
+duplicata `pendente` remanescente. Requer análise caso a caso com o Gestor antes
+de qualquer acção.
