@@ -766,3 +766,37 @@ export function formatHMS(totalSec: number): string {
   const pad = (n: number) => n.toString().padStart(2, "0");
   return `${pad(hh)}:${pad(mm)}:${pad(ss)}`;
 }
+
+/**
+ * ADR-051 — Exclusão segura de tarefas recorrentes.
+ *
+ * `single` remove apenas a ocorrência (o motor não a recria, pois a linha
+ * permanece com `deleted_at`); `future` remove a ocorrência escolhida e as
+ * futuras, preserva as passadas e encerra a série na data de corte.
+ * Ocorrências com histórico operacional são canceladas, nunca apagadas.
+ */
+export type DeleteSeriesScope = "single" | "future";
+
+export type DeleteSeriesResult = {
+  scope: DeleteSeriesScope;
+  cutoff_date: string;
+  deleted: number;
+  cancelled: number;
+  kept: number;
+  series_ended: boolean;
+};
+
+export async function deleteTaskSeries(
+  taskId: string,
+  scope: DeleteSeriesScope,
+  reason?: string,
+): Promise<DeleteSeriesResult> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("task_series_delete", {
+    _task_id: taskId,
+    _scope: scope,
+    _reason: reason?.trim() ? reason.trim() : null,
+  });
+  if (error) throw error;
+  return data as DeleteSeriesResult;
+}
