@@ -192,6 +192,48 @@ export function NewTicketDialog({
     },
   });
 
+  /**
+   * Verificação de duplicados (ADR-048): antes da confirmação final, o servidor
+   * procura tickets com o mesmo problema. Só se não houver nada relevante — ou se
+   * o utilizador insistir no modal — é que o ticket é realmente criado.
+   */
+  const checkMut = useMutation({
+    mutationFn: async (): Promise<SimilarResult> => {
+      if (!currentCompanyId) throw new Error("Nenhuma empresa selecionada.");
+      return findSimilarTickets({
+        companyId: currentCompanyId,
+        type,
+        title,
+        description,
+        module: module || null,
+        route,
+      });
+    },
+  });
+
+  async function handleSubmit() {
+    setFormError(null);
+    const parsed = schema.safeParse({ type, priority, title, description, module });
+    if (!parsed.success) {
+      const msg = parsed.error.issues[0]?.message ?? "Dados inválidos";
+      setFormError(msg);
+      toast.error(msg);
+      return;
+    }
+    try {
+      const res = await checkMut.mutateAsync();
+      setSimilar(res);
+      if (res.own.length > 0 || res.others.count > 0) {
+        setSimilarOpen(true);
+        return;
+      }
+    } catch {
+      // A verificação é auxiliar: nunca deve impedir a abertura do ticket.
+    }
+    mutation.mutate();
+  }
+
+
   const onFileChange = (list: FileList | null) => {
     if (!list) return;
     const arr: File[] = [];
