@@ -139,6 +139,9 @@ export function NewTicketDialog({
       setModule(draft?.module ?? defaultModule ?? "");
       setFiles([]);
       setFormError(null);
+      setSimilar(null);
+      setSimilarOpen(false);
+
     }
   }, [open, defaultType, defaultTitle, defaultModule]);
 
