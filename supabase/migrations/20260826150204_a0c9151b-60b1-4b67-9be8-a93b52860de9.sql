@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.vacation_guard_cancel() FROM PUBLIC, anon, authenticated;
