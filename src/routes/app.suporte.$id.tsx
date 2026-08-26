@@ -58,7 +58,7 @@ import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
 
 export const Route = createFileRoute("/app/suporte/$id")({
   component: () => (
-    <RoleGuard allow={["super_admin", "owner", "manager"]}>
+    <RoleGuard allow={["super_admin", "owner", "manager", "accountant", "secretary"]}>
       <SupportDetailPage />
     </RoleGuard>
   ),
@@ -76,6 +76,7 @@ type TicketDetail = {
   title: string;
   description: string;
   module: string | null;
+  destination_code: string | null;
   route: string | null;
   page_url: string | null;
   technical_context: Record<string, unknown>;
