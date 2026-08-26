@@ -1797,6 +1797,9 @@ function TaskForm({
             if (!ok) return;
           }
         }
+        // ADR-041 — segunda submissão (duplo clique/retry) é descartada aqui.
+        if (submittingRef.current) return;
+        submittingRef.current = true;
         setLoading(true);
         // Título derivado do cliente quando não preenchido manualmente.
         const clientName = clients.find((c) => c.id === clientId)?.name ?? "";
