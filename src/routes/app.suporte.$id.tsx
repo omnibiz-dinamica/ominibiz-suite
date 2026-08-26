@@ -514,6 +514,13 @@ function SupportDetailPage() {
             <span className="text-muted-foreground">
               {TICKET_TYPE_LABEL[t.type as keyof typeof TICKET_TYPE_LABEL] ?? t.type}
             </span>
+            <span
+              className="rounded bg-primary/10 px-1.5 py-0.5 text-primary"
+              title="Fila de destino do ticket"
+            >
+              {(DESTINATION_EMOJI[t.destination_code ?? ""] ?? "→") + " "}
+              {destinationLabel(t.destination_code, destinations)}
+            </span>
             <button
               type="button"
               onClick={() => copyText(t.ticket_number, "Número copiado")}
