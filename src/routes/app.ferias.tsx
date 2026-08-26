@@ -25,6 +25,7 @@ import { Switch } from "@/components/ui/switch";
 import { sendTransactionalEmail } from "@/lib/email/send";
 import { exportToExcel, exportToPdf } from "@/lib/exports";
 import { buildAppUrl } from "@/lib/app-url";
+import { CancelVacationDialog, type VacationCancelTarget } from "@/components/ferias/CancelVacationDialog";
 
 export const Route = createFileRoute("/app/ferias")({ component: FeriasPage });
 
