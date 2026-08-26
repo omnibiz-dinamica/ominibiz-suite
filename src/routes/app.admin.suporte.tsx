@@ -22,6 +22,8 @@ import {
 } from "@/lib/support/constants";
 import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
 import { invalidateSupportCache } from "@/lib/cache/support";
+import { DuplicateClustersPanel } from "@/components/support/DuplicateClustersPanel";
+
 
 export const Route = createFileRoute("/app/admin/suporte")({
   component: () => (
