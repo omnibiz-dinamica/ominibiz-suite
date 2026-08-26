@@ -149,6 +149,8 @@ function TasksPage() {
 
   // ADR-036 — cancelamento sempre com motivo obrigatório e auditado.
   const [cancelling, setCancelling] = useState<TaskRow | null>(null);
+  // SUP-2026-000074 — ponto esquecido bloqueia a conclusão: regularizar + concluir.
+  const [recovering, setRecovering] = useState<RecoveryEntry | null>(null);
   const [refusalReason, setRefusalReason] = useState("");
   const [view, setView] = useState<"active" | "archived">("active");
   const [taskView, setTaskView] = useState<"list" | "calendar">("list");
