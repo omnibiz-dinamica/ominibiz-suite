@@ -298,6 +298,42 @@ export function NewTicketDialog({
             </div>
           )}
 
+          <ModalSection
+            title="Destino do ticket *"
+            description="Para quem deseja enviar este ticket? O destino é a fila de atendimento — o responsável é atribuído depois."
+          >
+            {destinationsQ.isLoading ? (
+              <div className="text-sm text-muted-foreground">Carregando destinos…</div>
+            ) : (
+              <div className="grid gap-2 sm:grid-cols-3">
+                {destinations.map((d) => {
+                  const Icon = destinationIcon(d.icon);
+                  const active = destinationCode === d.code;
+                  return (
+                    <button
+                      key={d.code}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => setDestinationCode(d.code)}
+                      className={
+                        "flex h-full flex-col gap-1 rounded-xl border p-3 text-left transition-colors " +
+                        (active
+                          ? "border-primary bg-primary/10 ring-1 ring-primary"
+                          : "border-border bg-card hover:border-primary/50")
+                      }
+                    >
+                      <span className="flex items-center gap-2 text-sm font-medium">
+                        <Icon className="h-4 w-4 text-primary" />
+                        {d.label}
+                      </span>
+                      <span className="text-xs leading-snug text-muted-foreground">{d.description}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </ModalSection>
+
           <ModalSection title="Dados do ticket">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
@@ -401,6 +437,20 @@ export function NewTicketDialog({
             </div>
           </ModalSection>
 
+          <ModalSection title="Resumo" description="Confirme antes de enviar.">
+            <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">Destino</div>
+              <div className="mt-0.5 font-medium">
+                {selectedDestination
+                  ? `${DESTINATION_EMOJI[selectedDestination.code] ?? "•"} ${selectedDestination.label}`
+                  : "Ainda não selecionado"}
+              </div>
+              <div className="mt-2 text-xs text-muted-foreground">
+                Responsável: ainda não atribuído
+              </div>
+            </div>
+          </ModalSection>
+
           {formError && (
             <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
               {formError}
@@ -412,7 +462,10 @@ export function NewTicketDialog({
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
             Cancelar
           </Button>
-          <Button onClick={() => void handleSubmit()} disabled={busy || !currentCompanyId}>
+          <Button
+            onClick={() => void handleSubmit()}
+            disabled={busy || !currentCompanyId || !destinationCode}
+          >
             {busy ? (
               <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {checkMut.isPending ? "Verificando…" : "Enviando…"}</>
             ) : (
