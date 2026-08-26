@@ -139,6 +139,9 @@ function TasksPage() {
   const [seriesRow, setSeriesRow] = useState<RecurrenceRow | null>(null);
   const [deleting, setDeleting] = useState<TaskRow | null>(null);
   const [refusing, setRefusing] = useState<TaskRow | null>(null);
+  // ADR-044 — registo formal de falta pelo gestor (motivo obrigatório).
+  const [absenceTarget, setAbsenceTarget] = useState<TaskRow | null>(null);
+
   // ADR-036 — cancelamento sempre com motivo obrigatório e auditado.
   const [cancelling, setCancelling] = useState<TaskRow | null>(null);
   const [refusalReason, setRefusalReason] = useState("");
