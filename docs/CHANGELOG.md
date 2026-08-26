@@ -10,6 +10,15 @@
 ### 🎫 Correção sequencial de tickets abertos
 
 #### Corrigido
+- **SUP-2026-000073 (Urgente) — gestor sem opção de «marcar falta» (ADR-044).**
+  A ausência só podia ser marcada automaticamente (ou pelo gestor após o limiar),
+  e uma tarefa já «Ausente» ficava terminal, sem forma de registar formalmente a
+  falta do funcionário. Passa a existir a RPC `public.task_mark_absent`
+  (motivo obrigatório + classificação justificada/injustificada), disponível para
+  tarefas pendentes, autorizadas, em andamento e já ausentes, com auditoria em
+  `task_audit_events` e bloqueio quando existe ponto aberto. Novos campos em
+  `public.tasks`: `marked_absent_by`, `absence_reason`, `absence_justified`,
+  `absence_source`. UI: novo `MarkAbsentDialog` e destaque da falta na lista.
 - **SUP-2026-000095 (Alta) — notificações sem gestão de estados (ADR-043).**
   A caixa de notificações só permitia abrir ou marcar como lida, pelo que o menu
   nunca ficava limpo. Passa a ter estados: **Nova**, **Em tratamento**,

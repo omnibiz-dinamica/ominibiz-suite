@@ -860,3 +860,26 @@ Em tratamento, Resolvidas, Arquivadas, Todas) e o badge do menu passa a excluir
 arquivo é reversível («Restaurar»). Nenhuma alteração nos gatilhos que criam
 notificações — o valor por omissão `nova` preserva o comportamento anterior.
 
+## ADR-044 — Registo formal de falta em tarefas
+
+**Contexto.** SUP-2026-000073: uma tarefa aparecia como «Ausente» (varredura
+automática) mas o gestor não tinha como registar formalmente a falta do
+funcionário — nem motivo, nem classificação, nem autoria. A ação
+`marcar_ausente` do `task_transition` exigia o limiar de ausência e só aceitava
+tarefas pendentes/autorizadas.
+
+**Decisão.** Criada a RPC `public.task_mark_absent(_task_id, _reason, _justified)`
+(`security definer`, apenas gestor/proprietário da empresa da tarefa) como porta
+única do registo de falta. Aceita `pendente`, `autorizado`, `em_andamento` e
+`ausente` (completar registo), exige motivo, grava
+`marked_absent_by/absence_reason/absence_justified/absence_source='manual'` e
+audita em `task_audit_events` (`event = 'absence'`). Ponto aberto na tarefa
+devolve `TASK_HAS_OPEN_PUNCH`, reutilizando o fluxo de Recuperação de Ponto
+Aberto. Clientes em apontamento manual continuam sem ausência automática
+(ADR-025), mas o gestor pode registar a falta manualmente.
+
+**Consequências.** A UI de tarefas passa a abrir o `MarkAbsentDialog` em vez de
+transitar diretamente, o botão deixa de depender do limiar temporal, e a lista
+mostra origem, motivo e classificação da falta. `task_transition` mantém-se
+inalterado para compatibilidade (ecrã de ponto).
+
