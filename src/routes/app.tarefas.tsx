@@ -1911,6 +1911,7 @@ function TaskForm({
         }
 
         if (error) {
+          submittingRef.current = false;
           setLoading(false);
           toast.error(error.message);
           return;
@@ -1919,11 +1920,13 @@ function TaskForm({
           try {
             for (const taskId of createdTaskIds) await uploadCreationDocs(taskId);
           } catch (e) {
+            submittingRef.current = false;
             setLoading(false);
             toast.error((e as Error).message);
             return;
           }
         }
+        submittingRef.current = false;
         setLoading(false);
         toast.success(
           initial ? "Tarefa atualizada" : assignees.length > 1 ? `${assignees.length} tarefas criadas` : "Tarefa criada",
