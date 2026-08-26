@@ -763,3 +763,26 @@ a última em 2026-08-24).
 **Consequências.** A regra deixa de depender do ecrã (desktop, mobile, RPC ou
 Data API) e a limpeza de dados históricos é feita por atribuição, não por
 eliminação.
+
+---
+
+## ADR-040 — Ticket devolvido ao solicitante tem duas saídas explícitas
+- Data: 2026-08-26
+- Status: Aceite
+- Ticket: SUP-2026-000070
+
+**Contexto.** O fluxo de 2 níveis (ADR-021) devolve o ticket ao solicitante em
+estados de espera (`waiting_manager`, `waiting_employee`, `aguardando_cliente`,
+`returned_to_manager`, `em_validacao`). Nesses estados o gestor não via o botão
+de arquivar (restrito a `ARCHIVABLE_STATUSES`) nem o de reabrir (restrito a
+estados encerrados) — o ticket ficava sem saída visível.
+
+**Decisão.** Enquanto o ticket aguarda a validação do solicitante, o detalhe
+apresenta exactamente duas acções: **«Confirmar solução e arquivar»** (RPC
+`close_support_ticket`, motivo registado na timeline) e **«O problema continua»**
+(foca a caixa de resposta; o ticket permanece aberto e o suporte é notificado
+pela própria RPC de mensagem). `close_support_ticket` passa a aceitar esses
+estados para Super Admin, gestor da empresa ou o próprio solicitante.
+
+**Consequências.** Nenhum estado do fluxo fica sem transição disponível ao
+solicitante, e o encerramento continua auditado em `support_ticket_events`.
