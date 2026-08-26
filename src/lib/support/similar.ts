@@ -23,6 +23,7 @@ export interface SimilarTicket {
   priority: SupportTicketPriority;
   type: SupportTicketType;
   module: string | null;
+  destination_code?: string | null;
   created_at: string;
   resolved_at: string | null;
   level: SimilarityLevel;
@@ -44,6 +45,11 @@ export async function findSimilarTickets(input: {
   module?: string | null;
   route?: string | null;
   limit?: number;
+  /**
+   * Destino do novo ticket (ADR-049): reforça tickets da mesma fila, mas nunca
+   * exclui as outras — um ticket pode ter sido encaminhado para o setor errado.
+   */
+  destinationCode?: string | null;
 }): Promise<SimilarResult> {
   const { data, error } = await (supabase as any).rpc("support_find_similar", {
     _company_id: input.companyId,
@@ -53,6 +59,7 @@ export async function findSimilarTickets(input: {
     _module: input.module || null,
     _route: input.route || null,
     _limit: input.limit ?? 5,
+    _destination_code: input.destinationCode || null,
   });
   if (error) throw error;
   const res = (data ?? {}) as Partial<SimilarResult>;

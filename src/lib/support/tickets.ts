@@ -24,6 +24,8 @@ export interface CreateTicketInput {
   priority: SupportTicketPriority;
   title: string;
   description: string;
+  /** Fila de destino obrigatória (ADR-049): `tech`, `accounting`, `secretary`, … */
+  destinationCode: string;
   module?: string | null;
   route?: string | null;
   pageUrl?: string | null;
@@ -62,6 +64,7 @@ export async function createTicket(input: CreateTicketInput): Promise<{ id: stri
     _route: input.route ?? null,
     _page_url: input.pageUrl ?? null,
     _technical_context: input.technicalContext ?? {},
+    _destination_code: input.destinationCode,
   });
   if (error) throw error;
   const row = Array.isArray(data) ? data[0] : data;
