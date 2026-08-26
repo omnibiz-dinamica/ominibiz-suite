@@ -78,6 +78,7 @@ import { EditRecurrenceDialog } from "@/components/tasks/EditRecurrenceDialog";
 import type { RecurrenceRow } from "@/lib/tasks";
 import { isRefused } from "@/lib/tasks";
 import { CancelTaskDialog } from "@/components/tasks/CancelTaskDialog";
+import { DeleteRecurrenceDialog } from "@/components/tasks/DeleteRecurrenceDialog";
 import { MarkAbsentDialog } from "@/components/tasks/MarkAbsentDialog";
 import {
   OpenPunchRecoveryDialog,
