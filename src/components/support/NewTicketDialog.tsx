@@ -240,7 +240,10 @@ export function NewTicketDialog({
   }
 
 
+  const busy = mutation.isPending || checkMut.isPending;
+
   const onFileChange = (list: FileList | null) => {
+
     if (!list) return;
     const arr: File[] = [];
     for (const f of Array.from(list)) {
