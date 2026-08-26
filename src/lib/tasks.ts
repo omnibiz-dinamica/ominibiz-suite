@@ -179,39 +179,150 @@ export const FREQUENCY_LABELS: Record<RecurrenceFrequency, string> = {
   custom: "Personalizada",
 };
 
-/** Frequência apresentada ao Gestor (biweekly = weekly + interval_weeks 2). */
-export type RecurrenceUiFrequency = RecurrenceFrequency | "biweekly";
+/**
+ * Frequência apresentada ao Gestor.
+ *  • biweekly    = weekly + interval_weeks 2.
+ *  • monthly_pos = monthly + monthly_rule { position, weekday }.
+ */
+export type RecurrenceUiFrequency = RecurrenceFrequency | "biweekly" | "monthly_pos";
 
 export const UI_FREQUENCY_LABELS: Record<RecurrenceUiFrequency, string> = {
   daily: "Diariamente",
   weekly: "Semanalmente",
   biweekly: "Semana sim, semana não (a cada 2 semanas)",
-  monthly: "Mensalmente",
+  monthly: "Mensalmente (dia do mês)",
+  monthly_pos: "Mensalmente (posição no mês)",
   custom: "Personalizada",
 };
+
+export const MONTH_POSITIONS = [
+  { value: 1, label: "Primeira" },
+  { value: 2, label: "Segunda" },
+  { value: 3, label: "Terceira" },
+  { value: 4, label: "Quarta" },
+  { value: -1, label: "Última" },
+] as const;
+
+export function monthPositionLabel(position: number): string {
+  return MONTH_POSITIONS.find((p) => p.value === position)?.label ?? String(position);
+}
 
 /** Converte a seleção da UI em (frequency, interval_weeks) persistidos. */
 export function uiFrequencyToStored(f: RecurrenceUiFrequency): {
   frequency: RecurrenceFrequency;
   intervalWeeks: number;
 } {
-  return f === "biweekly" ? { frequency: "weekly", intervalWeeks: 2 } : { frequency: f, intervalWeeks: 1 };
+  if (f === "biweekly") return { frequency: "weekly", intervalWeeks: 2 };
+  if (f === "monthly_pos") return { frequency: "monthly", intervalWeeks: 1 };
+  return { frequency: f, intervalWeeks: 1 };
 }
 
 /** Converte o par persistido na opção exibida ao Gestor. */
-export function storedToUiFrequency(frequency: RecurrenceFrequency, intervalWeeks?: number | null): RecurrenceUiFrequency {
-  return frequency === "weekly" && (intervalWeeks ?? 1) >= 2 ? "biweekly" : frequency;
+export function storedToUiFrequency(
+  frequency: RecurrenceFrequency,
+  intervalWeeks?: number | null,
+  monthlyRule?: RecurrenceRow["monthly_rule"] | null,
+): RecurrenceUiFrequency {
+  if (frequency === "weekly" && (intervalWeeks ?? 1) >= 2) return "biweekly";
+  if (frequency === "monthly" && monthlyRule?.position != null && monthlyRule?.weekday != null) return "monthly_pos";
+  return frequency;
 }
 
 /** Rótulo humano de uma série já gravada. */
-export function recurrenceFrequencyLabel(frequency: RecurrenceFrequency, intervalWeeks?: number | null): string {
-  return UI_FREQUENCY_LABELS[storedToUiFrequency(frequency, intervalWeeks)];
+export function recurrenceFrequencyLabel(
+  frequency: RecurrenceFrequency,
+  intervalWeeks?: number | null,
+  monthlyRule?: RecurrenceRow["monthly_rule"] | null,
+): string {
+  return UI_FREQUENCY_LABELS[storedToUiFrequency(frequency, intervalWeeks, monthlyRule)];
 }
 
 export const WEEKDAY_LABELS = ["D", "S", "T", "Q", "Q", "S", "S"];
 export const WEEKDAY_FULL = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
-export async function recurrenceMaterialize(daysAhead = 14, companyId?: string | null): Promise<number> {
+// ---------------------------------------------------------
+// Pré-visualização de ocorrências (espelha public.recurrence_materialize)
+// ---------------------------------------------------------
+export interface RecurrencePreviewInput {
+  frequency: RecurrenceFrequency;
+  intervalWeeks: number;
+  weekdays: number[];
+  monthlyRule: RecurrenceRow["monthly_rule"];
+  startDate: string;
+  endDate?: string | null;
+}
+
+const toDate = (iso: string) => new Date(`${iso}T12:00:00`);
+const weekStart = (d: Date) => {
+  const c = new Date(d);
+  c.setDate(c.getDate() - c.getDay());
+  return c;
+};
+
+/** Datas das próximas N ocorrências, na mesma lógica do motor no banco. */
+export function previewRecurrenceDates(input: RecurrencePreviewInput, count = 5): Date[] {
+  if (!input.startDate) return [];
+  const start = toDate(input.startDate);
+  const end = input.endDate ? toDate(input.endDate) : null;
+  const anchor = weekStart(start);
+  const interval = Math.max(1, input.intervalWeeks || 1);
+  const out: Date[] = [];
+  const cursor = new Date(start);
+  for (let i = 0; i < 800 && out.length < count; i++) {
+    if (end && cursor > end) break;
+    const dow = cursor.getDay();
+    let match = false;
+    if (input.frequency === "daily") {
+      match = true;
+    } else if (input.frequency === "weekly") {
+      match = input.weekdays.includes(dow);
+      if (match && interval > 1) {
+        const offset = Math.round((weekStart(cursor).getTime() - anchor.getTime()) / (7 * 86_400_000));
+        match = offset % interval === 0;
+      }
+    } else if (input.frequency === "monthly") {
+      const { position, weekday, day_of_month: dom } = input.monthlyRule ?? {};
+      if (position != null && weekday != null) {
+        if (dow === weekday) {
+          if (position === -1) {
+            const probe = new Date(cursor);
+            probe.setDate(probe.getDate() + 7);
+            match = probe.getMonth() !== cursor.getMonth();
+          } else {
+            match = Math.floor((cursor.getDate() - 1) / 7) + 1 === position;
+          }
+        }
+      } else {
+        match = cursor.getDate() === (dom ?? start.getDate());
+      }
+    }
+    if (match) out.push(new Date(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return out;
+}
+
+/** Frase-exemplo dinâmica exibida no formulário. */
+export function describeRecurrence(input: RecurrencePreviewInput): string {
+  const ui = storedToUiFrequency(input.frequency, input.intervalWeeks, input.monthlyRule);
+  if (ui === "daily") return "Todos os dias.";
+  if (ui === "weekly")
+    return input.weekdays.length > 0
+      ? `Toda semana: ${input.weekdays.map((d) => WEEKDAY_FULL[d]).join(", ")}.`
+      : "Selecione os dias da semana.";
+  if (ui === "biweekly")
+    return `A cada 2 semanas: ${(input.weekdays.length ? input.weekdays : [toDate(input.startDate || new Date().toISOString().slice(0, 10)).getDay()])
+      .map((d) => WEEKDAY_FULL[d])
+      .join(", ")} (semana sim, semana não).`;
+  if (ui === "monthly_pos")
+    return `Ex.: ${monthPositionLabel(input.monthlyRule?.position ?? 1).toLowerCase()} ${
+      WEEKDAY_FULL[input.monthlyRule?.weekday ?? 5]
+    } de cada mês.`;
+  if (ui === "monthly") return `Todo dia ${input.monthlyRule?.day_of_month ?? 1} de cada mês.`;
+  return "Regra personalizada.";
+}
+
+export async function recurrenceMaterialize(daysAhead = 60, companyId?: string | null): Promise<number> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase.rpc as any)("recurrence_materialize", {
     _days_ahead: daysAhead,
