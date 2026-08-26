@@ -794,7 +794,18 @@ function FeriasPage() {
                 <div className="flex items-center gap-2">
                   <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_TONE.aprovado}`}>aprovado</span>
                   {(r.user_id === user?.id || isManager) && (
-                    <Button size="sm" variant="ghost" onClick={() => decide.mutate({ id: r.id, action: "cancelar" })}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() =>
+                        setCancelTarget({
+                          id: r.id,
+                          employeeName: r.user_id === user?.id ? "Você" : nameOf(r.user_id),
+                          periodLabel: `${fmt(r.start_date)} → ${fmt(r.end_date)}`,
+                          statusLabel: STATUS_LABEL[r.status],
+                        })
+                      }
+                    >
                       Cancelar
                     </Button>
                   )}
