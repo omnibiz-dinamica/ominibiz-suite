@@ -49,6 +49,11 @@ interface Props {
   /** Funcionário: "Voltar para esta tarefa". */
   onGoToEntry?: () => void;
   onResolved?: () => void;
+  /**
+   * SUP-2026-000074 — regularizar E concluir a tarefa no mesmo ato
+   * (usado quando o gestor tenta concluir uma tarefa com ponto esquecido).
+   */
+  completeTask?: boolean;
 }
 
 type Step = "choose" | "form" | "confirm";
