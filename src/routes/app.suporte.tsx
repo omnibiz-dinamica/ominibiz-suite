@@ -61,19 +61,30 @@ function SupportListPage() {
   const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<"" | SupportTicketStatus>("");
+  const [destinationFilter, setDestinationFilter] = useState<string>("");
   const [q, setQ] = useState("");
 
+  const destinationsQ = useQuery({
+    queryKey: supportDestinationsQueryKey,
+    queryFn: fetchSupportDestinations,
+    staleTime: 5 * 60 * 1000,
+  });
+  const destinations = destinationsQ.data ?? [];
+
   const { data: tickets = [], isLoading } = useQuery<TicketRow[]>({
-    queryKey: ["support-tickets", "list", currentCompanyId, statusFilter],
+    queryKey: ["support-tickets", "list", currentCompanyId, statusFilter, destinationFilter],
     enabled: !!currentCompanyId,
     queryFn: async () => {
       let query = supabase
         .from("support_tickets")
-        .select("id, ticket_number, company_id, type, priority, status, title, created_at, updated_at")
+        .select(
+          "id, ticket_number, company_id, destination_code, type, priority, status, title, created_at, updated_at",
+        )
         .order("created_at", { ascending: false })
         .limit(200);
       // RLS já filtra por empresa para managers; para super admin operando dentro de empresa, filtramos manualmente
       if (currentCompanyId) query = query.eq("company_id", currentCompanyId);
+      if (destinationFilter) query = query.eq("destination_code", destinationFilter);
       if (statusFilter) query = query.eq("status", statusFilter);
       else query = query.not("status", "in", "(fechado,rejeitado)");
       const { data, error } = await query;
