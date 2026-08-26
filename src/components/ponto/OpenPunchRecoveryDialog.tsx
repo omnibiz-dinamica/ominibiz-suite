@@ -66,6 +66,7 @@ export function OpenPunchRecoveryDialog({
   attemptedTaskId,
   onGoToEntry,
   onResolved,
+  completeTask = false,
 }: Props) {
   const reasons = mode === "manager" ? MANAGER_REASONS : EMPLOYEE_REASONS;
   const [step, setStep] = useState<Step>(mode === "manager" ? "form" : "choose");
