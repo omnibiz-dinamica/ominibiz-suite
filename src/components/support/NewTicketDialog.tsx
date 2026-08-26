@@ -120,6 +120,9 @@ export function NewTicketDialog({
   const [module, setModule] = useState(defaultModule ?? "");
   const [files, setFiles] = useState<File[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
+  const [similar, setSimilar] = useState<SimilarResult | null>(null);
+  const [similarOpen, setSimilarOpen] = useState(false);
+
 
   const pageUrl = useMemo(
     () => (typeof window !== "undefined" ? window.location.href : ""),
