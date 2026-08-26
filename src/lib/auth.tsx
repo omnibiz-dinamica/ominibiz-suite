@@ -2,7 +2,13 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-export type AppRole = "super_admin" | "owner" | "manager" | "accountant" | "employee";
+export type AppRole =
+  | "super_admin"
+  | "owner"
+  | "manager"
+  | "accountant"
+  | "secretary"
+  | "employee";
 
 export interface AuthProfile {
   id: string;
@@ -260,6 +266,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             r.role === "accountant" && (!currentCompanyId || r.company_id === currentCompanyId),
         )
       ? "accountant"
+      : roles.some(
+          (r) =>
+            r.role === "secretary" && (!currentCompanyId || r.company_id === currentCompanyId),
+        )
+      ? "secretary"
       : roles.some((r) => r.role === "employee")
       ? "employee"
       : null,
