@@ -71,6 +71,7 @@ const DRAFT_KEY = "omnibiz:support:new-ticket:draft:v1";
 type Draft = {
   type?: string;
   priority?: string;
+  destinationCode?: string;
   title?: string;
   description?: string;
   module?: string;
