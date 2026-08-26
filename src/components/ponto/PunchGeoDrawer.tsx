@@ -116,6 +116,19 @@ export function PunchGeoDrawer({ open, onOpenChange, timeEntryId, entryLabel }: 
           <SummaryChip icon="🟣" label="Cliente sem GEO" value={summary.client_without_geo} tone="info" />
         </section>
 
+        {/* Cliente sem coordenadas não é erro de GPS do funcionário: é configuração
+            do cliente em falta. Sem isso não há raio para validar (ADR-042). */}
+        {summary.client_without_geo > 0 && (
+          <div className="mb-4 rounded-xl border border-violet-500/30 bg-violet-500/10 p-3 text-xs text-violet-700 dark:text-violet-300">
+            <strong className="font-semibold">Este cliente não tem localização definida.</strong>{" "}
+            Não é um erro de GPS do funcionário: sem coordenadas do cliente não existe raio
+            para validar, por isso estas picagens ficam marcadas como “Cliente sem coordenadas”.
+            Defina a localização em Clientes → editar cliente → Localização para passar a ver
+            “Dentro do raio”.
+          </div>
+        )}
+
+
         {/* Filtros */}
         <section className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-3">
           <Filter className="h-4 w-4 text-muted-foreground" />

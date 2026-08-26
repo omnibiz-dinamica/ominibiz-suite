@@ -813,3 +813,26 @@ materializar a sua própria cópia.
 outro responsável, semanal vs. semana sim/semana não) continuam permitidas —
 validado por teste SQL. Toda a operação é reversível e auditada em
 `public.task_dedupe_audit`.
+
+## ADR-042 — Todos os eventos de ponto usam a mesma avaliação de geolocalização
+
+**Contexto.** SUP-2026-000071: gestora reportou "erro de geolocalização" sempre na
+1ª picagem e muitas vezes na saída, no mesmo local físico. A auditoria mostrou que
+`punch_arrival_v2`, `punch_pause_v2`, `punch_resume_v2` e `punch_departure_v2`
+gravavam `geo_status = 'within'` sempre que existia `lat/lng`, sem consultar as
+coordenadas do cliente, enquanto `punch_start_v2`/`punch_stop_v2` avaliavam a
+política real. Como os 18 clientes da empresa não têm `geo_lat/geo_lng`, o Início e
+o Encerramento ficavam corretamente como `CLIENT_WITHOUT_LOCATION` (badge violeta)
+e os restantes eventos apareciam como "Dentro do raio" — leitura de erro.
+
+**Decisão.** Um único caminho de avaliação: os quatro eventos passam por
+`_punch_resolve_policy` + `_punch_evaluate_geo`, com `policy = alert` e
+`required = false` fixos (informativo, nunca bloqueante, sem justificativa),
+persistindo `client_lat/lng`, raio, distância e `reason_code` verdadeiros.
+`CLIENT_WITHOUT_LOCATION` é um estado de configuração, não erro: a UI passa a
+explicá-lo e a indicar onde definir a localização do cliente.
+
+**Consequências.** Histórico coerente por registo; "Dentro do raio" volta a
+significar validação real contra o raio; o gestor vê que falta configurar a
+localização do cliente em vez de suspeitar do GPS do funcionário. Registos
+antigos mantêm-se como foram gravados (imutabilidade da auditoria de ponto).
