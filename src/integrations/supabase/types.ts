@@ -2309,6 +2309,7 @@ export type Database = {
       }
       task_audit_events: {
         Row: {
+          action_scope: string | null
           actor_role: string
           actor_user_id: string
           company_id: string
@@ -2317,12 +2318,15 @@ export type Database = {
           id: string
           new_archived: boolean | null
           new_status: Database["public"]["Enums"]["task_status"] | null
+          occurrence_date: string | null
           previous_archived: boolean | null
           previous_status: Database["public"]["Enums"]["task_status"] | null
           reason: string | null
+          recurrence_id: string | null
           task_id: string
         }
         Insert: {
+          action_scope?: string | null
           actor_role: string
           actor_user_id: string
           company_id: string
@@ -2331,12 +2335,15 @@ export type Database = {
           id?: string
           new_archived?: boolean | null
           new_status?: Database["public"]["Enums"]["task_status"] | null
+          occurrence_date?: string | null
           previous_archived?: boolean | null
           previous_status?: Database["public"]["Enums"]["task_status"] | null
           reason?: string | null
+          recurrence_id?: string | null
           task_id: string
         }
         Update: {
+          action_scope?: string | null
           actor_role?: string
           actor_user_id?: string
           company_id?: string
@@ -2345,9 +2352,11 @@ export type Database = {
           id?: string
           new_archived?: boolean | null
           new_status?: Database["public"]["Enums"]["task_status"] | null
+          occurrence_date?: string | null
           previous_archived?: boolean | null
           previous_status?: Database["public"]["Enums"]["task_status"] | null
           reason?: string | null
+          recurrence_id?: string | null
           task_id?: string
         }
         Relationships: [
@@ -5484,6 +5493,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      task_series_delete: {
+        Args: { _reason?: string; _scope?: string; _task_id: string }
+        Returns: Json
       }
       task_soft_delete: {
         Args: { _task_id: string }
