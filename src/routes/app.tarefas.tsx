@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -1639,6 +1639,13 @@ function TaskForm({
   const [recurrence, setRecurrence] = useState<RecurrenceFormValue>(emptyRecurrence());
   const [pendingDocs, setPendingDocs] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
+  /**
+   * ADR-041 — guarda síncrona contra duplo clique/retry. O estado `loading`
+   * só reflete no próximo render; o ref bloqueia a segunda submissão já no
+   * mesmo tick, antes de qualquer INSERT.
+   */
+  const submittingRef = useRef(false);
+
   const timingMode: "start_stop" = "start_stop";
 
   // ---------------------------------------------------------------
@@ -1790,6 +1797,9 @@ function TaskForm({
             if (!ok) return;
           }
         }
+        // ADR-041 — segunda submissão (duplo clique/retry) é descartada aqui.
+        if (submittingRef.current) return;
+        submittingRef.current = true;
         setLoading(true);
         // Título derivado do cliente quando não preenchido manualmente.
         const clientName = clients.find((c) => c.id === clientId)?.name ?? "";
@@ -1827,9 +1837,14 @@ function TaskForm({
             );
           }
           // Uma série (task_recurrence) por funcionário selecionado.
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const ins = await (supabase.from("task_recurrences" as any) as any).insert(
-            assignees.map((memberId) => ({
+          // ADR-041: inserção individual + idempotência. Se o banco recusar por
+          // série ativa equivalente (RECURRENCE_DUPLICATE_ACTIVE), tratamos como
+          // "já existe" — nunca criamos um clone e nunca abortamos os restantes.
+          let duplicates = 0;
+          let created = 0;
+          for (const memberId of assignees) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const ins = await (supabase.from("task_recurrences" as any) as any).insert({
               company_id: companyId,
               created_by: userId,
               title: payload.title,
@@ -1849,15 +1864,32 @@ function TaskForm({
               scheduled_time: derivedTime,
               duration_minutes: derivedDuration,
               task_group_id: groupId,
-            })),
-          );
-          error = ins.error;
-          if (!error) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            await (supabase.rpc as any)("recurrence_materialize", {
-              _days_ahead: 14,
-              _company_id: companyId,
             });
+            if (ins.error) {
+              if (String(ins.error.message ?? "").includes("RECURRENCE_DUPLICATE_ACTIVE")) {
+                duplicates += 1;
+                continue;
+              }
+              error = ins.error;
+              break;
+            }
+            created += 1;
+          }
+          if (!error) {
+            if (created > 0) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              await (supabase.rpc as any)("recurrence_materialize", {
+                _days_ahead: 14,
+                _company_id: companyId,
+              });
+            }
+            if (duplicates > 0) {
+              toast.info(
+                created > 0
+                  ? `${duplicates} recorrência(s) já existiam e não foram duplicadas.`
+                  : "Esta recorrência já existe e não foi duplicada.",
+              );
+            }
           }
         } else {
           // Uma tarefa por funcionário selecionado (tasks.assigned_to segue único).
@@ -1879,6 +1911,7 @@ function TaskForm({
         }
 
         if (error) {
+          submittingRef.current = false;
           setLoading(false);
           toast.error(error.message);
           return;
@@ -1887,11 +1920,13 @@ function TaskForm({
           try {
             for (const taskId of createdTaskIds) await uploadCreationDocs(taskId);
           } catch (e) {
+            submittingRef.current = false;
             setLoading(false);
             toast.error((e as Error).message);
             return;
           }
         }
+        submittingRef.current = false;
         setLoading(false);
         toast.success(
           initial ? "Tarefa atualizada" : assignees.length > 1 ? `${assignees.length} tarefas criadas` : "Tarefa criada",

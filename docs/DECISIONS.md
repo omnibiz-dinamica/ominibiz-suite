@@ -786,3 +786,30 @@ estados para Super Admin, gestor da empresa ou o próprio solicitante.
 
 **Consequências.** Nenhum estado do fluxo fica sem transição disponível ao
 solicitante, e o encerramento continua auditado em `support_ticket_events`.
+
+## ADR-041 — Série de recorrência equivalente é bloqueada na origem
+- Data: 2026-08-26
+- Status: Aceite
+- Prioridade: P0
+
+**Contexto.** O calendário apresentava a mesma ocorrência ×2/×3 (Guido Fruit,
+Mme Stefani, Escritório Life Tidy PT). O índice único existente
+(`recurrence_id`, `recurrence_date`) só protege *dentro* da mesma série, pelo que
+submissões repetidas do formulário criaram séries idênticas, cada uma a
+materializar a sua própria cópia.
+
+**Decisão.**
+1. Dados: soft-delete (`deleted_at`) apenas de duplicatas comprovadas — status
+   `pendente` e zero apontamentos, fotos, documentos, recusas ou folha de ponto.
+   Tarefas com histórico ficam em `REVISAO_MANUAL` e nunca são tocadas.
+2. Origem: índice único parcial sobre a chave canónica das séries `active`
+   (`company_id, title, client_id, assigned_to, scheduled_time, frequency,
+   weekdays, interval_weeks, monthly_rule, start_date, end_date`) e trigger que
+   levanta `RECURRENCE_DUPLICATE_ACTIVE` com o id da série existente.
+3. UI: o duplo clique é descartado por ref síncrona; o erro de duplicado é
+   tratado como idempotência ("já existe"), não como falha.
+
+**Consequências.** Recorrências legítimas diferentes (outro horário, outro dia,
+outro responsável, semanal vs. semana sim/semana não) continuam permitidas —
+validado por teste SQL. Toda a operação é reversível e auditada em
+`public.task_dedupe_audit`.
