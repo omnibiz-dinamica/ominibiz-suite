@@ -1605,9 +1605,22 @@ function TaskRowItem({
             )}
           </>
         )}
+        {/* ADR-044 — falta continua acessível em 'em andamento' e para completar o registo de ausências automáticas. */}
+        {!actions.includes("marcar_ausente") && canMarkAbsent(t, { isManager }) && (
+          <Button
+            size="sm"
+            variant="ghost"
+            title={t.status === "ausente" ? "Registar motivo da falta" : "Marcar falta"}
+            onClick={() => onTransition(t, "marcar_ausente")}
+          >
+            <UserX className="h-3 w-3" />
+            <span className="ml-1 hidden sm:inline">{t.status === "ausente" ? "Registar falta" : "Marcar falta"}</span>
+          </Button>
+        )}
         {actions.map((a) => (
           <ActionButton key={a} action={a} disabled={transitionPending} onClick={() => onTransition(t, a)} />
         ))}
+
       </div>
     </li>
   );
