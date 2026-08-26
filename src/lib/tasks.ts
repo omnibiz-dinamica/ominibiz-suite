@@ -382,20 +382,14 @@ export function availableActions(
     out.push("iniciar");
   if ((task.status === "pendente" || task.status === "autorizado") && isAssignee) out.push("recusar");
   if (task.status === "em_andamento" && (isAssignee || ctx.isManager)) out.push("concluir");
-  if (
-    ctx.isManager &&
-    canBecomeAbsent({
-      status: task.status,
-      scheduled_for: task.scheduled_for ?? null,
-      recurrence_date: task.recurrence_date ?? null,
-      due_at: task.due_at ?? null,
-    })
-  )
-    out.push("marcar_ausente");
+  // ADR-044 — o gestor pode registar falta a qualquer momento (motivo obrigatório),
+  // sem esperar pelo limiar de ausência automática.
+  if (ctx.isManager && (task.status === "pendente" || task.status === "autorizado")) out.push("marcar_ausente");
   if (ctx.isManager) out.push("cancelar");
 
   return out;
 }
+
 
 export const ACTION_LABELS: Record<TaskAction, string> = {
   autorizar: "Autorizar",
