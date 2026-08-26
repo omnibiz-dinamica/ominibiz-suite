@@ -113,6 +113,11 @@ function SupportAdminPage() {
   });
 
   const companyOptions = useMemo(() => companies.map((c) => [c.id, c.name] as const), [companies]);
+  const companyNameMap = useMemo(
+    () => new Map(companies.map((c) => [c.id, c.name] as const)),
+    [companies],
+  );
+
 
   const companySummary = useMemo(() => {
     const stats = new Map<string, { total: number; open: number; urgent: number; latest: string | null }>();
