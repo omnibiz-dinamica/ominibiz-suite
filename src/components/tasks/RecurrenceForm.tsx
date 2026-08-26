@@ -239,6 +239,23 @@ export function RecurrenceForm({
             </div>
           </div>
 
+          <div className="rounded-lg bg-muted/50 p-2.5">
+            <div className="text-xs font-medium">Próximas ocorrências</div>
+            {nextDates.length === 0 ? (
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Nenhuma ocorrência prevista com esta configuração.
+              </p>
+            ) : (
+              <ul className="mt-1 space-y-0.5 text-[11px] text-muted-foreground">
+                {nextDates.map((d) => (
+                  <li key={d.toISOString()}>
+                    {d.toLocaleDateString("pt-PT", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" })}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
           <p className="text-[11px] text-muted-foreground">
             Sem data fim, a recorrência fica ativa até desligamento do funcionário,
             encerramento do cliente ou cancelamento manual.
