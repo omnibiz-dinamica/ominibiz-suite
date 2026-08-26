@@ -170,17 +170,17 @@ export function NewTicketDialog({
     try {
       window.sessionStorage.setItem(
         DRAFT_KEY,
-        JSON.stringify({ type, priority, title, description, module }),
+        JSON.stringify({ type, priority, destinationCode, title, description, module }),
       );
     } catch {
       /* ignore */
     }
-  }, [open, type, priority, title, description, module]);
+  }, [open, type, priority, destinationCode, title, description, module]);
 
   const mutation = useMutation({
     mutationFn: async () => {
       if (!currentCompanyId) throw new Error("Nenhuma empresa selecionada.");
-      const parsed = schema.safeParse({ type, priority, title, description, module });
+      const parsed = schema.safeParse({ type, priority, destinationCode, title, description, module });
       if (!parsed.success) {
         throw new Error(parsed.error.issues[0]?.message ?? "Dados inválidos");
       }
@@ -188,6 +188,7 @@ export function NewTicketDialog({
         companyId: currentCompanyId,
         type,
         priority,
+        destinationCode: parsed.data.destinationCode,
         title: parsed.data.title,
         description: parsed.data.description,
         module: parsed.data.module || null,
@@ -232,13 +233,14 @@ export function NewTicketDialog({
         description,
         module: module || null,
         route,
+        destinationCode: destinationCode || null,
       });
     },
   });
 
   async function handleSubmit() {
     setFormError(null);
-    const parsed = schema.safeParse({ type, priority, title, description, module });
+    const parsed = schema.safeParse({ type, priority, destinationCode, title, description, module });
     if (!parsed.success) {
       const msg = parsed.error.issues[0]?.message ?? "Dados inválidos";
       setFormError(msg);
