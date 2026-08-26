@@ -648,11 +648,14 @@ function SupportDetailPage() {
                 </div>
               )}
               <Textarea
+                id="support-reply"
+                ref={replyRef}
                 value={reply}
                 onChange={(e) => setReply(e.target.value)}
                 placeholder="Escreva uma resposta…"
                 rows={4}
               />
+
               <div className="flex flex-wrap items-center justify-between gap-2">
                 {isSuperAdmin ? (
                   <label className="flex items-center gap-2 text-sm">
