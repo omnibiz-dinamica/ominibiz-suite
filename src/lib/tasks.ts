@@ -157,7 +157,12 @@ export interface RecurrenceRow {
    * 1 = todas as semanas; 2 = "semana sim, semana não".
    */
   interval_weeks: number;
-  monthly_rule: { day_of_month?: number };
+  /**
+   * Regra mensal. Retrocompatível:
+   *  • `{ day_of_month: n }` → todo dia n (formato legado, preservado).
+   *  • `{ position, weekday }` → BYSETPOS/BYDAY (ex.: última sexta = position -1, weekday 5).
+   */
+  monthly_rule: { day_of_month?: number; position?: number; weekday?: number };
   start_date: string;
   end_date: string | null;
   status: RecurrenceStatus;
