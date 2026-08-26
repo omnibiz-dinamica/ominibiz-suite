@@ -123,6 +123,7 @@ export function NewTicketDialog({
 
   const [type, setType] = useState<SupportTicketType>(defaultType ?? "duvida");
   const [priority, setPriority] = useState<SupportTicketPriority>("normal");
+  const [destinationCode, setDestinationCode] = useState<string>("");
   const [title, setTitle] = useState(defaultTitle ?? "");
   const [description, setDescription] = useState("");
   const [module, setModule] = useState(defaultModule ?? "");
@@ -137,11 +138,21 @@ export function NewTicketDialog({
     [open],
   );
 
+  // Catálogo de destinos (ADR-049) — vem da base, permite novas filas sem código.
+  const destinationsQ = useQuery({
+    queryKey: supportDestinationsQueryKey,
+    queryFn: fetchSupportDestinations,
+    staleTime: 5 * 60 * 1000,
+  });
+  const destinations = destinationsQ.data ?? [];
+  const selectedDestination = destinations.find((d) => d.code === destinationCode) ?? null;
+
   useEffect(() => {
     if (open) {
       const draft = readDraft();
       setType((draft?.type as SupportTicketType) ?? defaultType ?? "duvida");
       setPriority((draft?.priority as SupportTicketPriority) ?? "normal");
+      setDestinationCode(draft?.destinationCode ?? "");
       setTitle(draft?.title ?? defaultTitle ?? "");
       setDescription(draft?.description ?? "");
       setModule(draft?.module ?? defaultModule ?? "");
