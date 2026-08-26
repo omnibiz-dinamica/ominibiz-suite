@@ -153,7 +153,24 @@ function SupportListPage() {
             ))}
           </SelectContent>
         </Select>
+        <Select
+          value={destinationFilter || "all"}
+          onValueChange={(v) => setDestinationFilter(v === "all" ? "" : v)}
+        >
+          <SelectTrigger className="w-56">
+            <SelectValue placeholder="Destino" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os destinos</SelectItem>
+            {destinations.map((d) => (
+              <SelectItem key={d.code} value={d.code}>
+                {d.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
+
 
       {isLoading ? (
         <div className="text-sm text-muted-foreground">Carregando…</div>
@@ -184,6 +201,10 @@ function SupportListPage() {
                       {TICKET_PRIORITY_LABEL[t.priority]}
                     </span>
                     <span className="text-muted-foreground">{TICKET_TYPE_LABEL[t.type]}</span>
+                    <span className="rounded bg-primary/10 px-1.5 py-0.5 text-primary">
+                      {(DESTINATION_EMOJI[t.destination_code ?? ""] ?? "→") + " "}
+                      {destinationLabel(t.destination_code, destinations)}
+                    </span>
                   </div>
                   <div className="mt-1 truncate text-sm font-medium">{t.title}</div>
                 </div>
