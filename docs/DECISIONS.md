@@ -905,3 +905,40 @@ reflete a hora real informada. Nenhuma alteração de banco foi necessária — 
 RPCs de recuperação (ADR-034) passam a ser o caminho único de conclusão nesses
 casos.
 
+
+## ADR-046 — Cancelamento de férias: ação explícita, auditada e reversível
+
+**Contexto.** Um pedido de férias da funcionária Keila Oliveira (29/09/2026 →
+05/10/2026) apareceu como "Cancelado" 16,8 segundos depois de ser criado. A
+investigação mostrou que `/app/ferias` expunha botões "Cancelar" de clique único
+que disparavam `vacation_decide(action => 'cancelar')` sem confirmação, sem
+motivo e sem registo do ator — `vacation_requests` não tinha `cancelled_by`,
+pelo que era impossível saber quem cancelou. O botão convivia visualmente com
+botões de "Cancelar" que significam "fechar formulário", tornando o clique
+acidental provável.
+
+**Decisão.**
+1. **Auditoria dedicada.** Nova tabela append-only `public.vacation_audit`
+   (`vacation_request_id`, `company_id`, `actor_id`, `action`, `from_status`,
+   `to_status`, `reason`, `source`, `metadata`). RLS: Super Admin, gestor/owner
+   da empresa e o próprio funcionário leem; ninguém escreve pela Data API.
+   `vacation_decide` passa a registar **todas** as transições.
+2. **Autoria do cancelamento.** `vacation_requests` ganha `cancelled_by` e
+   `cancellation_reason`, preenchidos pela RPC.
+3. **Cancelamento é ato privilegiado.** Trigger `vacation_guard_cancel` rejeita
+   qualquer transição para `cancelado` que não venha de `vacation_decide`
+   (`omnibiz.vacation_cancel_ok`) ou que não tenha ator identificado —
+   `UPDATE` livre e efeitos colaterais deixam de conseguir cancelar férias.
+4. **UI com dupla confirmação.** `CancelVacationDialog` (ADR-026) substitui o
+   clique único: mostra funcionário, período e estado atual, exige motivo
+   (mín. 3 caracteres) e um segundo passo de confirmação destrutiva.
+5. **Restauração pontual.** Apenas o pedido `754239db-…` voltou a `pendente`,
+   com duas linhas em `vacation_audit` (reconstrução histórica do cancelamento
+   indevido + restauração administrativa) e nova notificação ao aprovador. Os
+   restantes 3 cancelamentos da base — todos com intervalo normal entre criação
+   e cancelamento — não foram tocados.
+
+**Consequências.** Nenhum cancelamento de férias volta a ser possível por clique
+acidental ou por caminho não auditado; cada cancelamento tem ator, motivo e
+timestamp de servidor. O histórico do pedido restaurado permanece visível em vez
+de ser apagado.
