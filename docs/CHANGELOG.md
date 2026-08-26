@@ -7,6 +7,17 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### 🎯 Destino obrigatório do ticket (ADR-049)
+
+#### Adicionado
+- Catálogo de filas em `public.support_destinations` (Suporte/Desenvolvimento, Contabilista, Secretária) — novas filas (RH, Financeiro, Jurídico…) entram por dados, sem alterar código.
+- Campo obrigatório **«Para quem deseja enviar este ticket?»** no `NewTicketDialog`, em cards, com resumo antes do envio (destino ≠ responsável).
+- Coluna `support_tickets.destination_code` com backfill por tipo; badge de destino na lista e no detalhe; filtro por destino na Central de Suporte.
+- Reencaminhamento auditado entre filas (`support_set_ticket_destination`) para Gestor e Super Admin, com evento `destination_changed`.
+- Papel `secretary` no enum `app_role`; Contabilista e Secretária acedem apenas aos tickets da sua fila, dentro da própria empresa (RLS mantida).
+- Detecção de semelhantes (ADR-048) passa a usar o destino como reforço de pontuação, sem excluir tickets de outras filas.
+
+
 ### 🎫 Correção sequencial de tickets abertos
 
 #### Corrigido
