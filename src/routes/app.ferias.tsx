@@ -834,7 +834,18 @@ function FeriasPage() {
                     </div>
                     {r.note && <div className="text-xs text-muted-foreground">{r.note}</div>}
                   </div>
-                  <Button size="sm" variant="ghost" onClick={() => decide.mutate({ id: r.id, action: "cancelar" })}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() =>
+                      setCancelTarget({
+                        id: r.id,
+                        employeeName: "Você",
+                        periodLabel: `${fmt(r.start_date)} → ${fmt(r.end_date)}`,
+                        statusLabel: STATUS_LABEL[r.status],
+                      })
+                    }
+                  >
                     Cancelar
                   </Button>
                 </li>
