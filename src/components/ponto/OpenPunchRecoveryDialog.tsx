@@ -49,6 +49,11 @@ interface Props {
   /** Funcionário: "Voltar para esta tarefa". */
   onGoToEntry?: () => void;
   onResolved?: () => void;
+  /**
+   * SUP-2026-000074 — regularizar E concluir a tarefa no mesmo ato
+   * (usado quando o gestor tenta concluir uma tarefa com ponto esquecido).
+   */
+  completeTask?: boolean;
 }
 
 type Step = "choose" | "form" | "confirm";
@@ -61,6 +66,7 @@ export function OpenPunchRecoveryDialog({
   attemptedTaskId,
   onGoToEntry,
   onResolved,
+  completeTask = false,
 }: Props) {
   const reasons = mode === "manager" ? MANAGER_REASONS : EMPLOYEE_REASONS;
   const [step, setStep] = useState<Step>(mode === "manager" ? "form" : "choose");
@@ -123,14 +129,16 @@ export function OpenPunchRecoveryDialog({
         endedAtIso: localInputToIso(endedAt),
         reasonCode,
         reasonText: reasonText.trim() || null,
-        completeTask: false,
+        completeTask,
       });
       if (!res.success) {
         toast.error(res.message ?? res.code);
         setStep("form");
         return;
       }
-      toast.success(res.message ?? "Ponto regularizado.");
+      toast.success(
+        completeTask ? "Ponto regularizado e tarefa concluída." : (res.message ?? "Ponto regularizado."),
+      );
       onOpenChange(false);
       onResolved?.();
     } catch (e) {

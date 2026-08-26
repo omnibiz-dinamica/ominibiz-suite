@@ -10,6 +10,14 @@
 ### 🎫 Correção sequencial de tickets abertos
 
 #### Corrigido
+- **SUP-2026-000074 (Urgente) — concluir tarefa com ponto esquecido (ADR-045).**
+  Quando o funcionário esquecia a saída, a conclusão da tarefa falhava (ou
+  fecharia o ponto em `now()`, inflando horas). O ecrã de Tarefas passa a
+  detetar o ponto em aberto e abre o modal canónico de Recuperação de Ponto
+  Aberto com hora real de saída + motivo obrigatórios, regularizando e
+  concluindo a tarefa num único ato auditado (`punch_recover_open_entry` com
+  `_complete_task = true`). Erros do `task_transition` relacionados com ponto
+  aberto passam a oferecer a regularização em vez de mensagem seca.
 - **SUP-2026-000073 (Urgente) — gestor sem opção de «marcar falta» (ADR-044).**
   A ausência só podia ser marcada automaticamente (ou pelo gestor após o limiar),
   e uma tarefa já «Ausente» ficava terminal, sem forma de registar formalmente a

@@ -79,6 +79,11 @@ import type { RecurrenceRow } from "@/lib/tasks";
 import { isRefused } from "@/lib/tasks";
 import { CancelTaskDialog } from "@/components/tasks/CancelTaskDialog";
 import { MarkAbsentDialog } from "@/components/tasks/MarkAbsentDialog";
+import {
+  OpenPunchRecoveryDialog,
+  type RecoveryEntry,
+} from "@/components/ponto/OpenPunchRecoveryDialog";
+import { fetchOpenEntries, fetchOpenEntrySelf } from "@/lib/punch/recovery";
 
 
 import { EmployeePicker } from "@/components/common/EmployeePicker";
@@ -144,6 +149,8 @@ function TasksPage() {
 
   // ADR-036 — cancelamento sempre com motivo obrigatório e auditado.
   const [cancelling, setCancelling] = useState<TaskRow | null>(null);
+  // SUP-2026-000074 — ponto esquecido bloqueia a conclusão: regularizar + concluir.
+  const [recovering, setRecovering] = useState<RecoveryEntry | null>(null);
   const [refusalReason, setRefusalReason] = useState("");
   const [view, setView] = useState<"active" | "archived">("active");
   const [taskView, setTaskView] = useState<"list" | "calendar">("list");
@@ -216,6 +223,51 @@ function TasksPage() {
     enabled: !!currentCompanyId,
   });
 
+  /**
+   * SUP-2026-000074 — pontos ainda em aberto (esquecimento de saída).
+   * Gestor vê os da empresa; funcionário apenas o seu.
+   */
+  const { data: openPunches } = useQuery({
+    queryKey: ["tasks-open-punches", currentCompanyId, user?.id, isManager],
+    queryFn: async (): Promise<RecoveryEntry[]> => {
+      if (isManager) {
+        const rows = await fetchOpenEntries(currentCompanyId);
+        return rows.map((r) => ({
+          time_entry_id: r.time_entry_id,
+          task_id: r.task_id,
+          task_title: r.task_title,
+          task_status: r.task_status,
+          client_name: r.client_name,
+          company_name: r.company_name,
+          started_at: r.started_at,
+          notes: r.notes,
+          user_name: r.user_name,
+        }));
+      }
+      const self = await fetchOpenEntrySelf();
+      if (!self) return [];
+      return [
+        {
+          time_entry_id: self.time_entry_id,
+          task_id: self.task_id,
+          task_title: self.task_title,
+          task_status: self.task_status,
+          client_name: self.client_name,
+          company_name: self.company_name,
+          started_at: self.started_at,
+          notes: self.notes,
+        },
+      ];
+    },
+    enabled: !!user,
+  });
+
+  const openPunchByTask = useMemo(() => {
+    const map = new Map<string, RecoveryEntry>();
+    for (const e of openPunches ?? []) if (e.task_id) map.set(e.task_id, e);
+    return map;
+  }, [openPunches]);
+
   // Varredura de ausentes por evento: ao carregar a tela. Nunca em loop.
   useEffect(() => {
     if (!user || !isManager) return;
@@ -244,11 +296,20 @@ function TasksPage() {
       transitionTask(id, action, reason),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["tasks-open-punches"] });
       toast.success("Tarefa atualizada");
       setRefusing(null);
       setRefusalReason("");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error, vars) => {
+      // SUP-2026-000074 — ponto esquecido: oferecer regularização em vez de erro seco.
+      const entry = openPunchByTask.get(vars.id);
+      if (entry && /ponto/i.test(e.message)) {
+        setRecovering(entry);
+        return;
+      }
+      toast.error(e.message);
+    },
   });
 
   const deleteTask = useMutation({
@@ -329,6 +390,21 @@ function TasksPage() {
     if (action === "marcar_ausente") {
       setAbsenceTarget(task);
       return;
+    }
+
+    // SUP-2026-000074 — concluir tarefa cujo ponto ficou aberto por esquecimento
+    // exige hora real de saída + motivo (nunca fechar silenciosamente em now()).
+    if (action === "concluir") {
+      const entry = openPunchByTask.get(task.id);
+      if (entry) {
+        const startedDay = formatWallDate(entry.started_at);
+        const today = formatWallDate(new Date().toISOString());
+        const isOtherUser = isManager && task.assigned_to !== user?.id;
+        if (startedDay !== today || isOtherUser) {
+          setRecovering(entry);
+          return;
+        }
+      }
     }
 
     transition.mutate({ id: task.id, action });
@@ -550,6 +626,21 @@ function TasksPage() {
         onDone={() => {
           setAbsenceTarget(null);
           qc.invalidateQueries({ queryKey: ["tasks"] });
+        }}
+      />
+
+      {/* SUP-2026-000074 — regularizar ponto esquecido e concluir a tarefa. */}
+      <OpenPunchRecoveryDialog
+        open={!!recovering}
+        onOpenChange={(o) => !o && setRecovering(null)}
+        mode={isManager ? "manager" : "employee"}
+        entry={recovering}
+        completeTask
+        onResolved={() => {
+          setRecovering(null);
+          qc.invalidateQueries({ queryKey: ["tasks"] });
+          qc.invalidateQueries({ queryKey: ["tasks-open-punches"] });
+          qc.invalidateQueries({ queryKey: ["notifications"] });
         }}
       />
 

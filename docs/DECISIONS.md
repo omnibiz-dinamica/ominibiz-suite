@@ -883,3 +883,25 @@ transitar diretamente, o botão deixa de depender do limiar temporal, e a lista
 mostra origem, motivo e classificação da falta. `task_transition` mantém-se
 inalterado para compatibilidade (ecrã de ponto).
 
+## ADR-045 — Conclusão de tarefa com ponto esquecido (SUP-2026-000074)
+
+**Contexto.** Quando o funcionário esquecia de bater a saída, o gestor não
+conseguia concluir a tarefa: a ação falhava com erro relativo ao ponto aberto ou,
+na melhor hipótese, fecharia o registo em `now()` — inflando horas sem qualquer
+justificação auditada.
+
+**Decisão.** A conclusão de tarefa com ponto em aberto deixa de ser uma
+transição direta. O ecrã de Tarefas consulta os pontos abertos
+(`punch_open_entries_list` para gestor, `punch_open_entry_self` para funcionário)
+e, quando o ponto pertence a outro utilizador ou começou num dia anterior, abre o
+modal canónico `OpenPunchRecoveryDialog` com `completeTask`, delegando o
+encerramento a `punch_recover_open_entry(..., _complete_task => true)`: hora real
+de saída e motivo obrigatórios, auditoria em `time_entries_audit` e notificação
+ao funcionário. Erros de `task_transition` que mencionem ponto aberto também
+abrem o mesmo modal.
+
+**Consequências.** Nenhum ponto é fechado silenciosamente e a folha de ponto
+reflete a hora real informada. Nenhuma alteração de banco foi necessária — as
+RPCs de recuperação (ADR-034) passam a ser o caminho único de conclusão nesses
+casos.
+
