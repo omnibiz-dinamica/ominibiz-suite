@@ -7,6 +7,20 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### 🗑️ Exclusão segura de tarefas recorrentes (ADR-051)
+
+#### Adicionado
+- Modal de escolha de âmbito ao excluir uma ocorrência de série: **Apenas esta ocorrência** ou **Esta e todas as futuras**, com motivo opcional registado na auditoria.
+- RPC `public.task_series_delete(_task_id, _scope, _reason)` — soft-delete das ocorrências sem histórico, cancelamento auditado das que têm histórico e encerramento da série na data de corte quando o âmbito é «futuras».
+- `task_audit_events` passa a registar `recurrence_id`, `occurrence_date` e `action_scope`.
+
+#### Preservado
+- Tarefas únicas mantêm exatamente o fluxo de exclusão anterior (`task_soft_delete`).
+- Ocorrências passadas nunca são alteradas; ocorrências com ponto, documentos ou fotos nunca são apagadas fisicamente; ponto aberto continua a bloquear a operação (`TASK_HAS_OPEN_PUNCH`).
+- RLS/RBAC inalterados: apenas gestor da empresa ou super admin executa a operação.
+
+---
+
 ### 🔁 Motor de recorrência v2 (ADR-050)
 
 #### Corrigido

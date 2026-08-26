@@ -1098,3 +1098,34 @@ série de uma vez — cria milhares de tarefas para séries sem data final.
 **Consequências.** Séries quinzenais completas até a data final, regras do tipo
 «última sexta-feira do mês» disponíveis, previsibilidade na UI e nenhuma
 alteração em séries ou tarefas já existentes.
+
+---
+
+## ADR-051 — Exclusão segura de tarefas recorrentes
+
+**Contexto.** Excluir uma tarefa de série apagava apenas a ocorrência, sem
+distinguir «apenas esta» de «esta e as futuras», e o motor podia continuar a
+gerar as datas seguintes.
+
+**Decisão.**
+- Nova RPC `public.task_series_delete(_task_id, _scope, _reason)` com
+  `_scope ∈ {single, future}`, `SECURITY DEFINER`, restrita a gestor da empresa
+  ou super admin.
+- `single` faz soft-delete da ocorrência: a linha permanece com `deleted_at`, e
+  o índice único `(recurrence_id, recurrence_date)` garante que
+  `recurrence_materialize` não a recria.
+- `future` usa como corte `recurrence_date` da ocorrência escolhida, atua sobre
+  as ocorrências com data ≥ corte e encerra a série
+  (`status = 'ended'`, `end_date = corte - 1`). Passadas ficam intactas.
+- Ocorrências com `time_entries`/`task_documents` ou em `em_andamento` nunca são
+  apagadas: são canceladas com motivo. Já terminais são preservadas; ponto
+  aberto devolve `TASK_HAS_OPEN_PUNCH`.
+- Auditoria em `task_audit_events` com `recurrence_id`, `occurrence_date` e
+  `action_scope`.
+
+**Alternativas rejeitadas.** (1) Tabela de exceções da série — o soft-delete já
+serve de exceção via índice único. (2) `DELETE` físico — destrói histórico
+operacional e auditoria.
+
+**Consequências.** Séries limpáveis com precisão, histórico e auditoria
+preservados, tarefas únicas com o fluxo anterior inalterado.
