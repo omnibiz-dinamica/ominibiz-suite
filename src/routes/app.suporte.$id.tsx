@@ -810,12 +810,28 @@ function SupportDetailPage() {
           </Button>
         )}
 
+        {/* SUP-2026-000070 — ticket devolvido ao solicitante: validar ou contestar. */}
+        {!isClosed && awaitingValidation && (
+          <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
+            <p className="text-xs text-muted-foreground">
+              Este ticket aguarda a sua validação. Confirme a solução para arquivar ou informe que o problema continua.
+            </p>
+            <Button className="w-full" onClick={() => setArchiveOpen(true)}>
+              <Archive className="mr-1 h-4 w-4" /> Confirmar solução e arquivar
+            </Button>
+            <Button variant="outline" className="w-full" onClick={focusReply}>
+              <RotateCcw className="mr-1 h-4 w-4" /> O problema continua
+            </Button>
+          </div>
+        )}
+
         {ARCHIVABLE_STATUSES.includes(t.status) && (
           <Button className="w-full" onClick={() => setArchiveOpen(true)}>
             <Archive className="mr-1 h-4 w-4" /> Arquivar ticket
           </Button>
         )}
       </aside>
+
 
       <ReopenTicketDialog
         open={reopenOpen}
