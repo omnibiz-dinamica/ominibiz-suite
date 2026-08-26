@@ -392,6 +392,21 @@ function TasksPage() {
       return;
     }
 
+    // SUP-2026-000074 — concluir tarefa cujo ponto ficou aberto por esquecimento
+    // exige hora real de saída + motivo (nunca fechar silenciosamente em now()).
+    if (action === "concluir") {
+      const entry = openPunchByTask.get(task.id);
+      if (entry) {
+        const startedDay = formatWallDate(entry.started_at);
+        const today = formatWallDate(new Date().toISOString());
+        const isOtherUser = isManager && task.assigned_to !== user?.id;
+        if (startedDay !== today || isOtherUser) {
+          setRecovering(entry);
+          return;
+        }
+      }
+    }
+
     transition.mutate({ id: task.id, action });
   };
   const submitRefusal = () => {
