@@ -495,9 +495,14 @@ export function normalizeBillingCountry(country: string | null | undefined): Bil
 export function normalizeModules(modules: CompanyBilling["enabled_modules"]): ModuleKey[] {
   const values = Array.isArray(modules) && modules.length > 0 ? modules : DEFAULT_ENABLED_MODULES;
   return Array.from(
-    new Set(values.filter((m): m is ModuleKey => Object.prototype.hasOwnProperty.call(MODULE_CATALOG, m))),
+    new Set([
+      // ADR-047 — piso mínimo: módulos essenciais nunca somem do menu.
+      ...ESSENTIAL_MODULES,
+      ...values.filter((m): m is ModuleKey => Object.prototype.hasOwnProperty.call(MODULE_CATALOG, m)),
+    ]),
   );
 }
+
 
 export function isModuleEnabled(modules: CompanyBilling["enabled_modules"], module: ModuleKey): boolean {
   return normalizeModules(modules).includes(module);
