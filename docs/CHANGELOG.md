@@ -913,3 +913,17 @@ queries, mutations ou fluxos funcionais.**
   (`submittingRef`) e criação de séries **uma a uma** com tratamento idempotente do
   erro de duplicado (avisa "já existe", nunca aborta os restantes responsáveis).
 - Ver ADR-041.
+
+## Ponto · avaliação de geolocalização consistente (SUP-2026-000071) · 2026-08-26
+
+- Chegada, Pausa, Retomada e Partida deixaram de gravar `geo_status = 'within'`
+  fixo: passam a usar `_punch_resolve_policy` + `_punch_evaluate_geo`, como já
+  faziam Início e Encerramento. Estes eventos continuam a **nunca bloquear** o
+  funcionário — apenas registam a situação real (dentro, fora, sem GPS ou
+  cliente sem coordenadas) com `client_lat/lng`, raio e distância.
+- Fim da incoerência reportada: a mesma picagem, no mesmo local, aparecia como
+  "Dentro do raio" na Pausa/Retomada/Partida e "Cliente sem coordenadas" no
+  Início/Encerramento (falso "erro de geolocalização").
+- `PunchGeoDrawer`: aviso explicativo quando o cliente não tem coordenadas —
+  deixa claro que não é erro de GPS do funcionário e indica onde configurar.
+- Ver ADR-042.
