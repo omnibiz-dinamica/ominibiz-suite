@@ -191,7 +191,7 @@ function AttachmentThumb({ att, onOpen }: { att: AttachmentRow; onOpen: (a: Atta
 
 function SupportDetailPage() {
   const { id } = useParams({ from: "/app/suporte/$id" });
-  const { user, isSuperAdmin } = useAuth();
+  const { user, isSuperAdmin, isManager } = useAuth();
   const qc = useQueryClient();
   const [reply, setReply] = useState("");
   const [isInternal, setIsInternal] = useState(false);
@@ -213,6 +213,26 @@ function SupportDetailPage() {
       return data as TicketDetail | null;
     },
   });
+
+  // Catálogo de filas (ADR-049) para exibir o destino e permitir reencaminhamento.
+  const destinationsQ = useQuery({
+    queryKey: supportDestinationsQueryKey,
+    queryFn: fetchSupportDestinations,
+    staleTime: 5 * 60 * 1000,
+  });
+  const destinations = destinationsQ.data ?? [];
+  const canRoute = isSuperAdmin || isManager;
+
+  const destinationMut = useMutation({
+    mutationFn: (code: string) => setTicketDestination(id, code),
+    onSuccess: () => {
+      invalidateSupportTicket(qc, id);
+      toast.success("Ticket reencaminhado.");
+    },
+    onError: (err: unknown) =>
+      toast.error("Falha ao reencaminhar: " + (err instanceof Error ? err.message : String(err))),
+  });
+
 
   const messagesQ = useQuery<MessageRow[]>({
     queryKey: ["support-ticket-messages", id],
