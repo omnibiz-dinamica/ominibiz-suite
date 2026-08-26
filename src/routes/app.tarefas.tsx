@@ -575,7 +575,24 @@ function TasksPage() {
         }}
       />
 
-      <AlertDialog open={!!deleting} onOpenChange={(v) => !v && !deleteTask.isPending && setDeleting(null)}>
+      {/* ADR-051 — tarefa de série: escolher entre "apenas esta" e "esta e futuras". */}
+      <DeleteRecurrenceDialog
+        task={deleting?.recurrence_id ? deleting : null}
+        clientName={deleting?.client_id ? clientsList?.find((c) => c.id === deleting.client_id)?.name : undefined}
+        open={!!deleting?.recurrence_id}
+        onOpenChange={(o) => !o && setDeleting(null)}
+        onDone={() => {
+          setDeleting(null);
+          qc.invalidateQueries({ queryKey: ["tasks"] });
+          qc.invalidateQueries({ queryKey: ["recurrences"] });
+          qc.invalidateQueries({ queryKey: ["notifications"] });
+        }}
+      />
+
+      <AlertDialog
+        open={!!deleting && !deleting.recurrence_id}
+        onOpenChange={(v) => !v && !deleteTask.isPending && setDeleting(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir tarefa?</AlertDialogTitle>
