@@ -81,7 +81,7 @@ function RecurrencesPage() {
   const materialize = async () => {
     setBusy(true);
     try {
-      const n = await recurrenceMaterialize(14, currentCompanyId);
+      const n = await recurrenceMaterialize(60, currentCompanyId);
       toast.success(`${n} ocorrência(s) geradas`);
       qc.invalidateQueries({ queryKey: ["tasks"] });
     } catch (e) {
@@ -108,7 +108,7 @@ function RecurrencesPage() {
           </p>
         </div>
         <Button onClick={materialize} disabled={busy} variant="outline">
-          <RefreshCcw className="mr-2 h-4 w-4" /> {busy ? "Gerando..." : "Gerar próximas 14d"}
+          <RefreshCcw className="mr-2 h-4 w-4" /> {busy ? "Gerando..." : "Gerar próximas 60d"}
         </Button>
       </div>
 
