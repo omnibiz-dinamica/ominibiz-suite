@@ -2039,9 +2039,21 @@ function TaskForm({
           }
           if (!error) {
             if (created > 0) {
+              // Horizonte cobre a série até a data final (cap 400d); sem data final, 60d.
+              const horizon = recurrence.endDate
+                ? Math.min(
+                    400,
+                    Math.max(
+                      1,
+                      Math.ceil(
+                        (new Date(`${recurrence.endDate}T12:00:00`).getTime() - Date.now()) / 86_400_000,
+                      ) + 1,
+                    ),
+                  )
+                : 60;
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               await (supabase.rpc as any)("recurrence_materialize", {
-                _days_ahead: 14,
+                _days_ahead: horizon,
                 _company_id: companyId,
               });
             }
