@@ -530,6 +530,28 @@ function SupportDetailPage() {
               <Copy className="h-3 w-3" /> copiar nº
             </button>
           </div>
+          {canRoute && (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="text-xs text-muted-foreground">Reencaminhar para:</span>
+              <Select
+                value={t.destination_code ?? undefined}
+                onValueChange={(v) => destinationMut.mutate(v)}
+                disabled={destinationMut.isPending}
+              >
+                <SelectTrigger className="h-8 w-56 text-xs">
+                  <SelectValue placeholder="Selecionar destino" />
+                </SelectTrigger>
+                <SelectContent>
+                  {destinations.map((d) => (
+                    <SelectItem key={d.code} value={d.code}>
+                      {d.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {destinationMut.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            </div>
+          )}
           <div className="mt-3 flex items-start justify-between gap-2">
             <h1 className="font-display text-xl font-semibold">{t.title}</h1>
             <button
