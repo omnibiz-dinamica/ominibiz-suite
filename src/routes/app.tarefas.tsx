@@ -68,7 +68,9 @@ import {
   transitionTask,
   archiveTask,
   canArchive,
+  canMarkAbsent,
 } from "@/lib/tasks";
+
 import { RecurrenceForm, emptyRecurrence, type RecurrenceFormValue } from "@/components/tasks/RecurrenceForm";
 import { TaskDocuments } from "@/components/tasks/TaskDocuments";
 import { ReassignDialog } from "@/components/tasks/ReassignDialog";
