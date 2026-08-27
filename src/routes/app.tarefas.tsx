@@ -1878,10 +1878,30 @@ function TaskForm({
     return rows.filter((r) => r.is_active && memberIds.has(r.user_id)).map((r) => r.user_id);
   };
 
+  const loadClientSchedule = async (cid: string) => {
+    if (initial || !cid) {
+      setClientSchedule([]);
+      setSchedulePrompt([]);
+      setScheduleHint(null);
+      return;
+    }
+    try {
+      const slots = await fetchClientSchedule(cid);
+      setClientSchedule(slots);
+      setScheduleHint(null);
+      suggestFromSchedule(slots, startDate);
+    } catch {
+      // Cliente sem programação legível não pode bloquear a criação da tarefa.
+      setClientSchedule([]);
+      setSchedulePrompt([]);
+    }
+  };
+
   const applyClient = async (cid: string) => {
     setClientId(cid);
     setTeamPrompt(null);
     if (initial || !cid) return;
+    void loadClientSchedule(cid);
     let team: string[] = [];
     try {
       team = await fetchClientTeam(cid);
@@ -1906,6 +1926,7 @@ function TaskForm({
     }
     setTeamPrompt({ clientName, team });
   };
+
 
   const uploadCreationDocs = async (taskId: string) => {
     for (const file of pendingDocs) {
