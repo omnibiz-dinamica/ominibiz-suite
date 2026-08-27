@@ -29,6 +29,12 @@ import {
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { toast } from "sonner";
 import {
+  fetchClientSchedule,
+  slotsForDate,
+  describeSlot,
+  type ClientScheduleSlot,
+} from "@/lib/tasks/client-schedule";
+import {
   Plus,
   Play,
   Check,
@@ -1832,6 +1838,42 @@ function TaskForm({
   const [teamPrompt, setTeamPrompt] = useState<{ clientName: string; team: string[] } | null>(null);
   const [teamHint, setTeamHint] = useState<string | null>(null);
 
+  // ---------------------------------------------------------------
+  // SUP-2026-000110 — programação habitual do cliente (sugestão).
+  // Fonte de verdade reutilizada: séries ativas em `task_recurrences`.
+  // Nunca sobrescreve horário já digitado pelo Gestor nem tarefas em edição.
+  // ---------------------------------------------------------------
+  const [clientSchedule, setClientSchedule] = useState<ClientScheduleSlot[]>([]);
+  const [touchedTimes, setTouchedTimes] = useState(false);
+  const [schedulePrompt, setSchedulePrompt] = useState<ClientScheduleSlot[]>([]);
+  const [scheduleHint, setScheduleHint] = useState<string | null>(null);
+
+  const applySlot = (slot: ClientScheduleSlot, silent = false) => {
+    if (slot.startTime) setStartTime(slot.startTime);
+    if (slot.endTime) setEndTime(slot.endTime);
+    if (slot.punchMode) setPunchMode(slot.punchMode as PunchMode);
+    setSchedulePrompt([]);
+    if (!silent) setScheduleHint(`Horário sugerido pela programação do cliente: ${describeSlot(slot)}.`);
+  };
+
+  const suggestFromSchedule = (slots: ClientScheduleSlot[], dateKey: string) => {
+    setSchedulePrompt([]);
+    if (initial || touchedTimes || slots.length === 0 || !dateKey) return;
+    const matches = slotsForDate(slots, dateKey);
+    const unique = matches.filter(
+      (s, i, arr) => arr.findIndex((o) => o.startTime === s.startTime && o.endTime === s.endTime) === i,
+    );
+    if (unique.length === 1) {
+      applySlot(unique[0]);
+      return;
+    }
+    if (unique.length > 1) {
+      setSchedulePrompt(unique);
+      setScheduleHint(null);
+    }
+  };
+
+
   const fetchClientTeam = async (cid: string): Promise<string[]> => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase.rpc as any)("client_default_assignees", { _client_id: cid });
@@ -1842,10 +1884,30 @@ function TaskForm({
     return rows.filter((r) => r.is_active && memberIds.has(r.user_id)).map((r) => r.user_id);
   };
 
+  const loadClientSchedule = async (cid: string) => {
+    if (initial || !cid) {
+      setClientSchedule([]);
+      setSchedulePrompt([]);
+      setScheduleHint(null);
+      return;
+    }
+    try {
+      const slots = await fetchClientSchedule(cid);
+      setClientSchedule(slots);
+      setScheduleHint(null);
+      suggestFromSchedule(slots, startDate);
+    } catch {
+      // Cliente sem programação legível não pode bloquear a criação da tarefa.
+      setClientSchedule([]);
+      setSchedulePrompt([]);
+    }
+  };
+
   const applyClient = async (cid: string) => {
     setClientId(cid);
     setTeamPrompt(null);
     if (initial || !cid) return;
+    void loadClientSchedule(cid);
     let team: string[] = [];
     try {
       team = await fetchClientTeam(cid);
@@ -1870,6 +1932,7 @@ function TaskForm({
     }
     setTeamPrompt({ clientName, team });
   };
+
 
   const uploadCreationDocs = async (taskId: string) => {
     for (const file of pendingDocs) {
@@ -2140,7 +2203,32 @@ function TaskForm({
             ))}
           </SelectContent>
         </Select>
+        {!initial && clientSchedule.length > 0 && (
+          <div className="rounded-lg border border-border bg-muted/40 p-3 text-xs">
+            <p className="font-medium text-foreground">Programação habitual do cliente</p>
+            <ul className="mt-1 space-y-0.5 text-muted-foreground">
+              {clientSchedule.map((s) => (
+                <li key={s.id}>{describeSlot(s)}</li>
+              ))}
+            </ul>
+            {schedulePrompt.length > 1 && (
+              <div className="mt-2 space-y-1.5">
+                <p className="text-foreground">Este cliente possui mais de uma programação para este dia.</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {schedulePrompt.map((s) => (
+                    <Button key={s.id} type="button" size="sm" variant="outline" onClick={() => applySlot(s)}>
+                      {s.startTime}
+                      {s.endTime ? `–${s.endTime}` : ""}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {scheduleHint && <p className="mt-1 text-muted-foreground">{scheduleHint}</p>}
+          </div>
+        )}
         {teamPrompt && (
+
           <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs">
             <p className="font-medium">
               Você já escolheu responsáveis. Usar a equipe padrão de {teamPrompt.clientName} (
@@ -2283,13 +2371,30 @@ function TaskForm({
         </div>
         <div className="space-y-1.5">
           <Label>Data início</Label>
-          <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
+          <Input
+            type="date"
+            value={startDate}
+            onChange={(e) => {
+              const next = e.target.value;
+              setStartDate(next);
+              suggestFromSchedule(clientSchedule, next);
+            }}
+            required
+          />
         </div>
         <div className="space-y-1.5">
           <Label>
             Hora início <span className="text-xs text-muted-foreground">(opcional)</span>
           </Label>
-          <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+          <Input
+            type="time"
+            value={startTime}
+            onChange={(e) => {
+              setTouchedTimes(true);
+              setSchedulePrompt([]);
+              setStartTime(e.target.value);
+            }}
+          />
         </div>
         <div className="space-y-1.5">
           <Label>Data fim</Label>
@@ -2299,7 +2404,15 @@ function TaskForm({
           <Label>
             Hora fim <span className="text-xs text-muted-foreground">(opcional)</span>
           </Label>
-          <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+          <Input
+            type="time"
+            value={endTime}
+            onChange={(e) => {
+              setTouchedTimes(true);
+              setSchedulePrompt([]);
+              setEndTime(e.target.value);
+            }}
+          />
         </div>
         <div className="space-y-1.5">
           <Label>Tolerância de ausência (min)</Label>
