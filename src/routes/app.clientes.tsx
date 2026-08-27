@@ -416,7 +416,7 @@ function ClientForm({
   const [name, setName] = useState(initial?.name ?? "");
   const [phone, setPhone] = useState(initial?.phone ?? "");
   const [email, setEmail] = useState(initial?.email ?? "");
-  const [address, setAddress] = useState(initial?.address ?? "");
+  const [address, setAddress] = useState(initial?.address ?? initial?.geo_address ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [status, setStatus] = useState<"ativo" | "inativo">(initial?.status ?? "ativo");
   const timingMode: "start_stop" = "start_stop";
@@ -433,12 +433,17 @@ function ClientForm({
   const [geo, setGeo] = useState<ClientGeoValue>({
     lat: initial?.geo_lat ?? null,
     lng: initial?.geo_lng ?? null,
-    address: initial?.geo_address ?? null,
+    address: initial?.geo_address ?? initial?.address ?? null,
     radiusM: initial?.geo_radius_m ?? 50,
   });
   const [selected, setSelected] = useState<Set<string>>(() => new Set(assignees.map((a) => a.user_id)));
   const [primary, setPrimary] = useState<string>(() => assignees.find((a) => a.is_primary)?.user_id ?? "");
   const [loading, setLoading] = useState(false);
+
+  const updateGeo = (next: ClientGeoValue) => {
+    setGeo(next);
+    if (next.address !== null && next.address !== address) setAddress(next.address);
+  };
 
   const toggleMember = (id: string) => {
     setSelected((s) => {
@@ -496,7 +501,7 @@ function ClientForm({
                 ...rates,
                 geo_lat: geo.lat,
                 geo_lng: geo.lng,
-                geo_address: geo.address?.trim() || null,
+                geo_address: address.trim() || null,
                 geo_radius_m: geo.lat != null ? geo.radiusM : null,
               })
               .eq("id", initial.id);
@@ -517,7 +522,7 @@ function ClientForm({
                 ...rates,
                 geo_lat: geo.lat,
                 geo_lng: geo.lng,
-                geo_address: geo.address?.trim() || null,
+                geo_address: address.trim() || null,
                 geo_radius_m: geo.lat != null ? geo.radiusM : null,
               })
               .select("id")
@@ -606,32 +611,6 @@ function ClientForm({
         </div>
       </ModalSection>
 
-      <ModalSection title="Endereço e geolocalização" icon={MapPin}>
-        <div className="space-y-1.5">
-          <Label>Endereço</Label>
-          <Input maxLength={250} value={address} onChange={(e) => setAddress(e.target.value)} />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Modo de apontamento</Label>
-          <div className="flex gap-2">
-            {([{ v: "start_stop", label: "Start/Stop", hint: "Funcionário marca início e fim" }] as const).map((opt) => (
-              <button
-                key={opt.v}
-                type="button"
-                onClick={() => undefined}
-                className={`flex-1 rounded-lg border p-2 text-left text-xs transition ${
-                  timingMode === opt.v ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
-                }`}
-              >
-                <div className="font-medium">{opt.label}</div>
-                <div className="text-[10px] text-muted-foreground">{opt.hint}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-        <ClientGeoEditor value={geo} onChange={setGeo} />
-      </ModalSection>
-
       <ModalSection title="Cobrança" icon={FileSpreadsheet}>
         <div className="space-y-1.5">
           <Label>Forma de cobrança</Label>
@@ -700,7 +679,40 @@ function ClientForm({
           empresa. A modalidade aplicada ao pagamento é sempre a do funcionário
           (Funcionário &gt; Cliente &gt; Empresa).
         </p>
+      </ModalSection>
 
+      <ModalSection title="Endereço e geolocalização" icon={MapPin}>
+        <div className="space-y-1.5">
+          <Label>Endereço do cliente</Label>
+          <Input
+            maxLength={250}
+            value={address}
+            onChange={(e) => {
+              const nextAddress = e.target.value;
+              setAddress(nextAddress);
+              setGeo((current) => ({ ...current, address: nextAddress }));
+            }}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Modo de apontamento</Label>
+          <div className="flex gap-2">
+            {([{ v: "start_stop", label: "Start/Stop", hint: "Funcionário marca início e fim" }] as const).map((opt) => (
+              <button
+                key={opt.v}
+                type="button"
+                onClick={() => undefined}
+                className={`flex-1 rounded-lg border p-2 text-left text-xs transition ${
+                  timingMode === opt.v ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
+                }`}
+              >
+                <div className="font-medium">{opt.label}</div>
+                <div className="text-[10px] text-muted-foreground">{opt.hint}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+        <ClientGeoEditor value={geo} onChange={updateGeo} showAddressField={false} />
       </ModalSection>
 
       {members.length > 0 && (

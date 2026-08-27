@@ -23,6 +23,8 @@ interface Props {
   onChange: (next: ClientGeoValue) => void;
   /** Empresa default: usado apenas se o cliente ainda não tem raio próprio. */
   defaultRadiusM?: number;
+  /** Mantém o endereço no formulário pai quando ele já é exibido lá. */
+  showAddressField?: boolean;
 }
 
 // Faixa permitida — reforçada pelo validador em `validateClientGeo`.
@@ -44,7 +46,7 @@ export function validateClientGeo(v: ClientGeoValue): string | null {
 
 const DEFAULT_CENTER = { lat: 38.7223, lng: -9.1393 }; // Lisboa
 
-export function ClientGeoEditor({ value, onChange, defaultRadiusM = 50 }: Props) {
+export function ClientGeoEditor({ value, onChange, defaultRadiusM = 50, showAddressField = true }: Props) {
   const provider = useMemo(() => getMapProvider(), []);
   const available = provider.isAvailable();
 
@@ -97,10 +99,10 @@ export function ClientGeoEditor({ value, onChange, defaultRadiusM = 50 }: Props)
 
       {/* Pesquisa */}
       <div className="space-y-1.5">
-        <Label>Pesquisar endereço</Label>
+        <Label>Localizar no mapa</Label>
         <div className="flex gap-2">
           <Input
-            placeholder="Rua, número, cidade…"
+            placeholder="Rua, número, cidade..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
@@ -199,15 +201,17 @@ export function ClientGeoEditor({ value, onChange, defaultRadiusM = 50 }: Props)
         </div>
       </div>
 
-      <div className="space-y-1.5">
-        <Label>Endereço</Label>
-        <Input
-          maxLength={250}
-          value={value.address ?? ""}
-          onChange={(e) => onChange({ ...value, address: e.target.value })}
-          placeholder="Preenchido pela pesquisa ou manual"
-        />
-      </div>
+      {showAddressField && (
+        <div className="space-y-1.5">
+          <Label>Endereço</Label>
+          <Input
+            maxLength={250}
+            value={value.address ?? ""}
+            onChange={(e) => onChange({ ...value, address: e.target.value })}
+            placeholder="Preenchido pela pesquisa ou manual"
+          />
+        </div>
+      )}
 
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
