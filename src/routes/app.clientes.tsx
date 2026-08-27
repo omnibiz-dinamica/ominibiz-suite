@@ -658,6 +658,91 @@ function ClientForm({
         </div>
       </ModalSection>
 
+      <ModalSection
+        title="Programação habitual"
+        description="Usada como sugestão ao criar tarefas para este cliente."
+        icon={CalendarDays}
+      >
+        <div className="flex items-start justify-between gap-3 rounded-lg border border-border bg-muted/20 p-3">
+          <div>
+            <p className="text-sm font-medium">Usar horário habitual</p>
+            <p className="text-xs text-muted-foreground">
+              A tarefa receberá a próxima data e o horário configurado, sem impedir ajustes manuais.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={scheduleEnabled}
+            onClick={() => setScheduleEnabled((value) => !value)}
+            className={`relative h-6 w-11 shrink-0 rounded-full transition ${scheduleEnabled ? "bg-primary" : "bg-muted"}`}
+          >
+            <span
+              className={`absolute top-1 h-4 w-4 rounded-full bg-background shadow transition ${scheduleEnabled ? "left-6" : "left-1"}`}
+            />
+          </button>
+        </div>
+
+        {scheduleEnabled && (
+          <>
+            <div className="space-y-1.5">
+              <Label>Dias habituais</Label>
+              <div className="grid grid-cols-7 gap-1.5">
+                {["D", "S", "T", "Q", "Q", "S", "S"].map((label, day) => {
+                  const active = scheduleWeekdays.includes(day);
+                  return (
+                    <button
+                      key={`${label}-${day}`}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() =>
+                        setScheduleWeekdays((current) =>
+                          active ? current.filter((value) => value !== day) : [...current, day].sort((a, b) => a - b),
+                        )
+                      }
+                      className={`h-9 rounded-md border text-sm font-medium ${active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:border-primary/50"}`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-muted-foreground">D = domingo; S = segunda-feira e sábado.</p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Tipo de horário</Label>
+              <Select value={scheduleMode} onValueChange={(value) => setScheduleMode(value as typeof scheduleMode)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fixed">Horário fixo</SelectItem>
+                  <SelectItem value="flexible">Horário flexível</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {scheduleMode === "fixed" ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Hora de início</Label>
+                  <Input type="time" value={scheduleStartTime} onChange={(e) => setScheduleStartTime(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Hora de fim</Label>
+                  <Input type="time" value={scheduleEndTime} onChange={(e) => setScheduleEndTime(e.target.value)} />
+                </div>
+              </div>
+            ) : (
+              <p className="rounded-lg border border-border bg-muted/20 p-3 text-xs text-muted-foreground">
+                A data será sugerida pelos dias selecionados. O funcionário registrará o horário no início e no fim.
+              </p>
+            )}
+          </>
+        )}
+      </ModalSection>
+
       <ModalSection title="Cobrança" icon={FileSpreadsheet}>
         <div className="space-y-1.5">
           <Label>Forma de cobrança</Label>
@@ -760,91 +845,6 @@ function ClientForm({
           </div>
         </div>
         <ClientGeoEditor value={geo} onChange={updateGeo} showAddressField={false} />
-      </ModalSection>
-
-      <ModalSection
-        title="Programação habitual"
-        description="Usada como sugestão ao criar tarefas para este cliente."
-        icon={CalendarDays}
-      >
-        <div className="flex items-start justify-between gap-3 rounded-lg border border-border bg-muted/20 p-3">
-          <div>
-            <p className="text-sm font-medium">Usar horário habitual</p>
-            <p className="text-xs text-muted-foreground">
-              A tarefa receberá a próxima data e o horário configurado, sem impedir ajustes manuais.
-            </p>
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={scheduleEnabled}
-            onClick={() => setScheduleEnabled((value) => !value)}
-            className={`relative h-6 w-11 shrink-0 rounded-full transition ${scheduleEnabled ? "bg-primary" : "bg-muted"}`}
-          >
-            <span
-              className={`absolute top-1 h-4 w-4 rounded-full bg-background shadow transition ${scheduleEnabled ? "left-6" : "left-1"}`}
-            />
-          </button>
-        </div>
-
-        {scheduleEnabled && (
-          <>
-            <div className="space-y-1.5">
-              <Label>Dias habituais</Label>
-              <div className="grid grid-cols-7 gap-1.5">
-                {["D", "S", "T", "Q", "Q", "S", "S"].map((label, day) => {
-                  const active = scheduleWeekdays.includes(day);
-                  return (
-                    <button
-                      key={`${label}-${day}`}
-                      type="button"
-                      aria-pressed={active}
-                      onClick={() =>
-                        setScheduleWeekdays((current) =>
-                          active ? current.filter((value) => value !== day) : [...current, day].sort((a, b) => a - b),
-                        )
-                      }
-                      className={`h-9 rounded-md border text-sm font-medium ${active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:border-primary/50"}`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-              <p className="text-[10px] text-muted-foreground">D = domingo; S = segunda-feira e sábado.</p>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>Tipo de horário</Label>
-              <Select value={scheduleMode} onValueChange={(value) => setScheduleMode(value as typeof scheduleMode)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="fixed">Horário fixo</SelectItem>
-                  <SelectItem value="flexible">Horário flexível</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {scheduleMode === "fixed" ? (
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Hora de início</Label>
-                  <Input type="time" value={scheduleStartTime} onChange={(e) => setScheduleStartTime(e.target.value)} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Hora de fim</Label>
-                  <Input type="time" value={scheduleEndTime} onChange={(e) => setScheduleEndTime(e.target.value)} />
-                </div>
-              </div>
-            ) : (
-              <p className="rounded-lg border border-border bg-muted/20 p-3 text-xs text-muted-foreground">
-                A data será sugerida pelos dias selecionados. O funcionário registrará o horário no início e no fim.
-              </p>
-            )}
-          </>
-        )}
       </ModalSection>
 
       {members.length > 0 && (
