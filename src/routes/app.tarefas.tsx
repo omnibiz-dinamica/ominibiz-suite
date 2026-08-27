@@ -29,6 +29,12 @@ import {
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { toast } from "sonner";
 import {
+  fetchClientSchedule,
+  slotsForDate,
+  describeSlot,
+  type ClientScheduleSlot,
+} from "@/lib/tasks/client-schedule";
+import {
   Plus,
   Play,
   Check,
@@ -2340,13 +2346,30 @@ function TaskForm({
         </div>
         <div className="space-y-1.5">
           <Label>Data início</Label>
-          <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
+          <Input
+            type="date"
+            value={startDate}
+            onChange={(e) => {
+              const next = e.target.value;
+              setStartDate(next);
+              suggestFromSchedule(clientSchedule, next);
+            }}
+            required
+          />
         </div>
         <div className="space-y-1.5">
           <Label>
             Hora início <span className="text-xs text-muted-foreground">(opcional)</span>
           </Label>
-          <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+          <Input
+            type="time"
+            value={startTime}
+            onChange={(e) => {
+              setTouchedTimes(true);
+              setSchedulePrompt([]);
+              setStartTime(e.target.value);
+            }}
+          />
         </div>
         <div className="space-y-1.5">
           <Label>Data fim</Label>
@@ -2356,7 +2379,15 @@ function TaskForm({
           <Label>
             Hora fim <span className="text-xs text-muted-foreground">(opcional)</span>
           </Label>
-          <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+          <Input
+            type="time"
+            value={endTime}
+            onChange={(e) => {
+              setTouchedTimes(true);
+              setSchedulePrompt([]);
+              setEndTime(e.target.value);
+            }}
+          />
         </div>
         <div className="space-y-1.5">
           <Label>Tolerância de ausência (min)</Label>
