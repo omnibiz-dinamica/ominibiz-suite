@@ -2203,7 +2203,32 @@ function TaskForm({
             ))}
           </SelectContent>
         </Select>
+        {!initial && clientSchedule.length > 0 && (
+          <div className="rounded-lg border border-border bg-muted/40 p-3 text-xs">
+            <p className="font-medium text-foreground">Programação habitual do cliente</p>
+            <ul className="mt-1 space-y-0.5 text-muted-foreground">
+              {clientSchedule.map((s) => (
+                <li key={s.id}>{describeSlot(s)}</li>
+              ))}
+            </ul>
+            {schedulePrompt.length > 1 && (
+              <div className="mt-2 space-y-1.5">
+                <p className="text-foreground">Este cliente possui mais de uma programação para este dia.</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {schedulePrompt.map((s) => (
+                    <Button key={s.id} type="button" size="sm" variant="outline" onClick={() => applySlot(s)}>
+                      {s.startTime}
+                      {s.endTime ? `–${s.endTime}` : ""}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {scheduleHint && <p className="mt-1 text-muted-foreground">{scheduleHint}</p>}
+          </div>
+        )}
         {teamPrompt && (
+
           <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs">
             <p className="font-medium">
               Você já escolheu responsáveis. Usar a equipe padrão de {teamPrompt.clientName} (
