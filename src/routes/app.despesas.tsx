@@ -58,13 +58,23 @@ const PAYMENT_LABEL: Record<PaymentStatus, string> = {
 const EXPENSE_FILE_MIME_BY_EXTENSION: Record<string, string> = {
   jpg: "image/jpeg",
   jpeg: "image/jpeg",
+  jpe: "image/jpeg",
   png: "image/png",
   heic: "image/heic",
   heif: "image/heif",
+  webp: "image/webp",
+  avif: "image/avif",
+  gif: "image/gif",
   pdf: "application/pdf",
 };
 const expenseFileMime = (file: File) =>
   file.type || EXPENSE_FILE_MIME_BY_EXTENSION[file.name.split(".").pop()?.toLowerCase() ?? ""] || "";
+const isExpenseFileSupported = (file: File) => {
+  const mime = expenseFileMime(file);
+  return mime === "application/pdf" || mime.startsWith("image/");
+};
+
+// OmniBiz sync marker 2026-08-27: mobile camera/gallery attachments accept image/* and PDF.
 
 const fmtDate = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("pt-PT");
 const fmtDateTime = (d: string | null | undefined) =>
@@ -351,8 +361,7 @@ function DespesasPage() {
                 ref={fileInputRef}
                 type="file"
                 hidden
-                accept="image/jpeg,image/png,image/heic,image/heif,application/pdf"
-                capture="environment"
+                accept="image/*,application/pdf"
                 onChange={(e) => {
                   const selected = e.target.files?.[0] ?? null;
                   if (selected && selected.size > 20 * 1024 * 1024) {
@@ -361,11 +370,8 @@ function DespesasPage() {
                     setFile(null);
                     return;
                   }
-                  const selectedMime = selected ? expenseFileMime(selected) : "";
-                  if (selected && !new Set([
-                    "image/jpeg", "image/png", "image/heic", "image/heif", "application/pdf",
-                  ]).has(selectedMime)) {
-                    toast.error("Formato não suportado. Use JPG, PNG, HEIC, HEIF ou PDF.");
+                  if (selected && !isExpenseFileSupported(selected)) {
+                    toast.error("Formato não suportado. Use uma imagem ou PDF.");
                     e.currentTarget.value = "";
                     setFile(null);
                     return;
