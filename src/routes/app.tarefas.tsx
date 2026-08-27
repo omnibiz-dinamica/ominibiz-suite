@@ -1832,6 +1832,42 @@ function TaskForm({
   const [teamPrompt, setTeamPrompt] = useState<{ clientName: string; team: string[] } | null>(null);
   const [teamHint, setTeamHint] = useState<string | null>(null);
 
+  // ---------------------------------------------------------------
+  // SUP-2026-000110 — programação habitual do cliente (sugestão).
+  // Fonte de verdade reutilizada: séries ativas em `task_recurrences`.
+  // Nunca sobrescreve horário já digitado pelo Gestor nem tarefas em edição.
+  // ---------------------------------------------------------------
+  const [clientSchedule, setClientSchedule] = useState<ClientScheduleSlot[]>([]);
+  const [touchedTimes, setTouchedTimes] = useState(false);
+  const [schedulePrompt, setSchedulePrompt] = useState<ClientScheduleSlot[]>([]);
+  const [scheduleHint, setScheduleHint] = useState<string | null>(null);
+
+  const applySlot = (slot: ClientScheduleSlot, silent = false) => {
+    if (slot.startTime) setStartTime(slot.startTime);
+    if (slot.endTime) setEndTime(slot.endTime);
+    if (slot.punchMode) setPunchMode(slot.punchMode as PunchMode);
+    setSchedulePrompt([]);
+    if (!silent) setScheduleHint(`Horário sugerido pela programação do cliente: ${describeSlot(slot)}.`);
+  };
+
+  const suggestFromSchedule = (slots: ClientScheduleSlot[], dateKey: string) => {
+    setSchedulePrompt([]);
+    if (initial || touchedTimes || slots.length === 0 || !dateKey) return;
+    const matches = slotsForDate(slots, dateKey);
+    const unique = matches.filter(
+      (s, i, arr) => arr.findIndex((o) => o.startTime === s.startTime && o.endTime === s.endTime) === i,
+    );
+    if (unique.length === 1) {
+      applySlot(unique[0]);
+      return;
+    }
+    if (unique.length > 1) {
+      setSchedulePrompt(unique);
+      setScheduleHint(null);
+    }
+  };
+
+
   const fetchClientTeam = async (cid: string): Promise<string[]> => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase.rpc as any)("client_default_assignees", { _client_id: cid });
