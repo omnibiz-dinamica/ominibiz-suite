@@ -31,6 +31,7 @@ import { toast } from "sonner";
 import {
   fetchClientSchedule,
   slotsForDate,
+  nextDateForSchedule,
   describeSlot,
   type ClientScheduleSlot,
 } from "@/lib/tasks/client-schedule";
@@ -118,7 +119,11 @@ const STATUS_FILTERS = [
 
 type StatusFilter = (typeof STATUS_FILTERS)[number];
 type TasksSearch = { status?: StatusFilter; employee?: string; client?: string; task?: string };
-type ClientOption = { id: string; name: string; timing_mode?: "start_stop" | "manual" | null };
+type ClientOption = {
+  id: string;
+  name: string;
+  timing_mode?: "start_stop" | "manual" | null;
+};
 type CalendarMode = "day" | "week" | "month" | "year";
 const TASK_DOC_ACCEPT = "application/pdf,image/png,image/jpeg,image/jpg";
 const TASK_DOC_MAX_SIZE = 10 * 1024 * 1024;
@@ -1845,12 +1850,18 @@ function TaskForm({
   // ---------------------------------------------------------------
   const [clientSchedule, setClientSchedule] = useState<ClientScheduleSlot[]>([]);
   const [touchedTimes, setTouchedTimes] = useState(false);
+  const [touchedDates, setTouchedDates] = useState(false);
   const [schedulePrompt, setSchedulePrompt] = useState<ClientScheduleSlot[]>([]);
   const [scheduleHint, setScheduleHint] = useState<string | null>(null);
 
   const applySlot = (slot: ClientScheduleSlot, silent = false) => {
-    if (slot.startTime) setStartTime(slot.startTime);
-    if (slot.endTime) setEndTime(slot.endTime);
+    if (slot.scheduleType === "fixed") {
+      setStartTime(slot.startTime ?? "");
+      setEndTime(slot.endTime ?? "");
+    } else {
+      setStartTime("");
+      setEndTime("");
+    }
     if (slot.punchMode) setPunchMode(slot.punchMode as PunchMode);
     setSchedulePrompt([]);
     if (!silent) setScheduleHint(`Horário sugerido pela programação do cliente: ${describeSlot(slot)}.`);
@@ -1858,18 +1869,24 @@ function TaskForm({
 
   const suggestFromSchedule = (slots: ClientScheduleSlot[], dateKey: string) => {
     setSchedulePrompt([]);
-    if (initial || touchedTimes || slots.length === 0 || !dateKey) return;
-    const matches = slotsForDate(slots, dateKey);
+    if (initial || touchedTimes || slots.length === 0) return;
+    const effectiveDate = dateKey || (!touchedDates ? nextDateForSchedule(slots) : null);
+    if (!effectiveDate) return;
+    const matches = slotsForDate(slots, effectiveDate);
     const unique = matches.filter(
       (s, i, arr) => arr.findIndex((o) => o.startTime === s.startTime && o.endTime === s.endTime) === i,
     );
     if (unique.length === 1) {
+      if (!dateKey && !startDate && !touchedDates) {
+        setStartDate(effectiveDate);
+        setEndDate(effectiveDate);
+      }
       applySlot(unique[0]);
       return;
     }
     if (unique.length > 1) {
       setSchedulePrompt(unique);
-      setScheduleHint(null);
+      setScheduleHint(`Programação encontrada para ${effectiveDate}: escolha um dos horários abaixo.`);
     }
   };
 
@@ -2376,6 +2393,7 @@ function TaskForm({
             value={startDate}
             onChange={(e) => {
               const next = e.target.value;
+              setTouchedDates(true);
               setStartDate(next);
               suggestFromSchedule(clientSchedule, next);
             }}
@@ -2398,7 +2416,15 @@ function TaskForm({
         </div>
         <div className="space-y-1.5">
           <Label>Data fim</Label>
-          <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required />
+          <Input
+            type="date"
+            value={endDate}
+            onChange={(e) => {
+              setTouchedDates(true);
+              setEndDate(e.target.value);
+            }}
+            required
+          />
         </div>
         <div className="space-y-1.5">
           <Label>
