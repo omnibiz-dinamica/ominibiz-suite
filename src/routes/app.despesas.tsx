@@ -354,32 +354,47 @@ function DespesasPage() {
             <Textarea id="exp-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
           </div>
           <div className="md:col-span-3 flex flex-wrap items-center gap-3">
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border px-3 py-2 text-sm hover:bg-muted">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              aria-label="Anexar foto ou PDF da despesa"
+            >
               <Upload className="h-4 w-4" />
               {file ? file.name : "Anexar foto/PDF"}
-              <input
-                ref={fileInputRef}
-                type="file"
-                hidden
-                accept="image/*,application/pdf"
-                onChange={(e) => {
-                  const selected = e.target.files?.[0] ?? null;
-                  if (selected && selected.size > 20 * 1024 * 1024) {
-                    toast.error("O comprovante deve ter no máximo 20 MB.");
-                    e.currentTarget.value = "";
-                    setFile(null);
-                    return;
-                  }
-                  if (selected && !isExpenseFileSupported(selected)) {
-                    toast.error("Formato não suportado. Use uma imagem ou PDF.");
-                    e.currentTarget.value = "";
-                    setFile(null);
-                    return;
-                  }
-                  setFile(selected);
-                }}
-              />
-            </label>
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="sr-only"
+              accept="image/*,application/pdf"
+              onClick={(e) => {
+                // Chrome Android may not emit change when the same file is chosen again.
+                e.currentTarget.value = "";
+              }}
+              onChange={(e) => {
+                const selected = e.target.files?.[0] ?? null;
+                if (selected && selected.size > 20 * 1024 * 1024) {
+                  toast.error("O comprovante deve ter no máximo 20 MB.");
+                  e.currentTarget.value = "";
+                  setFile(null);
+                  return;
+                }
+                if (selected && !isExpenseFileSupported(selected)) {
+                  toast.error("Formato não suportado. Use uma imagem ou PDF.");
+                  e.currentTarget.value = "";
+                  setFile(null);
+                  return;
+                }
+                if (selected) {
+                  console.info("[OmniBiz] comprovante selecionado", {
+                    mime: expenseFileMime(selected) || "unknown",
+                    size: selected.size,
+                  });
+                }
+                setFile(selected);
+              }}
+            />
             {file && (
               <Button size="sm" variant="ghost" onClick={() => {
                 setFile(null);
