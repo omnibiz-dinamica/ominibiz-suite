@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -55,6 +55,16 @@ const PAYMENT_LABEL: Record<PaymentStatus, string> = {
   aguardando_pagamento: "aguarda pagamento",
   paga: "paga",
 };
+const EXPENSE_FILE_MIME_BY_EXTENSION: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  heic: "image/heic",
+  heif: "image/heif",
+  pdf: "application/pdf",
+};
+const expenseFileMime = (file: File) =>
+  file.type || EXPENSE_FILE_MIME_BY_EXTENSION[file.name.split(".").pop()?.toLowerCase() ?? ""] || "";
 
 const fmtDate = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("pt-PT");
 const fmtDateTime = (d: string | null | undefined) =>
@@ -110,6 +120,7 @@ function DespesasPage() {
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const create = useMutation({
     mutationFn: async () => {
@@ -117,37 +128,53 @@ function DespesasPage() {
       const value = Number(amount.replace(",", "."));
       if (!Number.isFinite(value) || value < 0) throw new Error("Valor inválido");
       if (!reason.trim()) throw new Error("Indique o motivo");
-      let attachmentPath: string | null = null;
-      let attachmentMime: string | null = null;
-      let attachmentSize: number | null = null;
-      if (file) {
-        const safe = file.name.replace(/[^a-zA-Z0-9._-]+/g, "_");
-        const path = `${currentCompanyId}/${user.id}/${Date.now()}-${safe}`;
-        const up = await supabase.storage.from("employee-expenses").upload(path, file);
-        if (up.error) throw up.error;
-        attachmentPath = path;
-        attachmentMime = file.type;
-        attachmentSize = file.size;
-      }
-      const { error } = await (supabase as any).from("employee_expenses").insert({
+      const { data: expense, error } = await (supabase as any).from("employee_expenses").insert({
         company_id: currentCompanyId,
         user_id: user.id,
         expense_date: expenseDate,
         amount: value,
         reason: reason.trim(),
         notes: notes.trim() || null,
-        attachment_path: attachmentPath,
-        attachment_mime: attachmentMime,
-        attachment_size: attachmentSize,
-      });
+      }).select("id").single();
       if (error) throw error;
+      if (!file) return { attachmentError: null as string | null };
+
+      // Tie the object path to the expense record. The proof is optional,
+      // so a storage failure must not discard the expense itself.
+      const safe = file.name.replace(/[^a-zA-Z0-9._-]+/g, "_");
+      const path = `${currentCompanyId}/${user.id}/${expense.id}/${Date.now()}-${safe}`;
+      const up = await supabase.storage.from("employee-expenses").upload(path, file, {
+        contentType: expenseFileMime(file),
+        upsert: false,
+      });
+      if (up.error) return { attachmentError: up.error.message };
+
+      const { error: attachError } = await (supabase as any)
+        .from("employee_expenses")
+        .update({
+          attachment_path: path,
+          attachment_mime: expenseFileMime(file) || null,
+          attachment_size: file.size,
+        })
+        .eq("id", expense.id);
+      if (attachError) {
+        await supabase.storage.from("employee-expenses").remove([path]);
+        return { attachmentError: attachError.message };
+      }
+      return { attachmentError: null as string | null };
     },
-    onSuccess: () => {
-      toast.success("Despesa enviada para aprovação");
+    onSuccess: (result) => {
+      toast.success(
+        result.attachmentError
+          ? "Despesa salva, porém o comprovante não foi anexado."
+          : "Despesa enviada para aprovação",
+      );
+      if (result.attachmentError) toast.error(`Comprovante: ${result.attachmentError}`);
       setAmount("");
       setReason("");
       setNotes("");
       setFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       qc.invalidateQueries({ queryKey: ["expenses"] });
     },
     onError: (e: any) => toast.error(e.message ?? "Falha ao enviar"),
@@ -321,14 +348,37 @@ function DespesasPage() {
               <Upload className="h-4 w-4" />
               {file ? file.name : "Anexar foto/PDF"}
               <input
+                ref={fileInputRef}
                 type="file"
                 hidden
-                accept="image/*,application/pdf"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                accept="image/jpeg,image/png,image/heic,image/heif,application/pdf"
+                capture="environment"
+                onChange={(e) => {
+                  const selected = e.target.files?.[0] ?? null;
+                  if (selected && selected.size > 20 * 1024 * 1024) {
+                    toast.error("O comprovante deve ter no máximo 20 MB.");
+                    e.currentTarget.value = "";
+                    setFile(null);
+                    return;
+                  }
+                  const selectedMime = selected ? expenseFileMime(selected) : "";
+                  if (selected && !new Set([
+                    "image/jpeg", "image/png", "image/heic", "image/heif", "application/pdf",
+                  ]).has(selectedMime)) {
+                    toast.error("Formato não suportado. Use JPG, PNG, HEIC, HEIF ou PDF.");
+                    e.currentTarget.value = "";
+                    setFile(null);
+                    return;
+                  }
+                  setFile(selected);
+                }}
               />
             </label>
             {file && (
-              <Button size="sm" variant="ghost" onClick={() => setFile(null)}>
+              <Button size="sm" variant="ghost" onClick={() => {
+                setFile(null);
+                if (fileInputRef.current) fileInputRef.current.value = "";
+              }}>
                 <XIcon className="h-4 w-4" /> Remover anexo
               </Button>
             )}
