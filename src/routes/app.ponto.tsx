@@ -216,6 +216,26 @@ function PontoPage() {
     enabled: !!currentCompanyId,
   });
 
+  // O mapa acima pode ainda não conter o cliente quando um ponto já estava
+  // aberto antes da troca/atualização da empresa ativa. Busca apenas o cliente
+  // da tarefa em andamento como fallback, sem alterar o registro da tarefa.
+  const openClientId = openTask?.client_id ?? null;
+  const { data: openClient } = useQuery({
+    queryKey: ["punch-open-client", openClientId],
+    queryFn: async () => {
+      if (!openClientId) return null as { name: string } | null;
+      const { data, error } = await (supabase.from("clients" as never) as any)
+        .select("name")
+        .eq("id", openClientId)
+        .maybeSingle();
+      if (error) throw error;
+      return (data ?? null) as { name: string } | null;
+    },
+    enabled: !!openClientId && !clientsMap?.[openClientId],
+  });
+
+  const openClientName = openClientId ? clientsMap?.[openClientId] ?? openClient?.name : undefined;
+
   // Histórico recente
   const { data: history } = useQuery({
     queryKey: ["punch-history", user?.id, isManager, currentCompanyId],
@@ -445,7 +465,7 @@ function PontoPage() {
         <ActiveTaskCard
           entry={openEntry}
           task={openTask}
-          clientName={openTask.client_id ? clientsMap?.[openTask.client_id] : undefined}
+          clientName={openClientName}
           liveSec={liveSec}
           state={state}
           mode={openTaskMode}
@@ -773,7 +793,7 @@ function ActiveTaskCard({
           <h2 className="break-words font-display text-2xl font-semibold leading-tight sm:text-3xl">{task.title}</h2>
           {clientName && (
             <div className="mt-1 inline-flex items-center gap-1 text-sm text-muted-foreground">
-              <Building2 className="h-3.5 w-3.5" /> {clientName}
+              <Building2 className="h-3.5 w-3.5" /> Cliente: {clientName}
             </div>
           )}
           <div className="mt-2 flex flex-wrap items-center gap-2">
