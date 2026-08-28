@@ -5751,6 +5751,7 @@ export type Database = {
           geo_lat: number | null
           geo_lng: number | null
           geo_radius_m: number | null
+          habitual_schedule: Json
           hourly_rate: number | null
           id: string
           mixed_base_fixed: number | null
