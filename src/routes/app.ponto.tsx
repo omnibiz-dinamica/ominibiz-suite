@@ -303,6 +303,14 @@ function PontoPage() {
       qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
       qc.invalidateQueries({ queryKey: ["tasks"] });
     },
+    // Atualiza a folha mesmo quando a transição da tarefa falhar depois do stop.
+    // O ponto já pode ter sido fechado pela RPC e não deve ficar visível como aberto.
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ["punch-open"] });
+      void qc.invalidateQueries({ queryKey: ["punch-history"] });
+      void qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
+      void qc.invalidateQueries({ queryKey: ["tasks"] });
+    },
   });
   const startMut = useMutation({
     mutationFn: async (taskId: string) => {
