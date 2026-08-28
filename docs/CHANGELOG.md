@@ -7,6 +7,15 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### 🐞 P0 — Anexo de despesas no Chrome Android
+
+#### Corrigido
+- `src/routes/app.despesas.tsx`: o seletor de ficheiros abortava silenciosamente no Chrome Android porque o `value` do input era limpo dentro do próprio `onClick` e o `accept` combinava imagem+PDF num único controlo.
+- Passam a existir dois controlos explícitos — «Escolher da galeria/arquivos» (`accept="image/*,application/pdf"`, sem `capture`) e «Tirar foto» (`accept="image/*"`, `capture="environment"`) — accionados por botões reais, inputs `sr-only` (nunca `display:none`, nunca dentro de `<label>`), com `value = ""` **antes** do `click()`.
+- Adicionada pré-visualização do ficheiro escolhido (miniatura para imagens, ícone para PDF), tamanho e MIME resolvido por extensão quando o Android devolve `type` vazio (JPEG, PNG, WEBP, HEIC/HEIF, AVIF, GIF, PDF).
+- Cancelar o seletor deixa de apagar o anexo já escolhido; limite de 20 MB e mensagens de erro explícitas mantidos. Upload, caminho no bucket `employee-expenses` e persistência de `attachment_path` / `attachment_mime` / `attachment_size` permanecem inalterados.
+
+
 ### 🐞 P0 — Erro ao excluir tarefas recorrentes corrigido (ADR-052)
 
 #### Corrigido
