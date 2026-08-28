@@ -1640,6 +1640,7 @@ export type Database = {
           signature_url: string | null
           social_security_niss: string | null
           status: string | null
+          sector: string | null
           supervisor_id: string | null
           swift: string | null
           tax_country: string | null
@@ -1707,6 +1708,7 @@ export type Database = {
           signature_url?: string | null
           social_security_niss?: string | null
           status?: string | null
+          sector?: string | null
           supervisor_id?: string | null
           swift?: string | null
           tax_country?: string | null
@@ -1774,6 +1776,7 @@ export type Database = {
           signature_url?: string | null
           social_security_niss?: string | null
           status?: string | null
+          sector?: string | null
           supervisor_id?: string | null
           swift?: string | null
           tax_country?: string | null

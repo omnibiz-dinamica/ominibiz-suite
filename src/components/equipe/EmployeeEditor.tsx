@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
-import { Download, Trash2, Upload, IdCard, Building2, MapPin } from "lucide-react";
+import { Check, ChevronDown, Download, Plus, Trash2, Upload, IdCard, Building2, MapPin } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ModalSection } from "@/components/ui/dialog";
 import { EMPLOYEE_PAYMENT_TYPES, PAYMENT_TYPE_LABEL, type PaymentType } from "@/lib/compensation";
 
@@ -27,13 +28,14 @@ export interface EmployeeEditorProps {
   userId: string;
   companyId: string;
   currentRole: Role;
+  sectorOptions?: string[];
   onDone: () => void;
 }
 
 // Loose record type — generated supabase types may lag behind new columns.
 type ProfileRow = Record<string, unknown> & { id: string };
 
-export function EmployeeEditor({ userId, companyId, currentRole, onDone }: EmployeeEditorProps) {
+export function EmployeeEditor({ userId, companyId, currentRole, sectorOptions = [], onDone }: EmployeeEditorProps) {
   const qc = useQueryClient();
   const { isOwner, isSuperAdmin } = useAuth();
 
@@ -117,6 +119,7 @@ export function EmployeeEditor({ userId, companyId, currentRole, onDone }: Emplo
             currentRole={currentRole}
             userId={userId}
             companyId={companyId}
+            sectorOptions={sectorOptions}
             canPromoteOwner={!!(isOwner || isSuperAdmin)}
             onSave={save}
             onDone={onDone}
@@ -181,6 +184,7 @@ function TabDadosGerais({
   currentRole,
   userId,
   companyId,
+  sectorOptions,
   canPromoteOwner,
   onSave,
   onDone,
@@ -190,6 +194,7 @@ function TabDadosGerais({
   currentRole: Role;
   userId: string;
   companyId: string;
+  sectorOptions: string[];
   canPromoteOwner: boolean;
   onSave: (p: Record<string, unknown>, msg?: string) => Promise<void>;
   onDone: () => void;
@@ -200,6 +205,7 @@ function TabDadosGerais({
   const [jobTitle, setJobTitle] = useState(str(profile.job_title));
   const [workLocation, setWorkLocation] = useState(str(profile.work_location));
   const [teamNumber, setTeamNumber] = useState(num(profile.team_number));
+  const [sector, setSector] = useState(str(profile.sector));
   const [addressBe, setAddressBe] = useState(str(profile.address_be));
   const [status, setStatus] = useState(str(profile.status) || (profile.is_active === false ? "inativo" : "ativo"));
   const [role, setRole] = useState<Role>(currentRole);
@@ -220,6 +226,7 @@ function TabDadosGerais({
             job_title: toNullableString(jobTitle),
             work_location: toNullableString(workLocation),
             team_number: teamNumber ? Number(teamNumber) : null,
+            sector: toNullableString(sector),
             address_be: toNullableString(addressBe),
             status,
             is_active: status === "ativo",
@@ -295,6 +302,9 @@ function TabDadosGerais({
                 ))}
               </SelectContent>
             </Select>
+          </Field>
+          <Field label="Setor">
+            <SectorPicker value={sector} options={sectorOptions} onChange={setSector} />
           </Field>
           <Field label="Status">
             <Select value={status} onValueChange={setStatus}>
@@ -1101,6 +1111,90 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <Label>{label}</Label>
       {children}
     </div>
+  );
+}
+
+function normalizeSector(value: string): string {
+  return value
+    .toLocaleLowerCase("pt-BR")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function SectorPicker({
+  value,
+  options,
+  onChange,
+}: {
+  value: string;
+  options: string[];
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const normalizedQuery = normalizeSector(query.trim());
+  const filteredOptions = options.filter((option) => normalizeSector(option).includes(normalizedQuery));
+  const hasExactOption = options.some((option) => normalizeSector(option) === normalizedQuery);
+
+  return (
+    <Popover open={open} onOpenChange={(nextOpen) => {
+      setOpen(nextOpen);
+      if (!nextOpen) setQuery("");
+    }}>
+      <PopoverTrigger asChild>
+        <Button type="button" variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between font-normal">
+          <span className={value ? "truncate" : "truncate text-muted-foreground"}>
+            {value || "Selecionar ou criar setor"}
+          </span>
+          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" aria-hidden />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-[min(28rem,calc(100vw-2rem))] p-0">
+        <div className="border-b border-border p-2">
+          <Input
+            autoFocus
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Pesquisar ou criar setor"
+            aria-label="Pesquisar ou criar setor"
+          />
+        </div>
+        <div className="max-h-60 overflow-y-auto p-1">
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-muted-foreground hover:bg-accent"
+            onClick={() => { onChange(""); setOpen(false); }}
+          >
+            <Check className={`h-4 w-4 ${!value ? "opacity-100" : "opacity-0"}`} aria-hidden />
+            — sem setor —
+          </button>
+          {query.trim() && !hasExactOption && (
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-accent"
+              onClick={() => { onChange(query.trim()); setOpen(false); }}
+            >
+              <Plus className="h-4 w-4 shrink-0" aria-hidden />
+              Criar setor “{query.trim()}”
+            </button>
+          )}
+          {filteredOptions.map((option) => (
+            <button
+              key={option}
+              type="button"
+              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-accent"
+              onClick={() => { onChange(option); setOpen(false); }}
+            >
+              <Check className={`h-4 w-4 ${value === option ? "opacity-100" : "opacity-0"}`} aria-hidden />
+              <span className="truncate">{option}</span>
+            </button>
+          ))}
+          {filteredOptions.length === 0 && !query.trim() && (
+            <p className="px-3 py-3 text-center text-xs text-muted-foreground">Digite para criar o primeiro setor.</p>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 

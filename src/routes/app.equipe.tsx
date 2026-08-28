@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,7 @@ interface MemberRow {
     work_location: string | null;
     supervisor_id: string | null;
     team: string | null;
+    sector: string | null;
   } | null;
 }
 
@@ -100,6 +101,21 @@ function TeamPage() {
         emailsById = new Map();
       }
 
+      let sectorsById = new Map<string, string>();
+      try {
+        const { data: sectorRows } = await (supabase.from("profiles" as never) as any)
+          .select("id, sector")
+          .in("id", ids);
+        sectorsById = new Map(
+          ((sectorRows ?? []) as Array<{ id: string; sector: string | null }>)
+            .filter((p) => p.sector?.trim())
+            .map((p) => [p.id, p.sector!.trim()]),
+        );
+      } catch {
+        // The list remains usable while the optional sector migration is applied.
+        sectorsById = new Map();
+      }
+
       const profileRows = (profs ?? []) as NonNullable<MemberRow["profile"]>[];
       return (roles ?? []).map((r) => ({
         ...r,
@@ -107,6 +123,7 @@ function TeamPage() {
           ? {
               ...profileRows.find((p) => p.id === r.user_id)!,
               email: emailsById.get(r.user_id) ?? null,
+              sector: sectorsById.get(r.user_id) ?? null,
             }
           : null,
       })) as MemberRow[];
@@ -115,6 +132,17 @@ function TeamPage() {
   });
 
   const [editing, setEditing] = useState<MemberRow | null>(null);
+  const sectorOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          (members ?? [])
+            .map((m) => m.profile?.sector?.trim())
+            .filter((sector): sector is string => Boolean(sector)),
+        ),
+      ).sort((a, b) => a.localeCompare(b, "pt-BR")),
+    [members],
+  );
 
   const toggleActive = useMutation({
     mutationFn: async (m: MemberRow) => {
@@ -367,9 +395,11 @@ function TeamPage() {
                   <div className="text-xs text-muted-foreground">
                     {m.role} {m.profile?.phone ? `· ${m.profile.phone}` : ""}
                   </div>
-                  {(m.profile?.job_title || m.profile?.work_location || m.profile?.team) && (
+                  {(m.profile?.job_title || m.profile?.work_location || m.profile?.team || m.profile?.sector) && (
                     <div className="mt-0.5 text-xs text-muted-foreground">
-                      {[m.profile?.job_title, m.profile?.work_location, m.profile?.team].filter(Boolean).join(" · ")}
+                      {[m.profile?.job_title, m.profile?.work_location, m.profile?.team, m.profile?.sector]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </div>
                   )}
                 </div>
@@ -424,6 +454,7 @@ function TeamPage() {
                 userId={editing.user_id}
                 companyId={currentCompanyId!}
                 currentRole={editing.role}
+                sectorOptions={sectorOptions}
                 onDone={() => {
                   setEditing(null);
                   qc.invalidateQueries({ queryKey: ["team-members"] });
