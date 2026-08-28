@@ -130,7 +130,51 @@ function DespesasPage() {
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  // Pré-visualização só para imagens; PDF cai no ícone.
+  useEffect(() => {
+    if (!file || !expenseFileMime(file).startsWith("image/")) {
+      setFilePreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setFilePreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  /**
+   * Chrome Android aborta o seletor quando o value é limpo dentro do próprio
+   * onClick do input. Limpar antes do click() programático resolve e mantém a
+   * possibilidade de escolher o mesmo arquivo novamente.
+   */
+  const openPicker = (ref: React.RefObject<HTMLInputElement>) => {
+    const input = ref.current;
+    if (!input) return;
+    input.value = "";
+    input.click();
+  };
+
+  const onPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.currentTarget;
+    const selected = input.files?.[0] ?? null;
+    if (!selected) return; // usuário cancelou: mantém o anexo anterior
+    if (selected.size > 20 * 1024 * 1024) {
+      toast.error("O comprovante deve ter no máximo 20 MB.");
+      input.value = "";
+      return;
+    }
+    if (!isExpenseFileSupported(selected)) {
+      toast.error("Formato não suportado. Use uma imagem (JPG, PNG, WEBP, HEIC) ou PDF.");
+      input.value = "";
+      return;
+    }
+    setFile(selected);
+    toast.success("Comprovante anexado. Envie a despesa para guardar.");
+  };
+
 
   const create = useMutation({
     mutationFn: async () => {
