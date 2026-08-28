@@ -92,6 +92,13 @@ function DeploymentDiagnostics() {
 const GROUPS_STORAGE_KEY = "omnibiz:sidebar:groups:v2";
 const FORCE_MENU_CLOSED_KEY = "omnibiz:force-mobile-menu-closed";
 const MOBILE_QUERY = "(max-width: 767px)";
+// Referência visível da correção Android quando o host não injeta o SHA do build.
+const SOURCE_COMMIT_FALLBACK = "28676d6";
+
+const getVisibleCommit = () => {
+  const runtimeCommit = ((import.meta.env.VITE_COMMIT_SHA ?? "") as string).trim();
+  return runtimeCommit && runtimeCommit !== "dev" ? runtimeCommit.slice(0, 7) : SOURCE_COMMIT_FALLBACK;
+};
 
 export function AppLayout({ children }: { children?: ReactNode }) {
   const { user, isSuperAdmin, currentCompanyId, signOut, effectiveRole, switchCompany, initialized } = useAuth();
@@ -103,6 +110,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
   const [breakpointReady, setBreakpointReady] = useState(false);
   const qc = useQueryClient();
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const visibleCommit = getVisibleCommit();
 
   const superAdminOperating = isSuperAdmin && !!currentCompanyId;
 
@@ -373,7 +381,10 @@ export function AppLayout({ children }: { children?: ReactNode }) {
             {superAdminOperating && activeCompany?.name && (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-1.5 text-[11px] font-medium text-destructive">
                 <div className="text-[9px] uppercase tracking-wide opacity-80">Empresa ativa</div>
-                <div className="truncate">{activeCompany.name}</div>
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <span className="truncate">{activeCompany.name}</span>
+                  <span className="shrink-0 font-mono text-[9px] opacity-80">commit {visibleCommit}</span>
+                </div>
               </div>
             )}
           </div>
@@ -545,6 +556,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
                 <Shield className="h-3.5 w-3.5" />
                 <span className="truncate">
                   MODO SUPER ADMIN — Empresa ativa: <strong>{activeCompany?.name ?? "..."}</strong>
+                  <span className="ml-1.5 font-mono text-[10px] opacity-80">commit {visibleCommit}</span>
                 </span>
                 <Button
                   size="sm"
