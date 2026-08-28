@@ -80,6 +80,79 @@ const isExpenseFileSupported = (file: File) => {
   return mime === "application/pdf" || mime.startsWith("image/");
 };
 
+const EXPENSE_DRAFT_DB = "omnibiz-expense-drafts-v1";
+const EXPENSE_DRAFT_STORE = "attachments";
+
+type StoredExpenseAttachment = {
+  blob: Blob;
+  name: string;
+  type: string;
+  lastModified: number;
+};
+
+const openExpenseDraftDb = () => {
+  if (typeof indexedDB === "undefined") return Promise.resolve<IDBDatabase | null>(null);
+  return new Promise<IDBDatabase>((resolve, reject) => {
+    const request = indexedDB.open(EXPENSE_DRAFT_DB, 1);
+    request.onupgradeneeded = () => {
+      if (!request.result.objectStoreNames.contains(EXPENSE_DRAFT_STORE)) {
+        request.result.createObjectStore(EXPENSE_DRAFT_STORE);
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const saveExpenseDraftAttachment = async (key: string | null, file: File) => {
+  if (!key) return;
+  const db = await openExpenseDraftDb();
+  if (!db) return;
+  await new Promise<void>((resolve, reject) => {
+    const request = db
+      .transaction(EXPENSE_DRAFT_STORE, "readwrite")
+      .objectStore(EXPENSE_DRAFT_STORE)
+      .put({ blob: file, name: file.name, type: expenseFileMime(file), lastModified: file.lastModified }, key);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+  db.close();
+};
+
+const loadExpenseDraftAttachment = async (key: string | null) => {
+  if (!key) return null;
+  const db = await openExpenseDraftDb();
+  if (!db) return null;
+  const stored = await new Promise<StoredExpenseAttachment | undefined>((resolve, reject) => {
+    const request = db.transaction(EXPENSE_DRAFT_STORE, "readonly").objectStore(EXPENSE_DRAFT_STORE).get(key);
+    request.onsuccess = () => resolve(request.result as StoredExpenseAttachment | undefined);
+    request.onerror = () => reject(request.error);
+  });
+  db.close();
+  return stored ? new File([stored.blob], stored.name, { type: stored.type, lastModified: stored.lastModified }) : null;
+};
+
+const clearExpenseDraftAttachment = async (key: string | null) => {
+  if (!key) return;
+  const db = await openExpenseDraftDb();
+  if (!db) return;
+  await new Promise<void>((resolve, reject) => {
+    const request = db.transaction(EXPENSE_DRAFT_STORE, "readwrite").objectStore(EXPENSE_DRAFT_STORE).delete(key);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+  db.close();
+};
+
+const saveExpenseDraft = (key: string | null, draft: ExpenseDraft) => {
+  if (!key) return;
+  try {
+    sessionStorage.setItem(key, JSON.stringify(draft));
+  } catch {
+    // O rascunho é apenas um apoio e não pode bloquear o formulário.
+  }
+};
+
 // OmniBiz sync marker 2026-08-27: mobile camera/gallery attachments accept image/* and PDF.
 
 const fmtDate = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("pt-PT");
@@ -144,6 +217,7 @@ function DespesasPage() {
   const draftStorageKey = user?.id && currentCompanyId
     ? `omnibiz:expense-draft:${currentCompanyId}:${user.id}`
     : null;
+  const attachmentDraftKey = draftStorageKey ? `${draftStorageKey}:attachment` : null;
 
   // A câmera do Android pode suspender ou recriar a página por pressão de
   // memória. O rascunho textual é restaurado quando a aplicação regressa.
@@ -167,8 +241,21 @@ function DespesasPage() {
   useEffect(() => {
     if (!draftStorageKey || !draftReady) return;
     const draft: ExpenseDraft = { expenseDate, amount, reason, notes };
-    sessionStorage.setItem(draftStorageKey, JSON.stringify(draft));
+    saveExpenseDraft(draftStorageKey, draft);
   }, [amount, draftReady, draftStorageKey, expenseDate, notes, reason]);
+
+  useEffect(() => {
+    if (!attachmentDraftKey) return;
+    let cancelled = false;
+    void loadExpenseDraftAttachment(attachmentDraftKey)
+      .then((saved) => {
+        if (!cancelled && saved) setFile(saved);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [attachmentDraftKey]);
 
   // Pré-visualização só para imagens; PDF cai no ícone.
   useEffect(() => {
@@ -191,9 +278,15 @@ function DespesasPage() {
     if (!input) return;
     const draft = { expenseDate, amount, reason, notes };
     pickerDraftRef.current = draft;
-    if (draftStorageKey) sessionStorage.setItem(draftStorageKey, JSON.stringify(draft));
+    saveExpenseDraft(draftStorageKey, draft);
     input.value = "";
-    input.click();
+    try {
+      const picker = input as HTMLInputElement & { showPicker?: () => void };
+      if (typeof picker.showPicker === "function") picker.showPicker();
+      else input.click();
+    } catch {
+      input.click();
+    }
   };
 
   const onPicked = (e: ChangeEvent<HTMLInputElement>) => {
@@ -220,6 +313,7 @@ function DespesasPage() {
       setNotes(preserved.notes);
     }
     setFile(selected);
+    void saveExpenseDraftAttachment(attachmentDraftKey, selected).catch(() => undefined);
     toast.success("Comprovante anexado. Envie a despesa para guardar.");
   };
 
@@ -269,6 +363,7 @@ function DespesasPage() {
     onSuccess: () => {
       toast.success("Despesa enviada para aprovação");
       if (draftStorageKey) sessionStorage.removeItem(draftStorageKey);
+      void clearExpenseDraftAttachment(attachmentDraftKey).catch(() => undefined);
       setExpenseDate(new Date().toISOString().slice(0, 10));
       setAmount("");
       setReason("");
@@ -466,6 +561,7 @@ function DespesasPage() {
                   type="button"
                   onClick={() => {
                     setFile(null);
+                    void clearExpenseDraftAttachment(attachmentDraftKey).catch(() => undefined);
                     if (galleryInputRef.current) galleryInputRef.current.value = "";
                     if (cameraInputRef.current) cameraInputRef.current.value = "";
                   }}
