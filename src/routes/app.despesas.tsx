@@ -150,7 +150,7 @@ function DespesasPage() {
    * onClick do input. Limpar antes do click() programático resolve e mantém a
    * possibilidade de escolher o mesmo arquivo novamente.
    */
-  const openPicker = (ref: React.RefObject<HTMLInputElement>) => {
+  const openPicker = (ref: React.RefObject<HTMLInputElement | null>) => {
     const input = ref.current;
     if (!input) return;
     input.value = "";
