@@ -540,8 +540,8 @@ export function AppLayout({ children }: { children?: ReactNode }) {
       )}
 
       {/* Main */}
-      <div className="flex min-h-screen flex-1 flex-col md:pl-0">
-        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur md:px-8">
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col md:pl-0">
+        <header className="sticky top-0 z-20 flex min-w-0 h-16 items-center gap-2 border-b border-border bg-background/80 px-3 backdrop-blur sm:gap-3 sm:px-4 md:px-8">
           <button
             className="md:hidden"
             onClick={() => setOpen(true)}
@@ -550,18 +550,18 @@ export function AppLayout({ children }: { children?: ReactNode }) {
           >
             <Menu className="h-5 w-5" />
           </button>
-          <div className="flex-1">
+          <div className="min-w-0 flex-1">
             {superAdminOperating && (
-              <div className="flex flex-wrap items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-1.5 text-xs font-medium text-destructive">
+              <div className="flex min-w-0 flex-wrap items-center gap-1.5 rounded-lg border border-destructive/30 bg-destructive/10 px-2 py-1.5 text-[11px] font-medium text-destructive sm:gap-2 sm:px-3 sm:text-xs">
                 <Shield className="h-3.5 w-3.5" />
-                <span className="truncate">
+                <span className="min-w-0 flex-1 truncate">
                   MODO SUPER ADMIN — Empresa ativa: <strong>{activeCompany?.name ?? "..."}</strong>
                   <span className="ml-1.5 font-mono text-[10px] opacity-80">commit {visibleCommit}</span>
                 </span>
                 <Button
                   size="sm"
                   variant="outline"
-                  className="ml-auto h-7 border-destructive/40 px-2 text-[11px]"
+                  className="ml-auto h-7 shrink-0 border-destructive/40 px-2 text-[10px] sm:text-[11px]"
                   onClick={async () => {
                     await switchCompany(null);
                     qc.invalidateQueries();
@@ -590,7 +590,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
             </Button>
           )}
         </header>
-        <main className="flex-1 px-4 py-6 md:px-8 md:py-10">{children ?? <Outlet />}</main>
+        <main className="min-w-0 flex-1 px-3 py-6 sm:px-4 md:px-8 md:py-10">{children ?? <Outlet />}</main>
         {(import.meta.env.DEV || import.meta.env.VITE_SHOW_DIAGNOSTICS === "true") && (
           <footer className="border-t border-border bg-muted/30 px-4 py-2 text-[10px] text-muted-foreground md:px-8">
             <DeploymentDiagnostics />

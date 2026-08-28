@@ -746,8 +746,8 @@ function ActiveTaskCard({
   const useManualExit = isManualEntry || requiresManualEnd;
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card shadow-lg">
-      <div className="flex items-center justify-between border-b border-border/60 px-5 py-3 text-xs font-medium uppercase tracking-wide text-primary">
+    <section className="min-w-0 overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card shadow-lg">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-b border-border/60 px-4 py-3 text-xs font-medium uppercase tracking-wide text-primary sm:px-5">
         <span>Tarefa em andamento</span>
         <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] tracking-normal">
           {mode === "manual" ? (
@@ -760,9 +760,9 @@ function ActiveTaskCard({
           {PUNCH_MODE_LABELS[mode]}
         </span>
       </div>
-      <div className="space-y-5 p-5 sm:p-6">
+      <div className="min-w-0 space-y-5 p-4 sm:p-6">
         <div>
-          <h2 className="font-display text-2xl font-semibold leading-tight sm:text-3xl">{task.title}</h2>
+          <h2 className="break-words font-display text-2xl font-semibold leading-tight sm:text-3xl">{task.title}</h2>
           {clientName && (
             <div className="mt-1 inline-flex items-center gap-1 text-sm text-muted-foreground">
               <Building2 className="h-3.5 w-3.5" /> {clientName}
@@ -795,7 +795,7 @@ function ActiveTaskCard({
         ) : (
           <div className="flex flex-col items-center justify-center rounded-xl bg-background/60 py-6">
             <div className="text-[11px] uppercase tracking-widest text-muted-foreground">Tempo efetivo</div>
-            <div className="font-display text-5xl font-semibold tabular-nums sm:text-6xl">{formatHMS(liveSec)}</div>
+            <div className="max-w-full break-all font-display text-5xl font-semibold tabular-nums sm:text-6xl">{formatHMS(liveSec)}</div>
             {state === "pausado" && (
               <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-warning/15 px-2.5 py-1 text-xs font-medium text-warning-foreground">
                 <Coffee className="h-3 w-3" /> Em pausa
@@ -807,7 +807,7 @@ function ActiveTaskCard({
         {/* Ações grandes */}
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {!useManualExit && state === "aberto" && (
-            <Button size="lg" variant="outline" className="h-14 text-base" disabled={pausing} onClick={onPause}>
+              <Button size="lg" variant="outline" className="h-14 min-w-0 text-sm sm:text-base" disabled={pausing} onClick={onPause}>
               <Pause className="mr-2 h-5 w-5" /> Pausa almoço
             </Button>
           )}
@@ -820,7 +820,7 @@ function ActiveTaskCard({
             <Button
               size="lg"
               variant="outline"
-              className="h-14 text-base"
+              className="h-14 min-w-0 text-sm sm:text-base"
               disabled={manualEnding}
               onClick={onManualEnd}
             >
@@ -828,7 +828,7 @@ function ActiveTaskCard({
             </Button>
           )}
           {!useManualExit && (
-            <Button size="lg" className="h-14 text-base sm:col-span-2" disabled={ending} onClick={onComplete}>
+            <Button size="lg" className="h-14 min-w-0 text-sm sm:col-span-2" disabled={ending} onClick={onComplete}>
               <Square className="mr-2 h-5 w-5" /> Concluir tarefa
             </Button>
           )}
