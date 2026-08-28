@@ -50,6 +50,7 @@ import {
   canBecomeAbsent,
   canArchiveBy,
   canCancelTask,
+  addTaskCompletionNote,
 } from "@/lib/tasks";
 import { usePunchFlow } from "@/hooks/use-punch-flow";
 import { PunchFlowOverlay } from "@/components/ponto/PunchFlowOverlay";
@@ -97,7 +98,10 @@ function PontoPage() {
   const [manualEndOpen, setManualEndOpen] = useState(false);
   const [manualEndAt, setManualEndAt] = useState("");
   const [manualEndReason, setManualEndReason] = useState("");
+  const [manualCompletionNote, setManualCompletionNote] = useState("");
   const [manualEndRequiresReason, setManualEndRequiresReason] = useState(false);
+  const [completionDialogOpen, setCompletionDialogOpen] = useState(false);
+  const [completionNote, setCompletionNote] = useState("");
   const [recoveryOpen, setRecoveryOpen] = useState(false);
   const [recoveryAttemptedTaskId, setRecoveryAttemptedTaskId] = useState<string | null>(null);
   const [cancelTarget, setCancelTarget] = useState<TaskRow | null>(null);
@@ -319,7 +323,7 @@ function PontoPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["punch-open"] }),
   });
   const endMut = useMutation({
-    mutationFn: async () => {
+    mutationFn: async ({ note }: { note: string }) => {
       if (!openEntry || !openTask) throw new Error("Sem tarefa em andamento.");
       // 1) Fecha o time_entry via v2 (grava geopoint + política de geofencing).
       const res = await punch.run({ op: "stop", entryId: openEntry.id });
@@ -329,13 +333,26 @@ function PontoPage() {
       void punch.run({ op: "departure", entryId: openEntry.id, neverBlockOnGps: true });
       // 3) Transiciona a tarefa (regra de tarefa continua em `task_transition`).
       await transitionTask(openTask.id, "concluir");
-      return res;
+      let noteSaved = true;
+      if (note.trim()) {
+        try {
+          await addTaskCompletionNote(openTask.id, note);
+        } catch (error) {
+          noteSaved = false;
+          console.error("[task-completion-note] failed after punch stop", { taskId: openTask.id, error });
+        }
+      }
+      return { res, noteSaved };
     },
-    onSuccess: () => {
+    onSuccess: ({ noteSaved }) => {
+      setCompletionDialogOpen(false);
+      setCompletionNote("");
       qc.invalidateQueries({ queryKey: ["punch-open"] });
       qc.invalidateQueries({ queryKey: ["punch-history"] });
       qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
       qc.invalidateQueries({ queryKey: ["tasks"] });
+      if (noteSaved) toast.success("Tarefa concluída");
+      else toast.warning("Tarefa concluída, mas a observação não foi salva.");
     },
     // Atualiza a folha mesmo quando a transição da tarefa falhar depois do stop.
     // O ponto já pode ter sido fechado pela RPC e não deve ficar visível como aberto.
@@ -388,22 +405,33 @@ function PontoPage() {
     },
   });
   const manualEndMut = useMutation({
-    mutationFn: async ({ entryId, endedAt, reason }: { entryId: string; endedAt: string; reason?: string }) => {
+    mutationFn: async ({ entryId, endedAt, reason, note }: { entryId: string; endedAt: string; reason?: string; note: string }) => {
       if (!openEntry) {
         throw new Error("Sem ponto aberto.");
       }
       const entry = await punchEmployeeManualEnd(entryId, localInputToIso(endedAt), true, reason);
-      toast.success("Saida manual registrada.");
-      return entry;
+      let noteSaved = true;
+      if (note.trim() && openTask) {
+        try {
+          await addTaskCompletionNote(openTask.id, note);
+        } catch (error) {
+          noteSaved = false;
+          console.error("[task-completion-note] failed after manual punch end", { taskId: openTask.id, error });
+        }
+      }
+      return { entry, noteSaved };
     },
-    onSuccess: () => {
+    onSuccess: ({ noteSaved }) => {
       setManualEndOpen(false);
       setManualEndReason("");
+      setManualCompletionNote("");
       setManualEndRequiresReason(false);
       qc.invalidateQueries({ queryKey: ["punch-open"] });
       qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
       qc.invalidateQueries({ queryKey: ["punch-history"] });
       qc.invalidateQueries({ queryKey: ["tasks"] });
+      if (noteSaved) toast.success("Saida manual registrada.");
+      else toast.warning("Saida manual registrada, mas a observação não foi salva.");
     },
   });
   const requestAuthMut = useMutation({
@@ -452,6 +480,7 @@ function PontoPage() {
     if (!openEntry || !openTask) return;
     setManualEndAt(manualDefaultDateTime(openTask));
     setManualEndReason("");
+    setManualCompletionNote("");
     setManualEndRequiresReason(requiresReason);
     setManualEndOpen(true);
   }
@@ -487,7 +516,7 @@ function PontoPage() {
           onResume={() => resumeMut.mutate()}
           requiresManualEnd={isLateOpenEntry}
           onComplete={() =>
-            isManualOpenTask || isLateOpenEntry ? openManualEndDialog(isLateOpenEntry) : endMut.mutate()
+            isManualOpenTask || isLateOpenEntry ? openManualEndDialog(isLateOpenEntry) : setCompletionDialogOpen(true)
           }
           onManualEnd={() => openManualEndDialog(isLateOpenEntry)}
           pausing={pauseMut.isPending}
@@ -704,7 +733,12 @@ function PontoPage() {
                   toast.error("Informe a justificativa do fechamento tardio.");
                   return;
                 }
-                manualEndMut.mutate({ entryId: openEntry.id, endedAt: manualEndAt, reason: reason || undefined });
+                manualEndMut.mutate({
+                  entryId: openEntry.id,
+                  endedAt: manualEndAt,
+                  reason: reason || undefined,
+                  note: manualCompletionNote,
+                });
               }}
             >
               <div className="space-y-2">
@@ -732,6 +766,19 @@ function PontoPage() {
                   placeholder="Ex.: esqueci de bater saída ontem; horário correto confirmado com o gestor."
                 />
               </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="manual-completion-note">
+                  Observação da conclusão (opcional)
+                </label>
+                <Textarea
+                  id="manual-completion-note"
+                  value={manualCompletionNote}
+                  onChange={(e) => setManualCompletionNote(e.target.value)}
+                  rows={3}
+                  maxLength={2000}
+                  placeholder="Ex.: cliente solicitou algo adicional, houve algum problema, material em falta..."
+                />
+              </div>
             </form>
           </ModalBody>
           <ModalFooter>
@@ -741,6 +788,56 @@ function PontoPage() {
             <Button type="submit" form="manual-end-form" disabled={manualEndMut.isPending}>
               <LogOut className="mr-2 h-4 w-4" />
               {manualEndMut.isPending ? "Finalizando..." : "Finalizar manual"}
+            </Button>
+          </ModalFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={completionDialogOpen}
+        onOpenChange={(open) => {
+          if (!open && !endMut.isPending) {
+            setCompletionDialogOpen(false);
+            setCompletionNote("");
+          }
+        }}
+      >
+        <DialogContent size="sm">
+          <ModalHeader icon={Square} title="Concluir tarefa" description="Registre uma observação opcional sobre a conclusão." />
+          <ModalBody>
+            <form
+              id="punch-completion-form"
+              className="space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                endMut.mutate({ note: completionNote });
+              }}
+            >
+              <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm font-medium">
+                {openTask?.title ?? "Tarefa"}
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="punch-completion-note">
+                  Observação da conclusão (opcional)
+                </label>
+                <Textarea
+                  id="punch-completion-note"
+                  value={completionNote}
+                  onChange={(e) => setCompletionNote(e.target.value)}
+                  rows={4}
+                  maxLength={2000}
+                  placeholder="Ex.: cliente solicitou algo adicional, houve algum problema, material em falta..."
+                />
+              </div>
+            </form>
+          </ModalBody>
+          <ModalFooter>
+            <Button type="button" variant="outline" disabled={endMut.isPending} onClick={() => setCompletionDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" form="punch-completion-form" disabled={endMut.isPending}>
+              <Square className="mr-2 h-4 w-4" />
+              {endMut.isPending ? "Concluindo..." : "Concluir tarefa"}
             </Button>
           </ModalFooter>
         </DialogContent>

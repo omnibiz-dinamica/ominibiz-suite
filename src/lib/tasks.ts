@@ -574,6 +574,18 @@ export async function transitionTask(taskId: string, action: TaskAction, reason?
   return data as TaskRow;
 }
 
+/** Registra a observação histórica da conclusão sem alterar o estado da tarefa. */
+export async function addTaskCompletionNote(taskId: string, note: string): Promise<void> {
+  const normalized = note.trim();
+  if (!normalized) return;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase.rpc as any)("task_add_completion_note", {
+    _task_id: taskId,
+    _note: normalized,
+  });
+  if (error) throw error;
+}
+
 /** Arquiva (soft) ou desarquiva uma tarefa. Apenas estados terminais podem ser arquivados. */
 export async function archiveTask(taskId: string, archive = true): Promise<TaskRow> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

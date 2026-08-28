@@ -1155,3 +1155,28 @@ encerramento é um único `series_end`.
 **Consequências.** «Apenas esta» e «Esta e futuras» concluem sem erro, com
 auditoria completa e sem regressão nos eventos anteriores.
 
+---
+
+## ADR-053 — Observação histórica de conclusão de tarefa (2026-08-28)
+
+**Contexto.** O ticket SUP-2026-000112 solicita uma observação opcional no
+encerramento da tarefa, disponível posteriormente para o gestor, sem acoplar
+essa informação ao encerramento do ponto.
+
+**Decisão.** Reutilizar `task_audit_events`, adicionando apenas o evento
+`completion_note` à sua constraint existente e armazenando o texto no campo
+`reason`. A RPC `task_add_completion_note` valida `auth.uid()`, empresa,
+responsável/gestor, estado concluído e limite de 2.000 caracteres. A gravação
+ocorre depois da conclusão; falha na observação não desfaz a conclusão da
+tarefa nem o STOP.
+
+**Alternativas rejeitadas.** (1) Coluna nova em `tasks`, pois mistura dado
+operacional editável com histórico. (2) Alterar `task_transition` ou
+`punch_stop_v2`, pois aumentaria o acoplamento e poderia reintroduzir risco no
+fluxo de ponto. (3) Tabela paralela de comentários, pois não existe hoje e
+duplicaria a fonte de verdade da auditoria.
+
+**Consequências.** Observações ficam imutáveis como eventos, isoladas por
+empresa pelas policies existentes, com proteção contra repetição da mesma
+gravação e sem alteração de tarefas históricas.
+

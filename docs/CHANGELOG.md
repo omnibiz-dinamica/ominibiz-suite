@@ -7,6 +7,17 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### 🐞 SUP-2026-000112 — Observação opcional ao concluir tarefa
+
+#### Adicionado
+- O colaborador pode registrar uma observação opcional no encerramento pela tela de Tarefas ou pela Folha de Ponto, em desktop e mobile.
+- A observação é gravada como evento histórico `completion_note` em `task_audit_events`, com empresa, tarefa, autor, data e texto.
+- Gestores e responsáveis autorizados conseguem consultar a observação na listagem da tarefa; o limite é de 2.000 caracteres.
+
+#### Preservado
+- `task_transition`, START, STOP, duração, geopontos, recorrências, RLS e RBAC continuam separados e inalterados.
+- Falha opcional ao gravar a observação não desfaz a conclusão da tarefa nem o encerramento do ponto.
+
 ### 🐞 P0 — Anexo de despesas no Chrome Android
 
 #### Corrigido

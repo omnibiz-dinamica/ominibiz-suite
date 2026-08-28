@@ -76,6 +76,7 @@ import {
   archiveTask,
   canArchive,
   canMarkAbsent,
+  addTaskCompletionNote,
 } from "@/lib/tasks";
 
 import { RecurrenceForm, emptyRecurrence, type RecurrenceFormValue } from "@/components/tasks/RecurrenceForm";
@@ -124,6 +125,13 @@ type ClientOption = {
   name: string;
   timing_mode?: "start_stop" | "manual" | null;
 };
+type CompletionNote = {
+  id: string;
+  task_id: string;
+  actor_user_id: string;
+  created_at: string;
+  reason: string | null;
+};
 type CalendarMode = "day" | "week" | "month" | "year";
 const TASK_DOC_ACCEPT = "application/pdf,image/png,image/jpeg,image/jpg";
 const TASK_DOC_MAX_SIZE = 10 * 1024 * 1024;
@@ -158,6 +166,8 @@ function TasksPage() {
   const [refusing, setRefusing] = useState<TaskRow | null>(null);
   // ADR-044 — registo formal de falta pelo gestor (motivo obrigatório).
   const [absenceTarget, setAbsenceTarget] = useState<TaskRow | null>(null);
+  const [completing, setCompleting] = useState<TaskRow | null>(null);
+  const [completionNote, setCompletionNote] = useState("");
 
   // ADR-036 — cancelamento sempre com motivo obrigatório e auditado.
   const [cancelling, setCancelling] = useState<TaskRow | null>(null);
@@ -234,6 +244,27 @@ function TasksPage() {
     },
     enabled: !!currentCompanyId,
   });
+
+  const { data: completionNotes } = useQuery({
+    queryKey: ["task-completion-notes", currentCompanyId],
+    queryFn: async () => {
+      if (!currentCompanyId) return [] as CompletionNote[];
+      const { data, error } = await (supabase.from("task_audit_events" as never) as any)
+        .select("id,task_id,actor_user_id,created_at,reason")
+        .eq("company_id", currentCompanyId)
+        .eq("event", "completion_note")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as CompletionNote[];
+    },
+    enabled: !!user && !!currentCompanyId,
+  });
+
+  const completionNoteByTask = useMemo(() => {
+    const map = new Map<string, CompletionNote>();
+    for (const note of completionNotes ?? []) if (!map.has(note.task_id)) map.set(note.task_id, note);
+    return map;
+  }, [completionNotes]);
 
   /**
    * SUP-2026-000074 — pontos ainda em aberto (esquecimento de saída).
@@ -322,6 +353,31 @@ function TasksPage() {
       }
       toast.error(e.message);
     },
+  });
+
+  const completeTask = useMutation({
+    mutationFn: async ({ taskId, note }: { taskId: string; note: string }) => {
+      const task = await transitionTask(taskId, "concluir");
+      let noteSaved = true;
+      if (note.trim()) {
+        try {
+          await addTaskCompletionNote(taskId, note);
+        } catch (error) {
+          noteSaved = false;
+          console.error("[task-completion-note] failed after task completion", { taskId, error });
+        }
+      }
+      return { task, noteSaved };
+    },
+    onSuccess: ({ noteSaved }) => {
+      setCompleting(null);
+      setCompletionNote("");
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["task-completion-notes"] });
+      if (noteSaved) toast.success("Tarefa concluída");
+      else toast.warning("Tarefa concluída, mas a observação não foi salva.");
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const deleteTask = useMutation({
@@ -417,6 +473,9 @@ function TasksPage() {
           return;
         }
       }
+      setCompletionNote("");
+      setCompleting(task);
+      return;
     }
 
     transition.mutate({ id: task.id, action });
@@ -673,6 +732,55 @@ function TasksPage() {
         }}
       />
 
+      <Dialog
+        open={!!completing}
+        onOpenChange={(value) => {
+          if (!value && !completeTask.isPending) {
+            setCompleting(null);
+            setCompletionNote("");
+          }
+        }}
+      >
+        <DialogContent size="sm">
+          <ModalHeader icon={Check} title="Concluir tarefa" description="Registre uma observação opcional sobre a conclusão." />
+          <ModalBody>
+            <form
+              id="task-completion-form"
+              className="space-y-4"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (!completing) return;
+                completeTask.mutate({ taskId: completing.id, note: completionNote });
+              }}
+            >
+              <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm font-medium">
+                {completing?.title}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="task-completion-note">Observação da conclusão (opcional)</Label>
+                <Textarea
+                  id="task-completion-note"
+                  value={completionNote}
+                  onChange={(event) => setCompletionNote(event.target.value)}
+                  maxLength={2000}
+                  rows={4}
+                  placeholder="Ex.: cliente solicitou algo adicional, houve algum problema, material em falta..."
+                />
+              </div>
+            </form>
+          </ModalBody>
+          <ModalFooter>
+            <Button type="button" variant="outline" disabled={completeTask.isPending} onClick={() => setCompleting(null)}>
+              Cancelar
+            </Button>
+            <Button type="submit" form="task-completion-form" disabled={completeTask.isPending}>
+              <Check className="mr-2 h-4 w-4" />
+              {completeTask.isPending ? "Concluindo..." : "Concluir tarefa"}
+            </Button>
+          </ModalFooter>
+        </DialogContent>
+      </Dialog>
+
 
 
       <Dialog open={!!refusing} onOpenChange={(v) => !v && !transition.isPending && setRefusing(null)}>
@@ -831,10 +939,11 @@ function TasksPage() {
           onDelete={handleDeleteRequest}
           onTransition={handleTransition}
           onArchive={(id, archive) => archiveMut.mutate({ id, archive })}
-          onMoveDate={(id, dateKey) => moveTaskDate.mutate({ id, dateKey })}
-          transitionPending={transition.isPending}
-          archivePending={archiveMut.isPending}
-        />
+           onMoveDate={(id, dateKey) => moveTaskDate.mutate({ id, dateKey })}
+           transitionPending={transition.isPending}
+           archivePending={archiveMut.isPending}
+           completionNotes={completionNoteByTask}
+         />
       )}
 
       {!isLoading && filteredTasks.length > 0 && isManager && taskView === "calendar" && (
@@ -851,10 +960,11 @@ function TasksPage() {
           onDelete={handleDeleteRequest}
           onTransition={handleTransition}
           onArchive={(id, archive) => archiveMut.mutate({ id, archive })}
-          onMoveDate={(id, dateKey) => moveTaskDate.mutate({ id, dateKey })}
-          transitionPending={transition.isPending}
-          archivePending={archiveMut.isPending}
-        />
+           onMoveDate={(id, dateKey) => moveTaskDate.mutate({ id, dateKey })}
+           transitionPending={transition.isPending}
+           archivePending={archiveMut.isPending}
+           completionNotes={completionNoteByTask}
+         />
       )}
 
       {!isManager && !isLoading && (
@@ -879,10 +989,11 @@ function TasksPage() {
                 onDelete={handleDeleteRequest}
                 onTransition={handleTransition}
                 onArchive={(id, archive) => archiveMut.mutate({ id, archive })}
-                onMoveDate={(id, dateKey) => moveTaskDate.mutate({ id, dateKey })}
-                transitionPending={transition.isPending}
-                archivePending={archiveMut.isPending}
-              />
+                 onMoveDate={(id, dateKey) => moveTaskDate.mutate({ id, dateKey })}
+                 transitionPending={transition.isPending}
+                 archivePending={archiveMut.isPending}
+                 completionNotes={completionNoteByTask}
+               />
             ))}
           </ul>
         </div>
@@ -943,6 +1054,7 @@ interface RowHandlers {
   onMoveDate: (id: string, dateKey: string) => void;
   transitionPending: boolean;
   archivePending: boolean;
+  completionNotes: ReadonlyMap<string, CompletionNote>;
 }
 
 function TaskPlanningCalendar({
@@ -1597,11 +1709,13 @@ function TaskRowItem({
   onArchive,
   transitionPending,
   archivePending,
+  completionNotes,
 }: RowHandlers & { task: TaskRow }) {
   const late = isVisuallyLate(t);
   const actions = availableActions(t, { userId, isManager });
   const archived = !!t.archived_at;
   const archivable = canArchive(t);
+  const completionNote = completionNotes.get(t.id);
   const date = formatWallDate(t.scheduled_for ?? t.recurrence_date ?? t.due_at);
   const start = formatWallTime(t.scheduled_for);
   const end = formatWallTime(t.scheduled_end);
@@ -1672,6 +1786,13 @@ function TaskRowItem({
           {updated && <span>Atualizado: {updated}</span>}
         </div>
         {t.description && <div className="mt-1 line-clamp-1 text-xs text-muted-foreground">{t.description}</div>}
+        {completionNote && (
+          <div className="mt-2 rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-xs">
+            <div className="font-semibold text-primary">Observação da conclusão</div>
+            <div className="mt-0.5 whitespace-pre-wrap text-foreground">{completionNote.reason}</div>
+            <div className="mt-1 text-muted-foreground">Registada em {formatLocalTime(completionNote.created_at)}</div>
+          </div>
+        )}
       </div>
       <div className="flex flex-wrap justify-end gap-2">
         {isManager && (
