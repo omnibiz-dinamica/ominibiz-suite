@@ -132,6 +132,13 @@ type CompletionNote = {
   created_at: string;
   reason: string | null;
 };
+type ApprovedVacation = {
+  id: string;
+  user_id: string;
+  start_date: string;
+  end_date: string;
+  status: "aprovado";
+};
 type CalendarMode = "day" | "week" | "month" | "year";
 const TASK_DOC_ACCEPT = "application/pdf,image/png,image/jpeg,image/jpg";
 const TASK_DOC_MAX_SIZE = 10 * 1024 * 1024;
@@ -245,6 +252,24 @@ function TasksPage() {
     enabled: !!currentCompanyId,
   });
 
+  const { data: approvedVacations } = useQuery({
+    queryKey: ["approved-vacations-calendar", currentCompanyId, user?.id, isManager],
+    queryFn: async () => {
+      if (!currentCompanyId) return [] as ApprovedVacation[];
+      let q = supabase
+        .from("vacation_requests")
+        .select("id,user_id,start_date,end_date,status")
+        .eq("company_id", currentCompanyId)
+        .eq("status", "aprovado")
+        .order("start_date", { ascending: true });
+      if (!isManager) q = q.eq("user_id", user!.id);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []) as ApprovedVacation[];
+    },
+    enabled: !!user?.id && !!currentCompanyId,
+  });
+
   const { data: completionNotes } = useQuery({
     queryKey: ["task-completion-notes", currentCompanyId],
     queryFn: async () => {
@@ -327,6 +352,9 @@ function TasksPage() {
       .channel(`user:${user.id}:tasks-ui-sync`)
       .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, () =>
         qc.invalidateQueries({ queryKey: ["tasks"] }),
+      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "vacation_requests" }, () =>
+        qc.invalidateQueries({ queryKey: ["approved-vacations-calendar"] }),
       )
       .subscribe();
     return () => {
@@ -946,9 +974,10 @@ function TasksPage() {
          />
       )}
 
-      {!isLoading && filteredTasks.length > 0 && isManager && taskView === "calendar" && (
+      {!isLoading && (filteredTasks.length > 0 || (approvedVacations?.length ?? 0) > 0) && isManager && taskView === "calendar" && (
         <TaskPlanningCalendar
           tasks={filteredTasks}
+          vacations={approvedVacations ?? []}
           members={members ?? []}
           clients={clientsList ?? []}
           groupBy={calendarGroup}
@@ -999,9 +1028,10 @@ function TasksPage() {
         </div>
       )}
 
-      {!isLoading && filteredTasks.length > 0 && !isManager && taskView === "calendar" && (
+      {!isLoading && (filteredTasks.length > 0 || (approvedVacations?.length ?? 0) > 0) && !isManager && taskView === "calendar" && (
         <TaskPlanningCalendar
           tasks={filteredTasks}
+          vacations={approvedVacations ?? []}
           members={members ?? []}
           clients={clientsList ?? []}
           groupBy="client"
@@ -1016,6 +1046,7 @@ function TasksPage() {
           onMoveDate={(id, dateKey) => moveTaskDate.mutate({ id, dateKey })}
           transitionPending={transition.isPending}
           archivePending={archiveMut.isPending}
+          completionNotes={completionNoteByTask}
         />
       )}
     </div>
@@ -1059,12 +1090,14 @@ interface RowHandlers {
 
 function TaskPlanningCalendar({
   tasks,
+  vacations,
   members,
   clients,
   groupBy,
   ...handlers
 }: RowHandlers & {
   tasks: TaskRow[];
+  vacations: ApprovedVacation[];
   members: { id: string; full_name: string | null }[];
   clients: ClientOption[];
   groupBy: "assignee" | "client";
@@ -1107,6 +1140,8 @@ function TaskPlanningCalendar({
       const date = taskDate(task);
       return date ? dateKey(date) === key : false;
     });
+  const vacationsForKey = (list: ApprovedVacation[], key: string) =>
+    list.filter((vacation) => vacation.start_date <= key && vacation.end_date >= key);
   const addPeriod = (direction: -1 | 1) => {
     setCursor((current) => {
       const next = new Date(current);
@@ -1148,6 +1183,10 @@ function TaskPlanningCalendar({
     const list = groups.get(key) ?? [];
     list.push(task);
     groups.set(key, list);
+  }
+  for (const vacation of vacations) {
+    const key = groupBy === "assignee" ? vacation.user_id : "__no_client__";
+    if (!groups.has(key)) groups.set(key, []);
   }
   const groupEntries = Array.from(groups.entries()).sort(([a], [b]) => {
     const labelA =
@@ -1191,6 +1230,12 @@ function TaskPlanningCalendar({
       </div>
 
       {groupEntries.map(([key, groupTasks]) => {
+        const groupVacations =
+          groupBy === "assignee"
+            ? vacations.filter((vacation) => vacation.user_id === key)
+            : key === "__no_client__"
+              ? vacations
+              : [];
         const title =
           groupBy === "assignee"
             ? memberName(key === "__unassigned__" ? null : key)
@@ -1206,6 +1251,7 @@ function TaskPlanningCalendar({
                 <h2 className="font-display text-base font-semibold">{title}</h2>
                 <p className="text-xs text-muted-foreground">
                   {groupTasks.length} {groupTasks.length === 1 ? "tarefa" : "tarefas"}
+                  {groupVacations.length > 0 && ` · ${groupVacations.length} período(s) de férias`}
                 </p>
               </div>
             </div>
@@ -1216,6 +1262,7 @@ function TaskPlanningCalendar({
                   label={cursor.toLocaleDateString("pt-PT", { weekday: "long", day: "2-digit", month: "2-digit" })}
                   dateKeyValue={dateKey(cursor)}
                   tasks={tasksForKey(groupTasks, dateKey(cursor))}
+                  vacations={vacationsForKey(groupVacations, dateKey(cursor))}
                   members={members}
                   clients={clients}
                   groupBy={groupBy}
@@ -1232,6 +1279,7 @@ function TaskPlanningCalendar({
                     label={day.toLocaleDateString("pt-PT", { weekday: "short", day: "2-digit", month: "2-digit" })}
                     dateKeyValue={dateKey(day)}
                     tasks={tasksForKey(groupTasks, dateKey(day))}
+                    vacations={vacationsForKey(groupVacations, dateKey(day))}
                     members={members}
                     clients={clients}
                     groupBy={groupBy}
@@ -1245,6 +1293,7 @@ function TaskPlanningCalendar({
               <div className="grid grid-cols-1 gap-2 p-4 sm:grid-cols-2 lg:grid-cols-7">
                 {monthDays.map((day) => {
                   const dayTasks = tasksForKey(groupTasks, dateKey(day));
+                  const dayVacations = vacationsForKey(groupVacations, dateKey(day));
                   const muted = day.getMonth() !== cursor.getMonth();
                   return (
                     <div
@@ -1264,13 +1313,18 @@ function TaskPlanningCalendar({
                         <span className="font-medium">
                           {day.toLocaleDateString("pt-PT", { day: "2-digit", weekday: "short" })}
                         </span>
-                        {dayTasks.length > 0 && (
-                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-primary">{dayTasks.length}</span>
+                        {dayTasks.length + dayVacations.length > 0 && (
+                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-primary">
+                            {dayTasks.length + dayVacations.length}
+                          </span>
                         )}
                       </div>
                       <ul className="space-y-1">
                         {dayTasks.slice(0, 4).map((task) => (
                           <MiniTaskChip key={task.id} task={task} onClick={() => handlers.onEdit(task)} />
+                        ))}
+                        {dayVacations.map((vacation) => (
+                          <MiniVacationChip key={vacation.id} vacation={vacation} />
                         ))}
                       </ul>
                       {dayTasks.length > 4 && (
@@ -1289,20 +1343,29 @@ function TaskPlanningCalendar({
                     const date = taskDate(task);
                     return date && date.getFullYear() === month.getFullYear() && date.getMonth() === month.getMonth();
                   });
+                  const monthKey = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
+                  const monthVacations = groupVacations.filter(
+                    (vacation) => vacation.start_date.slice(0, 7) <= monthKey && vacation.end_date.slice(0, 7) >= monthKey,
+                  );
                   return (
                     <div key={month.getMonth()} className="min-h-36 rounded-lg border border-border bg-background p-3">
                       <div className="mb-3 flex items-center justify-between">
                         <h3 className="text-sm font-semibold capitalize">
                           {month.toLocaleDateString("pt-PT", { month: "long" })}
                         </h3>
-                        <span className="text-xs text-muted-foreground">{monthTasks.length}</span>
+                        <span className="text-xs text-muted-foreground">{monthTasks.length + monthVacations.length}</span>
                       </div>
                       <ul className="space-y-1">
                         {monthTasks.slice(0, 5).map((task) => (
                           <MiniTaskChip key={task.id} task={task} onClick={() => handlers.onEdit(task)} />
                         ))}
+                        {monthVacations.slice(0, 5).map((vacation) => (
+                          <MiniVacationChip key={vacation.id} vacation={vacation} />
+                        ))}
                       </ul>
-                      {monthTasks.length === 0 && <p className="text-xs text-muted-foreground">Sem tarefas</p>}
+                      {monthTasks.length === 0 && monthVacations.length === 0 && (
+                        <p className="text-xs text-muted-foreground">Sem tarefas ou férias</p>
+                      )}
                       {monthTasks.length > 5 && (
                         <p className="mt-1 text-[11px] text-muted-foreground">+{monthTasks.length - 5} tarefas</p>
                       )}
@@ -1322,6 +1385,7 @@ function CalendarDayColumn({
   label,
   dateKeyValue,
   tasks,
+  vacations,
   members,
   clients,
   groupBy,
@@ -1330,6 +1394,7 @@ function CalendarDayColumn({
   label: string;
   dateKeyValue: string;
   tasks: TaskRow[];
+  vacations: ApprovedVacation[];
   members: { id: string; full_name: string | null }[];
   clients: ClientOption[];
   groupBy: "assignee" | "client";
@@ -1353,10 +1418,10 @@ function CalendarDayColumn({
           <CalendarDays className="h-4 w-4 text-muted-foreground" />
           {label}
         </div>
-        <span className="text-xs text-muted-foreground">{tasks.length}</span>
+        <span className="text-xs text-muted-foreground">{tasks.length + vacations.length}</span>
       </div>
-      {tasks.length === 0 ? (
-        <p className="px-3 py-4 text-xs text-muted-foreground">Sem tarefas</p>
+      {tasks.length === 0 && vacations.length === 0 ? (
+        <p className="px-3 py-4 text-xs text-muted-foreground">Sem tarefas ou férias</p>
       ) : (
         <ul className="divide-y divide-border">
           {tasks.map((task) => (
@@ -1368,6 +1433,9 @@ function CalendarDayColumn({
               groupBy={groupBy}
               {...handlers}
             />
+          ))}
+          {vacations.map((vacation) => (
+            <CalendarVacationCard key={vacation.id} vacation={vacation} />
           ))}
         </ul>
       )}
@@ -1388,6 +1456,31 @@ function MiniTaskChip({ task, onClick }: { task: TaskRow; onClick: () => void })
       {start ? `${start} ` : ""}
       {task.title}
     </button>
+  );
+}
+
+function MiniVacationChip({ vacation }: { vacation: ApprovedVacation }) {
+  return (
+    <li
+      className="truncate rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-left text-[11px] font-medium text-emerald-700"
+      title={`Férias aprovadas · ${vacation.start_date} → ${vacation.end_date}`}
+    >
+      Férias · Aprovadas
+    </li>
+  );
+}
+
+function CalendarVacationCard({ vacation }: { vacation: ApprovedVacation }) {
+  const start = formatWallDate(vacation.start_date) || vacation.start_date;
+  const end = formatWallDate(vacation.end_date) || vacation.end_date;
+  return (
+    <li className="space-y-1 border-l-2 border-emerald-500 bg-emerald-50/70 px-3 py-3 text-emerald-800">
+      <div className="text-sm font-semibold">Férias</div>
+      <div className="text-xs">{start} → {end}</div>
+      <span className="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide">
+        Aprovadas
+      </span>
+    </li>
   );
 }
 

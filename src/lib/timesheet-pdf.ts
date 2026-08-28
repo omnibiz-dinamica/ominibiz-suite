@@ -85,7 +85,8 @@ export async function generateTimesheetPdf(
     { key: "out", label: "Saída", w: 70 },
     { key: "break", label: "Pausas", w: 70 },
     { key: "total", label: "Total horas", w: 90 },
-    { key: "visto", label: "Visto", w: contentW - 370 },
+    { key: "status", label: "Situação", w: 85 },
+    { key: "visto", label: "Visto", w: contentW - 455 },
   ];
 
   const tableHead = () => {
@@ -139,10 +140,11 @@ export async function generateTimesheetPdf(
       formatDayTime(d.last_out),
       formatMinutes(d.break_minutes),
       formatMinutes(d.worked_minutes),
+      d.day_type === "vacation" ? (d.first_in ? "Férias + ponto" : "Férias") : "Trabalhado",
       "",
     ];
     cells.forEach((value, i) => {
-      if (i === 5) {
+      if (i === 6) {
         // Coluna Visto: só usa a rubrica quando o dia foi realmente confirmado.
         if (d.confirmed_at && initialsData) {
           try {

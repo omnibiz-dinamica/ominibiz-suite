@@ -1210,3 +1210,23 @@ duplicar a notificação do funcionário.
   cada encaminhamento no histórico.
 - A migration precisa ser aplicada no Cloud Database antes de usar a nova ação
   no ambiente publicado.
+
+---
+
+## ADR-055 — Férias aprovadas como eventos compostos de calendário e fechamento (SUP-2026-000103)
+
+**Contexto.** O calendário operacional era alimentado somente por tarefas e o
+snapshot mensal somente por `time_entries`, embora a aplicação já reconhecesse
+férias aprovadas ao criar tarefas.
+
+**Decisão.** Reutilizar `vacation_requests` com `status = 'aprovado'` como fonte
+canônica de leitura. O calendário compõe eventos tipados de férias com tarefas,
+e `timesheet_build_snapshot` faz a união por data civil, preservando horas e
+contagem de dias trabalhados apenas dos registros de ponto.
+
+Férias não são copiadas para `tasks` nem para `time_entries`. Se houver ponto no
+mesmo dia, o relatório sinaliza o conflito sem apagar ou alterar o registro.
+
+**Consequências.** Alterações ou cancelamentos de férias aprovadas refletem-se
+automaticamente em calendários e prévias não assinadas. Snapshots/PDFs já
+assinados continuam imutáveis por ADR-038.

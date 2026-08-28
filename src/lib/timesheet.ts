@@ -69,6 +69,8 @@ export type SnapshotDay = {
   break_minutes: number;
   entries_count: number;
   confirmed_at: string | null;
+  day_type?: "work" | "vacation";
+  vacation_status?: "aprovado" | null;
 };
 
 export type TimesheetSnapshot = {

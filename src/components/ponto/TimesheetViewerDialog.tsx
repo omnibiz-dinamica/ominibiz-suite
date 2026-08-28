@@ -5,6 +5,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Download, FileText, Printer } from "lucide-react";
 import {
   TIMESHEET_STATUS_LABEL,
@@ -85,6 +86,7 @@ export function TimesheetViewerDialog({
                       <th className="px-3 py-2 text-left">Saída</th>
                       <th className="px-3 py-2 text-left">Pausas</th>
                       <th className="px-3 py-2 text-left">Total</th>
+                      <th className="px-3 py-2 text-left">Situação</th>
                       <th className="px-3 py-2 text-left">Visto</th>
                     </tr>
                   </thead>
@@ -96,6 +98,16 @@ export function TimesheetViewerDialog({
                         <td className="px-3 py-2">{formatDayTime(d.last_out)}</td>
                         <td className="px-3 py-2">{formatMinutes(d.break_minutes)}</td>
                         <td className="px-3 py-2">{formatMinutes(d.worked_minutes)}</td>
+                        <td className="px-3 py-2">
+                          {d.day_type === "vacation" ? (
+                            <div className="space-y-1">
+                              <Badge variant="secondary">Férias</Badge>
+                              {d.first_in && <div className="text-xs text-amber-700">Conflito com ponto</div>}
+                            </div>
+                          ) : (
+                            "Trabalhado"
+                          )}
+                        </td>
                         <td className="px-3 py-2 text-xs text-muted-foreground">
                           {d.confirmed_at ? "confirmado" : "—"}
                         </td>
@@ -103,7 +115,7 @@ export function TimesheetViewerDialog({
                     ))}
                     {snap.data.days.length === 0 && (
                       <tr>
-                        <td className="px-3 py-4 text-sm text-muted-foreground" colSpan={6}>
+                        <td className="px-3 py-4 text-sm text-muted-foreground" colSpan={7}>
                           Sem registos neste mês.
                         </td>
                       </tr>

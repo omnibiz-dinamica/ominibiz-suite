@@ -7,6 +7,18 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### 🐞 SUP-2026-000103 — Férias aprovadas no calendário e fechamento mensal
+
+#### Adicionado
+- O calendário de tarefas compõe férias aprovadas como eventos de RH, por funcionário, sem criar tarefas fictícias.
+- O fechamento mensal e os relatórios exibem os dias de férias aprovadas, inclusive períodos que atravessam meses.
+- Dias com férias e ponto existente ficam identificados como conflito, sem apagar ou alterar o ponto.
+
+#### Preservado
+- Apenas o estado técnico `aprovado` é exibido; pedidos pendentes, rejeitados e cancelados ficam fora.
+- Férias não geram `time_entry`, horas trabalhadas ou alteração financeira automática.
+- RLS, RBAC, recorrências, tarefas e histórico permanecem inalterados.
+
 ### 🐞 SUP-2026-000112 — Observação opcional ao concluir tarefa
 
 #### Adicionado
