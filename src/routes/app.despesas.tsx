@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { EmployeePicker } from "@/components/common/EmployeePicker";
 import { toast } from "sonner";
 import { exportToExcel, exportToPdf, type ExportColumn } from "@/lib/exports";
-import { CreditCard, Check, X as XIcon, Upload, Download, Plus, Trash2, FileSpreadsheet, FileText } from "lucide-react";
+import { CreditCard, Check, X as XIcon, Upload, Camera, Download, Plus, Trash2, FileSpreadsheet, FileText } from "lucide-react";
 
 export const Route = createFileRoute("/app/despesas")({ component: DespesasPage });
 
@@ -228,7 +228,8 @@ function DespesasPage() {
       setReason("");
       setNotes("");
       setFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      if (galleryInputRef.current) galleryInputRef.current.value = "";
+      if (cameraInputRef.current) cameraInputRef.current.value = "";
       qc.invalidateQueries({ queryKey: ["expenses"] });
     },
     onError: (e: any) => toast.error(e.message ?? "Falha ao enviar"),
