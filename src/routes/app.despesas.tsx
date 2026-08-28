@@ -353,57 +353,75 @@ function DespesasPage() {
             <Label htmlFor="exp-notes">Observações</Label>
             <Textarea id="exp-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
           </div>
-          <div className="md:col-span-3 flex flex-wrap items-center gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-              aria-label="Anexar foto ou PDF da despesa"
-            >
-              <Upload className="h-4 w-4" />
-              {file ? file.name : "Anexar foto/PDF"}
-            </Button>
+          <div className="md:col-span-3 space-y-2">
+            {/*
+              Chrome Android: um único input com accept combinado + reset de value
+              dentro do onClick fazia o seletor abortar silenciosamente. Agora há
+              dois inputs explícitos (galeria/arquivos e câmera), acionados por
+              botões reais, com o value limpo ANTES do click() programático.
+            */}
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="button" variant="outline" onClick={() => openPicker(galleryInputRef)}>
+                <Upload className="h-4 w-4" /> Escolher da galeria/arquivos
+              </Button>
+              <Button type="button" variant="outline" onClick={() => openPicker(cameraInputRef)}>
+                <Camera className="h-4 w-4" /> Tirar foto
+              </Button>
+              {file && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  type="button"
+                  onClick={() => {
+                    setFile(null);
+                    if (galleryInputRef.current) galleryInputRef.current.value = "";
+                    if (cameraInputRef.current) cameraInputRef.current.value = "";
+                  }}
+                >
+                  <XIcon className="h-4 w-4" /> Remover anexo
+                </Button>
+              )}
+            </div>
             <input
-              ref={fileInputRef}
+              ref={galleryInputRef}
+              id="exp-file-gallery"
               type="file"
               className="sr-only"
               accept="image/*,application/pdf"
-              onClick={(e) => {
-                // Chrome Android may not emit change when the same file is chosen again.
-                e.currentTarget.value = "";
-              }}
-              onChange={(e) => {
-                const selected = e.target.files?.[0] ?? null;
-                if (selected && selected.size > 20 * 1024 * 1024) {
-                  toast.error("O comprovante deve ter no máximo 20 MB.");
-                  e.currentTarget.value = "";
-                  setFile(null);
-                  return;
-                }
-                if (selected && !isExpenseFileSupported(selected)) {
-                  toast.error("Formato não suportado. Use uma imagem ou PDF.");
-                  e.currentTarget.value = "";
-                  setFile(null);
-                  return;
-                }
-                if (selected) {
-                  console.info("[OmniBiz] comprovante selecionado", {
-                    mime: expenseFileMime(selected) || "unknown",
-                    size: selected.size,
-                  });
-                }
-                setFile(selected);
-              }}
+              onChange={onPicked}
             />
-            {file && (
-              <Button size="sm" variant="ghost" onClick={() => {
-                setFile(null);
-                if (fileInputRef.current) fileInputRef.current.value = "";
-              }}>
-                <XIcon className="h-4 w-4" /> Remover anexo
-              </Button>
+            <input
+              ref={cameraInputRef}
+              id="exp-file-camera"
+              type="file"
+              className="sr-only"
+              accept="image/*"
+              capture="environment"
+              onChange={onPicked}
+            />
+            {file ? (
+              <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/40 p-2">
+                {filePreview ? (
+                  <img
+                    src={filePreview}
+                    alt="Pré-visualização do comprovante"
+                    className="h-16 w-16 rounded-md border border-border object-cover"
+                  />
+                ) : (
+                  <FileText className="h-8 w-8 shrink-0 text-muted-foreground" />
+                )}
+                <div className="min-w-0 text-xs">
+                  <p className="truncate font-medium">{file.name}</p>
+                  <p className="text-muted-foreground">
+                    {(file.size / 1024 / 1024).toFixed(2)} MB · {expenseFileMime(file) || "tipo desconhecido"}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">Imagem ou PDF até 20 MB (opcional).</p>
             )}
           </div>
+
         </div>
         <div className="mt-3 flex justify-end">
           <Button onClick={() => create.mutate()} disabled={create.isPending}>
