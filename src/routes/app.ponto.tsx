@@ -171,6 +171,15 @@ function PontoPage() {
     enabled: !!openEntry,
   });
 
+  // A mesma RPC que alimenta a recuperação também devolve o cliente por
+  // SECURITY DEFINER. Ela cobre o contexto de Super Admin quando a leitura
+  // direta de `clients` não consegue preencher o mapa da empresa ativa.
+  const { data: openEntrySummary } = useQuery({
+    queryKey: ["punch-open-summary", user?.id, openEntry?.id],
+    queryFn: fetchOpenEntrySelf,
+    enabled: !!user && !!openEntry?.id,
+  });
+
   // Próximas tarefas do dia (quando não há ponto aberto)
   const { data: upcoming } = useQuery({
     queryKey: ["punch-upcoming", user?.id, isManager, currentCompanyId],
@@ -234,7 +243,10 @@ function PontoPage() {
     enabled: !!openClientId && !clientsMap?.[openClientId],
   });
 
-  const openClientName = openClientId ? clientsMap?.[openClientId] ?? openClient?.name : undefined;
+  const openClientName =
+    (openClientId ? clientsMap?.[openClientId] ?? openClient?.name : undefined) ??
+    openEntrySummary?.client_name ??
+    undefined;
 
   // Histórico recente
   const { data: history } = useQuery({
@@ -263,12 +275,14 @@ function PontoPage() {
       .on("postgres_changes", { event: "*", schema: "public", table: "time_entries" }, () => {
         qc.invalidateQueries({ queryKey: ["punch-open"] });
         qc.invalidateQueries({ queryKey: ["punch-open-task"] });
+        qc.invalidateQueries({ queryKey: ["punch-open-summary"] });
         qc.invalidateQueries({ queryKey: ["punch-history"] });
         qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, () => {
         qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
         qc.invalidateQueries({ queryKey: ["punch-open-task"] });
+        qc.invalidateQueries({ queryKey: ["punch-open-summary"] });
       })
       .subscribe();
     return () => {
