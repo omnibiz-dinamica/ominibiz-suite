@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type ChangeEvent } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -131,6 +131,31 @@ function DespesasPage() {
   const [notes, setNotes] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelection = (event: ChangeEvent<HTMLInputElement>) => {
+    const selected = event.currentTarget.files?.[0] ?? null;
+    if (selected && selected.size > 20 * 1024 * 1024) {
+      toast.error("O comprovante deve ter no máximo 20 MB.");
+      event.currentTarget.value = "";
+      setFile(null);
+      return;
+    }
+    if (selected && !isExpenseFileSupported(selected)) {
+      toast.error("Formato não suportado. Use uma imagem ou PDF.");
+      event.currentTarget.value = "";
+      setFile(null);
+      return;
+    }
+    if (selected) {
+      console.info("[OmniBiz] comprovante selecionado", {
+        mime: expenseFileMime(selected) || "unknown",
+        size: selected.size,
+      });
+    }
+    // A seleção da foto nunca envia nem limpa o formulário da despesa.
+    setFile(selected);
+    event.currentTarget.value = "";
+  };
 
   const create = useMutation({
     mutationFn: async () => {
@@ -372,37 +397,24 @@ function DespesasPage() {
                 // Chrome Android may not emit change when the same file is chosen again.
                 e.currentTarget.value = "";
               }}
-              onChange={(e) => {
-                const selected = e.target.files?.[0] ?? null;
-                if (selected && selected.size > 20 * 1024 * 1024) {
-                  toast.error("O comprovante deve ter no máximo 20 MB.");
-                  e.currentTarget.value = "";
-                  setFile(null);
-                  return;
-                }
-                if (selected && !isExpenseFileSupported(selected)) {
-                  toast.error("Formato não suportado. Use uma imagem ou PDF.");
-                  e.currentTarget.value = "";
-                  setFile(null);
-                  return;
-                }
-                if (selected) {
-                  console.info("[OmniBiz] comprovante selecionado", {
-                    mime: expenseFileMime(selected) || "unknown",
-                    size: selected.size,
-                  });
-                }
-                setFile(selected);
-              }}
+              onChange={handleFileSelection}
             />
             {file && (
-              <Button size="sm" variant="ghost" onClick={() => {
-                setFile(null);
-                if (fileInputRef.current) fileInputRef.current.value = "";
-              }}>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setFile(null);
+                  if (fileInputRef.current) fileInputRef.current.value = "";
+                }}
+              >
                 <XIcon className="h-4 w-4" /> Remover anexo
               </Button>
             )}
+            <span aria-live="polite" className="text-xs text-muted-foreground">
+              {file ? "Comprovante pronto. Clique em Enviar despesa para guardar." : ""}
+            </span>
           </div>
         </div>
         <div className="mt-3 flex justify-end">
