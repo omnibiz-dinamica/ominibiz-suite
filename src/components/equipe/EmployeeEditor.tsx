@@ -203,7 +203,6 @@ function TabDadosGerais({
   const [phone, setPhone] = useState(str(profile.phone));
   const [companyPrimary, setCompanyPrimary] = useState(str(profile.company_id_primary) || companyId);
   const [jobTitle, setJobTitle] = useState(str(profile.job_title));
-  const [workLocation, setWorkLocation] = useState(str(profile.work_location));
   const [teamNumber, setTeamNumber] = useState(num(profile.team_number));
   const [sector, setSector] = useState(str(profile.sector));
   const [addressBe, setAddressBe] = useState(str(profile.address_be));
@@ -224,7 +223,6 @@ function TabDadosGerais({
             phone: toNullableString(phone),
             company_id_primary: toNullableString(companyPrimary),
             job_title: toNullableString(jobTitle),
-            work_location: toNullableString(workLocation),
             team_number: teamNumber ? Number(teamNumber) : null,
             sector: toNullableString(sector),
             address_be: toNullableString(addressBe),
@@ -282,9 +280,6 @@ function TabDadosGerais({
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Cargo / Função">
             <Input maxLength={120} value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
-          </Field>
-          <Field label="Local de trabalho principal">
-            <Input maxLength={200} value={workLocation} onChange={(e) => setWorkLocation(e.target.value)} />
           </Field>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
