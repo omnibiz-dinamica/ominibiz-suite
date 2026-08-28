@@ -17,6 +17,12 @@ export const Route = createFileRoute("/app/despesas")({ component: DespesasPage 
 
 type ExpenseStatus = "pendente" | "aprovada" | "rejeitada";
 type PaymentStatus = "aguardando_pagamento" | "paga";
+type ExpenseDraft = {
+  expenseDate: string;
+  amount: string;
+  reason: string;
+  notes: string;
+};
 type ExpenseRow = {
   id: string;
   company_id: string;
@@ -133,6 +139,36 @@ function DespesasPage() {
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const pickerDraftRef = useRef<ExpenseDraft | null>(null);
+  const [draftReady, setDraftReady] = useState(false);
+  const draftStorageKey = user?.id && currentCompanyId
+    ? `omnibiz:expense-draft:${currentCompanyId}:${user.id}`
+    : null;
+
+  // A câmera do Android pode suspender ou recriar a página por pressão de
+  // memória. O rascunho textual é restaurado quando a aplicação regressa.
+  useEffect(() => {
+    if (!draftStorageKey) return;
+    try {
+      const saved = sessionStorage.getItem(draftStorageKey);
+      if (saved) {
+        const draft = JSON.parse(saved) as Partial<ExpenseDraft>;
+        if (typeof draft.expenseDate === "string") setExpenseDate(draft.expenseDate);
+        if (typeof draft.amount === "string") setAmount(draft.amount);
+        if (typeof draft.reason === "string") setReason(draft.reason);
+        if (typeof draft.notes === "string") setNotes(draft.notes);
+      }
+    } catch {
+      // Um rascunho inválido não deve bloquear o formulário.
+    }
+    setDraftReady(true);
+  }, [draftStorageKey]);
+
+  useEffect(() => {
+    if (!draftStorageKey || !draftReady) return;
+    const draft: ExpenseDraft = { expenseDate, amount, reason, notes };
+    sessionStorage.setItem(draftStorageKey, JSON.stringify(draft));
+  }, [amount, draftReady, draftStorageKey, expenseDate, notes, reason]);
 
   // Pré-visualização só para imagens; PDF cai no ícone.
   useEffect(() => {
@@ -153,11 +189,16 @@ function DespesasPage() {
   const openPicker = (ref: React.RefObject<HTMLInputElement | null>) => {
     const input = ref.current;
     if (!input) return;
+    const draft = { expenseDate, amount, reason, notes };
+    pickerDraftRef.current = draft;
+    if (draftStorageKey) sessionStorage.setItem(draftStorageKey, JSON.stringify(draft));
     input.value = "";
     input.click();
   };
 
   const onPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
     const input = e.currentTarget;
     const selected = input.files?.[0] ?? null;
     if (!selected) return; // usuário cancelou: mantém o anexo anterior
@@ -170,6 +211,13 @@ function DespesasPage() {
       toast.error("Formato não suportado. Use uma imagem (JPG, PNG, WEBP, HEIC) ou PDF.");
       input.value = "";
       return;
+    }
+    const preserved = pickerDraftRef.current;
+    if (preserved) {
+      setExpenseDate(preserved.expenseDate);
+      setAmount(preserved.amount);
+      setReason(preserved.reason);
+      setNotes(preserved.notes);
     }
     setFile(selected);
     toast.success("Comprovante anexado. Envie a despesa para guardar.");
@@ -191,17 +239,18 @@ function DespesasPage() {
         notes: notes.trim() || null,
       }).select("id").single();
       if (error) throw error;
-      if (!file) return { attachmentError: null as string | null };
+      if (!file) return;
 
-      // Tie the object path to the expense record. The proof is optional,
-      // so a storage failure must not discard the expense itself.
       const safe = file.name.replace(/[^a-zA-Z0-9._-]+/g, "_");
       const path = `${currentCompanyId}/${user.id}/${expense.id}/${Date.now()}-${safe}`;
       const up = await supabase.storage.from("employee-expenses").upload(path, file, {
         contentType: expenseFileMime(file),
         upsert: false,
       });
-      if (up.error) return { attachmentError: up.error.message };
+      if (up.error) {
+        await (supabase as any).from("employee_expenses").delete().eq("id", expense.id);
+        throw new Error(`Não foi possível anexar o comprovante: ${up.error.message}`);
+      }
 
       const { error: attachError } = await (supabase as any)
         .from("employee_expenses")
@@ -213,21 +262,19 @@ function DespesasPage() {
         .eq("id", expense.id);
       if (attachError) {
         await supabase.storage.from("employee-expenses").remove([path]);
-        return { attachmentError: attachError.message };
+        await (supabase as any).from("employee_expenses").delete().eq("id", expense.id);
+        throw new Error(`Não foi possível associar o comprovante: ${attachError.message}`);
       }
-      return { attachmentError: null as string | null };
     },
-    onSuccess: (result) => {
-      toast.success(
-        result.attachmentError
-          ? "Despesa salva, porém o comprovante não foi anexado."
-          : "Despesa enviada para aprovação",
-      );
-      if (result.attachmentError) toast.error(`Comprovante: ${result.attachmentError}`);
+    onSuccess: () => {
+      toast.success("Despesa enviada para aprovação");
+      if (draftStorageKey) sessionStorage.removeItem(draftStorageKey);
+      setExpenseDate(new Date().toISOString().slice(0, 10));
       setAmount("");
       setReason("");
       setNotes("");
       setFile(null);
+      pickerDraftRef.current = null;
       if (galleryInputRef.current) galleryInputRef.current.value = "";
       if (cameraInputRef.current) cameraInputRef.current.value = "";
       qc.invalidateQueries({ queryKey: ["expenses"] });
@@ -469,7 +516,7 @@ function DespesasPage() {
 
         </div>
         <div className="mt-3 flex justify-end">
-          <Button onClick={() => create.mutate()} disabled={create.isPending}>
+          <Button type="button" onClick={() => create.mutate()} disabled={create.isPending}>
             Enviar despesa
           </Button>
         </div>
