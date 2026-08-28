@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type RefObject } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -11,12 +11,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { EmployeePicker } from "@/components/common/EmployeePicker";
 import { toast } from "sonner";
 import { exportToExcel, exportToPdf, type ExportColumn } from "@/lib/exports";
-import { CreditCard, Check, X as XIcon, Upload, Download, Plus, Trash2, FileSpreadsheet, FileText } from "lucide-react";
+import { CreditCard, Check, X as XIcon, Upload, Camera, Download, Plus, Trash2, FileSpreadsheet, FileText } from "lucide-react";
 
 export const Route = createFileRoute("/app/despesas")({ component: DespesasPage });
 
 type ExpenseStatus = "pendente" | "aprovada" | "rejeitada";
 type PaymentStatus = "aguardando_pagamento" | "paga";
+type ExpenseDraft = {
+  expenseDate: string;
+  amount: string;
+  reason: string;
+  notes: string;
+};
 type ExpenseRow = {
   id: string;
   company_id: string;
@@ -130,32 +136,93 @@ function DespesasPage() {
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const pickerDraftRef = useRef<ExpenseDraft | null>(null);
+  const [draftReady, setDraftReady] = useState(false);
+  const draftStorageKey = user?.id && currentCompanyId
+    ? `omnibiz:expense-draft:${currentCompanyId}:${user.id}`
+    : null;
 
-  const handleFileSelection = (event: ChangeEvent<HTMLInputElement>) => {
-    const selected = event.currentTarget.files?.[0] ?? null;
-    if (selected && selected.size > 20 * 1024 * 1024) {
-      toast.error("O comprovante deve ter no máximo 20 MB.");
-      event.currentTarget.value = "";
-      setFile(null);
+  // A câmera do Android pode suspender ou recriar a página por pressão de
+  // memória. O rascunho textual é restaurado quando a aplicação regressa.
+  useEffect(() => {
+    if (!draftStorageKey) return;
+    try {
+      const saved = sessionStorage.getItem(draftStorageKey);
+      if (saved) {
+        const draft = JSON.parse(saved) as Partial<ExpenseDraft>;
+        if (typeof draft.expenseDate === "string") setExpenseDate(draft.expenseDate);
+        if (typeof draft.amount === "string") setAmount(draft.amount);
+        if (typeof draft.reason === "string") setReason(draft.reason);
+        if (typeof draft.notes === "string") setNotes(draft.notes);
+      }
+    } catch {
+      // Um rascunho inválido não deve bloquear o formulário.
+    }
+    setDraftReady(true);
+  }, [draftStorageKey]);
+
+  useEffect(() => {
+    if (!draftStorageKey || !draftReady) return;
+    const draft: ExpenseDraft = { expenseDate, amount, reason, notes };
+    sessionStorage.setItem(draftStorageKey, JSON.stringify(draft));
+  }, [amount, draftReady, draftStorageKey, expenseDate, notes, reason]);
+
+  // Pré-visualização só para imagens; PDF cai no ícone.
+  useEffect(() => {
+    if (!file || !expenseFileMime(file).startsWith("image/")) {
+      setFilePreview(null);
       return;
     }
-    if (selected && !isExpenseFileSupported(selected)) {
-      toast.error("Formato não suportado. Use uma imagem ou PDF.");
-      event.currentTarget.value = "";
-      setFile(null);
-      return;
-    }
-    if (selected) {
-      console.info("[OmniBiz] comprovante selecionado", {
-        mime: expenseFileMime(selected) || "unknown",
-        size: selected.size,
-      });
-    }
-    // A seleção da foto nunca envia nem limpa o formulário da despesa.
-    setFile(selected);
-    event.currentTarget.value = "";
+    const url = URL.createObjectURL(file);
+    setFilePreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  /**
+   * Chrome Android aborta o seletor quando o value é limpo dentro do próprio
+   * onClick do input. Limpar antes do click() programático resolve e mantém a
+   * possibilidade de escolher o mesmo arquivo novamente.
+   */
+  const openPicker = (ref: RefObject<HTMLInputElement | null>) => {
+    const input = ref.current;
+    if (!input) return;
+    const draft = { expenseDate, amount, reason, notes };
+    pickerDraftRef.current = draft;
+    if (draftStorageKey) sessionStorage.setItem(draftStorageKey, JSON.stringify(draft));
+    input.value = "";
+    input.click();
   };
+
+  const onPicked = (e: ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const input = e.currentTarget;
+    const selected = input.files?.[0] ?? null;
+    if (!selected) return; // usuário cancelou: mantém o anexo anterior
+    if (selected.size > 20 * 1024 * 1024) {
+      toast.error("O comprovante deve ter no máximo 20 MB.");
+      input.value = "";
+      return;
+    }
+    if (!isExpenseFileSupported(selected)) {
+      toast.error("Formato não suportado. Use uma imagem (JPG, PNG, WEBP, HEIC) ou PDF.");
+      input.value = "";
+      return;
+    }
+    const preserved = pickerDraftRef.current;
+    if (preserved) {
+      setExpenseDate(preserved.expenseDate);
+      setAmount(preserved.amount);
+      setReason(preserved.reason);
+      setNotes(preserved.notes);
+    }
+    setFile(selected);
+    toast.success("Comprovante anexado. Envie a despesa para guardar.");
+  };
+
 
   const create = useMutation({
     mutationFn: async () => {
@@ -172,17 +239,18 @@ function DespesasPage() {
         notes: notes.trim() || null,
       }).select("id").single();
       if (error) throw error;
-      if (!file) return { attachmentError: null as string | null };
+      if (!file) return;
 
-      // Tie the object path to the expense record. The proof is optional,
-      // so a storage failure must not discard the expense itself.
       const safe = file.name.replace(/[^a-zA-Z0-9._-]+/g, "_");
       const path = `${currentCompanyId}/${user.id}/${expense.id}/${Date.now()}-${safe}`;
       const up = await supabase.storage.from("employee-expenses").upload(path, file, {
         contentType: expenseFileMime(file),
         upsert: false,
       });
-      if (up.error) return { attachmentError: up.error.message };
+      if (up.error) {
+        await (supabase as any).from("employee_expenses").delete().eq("id", expense.id);
+        throw new Error(`Não foi possível anexar o comprovante: ${up.error.message}`);
+      }
 
       const { error: attachError } = await (supabase as any)
         .from("employee_expenses")
@@ -194,22 +262,21 @@ function DespesasPage() {
         .eq("id", expense.id);
       if (attachError) {
         await supabase.storage.from("employee-expenses").remove([path]);
-        return { attachmentError: attachError.message };
+        await (supabase as any).from("employee_expenses").delete().eq("id", expense.id);
+        throw new Error(`Não foi possível associar o comprovante: ${attachError.message}`);
       }
-      return { attachmentError: null as string | null };
     },
-    onSuccess: (result) => {
-      toast.success(
-        result.attachmentError
-          ? "Despesa salva, porém o comprovante não foi anexado."
-          : "Despesa enviada para aprovação",
-      );
-      if (result.attachmentError) toast.error(`Comprovante: ${result.attachmentError}`);
+    onSuccess: () => {
+      toast.success("Despesa enviada para aprovação");
+      if (draftStorageKey) sessionStorage.removeItem(draftStorageKey);
+      setExpenseDate(new Date().toISOString().slice(0, 10));
       setAmount("");
       setReason("");
       setNotes("");
       setFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      pickerDraftRef.current = null;
+      if (galleryInputRef.current) galleryInputRef.current.value = "";
+      if (cameraInputRef.current) cameraInputRef.current.value = "";
       qc.invalidateQueries({ queryKey: ["expenses"] });
     },
     onError: (e: any) => toast.error(e.message ?? "Falha ao enviar"),
@@ -378,47 +445,81 @@ function DespesasPage() {
             <Label htmlFor="exp-notes">Observações</Label>
             <Textarea id="exp-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
           </div>
-          <div className="md:col-span-3 flex flex-wrap items-center gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-              aria-label="Anexar foto ou PDF da despesa"
-            >
-              <Upload className="h-4 w-4" />
-              {file ? file.name : "Anexar foto/PDF"}
-            </Button>
+          <div className="md:col-span-3 space-y-2">
+            {/*
+              Chrome Android: um único input com accept combinado + reset de value
+              dentro do onClick fazia o seletor abortar silenciosamente. Agora há
+              dois inputs explícitos (galeria/arquivos e câmera), acionados por
+              botões reais, com o value limpo ANTES do click() programático.
+            */}
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="button" variant="outline" onClick={() => openPicker(galleryInputRef)}>
+                <Upload className="h-4 w-4" /> Escolher da galeria/arquivos
+              </Button>
+              <Button type="button" variant="outline" onClick={() => openPicker(cameraInputRef)}>
+                <Camera className="h-4 w-4" /> Tirar foto
+              </Button>
+              {file && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  type="button"
+                  onClick={() => {
+                    setFile(null);
+                    if (galleryInputRef.current) galleryInputRef.current.value = "";
+                    if (cameraInputRef.current) cameraInputRef.current.value = "";
+                  }}
+                >
+                  <XIcon className="h-4 w-4" /> Remover anexo
+                </Button>
+              )}
+            </div>
             <input
-              ref={fileInputRef}
+              ref={galleryInputRef}
+              id="exp-file-gallery"
               type="file"
               className="sr-only"
               accept="image/*,application/pdf"
-              onClick={(e) => {
-                // Chrome Android may not emit change when the same file is chosen again.
-                e.currentTarget.value = "";
-              }}
-              onChange={handleFileSelection}
+              onChange={onPicked}
             />
-            {file && (
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setFile(null);
-                  if (fileInputRef.current) fileInputRef.current.value = "";
-                }}
-              >
-                <XIcon className="h-4 w-4" /> Remover anexo
-              </Button>
+            <input
+              ref={cameraInputRef}
+              id="exp-file-camera"
+              type="file"
+              className="sr-only"
+              accept="image/*"
+              capture="environment"
+              onChange={onPicked}
+            />
+            {file ? (
+              <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/40 p-2">
+                {filePreview ? (
+                  <img
+                    src={filePreview}
+                    alt="Pré-visualização do comprovante"
+                    className="h-16 w-16 rounded-md border border-border object-cover"
+                  />
+                ) : (
+                  <FileText className="h-8 w-8 shrink-0 text-muted-foreground" />
+                )}
+                <div className="min-w-0 text-xs">
+                  <p className="truncate font-medium">{file.name}</p>
+                  <p className="text-muted-foreground">
+                    {(file.size / 1024 / 1024).toFixed(2)} MB · {expenseFileMime(file) || "tipo desconhecido"}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">Imagem ou PDF até 20 MB (opcional).</p>
             )}
             <span aria-live="polite" className="text-xs text-muted-foreground">
               {file ? "Comprovante pronto. Clique em Enviar despesa para guardar." : ""}
             </span>
           </div>
+
         </div>
         <div className="mt-3 flex justify-end">
-          <Button onClick={() => create.mutate()} disabled={create.isPending}>
+          <Button type="button" onClick={() => create.mutate()} disabled={create.isPending}>
             Enviar despesa
           </Button>
         </div>
