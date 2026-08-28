@@ -17,9 +17,11 @@ import {
   FileSpreadsheet,
   FileText,
   Pencil,
+  Send,
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/dialog";
 import { EmployeePicker } from "@/components/common/EmployeePicker";
 import { Switch } from "@/components/ui/switch";
 import { sendTransactionalEmail } from "@/lib/email/send";
@@ -45,6 +47,8 @@ type VacationRow = {
   prior_validation: boolean;
   validated_by: string | null;
   assigned_approver_id: string | null;
+  forwarded_by: string | null;
+  forwarded_at: string | null;
 };
 
 const STATUS_TONE: Record<VacationStatus, string> = {
@@ -124,7 +128,14 @@ function FeriasPage() {
 
   // Names for manager view
   const userIds = useMemo(
-    () => Array.from(new Set(rows.flatMap((r) => [r.user_id, r.assigned_approver_id].filter(Boolean) as string[]))),
+    () =>
+      Array.from(
+        new Set(
+          rows.flatMap((r) =>
+            [r.user_id, r.assigned_approver_id, r.forwarded_by].filter(Boolean) as string[],
+          ),
+        ),
+      ),
     [rows],
   );
   const { data: names = {} } = useQuery({
@@ -152,6 +163,34 @@ function FeriasPage() {
         id: p.id,
         name: p.full_name ?? "Usuário",
         jobTitle: p.job_title ?? null,
+      }));
+    },
+  });
+
+  // Only active manager/owner memberships from the current company are eligible.
+  const { data: approvers = [] } = useQuery({
+    queryKey: ["vacation-approvers", currentCompanyId],
+    enabled: !!currentCompanyId && isManager,
+    queryFn: async () => {
+      const { data: roles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id, role")
+        .eq("company_id", currentCompanyId!)
+        .in("role", ["manager", "owner"]);
+      if (rolesError) throw rolesError;
+      const ids = Array.from(new Set((roles ?? []).map((r) => r.user_id).filter((id) => id !== user?.id)));
+      if (ids.length === 0) return [] as { id: string; name: string; role: string }[];
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name, is_active")
+        .in("id", ids)
+        .eq("is_active", true);
+      if (profilesError) throw profilesError;
+      const roleByUser = new Map((roles ?? []).map((r) => [r.user_id, r.role]));
+      return (profiles ?? []).map((p: any) => ({
+        id: p.id,
+        name: p.full_name ?? "Gestor",
+        role: roleByUser.get(p.id) ?? "manager",
       }));
     },
   });
@@ -344,6 +383,28 @@ function FeriasPage() {
     onError: (e: any) => toast.error(e.message ?? "Falha na operação"),
   });
 
+  const [forwardTarget, setForwardTarget] = useState<VacationRow | null>(null);
+  const [forwardApprover, setForwardApprover] = useState("");
+  const [forwardReason, setForwardReason] = useState("");
+  const forward = useMutation({
+    mutationFn: async (vars: { id: string; approverId: string; reason?: string }) => {
+      const { error } = await (supabase as any).rpc("vacation_forward_for_authorization", {
+        _id: vars.id,
+        _approver_id: vars.approverId,
+        _reason: vars.reason || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setForwardTarget(null);
+      setForwardApprover("");
+      setForwardReason("");
+      qc.invalidateQueries({ queryKey: ["vacations"] });
+      toast.success("Pedido enviado para autorização");
+    },
+    onError: (e: any) => toast.error(e.message ?? "Falha ao encaminhar pedido"),
+  });
+
   /** ADR-046: cancelamento de férias exige confirmação explícita + motivo. */
   const [cancelTarget, setCancelTarget] = useState<VacationCancelTarget | null>(null);
 
@@ -468,6 +529,9 @@ function FeriasPage() {
   const toApprove = rows.filter(
     (r) => r.status === "pendente" && r.assigned_approver_id === user?.id && r.user_id !== user?.id,
   );
+  const forwardedByMe = rows.filter(
+    (r) => r.status === "pendente" && r.forwarded_by === user?.id && r.user_id !== user?.id,
+  );
 
   return (
     <div className="space-y-6">
@@ -567,7 +631,7 @@ function FeriasPage() {
       {/* Manager: pending */}
       {(isManager || toApprove.length > 0) && (
         <section className="rounded-2xl border border-border bg-card p-5">
-          <h2 className="mb-3 font-semibold">Aguardando sua aprovação ({toApprove.length})</h2>
+          <h2 className="mb-3 font-semibold">Aguardando sua decisão ({toApprove.length})</h2>
           {toApprove.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nada para aprovar agora.</p>
           ) : (
@@ -579,10 +643,49 @@ function FeriasPage() {
                   name={nameOf(r.user_id)}
                   onApprove={() => decide.mutate({ id: r.id, action: "aprovar" })}
                   onReject={(reason) => decide.mutate({ id: r.id, action: "rejeitar", reason })}
+                  onForward={
+                    !r.forwarded_by
+                      ? () => {
+                          setForwardTarget(r);
+                          setForwardApprover("");
+                          setForwardReason("");
+                        }
+                      : undefined
+                  }
                 />
               ))}
             </ul>
           )}
+        </section>
+      )}
+
+      {isManager && forwardedByMe.length > 0 && (
+        <section className="rounded-2xl border border-border bg-card p-5">
+          <h2 className="mb-3 font-semibold">Enviados para autorização ({forwardedByMe.length})</h2>
+          <ul className="space-y-2">
+            {forwardedByMe.map((r) => (
+              <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3">
+                <div>
+                  <div className="font-medium">{nameOf(r.user_id)}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {fmt(r.start_date)} → {fmt(r.end_date)} · Autorizador: {nameOf(r.assigned_approver_id)}
+                  </div>
+                  <div className="text-xs text-muted-foreground">Aguardando decisão</div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setForwardTarget(r);
+                    setForwardApprover(r.assigned_approver_id ?? "");
+                    setForwardReason("");
+                  }}
+                >
+                  <Send className="h-4 w-4" /> Reencaminhar
+                </Button>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 
@@ -819,24 +922,24 @@ function FeriasPage() {
       {/* Own pending list */}
       {pending.some((r) => r.user_id === user?.id) && (
         <section className="rounded-2xl border border-border bg-card p-5">
-          <h2 className="mb-3 font-semibold">Minhas pendentes</h2>
+          <h2 className="mb-3 font-semibold">Aguardando aprovação</h2>
           <ul className="divide-y divide-border">
             {pending
               .filter((r) => r.user_id === user?.id)
               .map((r) => (
                 <li key={r.id} className="flex items-center justify-between py-2">
                   <div>
-                    <div className="font-medium">
-                      {fmt(r.start_date)} → {fmt(r.end_date)}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Aprovador: {r.assigned_approver_id ? nameOf(r.assigned_approver_id) : "Não definido"}
-                    </div>
+                  <div className="font-medium">{fmt(r.start_date)} → {fmt(r.end_date)}</div>
+                  <div className="text-xs text-muted-foreground">
+                    Aprovador: {r.assigned_approver_id ? nameOf(r.assigned_approver_id) : "Não definido"}
+                  </div>
                     {r.note && <div className="text-xs text-muted-foreground">{r.note}</div>}
                   </div>
-                  <Button
-                    size="sm"
-                    variant="ghost"
+                  <div className="flex items-center gap-2">
+                    <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_TONE.pendente}`}>Aguardando aprovação</span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
                     onClick={() =>
                       setCancelTarget({
                         id: r.id,
@@ -845,9 +948,10 @@ function FeriasPage() {
                         statusLabel: STATUS_LABEL[r.status],
                       })
                     }
-                  >
-                    Cancelar
-                  </Button>
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
                 </li>
               ))}
           </ul>
@@ -889,6 +993,69 @@ function FeriasPage() {
         saving={decide.isPending}
         onConfirm={(id, reason) => decide.mutate({ id, action: "cancelar", reason })}
       />
+
+      <Dialog open={!!forwardTarget} onOpenChange={(open) => !open && setForwardTarget(null)}>
+        <DialogContent size="sm">
+          <ModalHeader
+            icon={Send}
+            title="Enviar pedido para autorização"
+            description="Selecione um gestor ativo da mesma empresa para tomar a decisão final."
+          />
+          <ModalBody className="space-y-4">
+            {forwardTarget && (
+              <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm">
+                <div className="font-medium">Funcionário: {nameOf(forwardTarget.user_id)}</div>
+                <div className="text-muted-foreground">
+                  Período: {fmt(forwardTarget.start_date)} → {fmt(forwardTarget.end_date)} · {countDays(forwardTarget)} dias
+                </div>
+                {forwardTarget.note && <div className="mt-1 text-muted-foreground">Observação: {forwardTarget.note}</div>}
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="vacation-approver">Gestor autorizador *</Label>
+              <Select value={forwardApprover} onValueChange={setForwardApprover}>
+                <SelectTrigger id="vacation-approver">
+                  <SelectValue placeholder="Selecionar gestor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {approvers.map((approver) => (
+                    <SelectItem key={approver.id} value={approver.id}>
+                      {approver.name} · {approver.role === "owner" ? "Owner" : "Gestor"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {approvers.length === 0 && (
+                <p className="text-xs text-muted-foreground">Nenhum outro gestor ativo está disponível nesta empresa.</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="vacation-forward-reason">Observação (opcional)</Label>
+              <Textarea
+                id="vacation-forward-reason"
+                value={forwardReason}
+                onChange={(e) => setForwardReason(e.target.value)}
+                placeholder="Contexto para o gestor autorizador"
+                maxLength={500}
+              />
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="outline" onClick={() => setForwardTarget(null)} disabled={forward.isPending}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={() =>
+                forwardTarget &&
+                forward.mutate({ id: forwardTarget.id, approverId: forwardApprover, reason: forwardReason })
+              }
+              disabled={forward.isPending || !forwardApprover || approvers.length === 0}
+            >
+              <Send className="h-4 w-4" /> Enviar para autorização
+            </Button>
+          </ModalFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -969,11 +1136,13 @@ function PendingRow({
   name,
   onApprove,
   onReject,
+  onForward,
 }: {
   row: VacationRow;
   name: string;
   onApprove: () => void;
   onReject: (reason: string) => void;
+  onForward?: () => void;
 }) {
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
@@ -1000,6 +1169,11 @@ function PendingRow({
         </div>
         {!rejecting ? (
           <div className="flex gap-2">
+            {onForward && (
+              <Button size="sm" variant="outline" onClick={onForward}>
+                <Send className="h-4 w-4" /> Enviar para autorização
+              </Button>
+            )}
             <Button size="sm" onClick={onApprove}>
               <Check className="h-4 w-4" /> Aprovar
             </Button>

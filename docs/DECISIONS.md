@@ -1180,3 +1180,33 @@ duplicaria a fonte de verdade da auditoria.
 empresa pelas policies existentes, com proteção contra repetição da mesma
 gravação e sem alteração de tarefas históricas.
 
+## ADR-054 — Encaminhamento de autorização de férias (SUP-2026-000111)
+
+### Contexto
+
+O pedido de férias já possuía `assigned_approver_id`, `vacation_decide` e
+`vacation_audit`, mas não guardava quem encaminhou o pedido nem permitia ao
+gestor escolher outro autorizador da mesma empresa.
+
+### Decisão
+
+Adicionar apenas `forwarded_by` e `forwarded_at` em `vacation_requests` e criar
+uma RPC atômica `vacation_forward_for_authorization`. A RPC valida `auth.uid()`
+como gestor/owner da empresa (ou super admin conforme a regra existente), exige
+um autorizador ativo com role `manager` ou `owner` na mesma empresa, bloqueia
+autoaprovação e grava o evento `encaminhar` em `vacation_audit`.
+
+O estado técnico continua sendo `pendente`; a diferença visual é derivada dos
+campos de encaminhamento. Assim, não há novo enum, não há migração de pedidos
+históricos e `vacation_decide` permanece a fonte única da decisão final. Um
+trigger notifica o gestor que encaminhou quando o autorizador decide, sem
+duplicar a notificação do funcionário.
+
+### Consequências
+
+- O autorizador vê apenas pedidos da empresa atual e recebe uma notificação com
+  o identificador real do pedido.
+- Reencaminhamento é permitido enquanto o pedido continuar pendente, preservando
+  cada encaminhamento no histórico.
+- A migration precisa ser aplicada no Cloud Database antes de usar a nova ação
+  no ambiente publicado.

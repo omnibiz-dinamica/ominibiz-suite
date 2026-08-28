@@ -1075,3 +1075,13 @@ queries, mutations ou fluxos funcionais.**
   agrupar tickets por assinatura, com contagem de tickets, empresas e casos
   em aberto.
 - Ver ADR-048.
+## SUP-2026-000111 · Autorização de férias entre gestores · 2026-08-28
+
+- Gestor pode encaminhar uma solicitação pendente para outro Gestor/Owner ativo da
+  mesma empresa, com validação no backend e bloqueio de autoaprovação.
+- O autorizador recebe notificação, decide pelo fluxo existente e o gestor que
+  encaminhou recebe o resultado; o funcionário continua vendo apenas o fluxo
+  simples de aprovação.
+- Encaminhamento e solicitação passaram a compor o histórico append-only em
+  `vacation_audit`, sem alterar pedidos antigos.
+- Migration aditiva: `20260828173000_vacation_authorization_forwarding.sql`.

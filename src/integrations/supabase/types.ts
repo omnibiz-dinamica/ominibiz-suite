@@ -3505,6 +3505,8 @@ export type Database = {
       vacation_requests: {
         Row: {
           assigned_approver_id: string | null
+          forwarded_at: string | null
+          forwarded_by: string | null
           cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
@@ -3527,6 +3529,8 @@ export type Database = {
         }
         Insert: {
           assigned_approver_id?: string | null
+          forwarded_at?: string | null
+          forwarded_by?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
@@ -3549,6 +3553,8 @@ export type Database = {
         }
         Update: {
           assigned_approver_id?: string | null
+          forwarded_at?: string | null
+          forwarded_by?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
@@ -5081,6 +5087,10 @@ export type Database = {
       resolve_vacation_approver: {
         Args: { _company_id: string; _user_id: string }
         Returns: string
+      }
+      vacation_forward_for_authorization: {
+        Args: { _approver_id: string; _id: string; _reason?: string | null }
+        Returns: Database["public"]["Tables"]["vacation_requests"]["Row"]
       }
       return_support_ticket_to_manager: {
         Args: { _reason: string; _ticket_id: string }
