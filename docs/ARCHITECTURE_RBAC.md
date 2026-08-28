@@ -22,7 +22,7 @@ Funcionário       ← colaborador da empresa
 
 | Perfil | Escopo | Responsabilidades principais | O que NÃO faz |
 |---|---|---|---|
-| **Super Admin** | Plataforma inteira (multi-tenant) | Gestão de tenants, planos, billing, saúde da plataforma, suporte técnico global, auditoria cross-company. Ao selecionar uma empresa (`currentCompanyId != null`) **herda a visão do Gestor** dessa empresa. | Não é o destinatário natural de fluxos operacionais. Não deve receber notificações/emails de operação diária. |
+| **Super Admin** | Plataforma inteira (multi-tenant) | Gestão de tenants, planos, billing, saúde da plataforma, suporte técnico global, auditoria cross-company. Ao selecionar uma empresa (`currentCompanyId != null`) **herda a visão do Gestor** dessa empresa e recebe as notificações operacionais in-app correspondentes. | Não recebe emails operacionais; emails continuam separados entre operação e SaaS. |
 | **Owner** | Uma empresa | Titularidade legal, decisões estratégicas, configuração inicial da empresa, aprovações de alto impacto (contratos-mãe, política de férias, política de despesas). Herda todas as permissões de Gestor. | Não substitui o Gestor no dia-a-dia; delega operação. |
 | **Gestor** | Uma empresa | **Utilizador principal do sistema.** Opera RH, Equipa, Férias, Folha de Ponto, Despesas, Frota, Comercial, Clientes, Contratos. Aprova pedidos operacionais, configura módulos da empresa, exporta relatórios, recebe todas as notificações operacionais. | Não acede à Administração SaaS nem a dados de outras empresas. |
 | **Funcionário** | Próprios dados + tarefas atribuídas | Executa tarefas, regista ponto, solicita férias, submete despesas, consulta próprios recibos/contratos/documentos, edita perfil pessoal. | Não aprova, não configura, não vê dados de colegas exceto quando explicitamente partilhado. |
@@ -105,7 +105,7 @@ Antes de desenhar qualquer módulo, feature, widget ou notificação, responder 
 ```
 
 **Proibido:**
-- Enviar notificações operacionais para Super Admin como destinatário primário.
+- Enviar emails operacionais para Super Admin como destinatário direto.
 - Criar dashboards "para Super Admin" que na verdade são dashboards de operação de empresa.
 - Duplicar UI entre Super Admin e Gestor — Super Admin **herda** a UI do Gestor ao selecionar empresa.
 
@@ -125,7 +125,7 @@ Toda notificação in-app **deve** passar por um dos helpers padronizados abaixo
 ### 4.1 Regras
 
 - Um evento operacional **sempre** notifica `notifyManagers`. Se o solicitante for funcionário, também recebe `self`.
-- Super Admin **não** é destinatário de notificações operacionais. Só recebe notificações SaaS.
+- Super Admin recebe notificações operacionais in-app destinadas à gestão, preservando o `company_id` do evento para acompanhamento por empresa. Emails operacionais continuam sem Super Admin como destinatário direto.
 - Notificações devem sempre incluir: `company_id`, `entity_type`, `entity_id`, `action`, `actor_id`.
 
 ---
@@ -161,7 +161,7 @@ Toda notificação in-app **deve** passar por um dos helpers padronizados abaixo
 4. [ ] Emails passam por `sendTransactionalEmail()` e o template está em `registry.ts`.
 5. [ ] Rotas protegidas por `<RoleGuard allow={[...]}/>` coerente com a matriz.
 6. [ ] RLS na base de dados espelha a matriz (Gestor/Owner por `company_id`, Funcionário por `auth.uid()`, Super Admin via `has_role`).
-7. [ ] Super Admin **não** foi adicionado como destinatário primário de fluxo operacional.
+7. [ ] Super Admin recebe notificações in-app de gestão como herança operacional/auditoria; não foi adicionado como destinatário direto de emails operacionais.
 8. [ ] Se a feature introduz novo perfil ou nova ação — **este documento foi atualizado na mesma PR**.
 
 ### 6.2 Governança

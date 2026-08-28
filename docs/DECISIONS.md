@@ -1230,3 +1230,21 @@ mesmo dia, o relatório sinaliza o conflito sem apagar ou alterar o registro.
 **Consequências.** Alterações ou cancelamentos de férias aprovadas refletem-se
 automaticamente em calendários e prévias não assinadas. Snapshots/PDFs já
 assinados continuam imutáveis por ADR-038.
+
+## ADR-056 — Super Admin com herança operacional in-app
+
+**Contexto.** O Super Admin já herdava as telas e operações do Gestor ao
+selecionar uma empresa, mas os fluxos de notificação ainda entregavam eventos
+operacionais somente a `manager`/`owner`. Isso deixava a visão operacional do
+Super Admin incompleta.
+
+**Decisão.** O helper central `public._notify` mantém a notificação para o
+destinatário original e espelha, uma única vez, eventos destinados a
+`manager`/`owner` para os utilizadores globais com `super_admin`. O helper de
+suporte passa a usar o mesmo caminho. A cópia mantém o `company_id` original e
+recebe a marca técnica `super_admin_mirror` no metadata.
+
+**Limites.** A alteração vale apenas para notificações in-app. Não altera RLS,
+RBAC, roles por empresa, emails transacionais, tarefas, pontos, recorrências ou
+dados históricos. O Super Admin continua global e a UI continua condicionando
+a operação empresarial à empresa selecionada.

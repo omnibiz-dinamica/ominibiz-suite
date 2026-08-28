@@ -7,6 +7,18 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### 🐞 Herança operacional in-app do Super Admin
+
+#### Corrigido
+- O Super Admin mantém o acesso global e, ao operar uma empresa, passa a receber
+  as notificações in-app destinadas à gestão dessa empresa.
+- A entrega foi centralizada em `public._notify`, com deduplicação e preservação
+  do `company_id`; notificações de suporte passaram a usar o mesmo helper.
+
+#### Preservado
+- RLS, RBAC, isolamento multiempresa, emails operacionais, dados históricos,
+  tarefas, ponto, recorrências e demais regras de negócio não foram alterados.
+
 ### 🐞 SUP-2026-000103 — Férias aprovadas no calendário e fechamento mensal
 
 #### Adicionado
