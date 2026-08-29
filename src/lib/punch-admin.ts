@@ -131,3 +131,54 @@ export const ORIGIN_TONE: Record<PunchOrigin, string> = {
   manager_voided: "bg-destructive/15 text-destructive",
   paid_leave: "bg-success/15 text-success",
 };
+
+export type OperationalPunchRow = AdminTimeEntry & {
+  record_kind?: "work" | "paid_leave" | "absence";
+  absence_reason?: string | null;
+  absence_justified?: boolean | null;
+  absence_source?: string | null;
+  tasks: {
+    title: string;
+    client_id: string | null;
+    scheduled_for?: string | null;
+    scheduled_end?: string | null;
+    recurrence_date?: string | null;
+    due_at?: string | null;
+  } | null;
+  profiles: { full_name: string | null } | null;
+};
+
+export type OperationalPunchFilters = {
+  companyId: string;
+  employeeId?: string | null;
+  clientId?: string | null;
+  taskSearch?: string | null;
+  status?: "all" | "open" | "closed";
+  fromTs?: string | null;
+  toTs?: string | null;
+  fromDate?: string | null;
+  toDate?: string | null;
+  limit?: number;
+  offset?: number;
+};
+
+/** Feed canónico da Folha de Ponto · Gestão: pontos reais + faltas por ocorrência. */
+export async function listOperationalPunches(filters: OperationalPunchFilters) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("timesheet_operational_list", {
+    _company_id: filters.companyId,
+    _employee_id: filters.employeeId ?? null,
+    _client_id: filters.clientId ?? null,
+    _task_search: filters.taskSearch?.trim() || null,
+    _status: filters.status ?? "all",
+    _from_ts: filters.fromTs ?? null,
+    _to_ts: filters.toTs ?? null,
+    _from_date: filters.fromDate ?? null,
+    _to_date: filters.toDate ?? null,
+    _limit: filters.limit ?? 50,
+    _offset: filters.offset ?? 0,
+  });
+  if (error) throw error;
+  const result = (data ?? {}) as { rows?: OperationalPunchRow[]; total?: number };
+  return { rows: result.rows ?? [], total: result.total ?? 0 };
+}

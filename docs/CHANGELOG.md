@@ -14,6 +14,8 @@
   ainda não existe. Isso evita que a folha desapareça da listagem/relatórios por
   ausência de `timesheet_periods`; períodos existentes e versões assinadas não
   são modificados.
+- A Folha de Ponto · Gestão passa a usar um feed operacional único que combina
+  `time_entries` reais com faltas por ocorrência, sem criar ponto artificial.
 - Reutilizado o fluxo existente de falta, agora impedindo marcação futura,
   repetição de falta, tarefas já realizadas e tarefas com ponto aberto.
 - A auditoria da falta passa a guardar também a ocorrência e o escopo

@@ -35,7 +35,13 @@ import { PunchEditorDrawer } from "@/components/ponto/PunchEditorDrawer";
 import { PunchAuditDrawer } from "@/components/ponto/PunchAuditDrawer";
 import { PunchGeoDrawer } from "@/components/ponto/PunchGeoDrawer";
 import { OpenPunchPanel } from "@/components/ponto/OpenPunchPanel";
-import { ORIGIN_LABEL, ORIGIN_TONE, punchAdminVoidForRedo, type AdminTimeEntry } from "@/lib/punch-admin";
+import {
+  listOperationalPunches,
+  ORIGIN_LABEL,
+  ORIGIN_TONE,
+  punchAdminVoidForRedo,
+  type OperationalPunchRow,
+} from "@/lib/punch-admin";
 import { formatDuration } from "@/lib/tasks";
 import { formatWallDate, formatWallTime } from "@/lib/wall-clock";
 import { classifyEventStatus, type GeoPointRow } from "@/lib/punch/geo-view";
@@ -73,9 +79,6 @@ const emptyFilters: Filters = {
   to: "",
 };
 
-const TASK_SELECT =
-  "tasks(title, client_id, scheduled_for, scheduled_end, recurrence_date, due_at)";
-
 type TaskJoin = {
   title: string;
   client_id: string | null;
@@ -85,9 +88,8 @@ type TaskJoin = {
   due_at?: string | null;
 };
 
-type Row = AdminTimeEntry & {
+type Row = OperationalPunchRow & {
   tasks: TaskJoin | null;
-  profiles: { full_name: string | null } | null;
   geo?: GeoSummary | null;
 };
 
@@ -188,33 +190,24 @@ function GestaoPonto() {
     },
   });
 
-  // Lista paginada
+  // Feed canónico: pontos reais e faltas sem criar time_entry artificial.
   const { data: result, isLoading } = useQuery({
     queryKey: ["punch-admin-list", currentCompanyId, filters, page],
     enabled: !!currentCompanyId,
     queryFn: async () => {
-      let q = supabase
-        .from("time_entries")
-        .select(
-          `id, company_id, task_id, user_id, started_at, ended_at, paused_at, resumed_at, effective_minutes, notes, created_at, updated_at, origin, created_by, last_edited_by, last_edited_at, last_edit_reason, voided_at, voided_by, void_reason, entry_kind, paid_leave_minutes, ${TASK_SELECT}, profiles!inner(full_name)`,
-          { count: "exact" },
-        )
-        .eq("company_id", currentCompanyId!)
-        .is("voided_at", null)
-        .order("started_at", { ascending: false })
-        .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
-
-      if (filters.userId !== "all") q = q.eq("user_id", filters.userId);
-      if (filters.status === "open") q = q.is("ended_at", null);
-      if (filters.status === "closed") q = q.not("ended_at", "is", null);
-      if (filters.from) q = q.gte("started_at", new Date(filters.from + "T00:00:00").toISOString());
-      if (filters.to) q = q.lte("started_at", new Date(filters.to + "T23:59:59").toISOString());
-      if (filters.clientId !== "all") q = q.eq("tasks.client_id", filters.clientId);
-      if (filters.taskSearch.trim()) q = q.ilike("tasks.title", `%${filters.taskSearch.trim()}%`);
-
-      const { data, error, count } = await q;
-      if (error) throw error;
-      return { rows: (data ?? []) as unknown as Row[], total: count ?? 0 };
+      return listOperationalPunches({
+        companyId: currentCompanyId!,
+        employeeId: filters.userId === "all" ? null : filters.userId,
+        clientId: filters.clientId === "all" ? null : filters.clientId,
+        taskSearch: filters.taskSearch,
+        status: filters.status,
+        fromTs: filters.from ? new Date(filters.from + "T00:00:00").toISOString() : null,
+        toTs: filters.to ? new Date(filters.to + "T23:59:59").toISOString() : null,
+        fromDate: filters.from || null,
+        toDate: filters.to || null,
+        limit: PAGE_SIZE,
+        offset: page * PAGE_SIZE,
+      });
     },
   });
 
@@ -313,6 +306,16 @@ function GestaoPonto() {
   });
 
   const fmtDT = (s: string | null) => (s ? new Date(s).toLocaleString("pt-PT") : "");
+  const isAbsence = (r: Row) => r.record_kind === "absence";
+  const formatSituation = (r: Row) => {
+    if (!isAbsence(r)) return r.entry_kind === "paid_leave" ? "Folga remunerada" : "Trabalhado";
+    return r.absence_justified ? "Falta · justificada" : "Falta · injustificada";
+  };
+  const formatOrigin = (r: Row) => {
+    if (isAbsence(r)) return r.absence_source === "automatica" ? "Falta automática" : "Gestor";
+    return ORIGIN_LABEL[r.origin] ?? r.origin;
+  };
+  const formatNotes = (r: Row) => (isAbsence(r) ? (r.absence_reason ?? "") : (r.notes ?? ""));
 
   const exportColumns = (): ExportColumn<Row>[] => [
     { header: "Funcionário", accessor: (r) => r.profiles?.full_name ?? "" },
@@ -322,11 +325,15 @@ function GestaoPonto() {
     },
     { header: "Cliente", accessor: (r) => (r.tasks?.client_id ? (clientsMap[r.tasks.client_id] ?? "") : "") },
     { header: "Previsto", accessor: (r) => formatPrevisto(r.tasks) },
-    { header: "Início", accessor: (r) => fmtDT(r.started_at) },
-    { header: "Fim", accessor: (r) => fmtDT(r.ended_at) },
-    { header: "Efetivo", accessor: (r) => (r.effective_minutes != null ? formatDuration(r.effective_minutes) : "") },
-    { header: "Origem", accessor: (r) => ORIGIN_LABEL[r.origin] ?? r.origin },
-    { header: "Notas", accessor: (r) => r.notes ?? "" },
+    { header: "Situação", accessor: (r) => formatSituation(r) },
+    { header: "Início", accessor: (r) => (isAbsence(r) ? "" : fmtDT(r.started_at)) },
+    { header: "Fim", accessor: (r) => (isAbsence(r) ? "" : fmtDT(r.ended_at)) },
+    {
+      header: "Efetivo",
+      accessor: (r) => (isAbsence(r) ? "" : r.effective_minutes != null ? formatDuration(r.effective_minutes) : ""),
+    },
+    { header: "Origem", accessor: (r) => formatOrigin(r) },
+    { header: "Notas", accessor: (r) => formatNotes(r) },
     { header: "Geo entrada", accessor: (r) => fmtCoord(r.geo?.start) },
     { header: "Geo saída", accessor: (r) => fmtCoord(r.geo?.end) },
     { header: "Status geo entrada", accessor: (r) => fmtGeoStatus(r.geo?.start) },
@@ -340,26 +347,21 @@ function GestaoPonto() {
   ];
 
   const fetchAllForExport = async (): Promise<Row[]> => {
-    let q = supabase
-      .from("time_entries")
-      .select(
-        `id, company_id, task_id, user_id, started_at, ended_at, paused_at, resumed_at, effective_minutes, notes, created_at, updated_at, origin, created_by, last_edited_by, last_edited_at, last_edit_reason, voided_at, voided_by, void_reason, entry_kind, paid_leave_minutes, ${TASK_SELECT}, profiles!inner(full_name)`,
-      )
-      .eq("company_id", currentCompanyId!)
-      .is("voided_at", null)
-      .order("started_at", { ascending: false })
-      .limit(5000);
-    if (filters.userId !== "all") q = q.eq("user_id", filters.userId);
-    if (filters.status === "open") q = q.is("ended_at", null);
-    if (filters.status === "closed") q = q.not("ended_at", "is", null);
-    if (filters.from) q = q.gte("started_at", new Date(filters.from + "T00:00:00").toISOString());
-    if (filters.to) q = q.lte("started_at", new Date(filters.to + "T23:59:59").toISOString());
-    if (filters.clientId !== "all") q = q.eq("tasks.client_id", filters.clientId);
-    if (filters.taskSearch.trim()) q = q.ilike("tasks.title", `%${filters.taskSearch.trim()}%`);
-    const { data, error } = await q;
-    if (error) throw error;
-    const rows = (data ?? []) as unknown as Row[];
-    const ids = rows.map((r) => r.id);
+    const { rows } = await listOperationalPunches({
+      companyId: currentCompanyId!,
+      employeeId: filters.userId === "all" ? null : filters.userId,
+      clientId: filters.clientId === "all" ? null : filters.clientId,
+      taskSearch: filters.taskSearch,
+      status: filters.status,
+      fromTs: filters.from ? new Date(filters.from + "T00:00:00").toISOString() : null,
+      toTs: filters.to ? new Date(filters.to + "T23:59:59").toISOString() : null,
+      fromDate: filters.from || null,
+      toDate: filters.to || null,
+      limit: 5000,
+      offset: 0,
+    });
+    const realRows = rows.filter((r) => r.record_kind !== "absence");
+    const ids = realRows.map((r) => r.id);
     if (ids.length === 0) return rows;
 
     const { data: geoRows, error: geoError } = await supabase
@@ -379,7 +381,7 @@ function GestaoPonto() {
       geoByEntry.set(p.time_entry_id, summary);
     }
 
-    return rows.map((r) => ({ ...r, geo: geoByEntry.get(r.id) ?? null }));
+    return rows.map((r) => ({ ...r, geo: isAbsence(r) ? null : geoByEntry.get(r.id) ?? null }));
   };
 
   const handleExport = async (kind: "xlsx" | "pdf") => {
@@ -534,6 +536,7 @@ function GestaoPonto() {
                 <TableHead>Tarefa</TableHead>
                 <TableHead>Cliente</TableHead>
                 <TableHead>Previsto</TableHead>
+                <TableHead>Situação</TableHead>
                 <TableHead>Início</TableHead>
                 <TableHead>Fim</TableHead>
                 <TableHead className="text-right">Efetivo</TableHead>
@@ -545,14 +548,14 @@ function GestaoPonto() {
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8 text-sm text-muted-foreground">
+                  <TableCell colSpan={11} className="text-center py-8 text-sm text-muted-foreground">
                     Carregando...
                   </TableCell>
                 </TableRow>
               )}
               {!isLoading && (result?.rows ?? []).length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8 text-sm text-muted-foreground">
+                  <TableCell colSpan={11} className="text-center py-8 text-sm text-muted-foreground">
                     Nenhum registro encontrado.
                   </TableCell>
                 </TableRow>
@@ -567,51 +570,66 @@ function GestaoPonto() {
                   <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
                     {formatPrevisto(r.tasks) || "—"}
                   </TableCell>
-                  <TableCell className="text-sm">{new Date(r.started_at).toLocaleString()}</TableCell>
+                  <TableCell>
+                    <span
+                      className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                        isAbsence(r) ? "bg-destructive/15 text-destructive" : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {formatSituation(r)}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-sm">{isAbsence(r) ? "—" : new Date(r.started_at).toLocaleString()}</TableCell>
                   <TableCell className="text-sm">
-                    {r.ended_at ? (
+                    {isAbsence(r) ? (
+                      "—"
+                    ) : r.ended_at ? (
                       new Date(r.ended_at).toLocaleString()
                     ) : (
                       <span className="text-warning">em aberto</span>
                     )}
                   </TableCell>
                   <TableCell className="text-right font-mono">
-                    {r.effective_minutes != null ? formatDuration(r.effective_minutes) : "—"}
+                    {isAbsence(r) ? "—" : r.effective_minutes != null ? formatDuration(r.effective_minutes) : "—"}
                   </TableCell>
                   <TableCell>
                     <span
                       className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${ORIGIN_TONE[r.origin]}`}
                     >
-                      {ORIGIN_LABEL[r.origin]}
+                      {formatOrigin(r)}
                     </span>
                   </TableCell>
                   <TableCell className="max-w-[240px] truncate text-sm text-muted-foreground">
-                    {r.notes ?? "—"}
+                    {formatNotes(r) || "—"}
                   </TableCell>
                   <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openEdit(r)}>
-                          <Pencil className="mr-2 h-4 w-4" /> Editar
-                        </DropdownMenuItem>
-                        {!r.voided_at && r.entry_kind !== "paid_leave" && (
-                          <DropdownMenuItem onClick={() => requestVoid(r)} disabled={voidMut.isPending}>
-                            <RotateCcw className="mr-2 h-4 w-4" /> Devolver para refazer
+                    {isAbsence(r) ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openEdit(r)}>
+                            <Pencil className="mr-2 h-4 w-4" /> Editar
                           </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem onClick={() => openAudit(r)}>
-                          <History className="mr-2 h-4 w-4" /> Histórico
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => openGeo(r)}>
-                          <MapPin className="mr-2 h-4 w-4" /> Geolocalização
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                          {!r.voided_at && r.entry_kind !== "paid_leave" && (
+                            <DropdownMenuItem onClick={() => requestVoid(r)} disabled={voidMut.isPending}>
+                              <RotateCcw className="mr-2 h-4 w-4" /> Devolver para refazer
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem onClick={() => openAudit(r)}>
+                            <History className="mr-2 h-4 w-4" /> Histórico
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openGeo(r)}>
+                            <MapPin className="mr-2 h-4 w-4" /> Geolocalização
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
