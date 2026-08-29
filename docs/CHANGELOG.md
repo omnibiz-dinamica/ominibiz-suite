@@ -10,6 +10,10 @@
 ### 🐞 SUP-2026-000080 — Falta por tarefa não realizada na folha de ponto
 
 #### Corrigido
+- Ao persistir uma falta, o período mensal do funcionário é materializado quando
+  ainda não existe. Isso evita que a folha desapareça da listagem/relatórios por
+  ausência de `timesheet_periods`; períodos existentes e versões assinadas não
+  são modificados.
 - Reutilizado o fluxo existente de falta, agora impedindo marcação futura,
   repetição de falta, tarefas já realizadas e tarefas com ponto aberto.
 - A auditoria da falta passa a guardar também a ocorrência e o escopo
