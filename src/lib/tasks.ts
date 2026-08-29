@@ -504,9 +504,14 @@ export function availableActions(
     out.push("iniciar");
   if ((task.status === "pendente" || task.status === "autorizado") && isAssignee) out.push("recusar");
   if (task.status === "em_andamento" && (isAssignee || ctx.isManager)) out.push("concluir");
-  // ADR-044 — o gestor pode registar falta a qualquer momento (motivo obrigatório),
-  // sem esperar pelo limiar de ausência automática.
-  if (ctx.isManager && (task.status === "pendente" || task.status === "autorizado")) out.push("marcar_ausente");
+  // A falta só pode ser registada depois da ocorrência: 1h após o horário
+  // definido ou no dia seguinte quando a tarefa não tem horário.
+  if (
+    ctx.isManager &&
+    (task.status === "pendente" || task.status === "autorizado") &&
+    canBecomeAbsent(task)
+  )
+    out.push("marcar_ausente");
   if (ctx.isManager) out.push("cancelar");
 
   return out;
@@ -530,12 +535,15 @@ export const ABSENCE_REASONS = [
 ] as const;
 
 export function canMarkAbsent(
-  t: Pick<TaskRow, "status" | "assigned_to">,
+  t: Pick<TaskRow, "status" | "assigned_to" | "scheduled_for" | "recurrence_date" | "due_at">,
   ctx: { isManager: boolean },
 ): boolean {
   if (!ctx.isManager) return false;
   if (!t.assigned_to) return false;
-  return t.status === "pendente" || t.status === "autorizado" || t.status === "em_andamento" || t.status === "ausente";
+  return (
+    (t.status === "pendente" || t.status === "autorizado") &&
+    canBecomeAbsent(t)
+  );
 }
 
 export async function markTaskAbsent(taskId: string, reason: string, justified: boolean): Promise<TaskRow> {

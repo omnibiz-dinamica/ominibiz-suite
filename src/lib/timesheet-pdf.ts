@@ -140,7 +140,15 @@ export async function generateTimesheetPdf(
       formatDayTime(d.last_out),
       formatMinutes(d.break_minutes),
       formatMinutes(d.worked_minutes),
-      d.day_type === "vacation" ? (d.first_in ? "Férias + ponto" : "Férias") : "Trabalhado",
+      d.attendance_status === "absence" || d.attendance_status === "vacation_absence"
+        ? `Falta (${d.absence_task_count ?? 0} tarefa(s))`
+        : d.attendance_status === "mixed"
+          ? `Trabalhado + falta (${d.absence_task_count ?? 0})`
+          : d.day_type === "vacation"
+            ? d.first_in
+              ? "Férias + ponto"
+              : "Férias"
+            : "Trabalhado",
       "",
     ];
     cells.forEach((value, i) => {

@@ -71,6 +71,15 @@ export type SnapshotDay = {
   confirmed_at: string | null;
   day_type?: "work" | "vacation";
   vacation_status?: "aprovado" | null;
+  /** Faltas ficam vinculadas às ocorrências, sem transformar o dia em ausência total. */
+  absence_task_count?: number;
+  absence_tasks?: {
+    task_id: string;
+    title: string;
+    client_id: string | null;
+    work_date: string;
+  }[];
+  attendance_status?: "work" | "vacation" | "absence" | "mixed" | "vacation_absence";
 };
 
 export type TimesheetSnapshot = {

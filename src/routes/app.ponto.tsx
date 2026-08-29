@@ -59,6 +59,7 @@ import { formatWallDate, formatWallTime } from "@/lib/wall-clock";
 import { OpenPunchRecoveryDialog } from "@/components/ponto/OpenPunchRecoveryDialog";
 import { CancelTaskDialog } from "@/components/tasks/CancelTaskDialog";
 import { ArchiveTaskDialog } from "@/components/tasks/ArchiveTaskDialog";
+import { MarkAbsentDialog } from "@/components/tasks/MarkAbsentDialog";
 import { fetchOpenEntrySelf } from "@/lib/punch/recovery";
 
 export const Route = createFileRoute("/app/ponto")({ component: PontoPage });
@@ -106,6 +107,7 @@ function PontoPage() {
   const [recoveryAttemptedTaskId, setRecoveryAttemptedTaskId] = useState<string | null>(null);
   const [cancelTarget, setCancelTarget] = useState<TaskRow | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<TaskRow | null>(null);
+  const [absenceTarget, setAbsenceTarget] = useState<TaskRow | null>(null);
   const punch = usePunchFlow();
 
   // Detalhe do ponto aberto (tarefa, cliente, tempo em aberto) para o modal
@@ -443,16 +445,6 @@ function PontoPage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
-  const markAbsentMut = useMutation({
-    mutationFn: (taskId: string) => transitionTask(taskId, "marcar_ausente"),
-    onSuccess: () => {
-      toast.success("Falta registrada na tarefa.");
-      qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
-      qc.invalidateQueries({ queryKey: ["tasks"] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
   const state = openEntry ? punchState(openEntry) : "encerrado";
   const liveSec = openEntry ? effectiveSecondsNow(openEntry) : 0;
 
@@ -538,9 +530,12 @@ function PontoPage() {
           requestingAuth={requestAuthMut.isPending}
           requestingAuthId={requestAuthMut.variables ?? null}
           canMarkAbsent={isManager}
-          onMarkAbsent={(id) => markAbsentMut.mutate(id)}
-          markingAbsent={markAbsentMut.isPending}
-          markingAbsentId={markAbsentMut.variables ?? null}
+          onMarkAbsent={(id) => {
+            const target = (upcoming ?? []).find((t) => t.id === id);
+            if (target) setAbsenceTarget(target);
+          }}
+          markingAbsent={false}
+          markingAbsentId={null}
           onCancelTask={(t) => setCancelTarget(t)}
           onArchiveTask={(t) => setArchiveTarget(t)}
         />
@@ -617,6 +612,17 @@ function PontoPage() {
         onOpenChange={(o) => !o && setArchiveTarget(null)}
         onOpenPunch={() => setRecoveryOpen(true)}
         onDone={() => {
+          qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
+          qc.invalidateQueries({ queryKey: ["tasks"] });
+        }}
+      />
+      <MarkAbsentDialog
+        task={absenceTarget}
+        clientName={absenceTarget?.client_id ? clientsMap?.[absenceTarget.client_id] : undefined}
+        open={!!absenceTarget}
+        onOpenChange={(o) => !o && setAbsenceTarget(null)}
+        onDone={() => {
+          setAbsenceTarget(null);
           qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
           qc.invalidateQueries({ queryKey: ["tasks"] });
         }}

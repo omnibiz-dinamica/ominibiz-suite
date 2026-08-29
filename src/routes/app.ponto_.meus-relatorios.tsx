@@ -350,7 +350,24 @@ function PeriodDetail({
                         <td className="px-3 py-2">{formatMinutes(d.break_minutes)}</td>
                         <td className="px-3 py-2">{formatMinutes(d.worked_minutes)}</td>
                         <td className="px-3 py-2">
-                          {d.day_type === "vacation" ? (
+                          {d.attendance_status === "absence" || d.attendance_status === "vacation_absence" ? (
+                            <div className="space-y-1">
+                              <Badge variant="destructive">FALTA</Badge>
+                              <div className="text-xs text-muted-foreground">
+                                {d.absence_task_count ?? 0} tarefa(s): {d.absence_tasks?.map((t) => t.title).join(", ")}
+                              </div>
+                              {d.attendance_status === "vacation_absence" && (
+                                <div className="text-xs text-amber-700">Também há férias aprovadas</div>
+                              )}
+                            </div>
+                          ) : d.attendance_status === "mixed" ? (
+                            <div className="space-y-1">
+                              <Badge variant="destructive">Trabalhado + falta</Badge>
+                              <div className="text-xs text-muted-foreground">
+                                {d.absence_task_count ?? 0} tarefa(s) sem realização
+                              </div>
+                            </div>
+                          ) : d.day_type === "vacation" ? (
                             <div className="space-y-1">
                               <Badge variant="secondary">Férias</Badge>
                               {d.first_in && <div className="text-xs text-amber-700">Conflito com ponto</div>}

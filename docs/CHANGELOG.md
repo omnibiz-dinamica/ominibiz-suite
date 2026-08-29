@@ -7,6 +7,25 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### 🐞 SUP-2026-000080 — Falta por tarefa não realizada na folha de ponto
+
+#### Corrigido
+- Reutilizado o fluxo existente de falta, agora impedindo marcação futura,
+  repetição de falta, tarefas já realizadas e tarefas com ponto aberto.
+- A auditoria da falta passa a guardar também a ocorrência e o escopo
+  selecionado da tarefa recorrente.
+- O snapshot mensal passa a incluir `FALTA` por ocorrência e funcionário,
+  sem criar ponto fictício, somar horas ou transformar automaticamente o dia
+  inteiro em ausência.
+- Gestor, funcionário e PDF distinguem falta, férias e dia trabalhado; dias
+  com pontos e faltas preservam a situação mista.
+
+#### Preservado
+- A tarefa continua existente, as recorrências futuras não são alteradas e
+  férias aprovadas permanecem separadas da falta.
+- UUID, RBAC, RLS, isolamento multiempresa, START/STOP, histórico de pontos,
+  remuneração e valuations não foram alterados.
+
 ### 🐞 Herança operacional in-app do Super Admin
 
 #### Corrigido
