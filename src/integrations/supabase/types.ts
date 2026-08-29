@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -1640,7 +1640,6 @@ export type Database = {
           signature_url: string | null
           social_security_niss: string | null
           status: string | null
-          sector: string | null
           supervisor_id: string | null
           swift: string | null
           tax_country: string | null
@@ -1708,7 +1707,6 @@ export type Database = {
           signature_url?: string | null
           social_security_niss?: string | null
           status?: string | null
-          sector?: string | null
           supervisor_id?: string | null
           swift?: string | null
           tax_country?: string | null
@@ -1776,7 +1774,6 @@ export type Database = {
           signature_url?: string | null
           social_security_niss?: string | null
           status?: string | null
-          sector?: string | null
           supervisor_id?: string | null
           swift?: string | null
           tax_country?: string | null
@@ -3505,8 +3502,6 @@ export type Database = {
       vacation_requests: {
         Row: {
           assigned_approver_id: string | null
-          forwarded_at: string | null
-          forwarded_by: string | null
           cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
@@ -3529,8 +3524,6 @@ export type Database = {
         }
         Insert: {
           assigned_approver_id?: string | null
-          forwarded_at?: string | null
-          forwarded_by?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
@@ -3553,8 +3546,6 @@ export type Database = {
         }
         Update: {
           assigned_approver_id?: string | null
-          forwarded_at?: string | null
-          forwarded_by?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
@@ -5088,10 +5079,6 @@ export type Database = {
         Args: { _company_id: string; _user_id: string }
         Returns: string
       }
-      vacation_forward_for_authorization: {
-        Args: { _approver_id: string; _id: string; _reason?: string | null }
-        Returns: Database["public"]["Tables"]["vacation_requests"]["Row"]
-      }
       return_support_ticket_to_manager: {
         Args: { _reason: string; _ticket_id: string }
         Returns: undefined
@@ -5673,6 +5660,22 @@ export type Database = {
       timesheet_open_month: {
         Args: { _company_id: string; _month: number; _year: number }
         Returns: number
+      }
+      timesheet_operational_list: {
+        Args: {
+          _client_id?: string
+          _company_id: string
+          _employee_id?: string
+          _from_date?: string
+          _from_ts?: string
+          _limit?: number
+          _offset?: number
+          _status?: string
+          _task_search?: string
+          _to_date?: string
+          _to_ts?: string
+        }
+        Returns: Json
       }
       timesheet_period_ensure: {
         Args: {
