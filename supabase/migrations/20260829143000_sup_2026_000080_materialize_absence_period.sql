@@ -36,7 +36,7 @@ BEGIN
     NEW.assigned_to,
     EXTRACT(YEAR FROM v_occurrence_date)::integer,
     EXTRACT(MONTH FROM v_occurrence_date)::integer,
-    'aguardando_funcionario'
+    'aguardando_funcionario'::public.timesheet_status
   )
   ON CONFLICT (company_id, employee_id, period_year, period_month) DO NOTHING;
 
@@ -56,7 +56,7 @@ SELECT DISTINCT
   t.assigned_to,
   EXTRACT(YEAR FROM COALESCE(t.recurrence_date, t.scheduled_for::date, t.due_at::date))::integer,
   EXTRACT(MONTH FROM COALESCE(t.recurrence_date, t.scheduled_for::date, t.due_at::date))::integer,
-  'aguardando_funcionario'
+  'aguardando_funcionario'::public.timesheet_status
 FROM public.tasks t
 WHERE t.status = 'ausente'
   AND t.assigned_to IS NOT NULL
