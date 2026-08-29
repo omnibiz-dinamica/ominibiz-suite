@@ -18,6 +18,9 @@
   `time_entries` reais com faltas por ocorrência, sem criar ponto artificial.
 - O feed operacional classifica a origem da falta por evidência do registro
   (funcionário, gestor ou automática), sem usar essa origem como filtro de visibilidade.
+- O funcionário responsável pode registrar falta apenas na própria tarefa atribuída;
+  gestores mantêm o registro administrativo e ambos os fluxos geram a mesma ocorrência
+  na Folha de Ponto, com auditoria do ator correto.
 - Reutilizado o fluxo existente de falta, agora impedindo marcação futura,
   repetição de falta, tarefas já realizadas e tarefas com ponto aberto.
 - A auditoria da falta passa a guardar também a ocorrência e o escopo

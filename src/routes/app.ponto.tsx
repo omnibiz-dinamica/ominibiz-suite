@@ -529,7 +529,7 @@ function PontoPage() {
           onRequestAuth={(id) => requestAuthMut.mutate(id)}
           requestingAuth={requestAuthMut.isPending}
           requestingAuthId={requestAuthMut.variables ?? null}
-          canMarkAbsent={isManager}
+          canMarkAbsent={isManager || !!user?.id}
           onMarkAbsent={(id) => {
             const target = (upcoming ?? []).find((t) => t.id === id);
             if (target) setAbsenceTarget(target);

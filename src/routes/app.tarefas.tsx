@@ -1849,7 +1849,11 @@ function TaskRowItem({
         {t.status === "ausente" && (
           <div className="mt-2 space-y-0.5 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs">
             <div className="font-semibold uppercase tracking-wide text-destructive">
-              {t.absence_source === "manual" ? "Falta registada pelo gestor" : "Ausência automática"}
+              {t.absence_source === "employee"
+                ? "Falta registada pelo funcionário"
+                : t.absence_source === "manual"
+                  ? "Falta registada pelo gestor"
+                  : "Ausência automática"}
             </div>
             {t.absence_reason ? (
               <div>
@@ -1940,7 +1944,7 @@ function TaskRowItem({
           </>
         )}
         {/* ADR-044 — falta continua acessível em 'em andamento' e para completar o registo de ausências automáticas. */}
-        {!actions.includes("marcar_ausente") && canMarkAbsent(t, { isManager }) && (
+        {!actions.includes("marcar_ausente") && canMarkAbsent(t, { isManager, userId }) && (
           <Button
             size="sm"
             variant="ghost"

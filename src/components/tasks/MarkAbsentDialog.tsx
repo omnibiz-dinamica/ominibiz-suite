@@ -1,7 +1,7 @@
 /**
  * OmniBiz — Registo formal de falta (ADR-044 · SUP-2026-000073).
  *
- * O gestor marca a falta do funcionário numa tarefa com motivo obrigatório e
+ * O funcionário responsável ou o gestor marca a falta numa tarefa com motivo obrigatório e
  * classificação (justificada / injustificada). Toda a regra vive na RPC
  * `task_mark_absent`; ponto aberto bloqueia e encaminha para a Recuperação de
  * Ponto Aberto.

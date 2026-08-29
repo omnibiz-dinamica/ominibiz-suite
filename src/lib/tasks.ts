@@ -52,7 +52,7 @@ export interface TaskRow {
   marked_absent_by?: string | null;
   absence_reason?: string | null;
   absence_justified?: boolean | null;
-  absence_source?: "manual" | "automatica" | string | null;
+  absence_source?: "manual" | "employee" | "automatica" | string | null;
   absence_grace_minutes: number;
 
   created_at: string;
@@ -507,9 +507,14 @@ export function availableActions(
   // A falta só pode ser registada depois da ocorrência: 1h após o horário
   // definido ou no dia seguinte quando a tarefa não tem horário.
   if (
-    ctx.isManager &&
+    (ctx.isManager || isAssignee) &&
     (task.status === "pendente" || task.status === "autorizado") &&
-    canBecomeAbsent(task)
+    canBecomeAbsent({
+      ...task,
+      scheduled_for: task.scheduled_for ?? null,
+      recurrence_date: task.recurrence_date ?? null,
+      due_at: task.due_at ?? null,
+    })
   )
     out.push("marcar_ausente");
   if (ctx.isManager) out.push("cancelar");
@@ -521,8 +526,8 @@ export function availableActions(
 /**
  * ADR-044 — Registo formal de falta (SUP-2026-000073).
  *
- * O gestor marca falta explicitamente, com motivo obrigatório e classificação
- * (justificada / injustificada). Vale também para tarefas já marcadas como
+ * O funcionário responsável ou o gestor marca falta explicitamente, com motivo
+ * obrigatório e classificação (justificada / injustificada). Vale também para tarefas já marcadas como
  * ausentes automaticamente, permitindo completar o registo.
  */
 export const ABSENCE_REASONS = [
@@ -536,10 +541,10 @@ export const ABSENCE_REASONS = [
 
 export function canMarkAbsent(
   t: Pick<TaskRow, "status" | "assigned_to" | "scheduled_for" | "recurrence_date" | "due_at">,
-  ctx: { isManager: boolean },
+  ctx: { isManager: boolean; userId?: string | null },
 ): boolean {
-  if (!ctx.isManager) return false;
   if (!t.assigned_to) return false;
+  if (!ctx.isManager && t.assigned_to !== ctx.userId) return false;
   return (
     (t.status === "pendente" || t.status === "autorizado") &&
     canBecomeAbsent(t)
