@@ -137,6 +137,7 @@ export type OperationalPunchRow = AdminTimeEntry & {
   absence_reason?: string | null;
   absence_justified?: boolean | null;
   absence_source?: string | null;
+  absence_origin?: "employee" | "manager" | "automatic" | string | null;
   tasks: {
     title: string;
     client_id: string | null;

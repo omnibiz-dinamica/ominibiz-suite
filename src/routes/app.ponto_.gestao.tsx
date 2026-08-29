@@ -312,7 +312,12 @@ function GestaoPonto() {
     return r.absence_justified ? "Falta · justificada" : "Falta · injustificada";
   };
   const formatOrigin = (r: Row) => {
-    if (isAbsence(r)) return r.absence_source === "automatica" ? "Falta automática" : "Gestor";
+    if (isAbsence(r)) {
+      if (r.absence_origin === "employee") return "Funcionário";
+      if (r.absence_origin === "automatic") return "Falta automática";
+      if (r.absence_origin === "manager") return "Gestor";
+      return "Origem não identificada";
+    }
     return ORIGIN_LABEL[r.origin] ?? r.origin;
   };
   const formatNotes = (r: Row) => (isAbsence(r) ? (r.absence_reason ?? "") : (r.notes ?? ""));

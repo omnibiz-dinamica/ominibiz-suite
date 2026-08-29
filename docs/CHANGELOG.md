@@ -16,6 +16,8 @@
   são modificados.
 - A Folha de Ponto · Gestão passa a usar um feed operacional único que combina
   `time_entries` reais com faltas por ocorrência, sem criar ponto artificial.
+- O feed operacional classifica a origem da falta por evidência do registro
+  (funcionário, gestor ou automática), sem usar essa origem como filtro de visibilidade.
 - Reutilizado o fluxo existente de falta, agora impedindo marcação futura,
   repetição de falta, tarefas já realizadas e tarefas com ponto aberto.
 - A auditoria da falta passa a guardar também a ocorrência e o escopo
