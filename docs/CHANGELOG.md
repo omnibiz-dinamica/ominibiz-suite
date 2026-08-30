@@ -7,6 +7,23 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### 🐞 SUP-2026-000093 — Motivo da recusa visível para a gestão
+
+#### Corrigido
+- Notificações de recusa pelo funcionário exibem o motivo completo, o nome do
+  funcionário e a data da recusa, sem truncar o conteúdo operacional.
+- A tela de tarefas consulta o histórico canônico `task_refusals` em uma única
+  operação e usa-o como fallback quando os campos atuais da tarefa não contêm o
+  motivo.
+- O histórico de recusas permanece consultável depois da reatribuição, enquanto
+  cancelamentos feitos pelo Gestor continuam separados de recusas do funcionário.
+- Gestor, SuperAdmin no contexto da empresa e o próprio funcionário recebem a
+  visualização permitida pelas políticas RLS existentes.
+
+#### Preservado
+- Persistência, RBAC, RLS, isolamento multiempresa, recorrências, notificações,
+  START/STOP, faltas e observações da folha de ponto não foram alterados.
+
 ### 🐞 SUP-2026-000080 — Falta por tarefa não realizada na folha de ponto
 
 #### Corrigido

@@ -93,6 +93,11 @@ import {
   type RecoveryEntry,
 } from "@/components/ponto/OpenPunchRecoveryDialog";
 import { fetchOpenEntries, fetchOpenEntrySelf } from "@/lib/punch/recovery";
+import {
+  currentTaskRefusal,
+  groupTaskRefusals,
+  type TaskRefusalRecord,
+} from "@/lib/task-refusal-view";
 
 
 import { EmployeePicker } from "@/components/common/EmployeePicker";
@@ -160,7 +165,7 @@ export const Route = createFileRoute("/app/tarefas")({
 });
 
 function TasksPage() {
-  const { user, isManager, currentCompanyId } = useAuth();
+  const { user, profile, isManager, currentCompanyId } = useAuth();
   const qc = useQueryClient();
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
@@ -205,7 +210,7 @@ function TasksPage() {
   }, [editingSeries?.recurrence_id]);
 
   const { data: tasks, isLoading } = useQuery({
-    queryKey: ["tasks", currentCompanyId, user?.id, isManager, view],
+    queryKey: ["tasks", currentCompanyId, user?.id, isManager, view, search.task],
     queryFn: async () => {
       let q = supabase
         .from("tasks")
@@ -215,7 +220,8 @@ function TasksPage() {
         .order("created_at", { ascending: false });
       if (!isManager) q = q.eq("assigned_to", user!.id);
       else if (currentCompanyId) q = q.eq("company_id", currentCompanyId);
-      if (view === "archived") q = q.not("archived_at", "is", null);
+      if (search.task) q = q.eq("id", search.task);
+      else if (view === "archived") q = q.not("archived_at", "is", null);
       else q = q.is("archived_at", null);
       const { data, error } = await q;
       if (error) throw error;
@@ -285,11 +291,38 @@ function TasksPage() {
     enabled: !!user && !!currentCompanyId,
   });
 
+  const { data: taskRefusals } = useQuery({
+    queryKey: ["task-refusals", currentCompanyId, user?.id, isManager],
+    queryFn: async () => {
+      if (!currentCompanyId || !user?.id) return [] as TaskRefusalRecord[];
+      let q = supabase
+        .from("task_refusals")
+        .select("id,company_id,task_id,employee_id,actor_id,reason,previous_status,new_status,created_at")
+        .eq("company_id", currentCompanyId)
+        .order("created_at", { ascending: false });
+      if (!isManager) q = q.eq("employee_id", user.id);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []) as TaskRefusalRecord[];
+    },
+    enabled: !!user?.id && !!currentCompanyId,
+  });
+
   const completionNoteByTask = useMemo(() => {
     const map = new Map<string, CompletionNote>();
     for (const note of completionNotes ?? []) if (!map.has(note.task_id)) map.set(note.task_id, note);
     return map;
   }, [completionNotes]);
+
+  const refusalsByTask = useMemo(() => groupTaskRefusals(taskRefusals ?? []), [taskRefusals]);
+  const memberNames = useMemo(() => {
+    const names = new Map<string, string>();
+    for (const member of members ?? []) {
+      if (member.full_name?.trim()) names.set(member.id, member.full_name.trim());
+    }
+    if (user?.id && profile?.full_name?.trim()) names.set(user.id, profile.full_name.trim());
+    return names as ReadonlyMap<string, string>;
+  }, [members, profile?.full_name, user?.id]);
 
   /**
    * SUP-2026-000074 — pontos ainda em aberto (esquecimento de saída).
@@ -353,6 +386,9 @@ function TasksPage() {
       .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, () =>
         qc.invalidateQueries({ queryKey: ["tasks"] }),
       )
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "task_refusals" }, () =>
+        qc.invalidateQueries({ queryKey: ["task-refusals"] }),
+      )
       .on("postgres_changes", { event: "*", schema: "public", table: "vacation_requests" }, () =>
         qc.invalidateQueries({ queryKey: ["approved-vacations-calendar"] }),
       )
@@ -368,6 +404,7 @@ function TasksPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
       qc.invalidateQueries({ queryKey: ["tasks-open-punches"] });
+      qc.invalidateQueries({ queryKey: ["task-refusals"] });
       toast.success("Tarefa atualizada");
       setRefusing(null);
       setRefusalReason("");
@@ -969,8 +1006,10 @@ function TasksPage() {
           onArchive={(id, archive) => archiveMut.mutate({ id, archive })}
            onMoveDate={(id, dateKey) => moveTaskDate.mutate({ id, dateKey })}
            transitionPending={transition.isPending}
-           archivePending={archiveMut.isPending}
-           completionNotes={completionNoteByTask}
+          archivePending={archiveMut.isPending}
+          completionNotes={completionNoteByTask}
+          refusalsByTask={refusalsByTask}
+          memberNames={memberNames}
          />
       )}
 
@@ -993,6 +1032,8 @@ function TasksPage() {
            transitionPending={transition.isPending}
            archivePending={archiveMut.isPending}
            completionNotes={completionNoteByTask}
+           refusalsByTask={refusalsByTask}
+           memberNames={memberNames}
          />
       )}
 
@@ -1022,6 +1063,8 @@ function TasksPage() {
                  transitionPending={transition.isPending}
                  archivePending={archiveMut.isPending}
                  completionNotes={completionNoteByTask}
+                 refusalsByTask={refusalsByTask}
+                 memberNames={memberNames}
                />
             ))}
           </ul>
@@ -1047,6 +1090,8 @@ function TasksPage() {
           transitionPending={transition.isPending}
           archivePending={archiveMut.isPending}
           completionNotes={completionNoteByTask}
+          refusalsByTask={refusalsByTask}
+          memberNames={memberNames}
         />
       )}
     </div>
@@ -1086,6 +1131,8 @@ interface RowHandlers {
   transitionPending: boolean;
   archivePending: boolean;
   completionNotes: ReadonlyMap<string, CompletionNote>;
+  refusalsByTask: ReadonlyMap<string, TaskRefusalRecord[]>;
+  memberNames: ReadonlyMap<string, string>;
 }
 
 function TaskPlanningCalendar({
@@ -1626,6 +1673,8 @@ function CalendarTaskCard({
   onDelete,
   onTransition,
   transitionPending,
+  refusalsByTask,
+  memberNames,
 }: RowHandlers & {
   task: TaskRow;
   members: { id: string; full_name: string | null }[];
@@ -1642,6 +1691,8 @@ function CalendarTaskCard({
       : "";
   const memberName = members.find((m) => m.id === task.assigned_to)?.full_name ?? "Sem responsável";
   const clientName = clients.find((c) => c.id === task.client_id)?.name ?? "Sem cliente";
+  const refusalHistory = refusalsByTask.get(task.id) ?? [];
+  const refusal = currentTaskRefusal(task, refusalHistory);
 
   return (
     <li
@@ -1687,14 +1738,18 @@ function CalendarTaskCard({
           </span>
         )}
       </div>
-      {isRefused(task) && (
+      {refusal && (
         <div className="space-y-0.5 rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1.5 text-[11px]">
           <div className="font-semibold uppercase tracking-wide text-destructive">
-            Recusada · {members.find((m) => m.id === task.refused_by)?.full_name ?? memberName}
+            Recusada · {memberNames.get(refusal.employeeId) ?? memberName}
           </div>
-          <div>Motivo: {task.refusal_reason || "-"}</div>
+          <div className="whitespace-pre-wrap break-words">Motivo: {refusal.reason ?? "Motivo não registrado"}</div>
+          {refusal.refusedAt && (
+            <div className="text-muted-foreground">Recusada em: {formatLocalTime(refusal.refusedAt)}</div>
+          )}
         </div>
       )}
+      <TaskRefusalHistory records={refusalHistory} memberNames={memberNames} compact />
 
 
       <div className="flex flex-wrap justify-end gap-1">
@@ -1790,6 +1845,36 @@ function GroupedByAssignee({
   );
 }
 
+function TaskRefusalHistory({
+  records,
+  memberNames,
+  compact = false,
+}: {
+  records: readonly TaskRefusalRecord[];
+  memberNames: ReadonlyMap<string, string>;
+  compact?: boolean;
+}) {
+  if (records.length === 0) return null;
+
+  return (
+    <details className={compact ? "text-[11px]" : "mt-2 text-xs"}>
+      <summary className="cursor-pointer font-medium text-primary underline-offset-2 hover:underline">
+        Histórico de recusas ({records.length})
+      </summary>
+      <div className="mt-2 space-y-2 border-l-2 border-destructive/25 pl-3">
+        {records.map((record) => (
+          <div key={record.id} className="space-y-0.5">
+            <div className="font-medium text-foreground">
+              {memberNames.get(record.employee_id) ?? "Funcionário"} · {formatLocalTime(record.created_at)}
+            </div>
+            <div className="whitespace-pre-wrap break-words text-muted-foreground">{record.reason}</div>
+          </div>
+        ))}
+      </div>
+    </details>
+  );
+}
+
 function TaskRowItem({
   task: t,
   userId,
@@ -1803,6 +1888,8 @@ function TaskRowItem({
   transitionPending,
   archivePending,
   completionNotes,
+  refusalsByTask,
+  memberNames,
 }: RowHandlers & { task: TaskRow }) {
   const late = isVisuallyLate(t);
   const actions = availableActions(t, { userId, isManager });
@@ -1813,6 +1900,8 @@ function TaskRowItem({
   const start = formatWallTime(t.scheduled_for);
   const end = formatWallTime(t.scheduled_end);
   const updated = formatLocalTime(t.updated_at);
+  const refusalHistory = refusalsByTask.get(t.id) ?? [];
+  const refusal = currentTaskRefusal(t, refusalHistory);
 
   return (
     <li className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -1828,12 +1917,15 @@ function TaskRowItem({
             </span>
           )}
         </div>
-        {isRefused(t) && (
+        {refusal && (
           <div className="mt-2 space-y-0.5 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs">
             <div className="font-semibold uppercase tracking-wide text-destructive">Recusada pelo funcionário</div>
-            <div>Motivo: {t.refusal_reason || "-"}</div>
-            {t.refused_at && (
-              <div className="text-muted-foreground">Recusada em: {formatLocalTime(t.refused_at)}</div>
+            <div className="whitespace-pre-wrap break-words">
+              Funcionário: {memberNames.get(refusal.employeeId) ?? "Funcionário"}
+            </div>
+            <div className="whitespace-pre-wrap break-words">Motivo: {refusal.reason ?? "Motivo não registrado"}</div>
+            {refusal.refusedAt && (
+              <div className="text-muted-foreground">Recusada em: {formatLocalTime(refusal.refusedAt)}</div>
             )}
             {isManager && (
               <button
@@ -1846,6 +1938,7 @@ function TaskRowItem({
             )}
           </div>
         )}
+        <TaskRefusalHistory records={refusalHistory} memberNames={memberNames} />
         {t.status === "ausente" && (
           <div className="mt-2 space-y-0.5 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs">
             <div className="font-semibold uppercase tracking-wide text-destructive">

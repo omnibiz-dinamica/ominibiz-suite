@@ -8,6 +8,7 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
+    "test:task-refusals": "node --experimental-strip-types --test tests/task-refusal-view.test.ts",
     "lint": "eslint .",
     "format": "prettier --write ."
   },

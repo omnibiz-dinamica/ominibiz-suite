@@ -31,6 +31,7 @@ import {
 import { transitionTask } from "@/lib/tasks";
 import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
 import { invalidateNotificationsCache } from "@/lib/cache/notifications";
+import { taskRejectionNotificationDetails } from "@/lib/task-refusal-view";
 
 type NotificationEvent =
   | "task_created"
@@ -343,6 +344,7 @@ function NotificationsPage() {
             const isAuthReq = n.event === "task_authorization_requested" && isManager;
             const state = n.state ?? "nova";
             const terminal = state === "resolvida" || state === "arquivada";
+            const refusal = taskRejectionNotificationDetails(n.event, n.metadata);
             return (
               <li
                 key={n.id}
@@ -381,7 +383,24 @@ function NotificationsPage() {
                       <span className="text-xs text-muted-foreground">{new Date(n.created_at).toLocaleString()}</span>
                     </div>
                     <p className="mt-1 font-medium">{n.title}</p>
-                    {n.body && <p className="mt-0.5 truncate text-sm text-muted-foreground">{n.body}</p>}
+                    {refusal ? (
+                      <div className="mt-2 space-y-1 border-l-2 border-destructive/30 pl-3 text-sm">
+                        <p className="text-muted-foreground">
+                          {refusal.employeeName ? `${refusal.employeeName} recusou a tarefa.` : "Tarefa recusada pelo funcionário."}
+                        </p>
+                        <p className="whitespace-pre-wrap break-words">
+                          <span className="font-medium">Motivo da recusa:</span>{" "}
+                          {refusal.reason ?? "Motivo não registrado"}
+                        </p>
+                        {refusal.refusedAt && (
+                          <p className="text-xs text-muted-foreground">
+                            Recusada em: {new Date(refusal.refusedAt).toLocaleString("pt-PT")}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      n.body && <p className="mt-0.5 break-words text-sm text-muted-foreground">{n.body}</p>
+                    )}
                     {n.state_note && (
                       <p className="mt-1 text-xs italic text-muted-foreground">Nota: {n.state_note}</p>
                     )}
