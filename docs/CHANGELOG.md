@@ -17,6 +17,8 @@
   motivo.
 - O histórico de recusas permanece consultável depois da reatribuição, enquanto
   cancelamentos feitos pelo Gestor continuam separados de recusas do funcionário.
+- Tarefas canceladas exibem `cancellation_reason` e horário do cancelamento no
+  mesmo padrão visual das ocorrências de falta, sem serem rotuladas como recusa.
 - Gestor, SuperAdmin no contexto da empresa e o próprio funcionário recebem a
   visualização permitida pelas políticas RLS existentes.
 

@@ -44,6 +44,8 @@ export interface TaskRow {
   completed_at: string | null;
   authorized_at: string | null;
   cancelled_at: string | null;
+  cancelled_by?: string | null;
+  cancellation_reason?: string | null;
   refusal_reason?: string | null;
   refused_at?: string | null;
   refused_by?: string | null;

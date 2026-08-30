@@ -12,6 +12,10 @@ export interface TaskRefusalRecord {
 
 type RefusedTaskSnapshot = {
   status: string;
+  assigned_to?: string | null;
+  cancellation_reason?: string | null;
+  cancelled_at?: string | null;
+  cancelled_by?: string | null;
   refusal_reason?: string | null;
   refused_at?: string | null;
   refused_by?: string | null;
@@ -25,6 +29,13 @@ export interface TaskRefusalDetails {
 
 export interface TaskRejectionNotificationDetails extends TaskRefusalDetails {
   employeeName: string | null;
+}
+
+export interface TaskCancellationDetails {
+  cancelledBy: string | null;
+  reason: string | null;
+  cancelledAt: string | null;
+  byEmployee: boolean;
 }
 
 function nonBlank(value: unknown): string | null {
@@ -62,6 +73,17 @@ export function currentTaskRefusal(
     employeeId,
     reason: nonBlank(task.refusal_reason) ?? nonBlank(matchingHistory?.reason),
     refusedAt: nonBlank(task.refused_at) ?? nonBlank(matchingHistory?.created_at),
+  };
+}
+
+export function currentTaskCancellation(task: RefusedTaskSnapshot): TaskCancellationDetails | null {
+  if (task.status !== "cancelado" || nonBlank(task.refused_by)) return null;
+  const cancelledBy = nonBlank(task.cancelled_by);
+  return {
+    cancelledBy,
+    reason: nonBlank(task.cancellation_reason),
+    cancelledAt: nonBlank(task.cancelled_at),
+    byEmployee: !!cancelledBy && cancelledBy === nonBlank(task.assigned_to),
   };
 }
 

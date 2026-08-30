@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  currentTaskCancellation,
   currentTaskRefusal,
   groupTaskRefusals,
   taskRejectionNotificationDetails,
@@ -48,6 +49,34 @@ test("does not classify a manager cancellation as an employee refusal", () => {
     null,
   );
   assert.equal(currentTaskRefusal({ status: "cancelado", refused_by: null }, [refusal]), null);
+  assert.deepEqual(
+    currentTaskCancellation({
+      status: "cancelado",
+      assigned_to: "employee-a",
+      cancelled_by: "manager-a",
+      cancellation_reason: "Alteração de programação",
+      cancelled_at: "2026-08-29T20:40:00.000Z",
+    }),
+    {
+      cancelledBy: "manager-a",
+      reason: "Alteração de programação",
+      cancelledAt: "2026-08-29T20:40:00.000Z",
+      byEmployee: false,
+    },
+  );
+});
+
+test("does not show a cancellation block for an employee refusal", () => {
+  assert.equal(
+    currentTaskCancellation({
+      status: "cancelado",
+      assigned_to: "employee-a",
+      cancelled_by: "employee-a",
+      cancellation_reason: "Consulta médica",
+      refused_by: "employee-a",
+    }),
+    null,
+  );
 });
 
 test("reads structured employee refusal metadata from the notification", () => {

@@ -94,6 +94,7 @@ import {
 } from "@/components/ponto/OpenPunchRecoveryDialog";
 import { fetchOpenEntries, fetchOpenEntrySelf } from "@/lib/punch/recovery";
 import {
+  currentTaskCancellation,
   currentTaskRefusal,
   groupTaskRefusals,
   type TaskRefusalRecord,
@@ -1693,6 +1694,7 @@ function CalendarTaskCard({
   const clientName = clients.find((c) => c.id === task.client_id)?.name ?? "Sem cliente";
   const refusalHistory = refusalsByTask.get(task.id) ?? [];
   const refusal = currentTaskRefusal(task, refusalHistory);
+  const cancellation = currentTaskCancellation(task);
 
   return (
     <li
@@ -1746,6 +1748,19 @@ function CalendarTaskCard({
           <div className="whitespace-pre-wrap break-words">Motivo: {refusal.reason ?? "Motivo não registrado"}</div>
           {refusal.refusedAt && (
             <div className="text-muted-foreground">Recusada em: {formatLocalTime(refusal.refusedAt)}</div>
+          )}
+        </div>
+      )}
+      {cancellation && (
+        <div className="space-y-0.5 rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1.5 text-[11px]">
+          <div className="font-semibold uppercase tracking-wide text-destructive">
+            {cancellation.byEmployee ? "Cancelada pelo funcionário" : "Tarefa cancelada"}
+          </div>
+          <div className="whitespace-pre-wrap break-words">
+            Motivo: {cancellation.reason ?? "Motivo não registrado"}
+          </div>
+          {cancellation.cancelledAt && (
+            <div className="text-muted-foreground">Cancelada em: {formatLocalTime(cancellation.cancelledAt)}</div>
           )}
         </div>
       )}
@@ -1902,6 +1917,7 @@ function TaskRowItem({
   const updated = formatLocalTime(t.updated_at);
   const refusalHistory = refusalsByTask.get(t.id) ?? [];
   const refusal = currentTaskRefusal(t, refusalHistory);
+  const cancellation = currentTaskCancellation(t);
 
   return (
     <li className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -1935,6 +1951,19 @@ function TaskRowItem({
               >
                 Reatribuir tarefa
               </button>
+            )}
+          </div>
+        )}
+        {cancellation && (
+          <div className="mt-2 space-y-0.5 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs">
+            <div className="font-semibold uppercase tracking-wide text-destructive">
+              {cancellation.byEmployee ? "Cancelada pelo funcionário" : "Tarefa cancelada"}
+            </div>
+            <div className="whitespace-pre-wrap break-words">
+              Motivo: {cancellation.reason ?? "Motivo não registrado"}
+            </div>
+            {cancellation.cancelledAt && (
+              <div className="text-muted-foreground">Cancelada em: {formatLocalTime(cancellation.cancelledAt)}</div>
             )}
           </div>
         )}
