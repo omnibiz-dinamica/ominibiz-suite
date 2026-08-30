@@ -28,6 +28,7 @@ import {
   normalizeBusinessVertical,
 } from "@/lib/locale";
 import { resolveAvailableNavigation, type NavGroup } from "@/lib/navigation";
+import { getAppVersion } from "@/lib/app-version";
 
 function detectBrowser(): { name: string; version: string } {
   if (typeof navigator === "undefined") return { name: "ssr", version: "" };
@@ -49,11 +50,7 @@ function detectBrowser(): { name: string; version: string } {
 
 function DeploymentDiagnostics() {
   const showDiagnostics = import.meta.env.DEV || import.meta.env.VITE_SHOW_DIAGNOSTICS === "true";
-
-  if (!showDiagnostics) return null;
-
-  const build = (import.meta.env.VITE_BUILD_TIME ?? "dev") as string;
-  const commit = ((import.meta.env.VITE_COMMIT_SHA ?? "dev") as string).slice(0, 7);
+  const version = getAppVersion();
   const host = typeof window !== "undefined" ? window.location.host : "ssr";
   const env =
     /(^|\.)id-preview--/.test(host) || /(^|\.)preview--/.test(host)
@@ -71,18 +68,21 @@ function DeploymentDiagnostics() {
   const { name: browser, version: browserVersion } = detectBrowser();
 
   useEffect(() => {
-    if (!swSupported) return;
+    if (!showDiagnostics || !swSupported) return;
     navigator.serviceWorker
       .getRegistrations()
       .then((regs) => setSwCount(regs.length))
       .catch(() => setSwCount(-1));
-  }, [swSupported]);
+  }, [showDiagnostics, swSupported]);
+
+  if (!showDiagnostics) return null;
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 font-mono">
       <span className="font-sans">OmniBiz · Diagnóstico</span>
       <span>
-        v1 · build {build} · commit {commit} · env {env} · host {host} · {browser} {browserVersion} · pwa{" "}
+        v1 · build {version.buildId} · commit {version.shortCommitSha} · env {env} · host {host} · {browser}{" "}
+        {browserVersion} · pwa{" "}
         {isStandalone ? "on" : "off"} · sw {swCount === null ? "?" : swCount === -1 ? "err" : swCount}
       </span>
     </div>
@@ -92,14 +92,6 @@ function DeploymentDiagnostics() {
 const GROUPS_STORAGE_KEY = "omnibiz:sidebar:groups:v2";
 const FORCE_MENU_CLOSED_KEY = "omnibiz:force-mobile-menu-closed";
 const MOBILE_QUERY = "(max-width: 767px)";
-// Referência visível da correção Android quando o host não injeta o SHA do build.
-const SOURCE_COMMIT_FALLBACK = "28676d6";
-
-const getVisibleCommit = () => {
-  const runtimeCommit = ((import.meta.env.VITE_COMMIT_SHA ?? "") as string).trim();
-  return runtimeCommit && runtimeCommit !== "dev" ? runtimeCommit.slice(0, 7) : SOURCE_COMMIT_FALLBACK;
-};
-
 export function AppLayout({ children }: { children?: ReactNode }) {
   const { user, isSuperAdmin, currentCompanyId, signOut, effectiveRole, switchCompany, initialized } = useAuth();
   const { theme, toggle } = useTheme();
@@ -110,7 +102,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
   const [breakpointReady, setBreakpointReady] = useState(false);
   const qc = useQueryClient();
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
-  const visibleCommit = getVisibleCommit();
+  const visibleCommit = getAppVersion().buildId;
 
   const superAdminOperating = isSuperAdmin && !!currentCompanyId;
 

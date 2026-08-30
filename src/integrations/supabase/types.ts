@@ -3449,6 +3449,59 @@ export type Database = {
           },
         ]
       }
+      user_identity_audit: {
+        Row: {
+          action: string
+          actor_id: string
+          company_id: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          new_email_hash: string
+          new_email_redacted: string
+          old_email_hash: string
+          old_email_redacted: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          company_id: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          new_email_hash: string
+          new_email_redacted: string
+          old_email_hash: string
+          old_email_redacted: string
+          status: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          company_id?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          new_email_hash?: string
+          new_email_redacted?: string
+          old_email_hash?: string
+          old_email_redacted?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_identity_audit_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vacation_audit: {
         Row: {
           action: string
@@ -3937,6 +3990,13 @@ export type Database = {
           full_name: string
           is_active: boolean
           is_primary: boolean
+          user_id: string
+        }[]
+      }
+      company_member_emails: {
+        Args: { _company_id: string }
+        Returns: {
+          email: string
           user_id: string
         }[]
       }

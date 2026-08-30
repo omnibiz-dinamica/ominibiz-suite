@@ -14,6 +14,8 @@ import { Check, ChevronDown, Download, Plus, Trash2, Upload, IdCard, Building2, 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ModalSection } from "@/components/ui/dialog";
 import { EMPLOYEE_PAYMENT_TYPES, PAYMENT_TYPE_LABEL, type PaymentType } from "@/lib/compensation";
+import { updateManagedUserEmail } from "@/lib/user-email";
+import { isValidUserEmail, normalizeUserEmail } from "@/lib/user-email-security";
 
 
 /**
@@ -25,8 +27,10 @@ import { EMPLOYEE_PAYMENT_TYPES, PAYMENT_TYPE_LABEL, type PaymentType } from "@/
 type Role = "manager" | "employee" | "owner" | "super_admin";
 
 export interface EmployeeEditorProps {
+  canEditEmail?: boolean;
   userId: string;
   companyId: string;
+  currentEmail?: string | null;
   currentRole: Role;
   sectorOptions?: string[];
   onDone: () => void;
@@ -35,7 +39,15 @@ export interface EmployeeEditorProps {
 // Loose record type — generated supabase types may lag behind new columns.
 type ProfileRow = Record<string, unknown> & { id: string };
 
-export function EmployeeEditor({ userId, companyId, currentRole, sectorOptions = [], onDone }: EmployeeEditorProps) {
+export function EmployeeEditor({
+  canEditEmail = false,
+  userId,
+  companyId,
+  currentEmail,
+  currentRole,
+  sectorOptions = [],
+  onDone,
+}: EmployeeEditorProps) {
   const qc = useQueryClient();
   const { isOwner, isSuperAdmin } = useAuth();
 
@@ -119,6 +131,8 @@ export function EmployeeEditor({ userId, companyId, currentRole, sectorOptions =
             currentRole={currentRole}
             userId={userId}
             companyId={companyId}
+            canEditEmail={canEditEmail}
+            currentEmail={currentEmail}
             sectorOptions={sectorOptions}
             canPromoteOwner={!!(isOwner || isSuperAdmin)}
             onSave={save}
@@ -184,6 +198,8 @@ function TabDadosGerais({
   currentRole,
   userId,
   companyId,
+  canEditEmail,
+  currentEmail,
   sectorOptions,
   canPromoteOwner,
   onSave,
@@ -194,12 +210,15 @@ function TabDadosGerais({
   currentRole: Role;
   userId: string;
   companyId: string;
+  canEditEmail: boolean;
+  currentEmail?: string | null;
   sectorOptions: string[];
   canPromoteOwner: boolean;
   onSave: (p: Record<string, unknown>, msg?: string) => Promise<void>;
   onDone: () => void;
 }) {
   const [fullName, setFullName] = useState(str(profile.full_name));
+  const [email, setEmail] = useState(currentEmail ?? "");
   const [phone, setPhone] = useState(str(profile.phone));
   const [companyPrimary, setCompanyPrimary] = useState(str(profile.company_id_primary) || companyId);
   const [jobTitle, setJobTitle] = useState(str(profile.job_title));
@@ -209,6 +228,11 @@ function TabDadosGerais({
   const [status, setStatus] = useState(str(profile.status) || (profile.is_active === false ? "inativo" : "ativo"));
   const [role, setRole] = useState<Role>(currentRole);
   const [loading, setLoading] = useState(false);
+  const normalizedCurrentEmail = normalizeUserEmail(currentEmail ?? "");
+  const normalizedEmail = normalizeUserEmail(email);
+  const emailAvailable = Boolean(normalizedCurrentEmail);
+  const emailChanged = canEditEmail && emailAvailable && normalizedEmail !== normalizedCurrentEmail;
+  const emailValid = !emailAvailable || isValidUserEmail(normalizedEmail);
 
   return (
     <form
@@ -218,6 +242,14 @@ function TabDadosGerais({
         e.preventDefault();
         setLoading(true);
         try {
+          if (!emailValid) throw new Error("Informe um e-mail válido.");
+          if (emailChanged) {
+            const confirmed = window.confirm(
+              `Alterar o e-mail de acesso de ${normalizedCurrentEmail} para ${normalizedEmail}?`,
+            );
+            if (!confirmed) return;
+            await updateManagedUserEmail({ companyId, email: normalizedEmail, userId });
+          }
           await onSave({
             full_name: toNullableString(fullName),
             phone: toNullableString(phone),
@@ -259,6 +291,21 @@ function TabDadosGerais({
             <Input maxLength={40} value={phone} onChange={(e) => setPhone(e.target.value)} />
           </Field>
         </div>
+        <Field label="E-mail de acesso">
+          <Input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={!emailAvailable || !canEditEmail}
+            placeholder={emailAvailable ? undefined : "E-mail indisponível até aplicar a atualização"}
+            autoComplete="off"
+          />
+          <p className={`text-xs ${emailValid ? "text-muted-foreground" : "text-destructive"}`}>
+            {canEditEmail
+              ? "A alteração é confirmada antes do envio e registrada na auditoria."
+              : "O e-mail é somente leitura para o seu nível de acesso."}
+          </p>
+        </Field>
       </ModalSection>
 
       <ModalSection title="Organização e acesso" icon={Building2}>

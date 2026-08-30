@@ -86,6 +86,9 @@ function ProfilePage() {
           <div>
             <dt className="text-xs uppercase text-muted-foreground">Email</dt>
             <dd className="mt-0.5 font-medium">{user?.email}</dd>
+            <dd className="mt-1 text-xs text-muted-foreground">
+              Alterações de e-mail requerem autorização do Gestor.
+            </dd>
           </div>
           <div>
             <dt className="text-xs uppercase text-muted-foreground">Papel</dt>

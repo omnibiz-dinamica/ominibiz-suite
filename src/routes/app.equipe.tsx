@@ -51,7 +51,7 @@ export const Route = createFileRoute("/app/equipe")({
 });
 
 function TeamPage() {
-  const { isManager, currentCompanyId, user } = useAuth();
+  const { isManager, isSuperAdmin, currentCompanyId, user } = useAuth();
   const qc = useQueryClient();
   const [email, setEmail] = useState("");
   const [accessEmail, setAccessEmail] = useState("");
@@ -91,13 +91,17 @@ function TeamPage() {
 
       let emailsById = new Map<string, string>();
       try {
-        const { data: emailRows } = await (supabase.from("profiles" as never) as any).select("id, email").in("id", ids);
+        const { data: emailRows, error: emailError } = await supabase.rpc("company_member_emails", {
+          _company_id: currentCompanyId!,
+        });
+        if (emailError) throw emailError;
         emailsById = new Map(
-          ((emailRows ?? []) as Array<{ id: string; email: string | null }>)
+          ((emailRows ?? []) as Array<{ user_id: string; email: string | null }>)
             .filter((p) => p.email?.trim())
-            .map((p) => [p.id, p.email!.trim()]),
+            .map((p) => [p.user_id, p.email!.trim()]),
         );
       } catch {
+        // Keep the team editor available while the secure email RPC is being deployed.
         emailsById = new Map();
       }
 
@@ -454,6 +458,8 @@ function TeamPage() {
                 userId={editing.user_id}
                 companyId={currentCompanyId!}
                 currentRole={editing.role}
+                currentEmail={editing.profile?.email ?? null}
+                canEditEmail={isSuperAdmin || editing.role === "employee"}
                 sectorOptions={sectorOptions}
                 onDone={() => {
                   setEditing(null);

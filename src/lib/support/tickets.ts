@@ -9,6 +9,7 @@
  *  - lê dados via Data API (RLS aplica).
  */
 import { supabase } from "@/integrations/supabase/client";
+import { getAppVersion } from "@/lib/app-version";
 import {
   ALLOWED_ATTACHMENT_MIME,
   MAX_ATTACHMENT_SIZE_BYTES,
@@ -211,6 +212,7 @@ export async function signedAttachmentUrl(storagePath: string, expiresInSec = 60
 export function collectTechnicalContext(extra?: Record<string, unknown>): Record<string, unknown> {
   const nav = typeof navigator !== "undefined" ? navigator : null;
   const win = typeof window !== "undefined" ? window : null;
+  const version = getAppVersion();
   return {
     user_agent: nav?.userAgent ?? null,
     language: nav?.language ?? null,
@@ -218,8 +220,9 @@ export function collectTechnicalContext(extra?: Record<string, unknown>): Record
     screen: win ? `${win.screen?.width}x${win.screen?.height}` : null,
     viewport: win ? `${win.innerWidth}x${win.innerHeight}` : null,
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone ?? null,
-    build: (import.meta.env.VITE_BUILD_TIME as string | undefined) ?? "dev",
-    commit: (import.meta.env.VITE_COMMIT_SHA as string | undefined) ?? "dev",
+    build: version.buildId,
+    build_time: version.buildTime,
+    commit: version.commitSha,
     pathname: win?.location?.pathname ?? null,
     href: win?.location?.href ?? null,
     ...(extra ?? {}),

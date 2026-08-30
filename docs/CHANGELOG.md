@@ -7,6 +7,27 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### ✨ 300826001 — Versionamento e e-mail canônicos
+
+#### Adicionado
+- Builds publicados recebem identificador `DDMMAANNN`, calculado pela data da
+  atualização e sequência diária; o SHA Git real permanece disponível para
+  diagnóstico técnico.
+- O modal de colaborador passa a mostrar o e-mail canônico de `auth.users` e
+  permite alteração administrativa confirmada para a hierarquia autorizada.
+- Alterações de e-mail passam por rota exclusiva de servidor, validam UUID,
+  vínculo empresarial e RBAC, e geram auditoria com valores mascarados e hash.
+
+#### Corrigido
+- Removido o fallback hardcoded `28676d6`; banner e cartão da empresa ativa
+  consomem a mesma fonte de metadata do build.
+- A listagem deixa de consultar `profiles.email`, coluna inexistente, sem criar
+  um segundo armazenamento de identidade.
+
+#### Preservado
+- `auth.users.id` continua sendo a identidade permanente; service role não é
+  exposta ao frontend e convites, memberships e RLS permanecem inalterados.
+
 ### 🐞 SUP-2026-000108 — Ações de notificações por perfil
 
 #### Corrigido

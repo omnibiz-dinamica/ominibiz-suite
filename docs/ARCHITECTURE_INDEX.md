@@ -16,6 +16,7 @@
 | [`ARCHITECTURE_RBAC.md`](./ARCHITECTURE_RBAC.md) | **Produção** | 2026-07-04 | Hierarquia de perfis, matriz de permissões, regras de notificação e email, governação de novas features. | Nenhuma — documento raiz |
 | [`DECISIONS.md`](./DECISIONS.md) | **Produção** | 2026-07-06 | Architecture Decision Records (ADRs) — registro imutável de decisões arquiteturais. | Nenhuma |
 | [`KNOWN_ISSUES.md`](./KNOWN_ISSUES.md) | **Produção** | 2026-07-06 | Registro vivo de bugs conhecidos, causa raiz, workaround e plano de correção. | Nenhuma |
+| [`BUILD_VERSIONING.md`](./BUILD_VERSIONING.md) | **Produção** | 2026-08-30 | Identificador canônico de build no formato `DDMMAANNN`, SHA técnico e fluxo de commit/publicação. | Git, Vite |
 | [`ATUALIZACOES_OPERACIONAIS_V1_0.md`](./ATUALIZACOES_OPERACIONAIS_V1_0.md) | **Produção** | 2026-07-16 | Manual das novidades V1.0 Operacional — modo de apontamento, cobrança mensal, valores padrão, overrides, recorrência condicional, dashboard clicável, filtros persistentes, `EmployeePicker` universal, Liberação de Identidade. | `DECISIONS.md` (ADR-016/017/018), `CHANGELOG.md` |
 | [`release-notes/RELEASE_NOTES_ADMIN_V1.0.md`](./release-notes/RELEASE_NOTES_ADMIN_V1.0.md) | **Produção** | 2026-07-16 | Release notes por público — Administrador. | `ATUALIZACOES_OPERACIONAIS_V1_0.md` |
 | [`release-notes/RELEASE_NOTES_GESTOR_V1.0.md`](./release-notes/RELEASE_NOTES_GESTOR_V1.0.md) | **Produção** | 2026-07-16 | Release notes por público — Gestor. | `ATUALIZACOES_OPERACIONAIS_V1_0.md` |

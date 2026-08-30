@@ -77,6 +77,7 @@ import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/em
 import { Route as AppComercialContratosNovoRouteImport } from './routes/app.comercial.contratos.novo'
 import { Route as AppComercialContratosIdRouteImport } from './routes/app.comercial.contratos.$id'
 import { Route as ApiPublicWhatsappDispatchRouteImport } from './routes/api/public/whatsapp/dispatch'
+import { Route as ApiAdminUsersEmailRouteImport } from './routes/api/admin/users/email'
 
 const UnsubscribeRoute = UnsubscribeRouteImport.update({
   id: '/unsubscribe',
@@ -436,6 +437,11 @@ const ApiPublicWhatsappDispatchRoute =
     path: '/api/public/whatsapp/dispatch',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiAdminUsersEmailRoute = ApiAdminUsersEmailRouteImport.update({
+  id: '/api/admin/users/email',
+  path: '/api/admin/users/email',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -498,6 +504,7 @@ export interface FileRoutesByFullPath {
   '/app/material-construcao/': typeof AppMaterialConstrucaoIndexRoute
   '/app/restaurante/': typeof AppRestauranteIndexRoute
   '/app/rh/': typeof AppRhIndexRoute
+  '/api/admin/users/email': typeof ApiAdminUsersEmailRoute
   '/api/public/whatsapp/dispatch': typeof ApiPublicWhatsappDispatchRoute
   '/app/comercial/contratos/$id': typeof AppComercialContratosIdRoute
   '/app/comercial/contratos/novo': typeof AppComercialContratosNovoRoute
@@ -565,6 +572,7 @@ export interface FileRoutesByTo {
   '/app/material-construcao': typeof AppMaterialConstrucaoIndexRoute
   '/app/restaurante': typeof AppRestauranteIndexRoute
   '/app/rh': typeof AppRhIndexRoute
+  '/api/admin/users/email': typeof ApiAdminUsersEmailRoute
   '/api/public/whatsapp/dispatch': typeof ApiPublicWhatsappDispatchRoute
   '/app/comercial/contratos/$id': typeof AppComercialContratosIdRoute
   '/app/comercial/contratos/novo': typeof AppComercialContratosNovoRoute
@@ -636,6 +644,7 @@ export interface FileRoutesById {
   '/app/material-construcao/': typeof AppMaterialConstrucaoIndexRoute
   '/app/restaurante/': typeof AppRestauranteIndexRoute
   '/app/rh/': typeof AppRhIndexRoute
+  '/api/admin/users/email': typeof ApiAdminUsersEmailRoute
   '/api/public/whatsapp/dispatch': typeof ApiPublicWhatsappDispatchRoute
   '/app/comercial/contratos/$id': typeof AppComercialContratosIdRoute
   '/app/comercial/contratos/novo': typeof AppComercialContratosNovoRoute
@@ -708,6 +717,7 @@ export interface FileRouteTypes {
     | '/app/material-construcao/'
     | '/app/restaurante/'
     | '/app/rh/'
+    | '/api/admin/users/email'
     | '/api/public/whatsapp/dispatch'
     | '/app/comercial/contratos/$id'
     | '/app/comercial/contratos/novo'
@@ -775,6 +785,7 @@ export interface FileRouteTypes {
     | '/app/material-construcao'
     | '/app/restaurante'
     | '/app/rh'
+    | '/api/admin/users/email'
     | '/api/public/whatsapp/dispatch'
     | '/app/comercial/contratos/$id'
     | '/app/comercial/contratos/novo'
@@ -845,6 +856,7 @@ export interface FileRouteTypes {
     | '/app/material-construcao/'
     | '/app/restaurante/'
     | '/app/rh/'
+    | '/api/admin/users/email'
     | '/api/public/whatsapp/dispatch'
     | '/app/comercial/contratos/$id'
     | '/app/comercial/contratos/novo'
@@ -865,6 +877,7 @@ export interface RootRouteChildren {
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   SignTokenRoute: typeof SignTokenRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
+  ApiAdminUsersEmailRoute: typeof ApiAdminUsersEmailRoute
   ApiPublicWhatsappDispatchRoute: typeof ApiPublicWhatsappDispatchRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
@@ -1351,6 +1364,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicWhatsappDispatchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/users/email': {
+      id: '/api/admin/users/email'
+      path: '/api/admin/users/email'
+      fullPath: '/api/admin/users/email'
+      preLoaderRoute: typeof ApiAdminUsersEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1548,6 +1568,7 @@ const rootRouteChildren: RootRouteChildren = {
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   SignTokenRoute: SignTokenRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
+  ApiAdminUsersEmailRoute: ApiAdminUsersEmailRoute,
   ApiPublicWhatsappDispatchRoute: ApiPublicWhatsappDispatchRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,

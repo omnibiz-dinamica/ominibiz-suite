@@ -5,18 +5,16 @@
 //     error logger plugins, and sandbox detection (port/host/strictPort).
 // You can pass additional config via defineConfig({ vite: { ... } }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { resolveBuildMetadata } from "./scripts/build-id.ts";
 
-// Build-time diagnostics: expose build timestamp + commit (when available)
-// to the client via import.meta.env.VITE_BUILD_* so we can compare deployments.
-const buildTime = new Date().toISOString();
-const commit =
-  process.env.VITE_COMMIT_SHA ||
-  process.env.CF_PAGES_COMMIT_SHA ||
-  process.env.COMMIT_SHA ||
-  process.env.GITHUB_SHA ||
-  "dev";
+const metadata = resolveBuildMetadata();
 
-process.env.VITE_BUILD_TIME = buildTime;
-process.env.VITE_COMMIT_SHA = commit;
-
-export default defineConfig();
+export default defineConfig({
+  vite: {
+    define: {
+      __OMNIBIZ_BUILD_ID__: JSON.stringify(metadata.buildId),
+      __OMNIBIZ_BUILD_TIME__: JSON.stringify(metadata.buildTime),
+      __OMNIBIZ_COMMIT_SHA__: JSON.stringify(metadata.commitSha),
+    },
+  },
+});

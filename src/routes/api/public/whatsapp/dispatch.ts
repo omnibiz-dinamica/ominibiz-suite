@@ -25,7 +25,7 @@ function json(body: unknown, status = 200) {
 export const Route = createFileRoute("/api/public/whatsapp/dispatch")({
   server: {
     handlers: {
-      POST: async ({ request }) => {
+      POST: async ({ request }: { request: Request }) => {
         const expectedKey = process.env.SUPABASE_PUBLISHABLE_KEY;
         const providedKey =
           request.headers.get("apikey") ??
@@ -42,10 +42,9 @@ export const Route = createFileRoute("/api/public/whatsapp/dispatch")({
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-        const { data: batch, error: claimError } = await (supabaseAdmin as any).rpc(
-          "whatsapp_claim_batch",
-          { _limit: 10 },
-        );
+        const { data: batch, error: claimError } = await supabaseAdmin.rpc("whatsapp_claim_batch", {
+          _limit: 10,
+        });
         if (claimError) {
           console.error("[whatsapp-dispatch] claim failed", claimError.message);
           return json({ error: claimError.message }, 500);
@@ -94,7 +93,7 @@ export const Route = createFileRoute("/api/public/whatsapp/dispatch")({
               console.log(
                 `[whatsapp-dispatch] sent id=${row.id} event=${row.event} http=${res.status}`,
               );
-              await (supabaseAdmin as any).rpc("whatsapp_mark_sent", {
+              await supabaseAdmin.rpc("whatsapp_mark_sent", {
                 _id: row.id,
                 _http_status: res.status,
                 _response: text,
@@ -104,7 +103,7 @@ export const Route = createFileRoute("/api/public/whatsapp/dispatch")({
               console.error(
                 `[whatsapp-dispatch] failed id=${row.id} event=${row.event} http=${res.status}`,
               );
-              await (supabaseAdmin as any).rpc("whatsapp_mark_failed", {
+              await supabaseAdmin.rpc("whatsapp_mark_failed", {
                 _id: row.id,
                 _error: `HTTP ${res.status}`,
                 _http_status: res.status,
@@ -118,11 +117,9 @@ export const Route = createFileRoute("/api/public/whatsapp/dispatch")({
                 ? `Timeout após ${REQUEST_TIMEOUT_MS} ms`
                 : ((err as Error)?.message ?? "Erro de rede");
             console.error(`[whatsapp-dispatch] error id=${row.id} ${message}`);
-            await (supabaseAdmin as any).rpc("whatsapp_mark_failed", {
+            await supabaseAdmin.rpc("whatsapp_mark_failed", {
               _id: row.id,
               _error: message,
-              _http_status: null,
-              _response: null,
             });
           } finally {
             clearTimeout(timer);
@@ -133,4 +130,4 @@ export const Route = createFileRoute("/api/public/whatsapp/dispatch")({
       },
     },
   },
-});
+} as never);

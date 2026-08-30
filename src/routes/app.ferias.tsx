@@ -122,7 +122,7 @@ function FeriasPage() {
       if (isEmployee) q = q.eq("user_id", user!.id);
       const { data, error } = await q;
       if (error) throw error;
-      return (data ?? []) as VacationRow[];
+      return (data ?? []) as unknown as VacationRow[];
     },
   });
 
