@@ -31,6 +31,10 @@ import {
 import { transitionTask } from "@/lib/tasks";
 import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
 import { invalidateNotificationsCache } from "@/lib/cache/notifications";
+import {
+  canManageNotification,
+  resolveNotificationActions,
+} from "@/lib/notification-actions";
 import { taskRejectionNotificationDetails } from "@/lib/task-refusal-view";
 
 type NotificationEvent =
@@ -142,7 +146,7 @@ export const Route = createFileRoute("/app/notificacoes")({
 });
 
 function NotificationsPage() {
-  const { user, isManager } = useAuth();
+  const { user, currentCompanyId, isManager, isSuperAdmin } = useAuth();
   const qc = useQueryClient();
   const nav = useNavigate();
   const [tab, setTab] = useState<TabKey>("ativas");
@@ -341,9 +345,20 @@ function NotificationsPage() {
       ) : (
         <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
           {visible.map((n) => {
-            const isAuthReq = n.event === "task_authorization_requested" && isManager;
             const state = n.state ?? "nova";
-            const terminal = state === "resolvida" || state === "arquivada";
+            const canManage = canManageNotification({
+              currentCompanyId,
+              isManager,
+              isSuperAdmin,
+              notificationCompanyId: n.company_id,
+            });
+            const isAuthReq = n.event === "task_authorization_requested" && canManage;
+            const actions = resolveNotificationActions({
+              canManage,
+              canOpen:
+                !!n.task_id || n.event.startsWith("vacation_") || n.event.startsWith("expense_"),
+              state,
+            });
             const refusal = taskRejectionNotificationDetails(n.event, n.metadata);
             return (
               <li
@@ -427,13 +442,13 @@ function NotificationsPage() {
                       </Button>
                     </>
                   )}
-                  {(n.task_id || n.event.startsWith("vacation_") || n.event.startsWith("expense_")) && (
+                  {actions.open && (
                     <Button size="sm" variant="ghost" onClick={() => openNotification(n)}>
                       <ExternalLink className="mr-1.5 h-4 w-4" /> Abrir
                     </Button>
                   )}
 
-                  {!terminal && state !== "em_tratamento" && (
+                  {actions.treat && (
                     <Button
                       size="sm"
                       variant="ghost"
@@ -443,7 +458,7 @@ function NotificationsPage() {
                       <Timer className="mr-1.5 h-4 w-4" /> Tratar
                     </Button>
                   )}
-                  {!terminal && (
+                  {actions.forward && (
                     <Button
                       size="sm"
                       variant="ghost"
@@ -453,7 +468,7 @@ function NotificationsPage() {
                       <Send className="mr-1.5 h-4 w-4" /> Encaminhar
                     </Button>
                   )}
-                  {!terminal && (
+                  {actions.resolve && (
                     <Button
                       size="sm"
                       variant="ghost"
@@ -463,7 +478,7 @@ function NotificationsPage() {
                       <CheckCircle2 className="mr-1.5 h-4 w-4" /> Resolvida
                     </Button>
                   )}
-                  {state !== "arquivada" ? (
+                  {actions.archive ? (
                     <Button
                       size="sm"
                       variant="ghost"
@@ -472,7 +487,7 @@ function NotificationsPage() {
                     >
                       <Archive className="mr-1.5 h-4 w-4" /> Arquivar
                     </Button>
-                  ) : (
+                  ) : actions.restore ? (
                     <Button
                       size="sm"
                       variant="ghost"
@@ -481,7 +496,7 @@ function NotificationsPage() {
                     >
                       <ArchiveRestore className="mr-1.5 h-4 w-4" /> Restaurar
                     </Button>
-                  )}
+                  ) : null}
                 </div>
               </li>
             );

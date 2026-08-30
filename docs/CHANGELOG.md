@@ -7,6 +7,22 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### 🐞 SUP-2026-000108 — Ações de notificações por perfil
+
+#### Corrigido
+- Funcionários visualizam somente as ações `Abrir` e `Arquivar` nas notificações
+  compatíveis; ações de tratamento, encaminhamento e resolução ficam restritas à
+  gestão da empresa ativa e ao Super Admin.
+- A RPC canônica de mudança de estado também bloqueia tentativas diretas de um
+  funcionário executar ações administrativas, mantendo o arquivamento próprio;
+  atualizações diretas da tabela também deixam de contornar essa autorização.
+- A resolução das ações foi centralizada e coberta por testes para funcionário,
+  Gestor e Super Admin.
+
+#### Preservado
+- Deep links, leitura, filtros, tempo real, histórico, UUID, RBAC, RLS e isolamento
+  multiempresa não foram alterados.
+
 ### 🐞 SUP-2026-000093 — Motivo da recusa visível para a gestão
 
 #### Corrigido
