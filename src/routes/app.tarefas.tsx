@@ -36,6 +36,11 @@ import {
   type ClientScheduleSlot,
 } from "@/lib/tasks/client-schedule";
 import {
+  addWallMinutes,
+  distributeContractedMinutes,
+  formatContractedMinutes,
+} from "@/lib/tasks/contracted-hours";
+import {
   Plus,
   Play,
   Check,
@@ -134,6 +139,7 @@ type ClientOption = {
   id: string;
   name: string;
   timing_mode?: "start_stop" | "manual" | null;
+  contracted_minutes?: number | null;
 };
 type CompletionNote = {
   id: string;
@@ -262,7 +268,7 @@ function TasksPage() {
     queryFn: async () => {
       if (!currentCompanyId) return [] as ClientOption[];
       const { data, error } = await (supabase.from("clients" as never) as any)
-        .select("id,name,timing_mode")
+        .select("id,name,timing_mode,contracted_minutes")
         .eq("company_id", currentCompanyId)
         .eq("status", "ativo")
         .order("name", { ascending: true });
@@ -2308,7 +2314,12 @@ function TaskForm({
 }: {
   formId: string;
   members: { id: string; full_name: string | null; email?: string | null }[];
-  clients: { id: string; name: string; timing_mode?: "start_stop" | "manual" | null }[];
+  clients: {
+    id: string;
+    name: string;
+    timing_mode?: "start_stop" | "manual" | null;
+    contracted_minutes?: number | null;
+  }[];
   companyId: string;
   userId: string;
   initial?: TaskRow;
@@ -2381,11 +2392,32 @@ function TaskForm({
   // ---------------------------------------------------------------
   const [clientSchedule, setClientSchedule] = useState<ClientScheduleSlot[]>([]);
   const [touchedTimes, setTouchedTimes] = useState(false);
+  const [manualEndOverride, setManualEndOverride] = useState(Boolean(initial?.scheduled_end));
   const [touchedDates, setTouchedDates] = useState(false);
   const [schedulePrompt, setSchedulePrompt] = useState<ClientScheduleSlot[]>([]);
   const [scheduleHint, setScheduleHint] = useState<string | null>(null);
 
+  const selectedClient = clients.find((client) => client.id === clientId);
+  const contractedMinutes = selectedClient?.contracted_minutes ?? null;
+  const distributedMinutes = useMemo(
+    () => distributeContractedMinutes(contractedMinutes, assignees.length),
+    [contractedMinutes, assignees.length],
+  );
+
+  useEffect(() => {
+    if (initial || manualEndOverride || contractedMinutes == null || !startDate || !startTime || assignees.length === 0) {
+      return;
+    }
+    const [minutesForFirstEmployee] = distributedMinutes;
+    if (minutesForFirstEmployee == null) return;
+    const derivedEnd = addWallMinutes(startDate, startTime, minutesForFirstEmployee);
+    if (!derivedEnd) return;
+    setEndDate((current) => (current === derivedEnd.date ? current : derivedEnd.date));
+    setEndTime((current) => (current === derivedEnd.time ? current : derivedEnd.time));
+  }, [assignees.length, contractedMinutes, distributedMinutes, initial, manualEndOverride, startDate, startTime]);
+
   const applySlot = (slot: ClientScheduleSlot, silent = false) => {
+    setManualEndOverride(false);
     if (slot.scheduleType === "fixed") {
       setStartTime(slot.startTime ?? "");
       setEndTime(slot.endTime ?? "");
@@ -2603,6 +2635,20 @@ function TaskForm({
           absence_grace_minutes: graceMinutes,
           punch_mode_override: punchMode || null,
         };
+        const useContractedSchedule =
+          contractedMinutes != null && !manualEndOverride && startDate !== "" && startTime !== "";
+        const manualDurationMinutes =
+          startISO && endISO ? Math.max(0, Math.round((new Date(endISO).getTime() - new Date(startISO).getTime()) / 60000)) : 0;
+        const taskTimesFor = (index: number) => {
+          if (!useContractedSchedule) {
+            return { scheduled_for: startISO, scheduled_end: endISO, due_at: dueISO };
+          }
+          const minutes = distributedMinutes[index] ?? distributedMinutes[0] ?? 0;
+          const end = addWallMinutes(startDate, startTime, minutes);
+          if (!end) return { scheduled_for: startISO, scheduled_end: endISO, due_at: dueISO };
+          const scheduledEnd = wallDateTimeToISO(end.date, end.time);
+          return { scheduled_for: startISO, scheduled_end: scheduledEnd, due_at: scheduledEnd ?? dueISO };
+        };
         let error: { message: string } | null = null;
         const createdTaskIds: string[] = [];
         // Fase B: lote multi-responsável. Cada responsável mantém a SUA tarefa
@@ -2614,20 +2660,14 @@ function TaskForm({
           // Horario e duracao da recorrencia sao derivados do topo do formulario.
           // Sem horario, a recorrencia fica por dia; nunca materializa 00:00.
           const derivedTime = startTime ? `${startTime}:00` : null;
-          let derivedDuration = 0;
-          if (startISO && endISO) {
-            derivedDuration = Math.max(
-              0,
-              Math.round((new Date(endISO).getTime() - new Date(startISO).getTime()) / 60000),
-            );
-          }
+          const derivedDuration = manualDurationMinutes;
           // Uma série (task_recurrence) por funcionário selecionado.
           // ADR-041: inserção individual + idempotência. Se o banco recusar por
           // série ativa equivalente (RECURRENCE_DUPLICATE_ACTIVE), tratamos como
           // "já existe" — nunca criamos um clone e nunca abortamos os restantes.
           let duplicates = 0;
           let created = 0;
-          for (const memberId of assignees) {
+          for (const [index, memberId] of assignees.entries()) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const ins = await (supabase.from("task_recurrences" as any) as any).insert({
               company_id: companyId,
@@ -2653,7 +2693,9 @@ function TaskForm({
               start_date: recurrence.startDate,
               end_date: recurrence.endDate || null,
               scheduled_time: derivedTime,
-              duration_minutes: derivedDuration,
+              duration_minutes: useContractedSchedule
+                ? distributedMinutes[index] ?? distributedMinutes[0] ?? derivedDuration
+                : derivedDuration,
               task_group_id: groupId,
             });
             if (ins.error) {
@@ -2699,12 +2741,13 @@ function TaskForm({
           const inserted = await supabase
             .from("tasks")
             .insert(
-              assignees.map((memberId) => ({
+              assignees.map((memberId, index) => ({
                 ...payload,
                 assigned_to: memberId,
                 company_id: companyId,
                 created_by: userId,
                 task_group_id: groupId,
+                ...taskTimesFor(index),
               })),
             )
             .select("id")
@@ -2751,14 +2794,31 @@ function TaskForm({
             ))}
           </SelectContent>
         </Select>
-        {!initial && clientSchedule.length > 0 && (
+        {!initial && (clientSchedule.length > 0 || contractedMinutes != null) && (
           <div className="rounded-lg border border-border bg-muted/40 p-3 text-xs">
-            <p className="font-medium text-foreground">Programação habitual do cliente</p>
-            <ul className="mt-1 space-y-0.5 text-muted-foreground">
-              {clientSchedule.map((s) => (
-                <li key={s.id}>{describeSlot(s)}</li>
-              ))}
-            </ul>
+            <p className="font-medium text-foreground">Configuração do cliente</p>
+            {clientSchedule.length > 0 && (
+              <ul className="mt-1 space-y-0.5 text-muted-foreground">
+                {clientSchedule.map((s) => (
+                  <li key={s.id}>{describeSlot(s)}</li>
+                ))}
+              </ul>
+            )}
+            {contractedMinutes != null && (
+              <p className="mt-1 text-muted-foreground">
+                Carga total contratada: <span className="font-medium text-foreground">{formatContractedMinutes(contractedMinutes)}</span>
+              </p>
+            )}
+            {distributedMinutes.length > 0 && (
+              <p className="mt-1 text-muted-foreground">
+                {assignees.length} {assignees.length === 1 ? "funcionário" : "funcionários"} selecionado(s)
+                {" → "}
+                <span className="font-medium text-foreground">{formatContractedMinutes(distributedMinutes[0])} por funcionário</span>
+              </p>
+            )}
+            {contractedMinutes != null && assignees.length === 0 && (
+              <p className="mt-1 text-muted-foreground">Selecione pelo menos um funcionário para calcular a duração individual.</p>
+            )}
             {schedulePrompt.length > 1 && (
               <div className="mt-2 space-y-1.5">
                 <p className="text-foreground">Este cliente possui mais de uma programação para este dia.</p>
@@ -2965,6 +3025,7 @@ function TaskForm({
             type="time"
             value={endTime}
             onChange={(e) => {
+              setManualEndOverride(true);
               setTouchedTimes(true);
               setSchedulePrompt([]);
               setEndTime(e.target.value);

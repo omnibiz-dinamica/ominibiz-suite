@@ -30,6 +30,7 @@ import { exportToExcel, exportToPdf, type ExportColumn } from "@/lib/exports";
 import { ClientGeoEditor, validateClientGeo, type ClientGeoValue } from "@/components/clientes/ClientGeoEditor";
 import { invalidateClientsCache } from "@/lib/cache/clients";
 import { parseHabitualSchedule, type ClientHabitualSchedule } from "@/lib/tasks/client-schedule";
+import { formatContractedMinutes } from "@/lib/tasks/contracted-hours";
 
 export const Route = createFileRoute("/app/clientes")({
   component: () => (
@@ -54,6 +55,7 @@ interface ClientRow {
   fixed_rate: number | null;
   monthly_rate: number | null;
   daily_rate: number | null;
+  contracted_minutes: number | null;
 
   timing_mode: "start_stop" | "manual";
   geo_lat: number | null;
@@ -219,6 +221,11 @@ function ClientsPage() {
       accessor: (c) => (c.monthly_rate != null ? `€ ${Number(c.monthly_rate).toFixed(2)}` : ""),
       width: 70,
     },
+    {
+      header: "Horas contratadas",
+      accessor: (c) => formatContractedMinutes(c.contracted_minutes),
+      width: 90,
+    },
 
     {
       header: "Apontamento",
@@ -382,6 +389,11 @@ function ClientsPage() {
                       <MapPin className="h-3 w-3" /> {c.address}
                     </div>
                   )}
+                  {c.contracted_minutes != null && c.contracted_minutes > 0 && (
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="h-3 w-3" /> Carga contratada: {formatContractedMinutes(c.contracted_minutes)}
+                    </div>
+                  )}
                   {c.notes && <div className="line-clamp-2 pt-1 text-foreground/70">{c.notes}</div>}
                 </div>
 
@@ -452,6 +464,12 @@ function ClientForm({
   const [scheduleMode, setScheduleMode] = useState<ClientHabitualSchedule["mode"]>(firstSchedule?.mode ?? "fixed");
   const [scheduleStartTime, setScheduleStartTime] = useState(firstSchedule?.startTime ?? "");
   const [scheduleEndTime, setScheduleEndTime] = useState(firstSchedule?.endTime ?? "");
+  const [contractedHours, setContractedHours] = useState(
+    initial?.contracted_minutes != null ? String(Math.floor(initial.contracted_minutes / 60)) : "",
+  );
+  const [contractedRemainder, setContractedRemainder] = useState(
+    initial?.contracted_minutes != null ? String(initial.contracted_minutes % 60) : "",
+  );
 
   const [geo, setGeo] = useState<ClientGeoValue>({
     lat: initial?.geo_lat ?? null,
@@ -500,6 +518,22 @@ function ClientForm({
             const n = Number(s.replace(",", "."));
             return Number.isFinite(n) && s.trim() !== "" ? n : null;
           };
+          const parseWhole = (s: string): number | null => {
+            if (s.trim() === "") return 0;
+            const n = Number(s);
+            return Number.isInteger(n) && n >= 0 ? n : null;
+          };
+          const hours = parseWhole(contractedHours);
+          const remainder = parseWhole(contractedRemainder);
+          if (hours == null || remainder == null || remainder > 59) {
+            toast.error("Informe horas e minutos contratados válidos.");
+            return;
+          }
+          const contractedMinutes = hours === 0 && remainder === 0 ? null : hours * 60 + remainder;
+          if (contractedMinutes == null && (contractedHours.trim() !== "" || contractedRemainder.trim() !== "")) {
+            toast.error("As horas totais contratadas devem ser maiores que zero.");
+            return;
+          }
           // Pacote V2 §6: os três valores do cliente são independentes e opcionais.
           // Nunca são apagados por causa da forma de cobrança selecionada.
           const rates = {
@@ -544,6 +578,7 @@ function ClientForm({
                 timing_mode: timingMode,
                 billing_mode: billingMode,
                 ...rates,
+                contracted_minutes: contractedMinutes,
                 geo_lat: geo.lat,
                 geo_lng: geo.lng,
                 geo_address: address.trim() || null,
@@ -566,6 +601,7 @@ function ClientForm({
                 timing_mode: timingMode,
                 billing_mode: billingMode,
                 ...rates,
+                contracted_minutes: contractedMinutes,
                 geo_lat: geo.lat,
                 geo_lng: geo.lng,
                 geo_address: address.trim() || null,
@@ -741,6 +777,39 @@ function ClientForm({
             )}
           </>
         )}
+        <div className="space-y-1.5 rounded-lg border border-border bg-muted/20 p-3">
+          <Label>Horas totais contratadas</Label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Horas</Label>
+              <Input
+                type="number"
+                min="0"
+                step="1"
+                inputMode="numeric"
+                value={contractedHours}
+                onChange={(e) => setContractedHours(e.target.value)}
+                placeholder="3"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Minutos</Label>
+              <Input
+                type="number"
+                min="0"
+                max="59"
+                step="1"
+                inputMode="numeric"
+                value={contractedRemainder}
+                onChange={(e) => setContractedRemainder(e.target.value)}
+                placeholder="00"
+              />
+            </div>
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            Carga total do serviço, distribuída entre os funcionários selecionados na tarefa. Não altera cobrança nem horas efetivas.
+          </p>
+        </div>
       </ModalSection>
 
       <ModalSection title="Cobrança" icon={FileSpreadsheet}>

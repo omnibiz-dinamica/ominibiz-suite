@@ -103,6 +103,7 @@ export type Database = {
           address: string | null
           billing_mode: string
           company_id: string
+          contracted_minutes: number | null
           created_at: string
           created_by: string | null
           daily_rate: number | null
@@ -130,6 +131,7 @@ export type Database = {
           address?: string | null
           billing_mode?: string
           company_id: string
+          contracted_minutes?: number | null
           created_at?: string
           created_by?: string | null
           daily_rate?: number | null
@@ -157,6 +159,7 @@ export type Database = {
           address?: string | null
           billing_mode?: string
           company_id?: string
+          contracted_minutes?: number | null
           created_at?: string
           created_by?: string | null
           daily_rate?: number | null
@@ -5868,6 +5871,7 @@ export type Database = {
           address: string | null
           billing_mode: string
           company_id: string
+          contracted_minutes: number | null
           created_at: string
           created_by: string | null
           daily_rate: number | null

@@ -78,26 +78,38 @@ function addMinutes(hhmm: string, minutes: number): string {
 export async function fetchClientSchedule(clientId: string): Promise<ClientScheduleSlot[]> {
   const [clientResult, recurrenceResult] = await Promise.all([
     // The generated database types may lag behind the Cloud Database migration.
-    (supabase.from("clients" as any) as any).select("habitual_schedule").eq("id", clientId).maybeSingle(),
+    (supabase.from("clients" as any) as any)
+      .select("habitual_schedule,contracted_minutes")
+      .eq("id", clientId)
+      .maybeSingle(),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase.from("task_recurrences" as any) as any)
       .select("id,title,weekdays,scheduled_time,duration_minutes,punch_mode_override,frequency,interval_weeks,status")
       .eq("client_id", clientId)
       .eq("status", "active"),
   ]);
+  if (clientResult.error) throw clientResult.error;
   if (recurrenceResult.error) throw recurrenceResult.error;
 
+  const contractedMinutes =
+    Number.isInteger(clientResult.data?.contracted_minutes) && clientResult.data.contracted_minutes > 0
+      ? clientResult.data.contracted_minutes
+      : null;
   const configured = parseHabitualSchedule(clientResult.data?.habitual_schedule).map((slot, index) => ({
     id: `client-habitual:${clientId}:${index}`,
     title: "Programação habitual do cliente",
     weekdays: slot.weekdays,
     startTime: slot.startTime,
-    endTime: slot.endTime,
+    endTime:
+      slot.startTime && contractedMinutes != null
+        ? addMinutes(slot.startTime, contractedMinutes)
+        : slot.endTime,
     durationMinutes:
-      slot.startTime && slot.endTime
+      contractedMinutes ??
+      (slot.startTime && slot.endTime
         ? Math.max(0, (Number(slot.endTime.slice(0, 2)) * 60 + Number(slot.endTime.slice(3)) -
             (Number(slot.startTime.slice(0, 2)) * 60 + Number(slot.startTime.slice(3)) + 1440)) % 1440)
-        : null,
+        : null),
     punchMode: null,
     frequency: "weekly",
     intervalWeeks: 1,
