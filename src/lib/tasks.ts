@@ -633,7 +633,16 @@ export async function addTaskCompletionNote(taskId: string, note: string): Promi
     _task_id: taskId,
     _note: normalized,
   });
-  if (error) throw error;
+  if (error) {
+    console.error("[task-completion-note] RPC error", {
+      taskId,
+      code: error.code ?? null,
+      message: error.message ?? null,
+      details: error.details ?? null,
+      hint: error.hint ?? null,
+    });
+    throw error;
+  }
 }
 
 /** Arquiva (soft) ou desarquiva uma tarefa. Apenas estados terminais podem ser arquivados. */
