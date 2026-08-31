@@ -46,6 +46,7 @@ import {
   createTicket,
   uploadAttachment,
 } from "@/lib/support/tickets";
+import { getSupportErrorMessage } from "@/lib/support/errors";
 import { invalidateSupportCache } from "@/lib/cache/support";
 import { findSimilarTickets, type SimilarResult } from "@/lib/support/similar";
 import { SimilarTicketsDialog } from "@/components/support/SimilarTicketsDialog";
@@ -212,7 +213,7 @@ export function NewTicketDialog({
       });
     },
     onError: (err: unknown) => {
-      const msg = err instanceof Error ? err.message : String(err);
+      const msg = getSupportErrorMessage(err);
       setFormError(msg);
       toast.error("Falha ao criar ticket: " + msg);
     },

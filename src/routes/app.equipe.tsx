@@ -9,11 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, ModalHeader, ModalBody } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Copy, Trash2, Pencil, Power, Send, UserCog } from "lucide-react";
+import { Check, Copy, MailCheck, Trash2, Pencil, Power, Send, UserCog, X } from "lucide-react";
 import { RoleGuard } from "@/components/RoleGuard";
 import { sendTransactionalEmail } from "@/lib/email/send";
 import { buildAppUrl } from "@/lib/app-url";
 import { EmployeeEditor } from "@/components/equipe/EmployeeEditor";
+import { decideEmailChangeRequest } from "@/lib/user-email";
 
 interface MemberRow {
   user_id: string;
@@ -31,6 +32,15 @@ interface MemberRow {
     sector: string | null;
   } | null;
 }
+
+type EmailChangeRequestRow = {
+  id: string;
+  user_id: string;
+  current_email_redacted: string;
+  requested_email: string;
+  reason: string;
+  requested_at: string;
+};
 
 function getMemberDisplayName(member: MemberRow) {
   const fullName = member.profile?.full_name?.trim();
@@ -51,7 +61,7 @@ export const Route = createFileRoute("/app/equipe")({
 });
 
 function TeamPage() {
-  const { isManager, isSuperAdmin, currentCompanyId, user } = useAuth();
+  const { isManager, currentCompanyId, user } = useAuth();
   const qc = useQueryClient();
   const [email, setEmail] = useState("");
   const [accessEmail, setAccessEmail] = useState("");
@@ -136,6 +146,37 @@ function TeamPage() {
   });
 
   const [editing, setEditing] = useState<MemberRow | null>(null);
+
+  const { data: emailChangeRequests = [] } = useQuery({
+    queryKey: ["email-change-requests", currentCompanyId, "pending"],
+    enabled: !!currentCompanyId && isManager,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_email_change_requests")
+        .select("id, user_id, current_email_redacted, requested_email, reason, requested_at")
+        .eq("company_id", currentCompanyId!)
+        .eq("status", "pending")
+        .order("requested_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as EmailChangeRequestRow[];
+    },
+  });
+
+  const decideEmailRequest = useMutation({
+    mutationFn: async (input: {
+      decision: "approve" | "reject";
+      decisionReason?: string;
+      requestId: string;
+    }) => decideEmailChangeRequest(input),
+    onSuccess: async (result) => {
+      toast.success(result.status === "approved" ? "Alteração de e-mail aprovada." : "Pedido recusado.");
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["email-change-requests", currentCompanyId] }),
+        qc.invalidateQueries({ queryKey: ["team-members", currentCompanyId] }),
+      ]);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
   const sectorOptions = useMemo(
     () =>
       Array.from(
@@ -358,6 +399,25 @@ function TeamPage() {
         </form>
       </div>
 
+      <EmailChangeRequestsSection
+        members={members ?? []}
+        requests={emailChangeRequests}
+        savingId={decideEmailRequest.isPending ? (decideEmailRequest.variables?.requestId ?? null) : null}
+        onApprove={(request) => {
+          if (!window.confirm(`Aprovar a troca para ${request.requested_email}?`)) return;
+          decideEmailRequest.mutate({ decision: "approve", requestId: request.id });
+        }}
+        onReject={(request) => {
+          const reason = window.prompt("Motivo da recusa (opcional):", "");
+          if (reason === null) return;
+          decideEmailRequest.mutate({
+            decision: "reject",
+            decisionReason: reason,
+            requestId: request.id,
+          });
+        }}
+      />
+
       <div className="rounded-2xl border border-border bg-card p-6">
         <InvitesSection
           invites={(invites ?? []) as unknown as InviteRow[]}
@@ -459,7 +519,6 @@ function TeamPage() {
                 companyId={currentCompanyId!}
                 currentRole={editing.role}
                 currentEmail={editing.profile?.email ?? null}
-                canEditEmail={isSuperAdmin || editing.role === "employee"}
                 sectorOptions={sectorOptions}
                 onDone={() => {
                   setEditing(null);
@@ -471,6 +530,82 @@ function TeamPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function EmailChangeRequestsSection({
+  members,
+  onApprove,
+  onReject,
+  requests,
+  savingId,
+}: {
+  members: MemberRow[];
+  onApprove: (request: EmailChangeRequestRow) => void;
+  onReject: (request: EmailChangeRequestRow) => void;
+  requests: EmailChangeRequestRow[];
+  savingId: string | null;
+}) {
+  return (
+    <section className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+      <div className="flex items-start gap-3">
+        <MailCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+        <div>
+          <h2 className="font-display text-lg font-semibold">Alterações de e-mail</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Pedidos enviados pelos titulares das contas e aguardando decisão.
+          </p>
+        </div>
+      </div>
+
+      {requests.length === 0 ? (
+        <p className="mt-4 rounded-lg border border-dashed border-border px-3 py-4 text-sm text-muted-foreground">
+          Nenhum pedido pendente.
+        </p>
+      ) : (
+        <ul className="mt-4 divide-y divide-border">
+          {requests.map((request) => {
+            const member = members.find((item) => item.user_id === request.user_id);
+            const displayName = member ? getMemberDisplayName(member) : "Utilizador";
+            return (
+              <li key={request.id} className="grid gap-3 py-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+                <div className="min-w-0 space-y-1">
+                  <p className="font-medium">{displayName}</p>
+                  <p className="break-all text-sm text-muted-foreground">
+                    {request.current_email_redacted} → {request.requested_email}
+                  </p>
+                  <p className="text-sm">Motivo: {request.reason}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Solicitado em {new Date(request.requested_at).toLocaleString("pt-PT")}
+                  </p>
+                </div>
+                <div className="flex w-full gap-2 sm:w-auto">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1 sm:flex-none"
+                    disabled={savingId === request.id}
+                    onClick={() => onReject(request)}
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Recusar
+                  </Button>
+                  <Button
+                    type="button"
+                    className="flex-1 sm:flex-none"
+                    disabled={savingId === request.id}
+                    onClick={() => onApprove(request)}
+                  >
+                    <Check className="mr-2 h-4 w-4" />
+                    Aprovar
+                  </Button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
   );
 }
 

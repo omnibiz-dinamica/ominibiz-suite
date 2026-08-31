@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
-  canManageUserEmail,
-  isValidUserEmail,
+  canApproveUserEmailChange,
   normalizeUserEmail,
   redactUserEmail,
   type UserRoleAssignment,
@@ -36,53 +35,92 @@ export const Route = createFileRoute("/api/admin/users/email")({
         } = await supabaseAdmin.auth.getUser(token);
         if (authError || !actor) return json({ error: "Sessão inválida." }, 401);
 
-        let companyId: string;
-        let email: string;
-        let userId: string;
+        let decision: "approve" | "reject";
+        let decisionReason: string | null;
+        let requestId: string;
         try {
           const body = (await request.json()) as Record<string, unknown>;
-          companyId = String(body.companyId ?? "");
-          email = normalizeUserEmail(String(body.email ?? ""));
-          userId = String(body.userId ?? "");
+          const requestedDecision = String(body.decision ?? "");
+          if (requestedDecision !== "approve" && requestedDecision !== "reject") {
+            return json({ error: "Decisão inválida." }, 400);
+          }
+          decision = requestedDecision;
+          decisionReason = String(body.decisionReason ?? "").trim() || null;
+          requestId = String(body.requestId ?? "");
         } catch {
           return json({ error: "Pedido inválido." }, 400);
         }
 
-        if (!UUID_PATTERN.test(companyId) || !UUID_PATTERN.test(userId)) {
-          return json({ error: "Empresa ou utilizador inválido." }, 400);
+        if (!UUID_PATTERN.test(requestId)) return json({ error: "Decisão inválida." }, 400);
+        if (decisionReason && decisionReason.length > 500) {
+          return json({ error: "A observação da decisão deve ter até 500 caracteres." }, 400);
         }
-        if (!isValidUserEmail(email)) return json({ error: "Informe um e-mail válido." }, 400);
+
+        const { data: emailRequest, error: requestError } = await supabaseAdmin
+          .from("user_email_change_requests")
+          .select("*")
+          .eq("id", requestId)
+          .maybeSingle();
+        if (requestError) return json({ error: "Não foi possível consultar o pedido." }, 500);
+        if (!emailRequest) return json({ error: "Pedido não encontrado." }, 404);
+        if (emailRequest.status !== "pending") {
+          return json({ error: "Este pedido já foi decidido." }, 409);
+        }
 
         const { data: roleRows, error: roleError } = await supabaseAdmin
           .from("user_roles")
           .select("user_id, role, company_id")
-          .in("user_id", [actor.id, userId]);
+          .in("user_id", [actor.id, emailRequest.user_id]);
         if (roleError) return json({ error: "Não foi possível validar as permissões." }, 500);
 
         const roles = (roleRows ?? []) as UserRoleAssignment[];
-        if (!canManageUserEmail({ actorId: actor.id, companyId, roles, targetUserId: userId })) {
-          return json({ error: "Sem permissão para alterar o e-mail deste utilizador." }, 403);
+        if (
+          !canApproveUserEmailChange({
+            actorId: actor.id,
+            companyId: emailRequest.company_id,
+            roles,
+            targetUserId: emailRequest.user_id,
+          })
+        ) {
+          return json({ error: "Sem permissão para decidir este pedido." }, 403);
+        }
+
+        const decisionPatch = {
+          decided_at: new Date().toISOString(),
+          decided_by: actor.id,
+          decision_reason: decisionReason,
+          status: decision === "approve" ? "approved" : "rejected",
+        };
+
+        if (decision === "reject") {
+          const { error: rejectError } = await supabaseAdmin
+            .from("user_email_change_requests")
+            .update(decisionPatch)
+            .eq("id", requestId)
+            .eq("status", "pending")
+            .select("id")
+            .single();
+          if (rejectError) return json({ error: "Não foi possível recusar o pedido." }, 500);
+          return json({ changed: false, status: "rejected" });
         }
 
         const { data: targetData, error: targetError } =
-          await supabaseAdmin.auth.admin.getUserById(userId);
+          await supabaseAdmin.auth.admin.getUserById(emailRequest.user_id);
         const target = targetData.user;
-        if (targetError || !target?.email)
-          return json({ error: "Utilizador não encontrado." }, 404);
+        if (targetError || !target?.email) return json({ error: "Utilizador não encontrado." }, 404);
 
         const oldEmail = normalizeUserEmail(target.email);
-        if (oldEmail === email) return json({ email, changed: false });
-
+        const newEmail = normalizeUserEmail(emailRequest.requested_email);
         const auditPayload = {
           action: "email_change",
           actor_id: actor.id,
-          company_id: companyId,
-          new_email_hash: await sha256(email),
-          new_email_redacted: redactUserEmail(email),
+          company_id: emailRequest.company_id,
+          new_email_hash: await sha256(newEmail),
+          new_email_redacted: redactUserEmail(newEmail),
           old_email_hash: await sha256(oldEmail),
           old_email_redacted: redactUserEmail(oldEmail),
           status: "pending",
-          user_id: userId,
+          user_id: emailRequest.user_id,
         };
         const { data: audit, error: auditError } = await supabaseAdmin
           .from("user_identity_audit")
@@ -94,26 +132,40 @@ export const Route = createFileRoute("/api/admin/users/email")({
           return json({ error: "Não foi possível iniciar a alteração auditada." }, 500);
         }
 
-        const { data: updated, error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-          userId,
-          {
-            email,
-          },
-        );
-        if (updateError || !updated.user?.email) {
-          await supabaseAdmin
-            .from("user_identity_audit")
-            .update({ completed_at: new Date().toISOString(), status: "failed" })
-            .eq("id", audit.id);
-          const duplicate = /already|registered|exists|duplicate/i.test(updateError?.message ?? "");
-          return json(
-            {
-              error: duplicate
-                ? "Este e-mail já está associado a outra conta."
-                : "Falha ao atualizar o e-mail.",
-            },
-            duplicate ? 409 : 500,
+        let changed = false;
+        if (oldEmail !== newEmail) {
+          const { data: updated, error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+            emailRequest.user_id,
+            { email: newEmail },
           );
+          if (updateError || !updated.user?.email) {
+            await supabaseAdmin
+              .from("user_identity_audit")
+              .update({ completed_at: new Date().toISOString(), status: "failed" })
+              .eq("id", audit.id);
+            const duplicate = /already|registered|exists|duplicate/i.test(updateError?.message ?? "");
+            return json(
+              {
+                error: duplicate
+                  ? "Este e-mail já está associado a outra conta."
+                  : "Falha ao atualizar o e-mail.",
+              },
+              duplicate ? 409 : 500,
+            );
+          }
+          changed = true;
+        }
+
+        const { error: decisionError } = await supabaseAdmin
+          .from("user_email_change_requests")
+          .update(decisionPatch)
+          .eq("id", requestId)
+          .eq("status", "pending")
+          .select("id")
+          .single();
+        if (decisionError) {
+          console.error("[user-email] request completion failed", decisionError.message);
+          return json({ error: "O e-mail foi atualizado, mas o pedido requer reconciliação administrativa." }, 500);
         }
 
         const { error: completeAuditError } = await supabaseAdmin
@@ -124,7 +176,7 @@ export const Route = createFileRoute("/api/admin/users/email")({
           console.error("[user-email] audit completion failed", completeAuditError.message);
         }
 
-        return json({ changed: true, email: normalizeUserEmail(updated.user.email) });
+        return json({ changed, email: newEmail, status: "approved" });
       },
     },
   },

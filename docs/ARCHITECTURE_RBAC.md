@@ -76,6 +76,10 @@ Legenda:
 - **Férias / Despesas:** o solicitante recebe notificação e email **do próprio pedido** (confirmação + decisão); o aprovador recebe notificação e email **do pedido recebido**.
 - **Contratos:** quando o signatário é externo (cliente), o fluxo público de assinatura (`/sign/$token`) não requer perfil OmniBiz.
 - **Administração SaaS:** nenhum outro perfil deve ver esta secção no menu, sequer visualmente.
+- **Identidade de acesso:** `auth.users.email` é exibido como dado canônico e
+  somente leitura. O titular solicita a troca no próprio Perfil; outro utilizador
+  autorizado na hierarquia decide o pedido. O UUID não é alterado e toda troca
+  concluída gera auditoria de identidade.
 
 ---
 

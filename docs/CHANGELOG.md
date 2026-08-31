@@ -7,6 +7,26 @@
 
 ## [Não lançado] — Sprint de Refinamento Operacional
 
+### 🐞 300826002 — Solicitações de suporte e identidade de acesso
+
+#### Corrigido
+- A criação de tickets deixa de usar o UUID do ticket como `task_id` da
+  notificação. O vínculo permanece em `metadata.ticket_id`, preservando a chave
+  estrangeira de tarefas e impedindo o rollback da solicitação.
+- Erros estruturados do Supabase passam a exibir mensagens compreensíveis; a
+  Central de Suporte não apresenta mais `[object Object]`.
+- O identificador sequencial do build fica rastreado no código para que o
+  publisher do Lovable não volte a exibir `commit local` quando não recebe `.git`.
+
+#### Alterado
+- O e-mail canônico de cadastro é somente leitura na edição do utilizador.
+- A troca de e-mail passa a ser solicitada pelo próprio titular no Perfil e
+  decidida por Gestor, Owner ou Super Admin autorizado, com auditoria.
+
+#### Preservado
+- UUID de autenticação, hierarquia RBAC, RLS, isolamento multiempresa, destinos,
+  timeline, anexos e notificações do suporte permanecem canônicos.
+
 ### ✨ 300826001 — Versionamento e e-mail canônicos
 
 #### Adicionado

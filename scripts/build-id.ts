@@ -51,20 +51,23 @@ export function resolveBuildMetadata({
   env = process.env,
   git = runGit,
   now = new Date(),
+  persistedBuildId,
 }: {
   env?: NodeJS.ProcessEnv;
   git?: GitRunner;
   now?: Date;
+  persistedBuildId?: string;
 } = {}) {
   const subject = git(["show", "-s", "--format=%s", "HEAD"]);
   const subjects = (git(["log", "--format=%s"]) ?? "").split(/\r?\n/).filter(Boolean);
   const explicitBuildId = extractBuildId(env.VITE_BUILD_ID ?? env.APP_BUILD_ID);
   const subjectBuildId = extractBuildId(subject);
+  const sourceBuildId = extractBuildId(persistedBuildId);
   const hasGitMetadata = Boolean(subject || subjects.length);
   const buildId =
     explicitBuildId ??
     subjectBuildId ??
-    (hasGitMetadata ? nextBuildId(formatBuildDate(now), subjects) : "local");
+    (hasGitMetadata ? nextBuildId(formatBuildDate(now), subjects) : (sourceBuildId ?? "local"));
   const commitSha =
     env.VITE_COMMIT_SHA ??
     env.CF_PAGES_COMMIT_SHA ??

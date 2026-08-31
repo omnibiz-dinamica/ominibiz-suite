@@ -57,6 +57,20 @@ test("build metadata uses the update date before the new commit exists", () => {
   );
 });
 
+test("build metadata uses the tracked source id when the publisher has no Git metadata", () => {
+  const git: GitRunner = () => null;
+
+  assert.equal(
+    resolveBuildMetadata({
+      env: {},
+      git,
+      now: new Date("2026-08-30T15:00:00.000Z"),
+      persistedBuildId: "300826002",
+    }).buildId,
+    "300826002",
+  );
+});
+
 test("frontend version keeps build id and git sha as separate values", () => {
   assert.deepEqual(
     resolveAppVersion({

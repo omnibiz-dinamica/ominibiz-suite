@@ -3449,6 +3449,56 @@ export type Database = {
           },
         ]
       }
+      user_email_change_requests: {
+        Row: {
+          company_id: string
+          current_email_redacted: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_reason: string | null
+          id: string
+          reason: string
+          requested_at: string
+          requested_email: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          current_email_redacted: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_reason?: string | null
+          id?: string
+          reason: string
+          requested_at?: string
+          requested_email: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          current_email_redacted?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_reason?: string | null
+          id?: string
+          reason?: string
+          requested_at?: string
+          requested_email?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_email_change_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_identity_audit: {
         Row: {
           action: string

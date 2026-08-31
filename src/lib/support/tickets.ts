@@ -10,28 +10,15 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import { getAppVersion } from "@/lib/app-version";
+import { buildCreateTicketArgs, type CreateTicketInput } from "./create-ticket-payload";
+import { getSupportErrorDetails } from "./errors";
 import {
   ALLOWED_ATTACHMENT_MIME,
   MAX_ATTACHMENT_SIZE_BYTES,
   SUPPORT_BUCKET,
   type SupportTicketPriority,
   type SupportTicketStatus,
-  type SupportTicketType,
 } from "./constants";
-
-export interface CreateTicketInput {
-  companyId: string;
-  type: SupportTicketType;
-  priority: SupportTicketPriority;
-  title: string;
-  description: string;
-  /** Fila de destino obrigatória (ADR-049): `tech`, `accounting`, `secretary`, … */
-  destinationCode: string;
-  module?: string | null;
-  route?: string | null;
-  pageUrl?: string | null;
-  technicalContext?: Record<string, unknown>;
-}
 
 function sanitizeFileName(name: string): string {
   return name
@@ -55,19 +42,12 @@ async function sha256Hex(file: File): Promise<string | null> {
 }
 
 export async function createTicket(input: CreateTicketInput): Promise<{ id: string; ticket_number: string }> {
-  const { data, error } = await (supabase as any).rpc("create_support_ticket", {
-    _company_id: input.companyId,
-    _type: input.type,
-    _priority: input.priority,
-    _title: input.title.trim(),
-    _description: input.description.trim(),
-    _module: input.module ?? null,
-    _route: input.route ?? null,
-    _page_url: input.pageUrl ?? null,
-    _technical_context: input.technicalContext ?? {},
-    _destination_code: input.destinationCode,
-  });
-  if (error) throw error;
+  const { data, error } = await (supabase as any).rpc("create_support_ticket", buildCreateTicketArgs(input));
+  if (error) {
+    const technical = getSupportErrorDetails(error);
+    console.error("[support:create-ticket] RPC failed", technical);
+    throw error;
+  }
   const row = Array.isArray(data) ? data[0] : data;
   if (!row?.id) throw new Error("Falha ao criar ticket");
   return { id: row.id as string, ticket_number: row.ticket_number as string };

@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  canManageUserEmail,
+  canApproveUserEmailChange,
+  isValidEmailChangeReason,
   isValidUserEmail,
   normalizeUserEmail,
   redactUserEmail,
@@ -11,6 +12,8 @@ import {
 
 const roles: UserRoleAssignment[] = [
   { user_id: "manager-a", role: "manager", company_id: "company-a" },
+  { user_id: "manager-a2", role: "manager", company_id: "company-a" },
+  { user_id: "owner-a", role: "owner", company_id: "company-a" },
   { user_id: "employee-a", role: "employee", company_id: "company-a" },
   { user_id: "manager-b", role: "manager", company_id: "company-b" },
   { user_id: "employee-b", role: "employee", company_id: "company-b" },
@@ -24,9 +27,9 @@ test("normalizes, validates and redacts email without changing identity semantic
   assert.equal(redactUserEmail("user@example.com"), "u***@example.com");
 });
 
-test("manager can change an employee email in the same company", () => {
+test("manager can approve another account holder in the same company", () => {
   assert.equal(
-    canManageUserEmail({
+    canApproveUserEmailChange({
       actorId: "manager-a",
       companyId: "company-a",
       roles,
@@ -36,9 +39,9 @@ test("manager can change an employee email in the same company", () => {
   );
 });
 
-test("manager cannot change email across tenants or for another manager", () => {
+test("manager cannot approve across tenants, a manager or their own request", () => {
   assert.equal(
-    canManageUserEmail({
+    canApproveUserEmailChange({
       actorId: "manager-a",
       companyId: "company-b",
       roles,
@@ -47,7 +50,16 @@ test("manager cannot change email across tenants or for another manager", () => 
     false,
   );
   assert.equal(
-    canManageUserEmail({
+    canApproveUserEmailChange({
+      actorId: "manager-a",
+      companyId: "company-a",
+      roles,
+      targetUserId: "manager-a2",
+    }),
+    false,
+  );
+  assert.equal(
+    canApproveUserEmailChange({
       actorId: "manager-a",
       companyId: "company-a",
       roles,
@@ -57,9 +69,21 @@ test("manager cannot change email across tenants or for another manager", () => 
   );
 });
 
-test("super admin retains administrative access", () => {
+test("owner can approve managers and employees in the same company", () => {
   assert.equal(
-    canManageUserEmail({
+    canApproveUserEmailChange({
+      actorId: "owner-a",
+      companyId: "company-a",
+      roles,
+      targetUserId: "manager-a",
+    }),
+    true,
+  );
+});
+
+test("super admin can approve another account holder", () => {
+  assert.equal(
+    canApproveUserEmailChange({
       actorId: "super",
       companyId: "company-b",
       roles,
@@ -67,4 +91,10 @@ test("super admin retains administrative access", () => {
     }),
     true,
   );
+});
+
+test("email change reason is required and bounded", () => {
+  assert.equal(isValidEmailChangeReason("troca"), true);
+  assert.equal(isValidEmailChangeReason("curt"), false);
+  assert.equal(isValidEmailChangeReason("x".repeat(501)), false);
 });

@@ -97,7 +97,11 @@ auditoria e notificações:
 
 Helpers auxiliares:
 `support_ticket_log_event`, `support_notify_super_admins`,
-`support_notify_user`.
+`support_notify_user`, `support_notify_managers`.
+
+O identificador de ticket é armazenado em `notifications.metadata.ticket_id`.
+`notifications.task_id` é reservado exclusivamente para chaves de `tasks`; usar
+um UUID de ticket nesse campo aborta a transação pela chave estrangeira.
 
 ## 4. Rotas e UI
 

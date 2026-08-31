@@ -24,7 +24,12 @@ export function redactUserEmail(value: string): string {
   return `${localPart.slice(0, 1)}***@${domain}`;
 }
 
-export function canManageUserEmail({
+export function isValidEmailChangeReason(value: string): boolean {
+  const reason = value.trim();
+  return reason.length >= 5 && reason.length <= 500;
+}
+
+export function canApproveUserEmailChange({
   actorId,
   companyId,
   roles,
@@ -35,6 +40,8 @@ export function canManageUserEmail({
   roles: UserRoleAssignment[];
   targetUserId: string;
 }): boolean {
+  if (actorId === targetUserId) return false;
+
   const actorRoles = roles.filter((role) => role.user_id === actorId);
   const targetRoles = roles.filter((role) => role.user_id === targetUserId);
   const actorIsSuperAdmin = actorRoles.some((role) => role.role === "super_admin");
@@ -48,6 +55,10 @@ export function canManageUserEmail({
     .map((role) => role.role);
   if (actorCompanyRoles.includes("manager")) {
     return targetCompanyRole === "employee";
+  }
+
+  if (actorCompanyRoles.includes("owner")) {
+    return targetCompanyRole === "manager" || targetCompanyRole === "employee";
   }
 
   return false;

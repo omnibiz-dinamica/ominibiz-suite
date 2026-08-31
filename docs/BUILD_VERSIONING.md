@@ -14,14 +14,18 @@ Exemplo: a primeira atualização de 30/08/2026 é `300826001`; a segunda é
 
 ## Fluxo de commit
 
-1. Execute `npm run version:next`.
-2. Inicie a mensagem do commit com o número retornado.
-3. O build lê o número da mensagem do commit e injeta `VITE_BUILD_ID`.
-4. `src/lib/app-version.ts` fornece a versão para toda a aplicação.
+1. Execute `npm run version:stamp`.
+2. O comando calcula a próxima sequência e grava o identificador em
+   `src/generated/build-metadata.ts`.
+3. Inicie a mensagem do commit com o mesmo número retornado.
+4. O build injeta `VITE_BUILD_ID`, preferindo o commit quando Git está disponível
+   e usando o identificador rastreado quando o publisher não possui `.git`.
+5. `src/lib/app-version.ts` fornece a versão para toda a aplicação.
 
 O SHA real continua disponível separadamente em `VITE_COMMIT_SHA` para
 diagnóstico técnico. Nenhum número de versão é salvo em empresas ou escrito
 manualmente em componentes React.
 
 Ambientes de CI podem definir `VITE_BUILD_ID` ou `APP_BUILD_ID` explicitamente.
-Sem Git e sem variável de ambiente, o fallback exibido é `local`.
+O valor `local` só é usado quando não há Git, variável nem metadata rastreada;
+publicações do Lovable recebem o número gravado no código-fonte.
