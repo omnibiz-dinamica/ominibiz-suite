@@ -31,6 +31,7 @@ import { ClientGeoEditor, validateClientGeo, type ClientGeoValue } from "@/compo
 import { invalidateClientsCache } from "@/lib/cache/clients";
 import { parseHabitualSchedule, type ClientHabitualSchedule } from "@/lib/tasks/client-schedule";
 import { formatContractedMinutes } from "@/lib/tasks/contracted-hours";
+import { describeClientSchedule } from "@/lib/tasks/client-card";
 
 export const Route = createFileRoute("/app/clientes")({
   component: () => (
@@ -374,6 +375,19 @@ function ClientsPage() {
                 </div>
 
                 <div className="space-y-1 text-xs text-muted-foreground">
+                  {describeClientSchedule(c).map((schedule, index) => (
+                    <div key={`${schedule}-${index}`} className="flex items-center gap-1.5">
+                      <CalendarDays className="h-3 w-3" /> {schedule}
+                    </div>
+                  ))}
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="h-3 w-3" /> Carga contratada: {formatContractedMinutes(c.contracted_minutes) || "Não definida"}
+                  </div>
+                  {(c.address || c.geo_address) && (
+                    <div className="flex items-center gap-1.5">
+                      <MapPin className="h-3 w-3" /> {c.address || c.geo_address}
+                    </div>
+                  )}
                   {c.phone && (
                     <div className="flex items-center gap-1.5">
                       <Phone className="h-3 w-3" /> {c.phone}
@@ -382,16 +396,6 @@ function ClientsPage() {
                   {c.email && (
                     <div className="flex items-center gap-1.5">
                       <Mail className="h-3 w-3" /> {c.email}
-                    </div>
-                  )}
-                  {c.address && (
-                    <div className="flex items-center gap-1.5">
-                      <MapPin className="h-3 w-3" /> {c.address}
-                    </div>
-                  )}
-                  {c.contracted_minutes != null && c.contracted_minutes > 0 && (
-                    <div className="flex items-center gap-1.5">
-                      <Clock className="h-3 w-3" /> Carga contratada: {formatContractedMinutes(c.contracted_minutes)}
                     </div>
                   )}
                   {c.notes && <div className="line-clamp-2 pt-1 text-foreground/70">{c.notes}</div>}
