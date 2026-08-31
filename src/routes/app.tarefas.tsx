@@ -82,8 +82,11 @@ import {
   canArchive,
   canMarkAbsent,
   addTaskCompletionNote,
+  pauseMinutesNow,
+  formatDuration,
   isBulkArchiveEligible,
   isBulkDeleteEligible,
+  type TimeEntryRow,
   recordNoStartReason,
 } from "@/lib/tasks";
 
@@ -250,6 +253,25 @@ function TasksPage() {
     enabled: !!user,
   });
 
+  // Uma consulta única vincula o ponto mais recente a cada tarefa exibida.
+  // A pausa continua sendo lida de time_entries, sem duplicar dados em tasks.
+  const taskIds = useMemo(() => (tasks ?? []).map((task) => task.id), [tasks]);
+  const { data: taskPunches } = useQuery({
+    queryKey: ["task-punches", currentCompanyId, taskIds],
+    queryFn: async (): Promise<TimeEntryRow[]> => {
+      if (!currentCompanyId || taskIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("time_entries")
+        .select("id,company_id,task_id,user_id,started_at,paused_at,resumed_at,ended_at,effective_minutes,notes,created_at,updated_at")
+        .eq("company_id", currentCompanyId)
+        .in("task_id", taskIds)
+        .order("started_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as TimeEntryRow[];
+    },
+    enabled: !!user && !!currentCompanyId && tasks !== undefined,
+  });
+
   const { data: members } = useQuery({
     queryKey: ["members", currentCompanyId],
     queryFn: async () => {
@@ -389,6 +411,20 @@ function TasksPage() {
     return map;
   }, [openPunches]);
 
+  const taskPunchByTask = useMemo(() => {
+    const map = new Map<string, TimeEntryRow>();
+    for (const entry of taskPunches ?? []) {
+      if (!entry.task_id) continue;
+      const previous = map.get(entry.task_id);
+      const entryIsOpen = !entry.ended_at;
+      const previousIsOpen = previous ? !previous.ended_at : false;
+      if (!previous || (entryIsOpen && !previousIsOpen) || entry.started_at > previous.started_at) {
+        map.set(entry.task_id, entry);
+      }
+    }
+    return map;
+  }, [taskPunches]);
+
   // Varredura de ausentes por evento: ao carregar a tela. Nunca em loop.
   useEffect(() => {
     if (!user || !isManager) return;
@@ -408,6 +444,9 @@ function TasksPage() {
       )
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "task_refusals" }, () =>
         qc.invalidateQueries({ queryKey: ["task-refusals"] }),
+      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "time_entries" }, () =>
+        qc.invalidateQueries({ queryKey: ["task-punches"] }),
       )
       .on("postgres_changes", { event: "*", schema: "public", table: "vacation_requests" }, () =>
         qc.invalidateQueries({ queryKey: ["approved-vacations-calendar"] }),
@@ -649,6 +688,15 @@ function TasksPage() {
   );
   const bulkArchiveTasks = useMemo(() => selectedTasks.filter(isBulkArchiveEligible), [selectedTasks]);
   const bulkDeleteTasks = useMemo(() => selectedTasks.filter(isBulkDeleteEligible), [selectedTasks]);
+  const selectableTaskIds = useMemo(() => filteredTasks.map((task) => task.id), [filteredTasks]);
+  const allSelectableTasksSelected =
+    selectableTaskIds.length > 0 && selectableTaskIds.every((id) => selectedTaskIds.includes(id));
+  const toggleAllVisibleTasks = () => {
+    setSelectedTaskIds((current) => {
+      if (allSelectableTasksSelected) return current.filter((id) => !selectableTaskIds.includes(id));
+      return Array.from(new Set([...current, ...selectableTaskIds]));
+    });
+  };
 
   // Contador de recusas pendentes de decisão do gestor (SUP-2026-000077).
   const refusedCount = useMemo(() => (tasks ?? []).filter((t) => isRefused(t)).length, [tasks]);
@@ -1118,6 +1166,28 @@ function TasksPage() {
           </Button>
         </section>
       )}
+      {isManager && filteredTasks.length > 0 && (
+        <section className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3">
+          <label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
+            <input
+              type="checkbox"
+              checked={allSelectableTasksSelected}
+              onChange={toggleAllVisibleTasks}
+              aria-label="Selecionar todas as tarefas visíveis"
+              className="h-4 w-4 accent-primary"
+            />
+            Selecionar tarefas visíveis
+          </label>
+          <span className="text-xs text-muted-foreground">
+            {selectedTaskIds.length > 0 ? `${selectedTaskIds.length} selecionada(s)` : "Nenhuma selecionada"}
+          </span>
+          {selectedTaskIds.length > 0 && (
+            <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setSelectedTaskIds([])}>
+              Limpar seleção
+            </Button>
+          )}
+        </section>
+      )}
 
       {!isLoading && filteredTasks.length === 0 && (
         <div className="rounded-2xl border border-border bg-card px-5 py-12 text-center text-sm text-muted-foreground">
@@ -1147,7 +1217,8 @@ function TasksPage() {
           completionNotes={completionNoteByTask}
           refusalsByTask={refusalsByTask}
           memberNames={memberNames}
-          selectedTaskIds={new Set(selectedTaskIds)}
+           selectedTaskIds={new Set(selectedTaskIds)}
+           taskPunches={taskPunchByTask}
           onToggleTaskSelection={(id) => setSelectedTaskIds((current) => current.includes(id) ? current.filter((x) => x !== id) : [...current, id])}
           onNoStartReason={setNoStartTarget}
          />
@@ -1177,7 +1248,8 @@ function TasksPage() {
            completionNotes={completionNoteByTask}
            refusalsByTask={refusalsByTask}
            memberNames={memberNames}
-           selectedTaskIds={new Set(selectedTaskIds)}
+          selectedTaskIds={new Set(selectedTaskIds)}
+          taskPunches={taskPunchByTask}
            onToggleTaskSelection={(id) => setSelectedTaskIds((current) => current.includes(id) ? current.filter((x) => x !== id) : [...current, id])}
            onNoStartReason={setNoStartTarget}
          />
@@ -1212,6 +1284,7 @@ function TasksPage() {
                  refusalsByTask={refusalsByTask}
                  memberNames={memberNames}
                  selectedTaskIds={new Set(selectedTaskIds)}
+                 taskPunches={taskPunchByTask}
                  onToggleTaskSelection={(id) => setSelectedTaskIds((current) => current.includes(id) ? current.filter((x) => x !== id) : [...current, id])}
                  onNoStartReason={setNoStartTarget}
                />
@@ -1244,7 +1317,8 @@ function TasksPage() {
           completionNotes={completionNoteByTask}
           refusalsByTask={refusalsByTask}
           memberNames={memberNames}
-          selectedTaskIds={new Set(selectedTaskIds)}
+           selectedTaskIds={new Set(selectedTaskIds)}
+           taskPunches={taskPunchByTask}
           onToggleTaskSelection={(id) => setSelectedTaskIds((current) => current.includes(id) ? current.filter((x) => x !== id) : [...current, id])}
           onNoStartReason={setNoStartTarget}
         />
@@ -1288,6 +1362,7 @@ interface RowHandlers {
   completionNotes: ReadonlyMap<string, CompletionNote>;
   refusalsByTask: ReadonlyMap<string, TaskRefusalRecord[]>;
   memberNames: ReadonlyMap<string, string>;
+  taskPunches: ReadonlyMap<string, TimeEntryRow>;
   selectedTaskIds?: ReadonlySet<string>;
   onToggleTaskSelection?: (taskId: string) => void;
   onNoStartReason?: (task: TaskRow) => void;
@@ -1836,6 +1911,7 @@ function CalendarTaskCard({
   selectedTaskIds,
   onToggleTaskSelection,
   onNoStartReason,
+  taskPunches,
 }: RowHandlers & {
   task: TaskRow;
   members: { id: string; full_name: string | null }[];
@@ -1852,6 +1928,7 @@ function CalendarTaskCard({
       : "";
   const memberName = members.find((m) => m.id === task.assigned_to)?.full_name ?? "Sem responsável";
   const clientName = clients.find((c) => c.id === task.client_id)?.name ?? "Sem cliente";
+  const taskPunch = taskPunches.get(task.id);
   const refusalHistory = refusalsByTask.get(task.id) ?? [];
   const refusal = currentTaskRefusal(task, refusalHistory);
   const cancellation = currentTaskCancellation(task);
@@ -1867,7 +1944,7 @@ function CalendarTaskCard({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 items-start gap-2">
-          {isManager && !task.recurrence_id && onToggleTaskSelection && (
+          {isManager && onToggleTaskSelection && (
             <input
               type="checkbox"
               aria-label={`Selecionar tarefa ${task.title}`}
@@ -1889,6 +1966,7 @@ function CalendarTaskCard({
               <span className="italic">Sem horário definido</span>
             )}
             <span>{groupBy === "assignee" ? clientName : memberName}</span>
+            {taskPunch && <PauseSummary entry={taskPunch} />}
           </div>
         </div>
         <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${STATUS_TONE[task.status]}`}>
@@ -2085,6 +2163,7 @@ function TaskRowItem({
   selectedTaskIds,
   onToggleTaskSelection,
   onNoStartReason,
+  taskPunches,
 }: RowHandlers & { task: TaskRow }) {
   const late = isVisuallyLate(t);
   const actions = availableActions(t, { userId, isManager });
@@ -2098,11 +2177,12 @@ function TaskRowItem({
   const refusalHistory = refusalsByTask.get(t.id) ?? [];
   const refusal = currentTaskRefusal(t, refusalHistory);
   const cancellation = currentTaskCancellation(t);
+  const taskPunch = taskPunches.get(t.id);
 
   return (
     <li className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 flex-1 items-start gap-2">
-        {isManager && !t.recurrence_id && onToggleTaskSelection && (
+        {isManager && onToggleTaskSelection && (
           <input
             type="checkbox"
             aria-label={`Selecionar tarefa ${t.title}`}
@@ -2193,6 +2273,7 @@ function TaskRowItem({
             !t.scheduled_for && <span className="italic">Sem horário definido</span>
           )}
           {updated && <span>Atualizado: {updated}</span>}
+          {taskPunch && <PauseSummary entry={taskPunch} />}
         </div>
         {t.description && <div className="mt-1 line-clamp-1 text-xs text-muted-foreground">{t.description}</div>}
         {completionNote && (
@@ -2280,6 +2361,17 @@ function TaskRowItem({
 
       </div>
     </li>
+  );
+}
+
+function PauseSummary({ entry }: { entry: TimeEntryRow }) {
+  const minutes = pauseMinutesNow(entry);
+  if (minutes == null) return null;
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-warning/15 px-2 py-0.5 font-medium text-warning-foreground">
+      <Clock className="h-3 w-3" />
+      {!entry.resumed_at && !entry.ended_at ? "Em pausa" : `Pausa ${formatDuration(minutes)}`}
+    </span>
   );
 }
 

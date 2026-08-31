@@ -45,7 +45,7 @@ import {
   punchAdminVoidForRedo,
   type OperationalPunchRow,
 } from "@/lib/punch-admin";
-import { formatDuration, type TaskRow } from "@/lib/tasks";
+import { formatDuration, pauseMinutesNow, type TaskRow } from "@/lib/tasks";
 import { formatWallDate, formatWallTime } from "@/lib/wall-clock";
 import { classifyEventStatus, type GeoPointRow } from "@/lib/punch/geo-view";
 import { exportToExcel, exportToPdf, type ExportColumn } from "@/lib/exports";
@@ -374,6 +374,11 @@ function GestaoPonto() {
     return ORIGIN_LABEL[r.origin] ?? r.origin;
   };
   const formatNotes = (r: Row) => (isAbsence(r) ? (r.absence_reason ?? "") : (r.no_start_reason ?? r.notes ?? ""));
+  const formatPause = (r: Row) => {
+    const minutes = pauseMinutesNow(r);
+    if (minutes == null) return "—";
+    return !r.resumed_at && !r.ended_at ? "Em pausa" : formatDuration(minutes);
+  };
 
   const exportColumns = (): ExportColumn<Row>[] => [
     { header: "Funcionário", accessor: (r) => r.profiles?.full_name ?? "" },
@@ -390,6 +395,7 @@ function GestaoPonto() {
       header: "Efetivo",
       accessor: (r) => (isNonWork(r) ? "" : r.effective_minutes != null ? formatDuration(r.effective_minutes) : ""),
     },
+    { header: "Pausa", accessor: (r) => formatPause(r) },
     { header: "Origem", accessor: (r) => formatOrigin(r) },
     { header: "Notas", accessor: (r) => formatNotes(r) },
     { header: "Geo entrada", accessor: (r) => fmtCoord(r.geo?.start) },
@@ -598,6 +604,7 @@ function GestaoPonto() {
                 <TableHead>Início</TableHead>
                 <TableHead>Fim</TableHead>
                 <TableHead className="text-right">Efetivo</TableHead>
+                <TableHead>Pausa</TableHead>
                 <TableHead>Origem</TableHead>
                 <TableHead>Notas</TableHead>
                 <TableHead className="w-10"></TableHead>
@@ -606,14 +613,14 @@ function GestaoPonto() {
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={11} className="text-center py-8 text-sm text-muted-foreground">
+                  <TableCell colSpan={12} className="text-center py-8 text-sm text-muted-foreground">
                     Carregando...
                   </TableCell>
                 </TableRow>
               )}
               {!isLoading && (result?.rows ?? []).length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={11} className="text-center py-8 text-sm text-muted-foreground">
+                  <TableCell colSpan={12} className="text-center py-8 text-sm text-muted-foreground">
                     Nenhum registro encontrado.
                   </TableCell>
                 </TableRow>
@@ -650,6 +657,7 @@ function GestaoPonto() {
                   <TableCell className="text-right font-mono">
                     {isNonWork(r) ? "—" : r.effective_minutes != null ? formatDuration(r.effective_minutes) : "—"}
                   </TableCell>
+                  <TableCell className="whitespace-nowrap text-sm">{formatPause(r)}</TableCell>
                   <TableCell>
                     <span
                       className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${ORIGIN_TONE[r.origin]}`}

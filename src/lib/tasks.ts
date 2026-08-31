@@ -1,4 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
+import { pauseMinutesNow } from "@/lib/punch/pause";
+export { pauseMinutesNow } from "@/lib/punch/pause";
 export {
   automaticAbsenceAllowedAt,
   isBulkArchiveEligible,
