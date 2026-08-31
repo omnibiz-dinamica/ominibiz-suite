@@ -5,6 +5,22 @@
 
 ---
 
+### 🚧 310826003 — Regularização de faltas com ponto manual
+
+#### Alterado
+- O Gestor/Super Admin pode usar os três pontos de uma falta para lançar o
+  horário real do funcionário que esqueceu de marcar o ponto.
+- Funcionário, tarefa e cliente da ocorrência são apresentados já vinculados;
+  o início, o fim e o motivo ficam registrados pela regularização administrativa.
+- A tarefa deixa de aparecer como falta duplicada quando o ponto é encerrado,
+  preservando o histórico e o cálculo do tempo efetivo.
+
+#### Preservado
+- O fluxo usa a RPC canônica de regularização, com validação de empresa,
+  permissões, conflitos de horário e auditoria transacional.
+- START/STOP, geolocalização, RLS, RBAC, recorrências e dados históricos não
+  foram alterados.
+
 ### 🚧 310826002 — Ações para faltas na Folha de Ponto
 
 #### Alterado

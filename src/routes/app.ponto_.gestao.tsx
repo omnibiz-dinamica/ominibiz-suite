@@ -30,6 +30,7 @@ import {
   FileDown,
   MapPin,
   RotateCcw,
+  ClockPlus,
 } from "lucide-react";
 import { PunchEditorDrawer } from "@/components/ponto/PunchEditorDrawer";
 import { PunchAuditDrawer } from "@/components/ponto/PunchAuditDrawer";
@@ -156,6 +157,7 @@ function GestaoPonto() {
   const [geoEntry, setGeoEntry] = useState<Row | null>(null);
   const [absenceEditTarget, setAbsenceEditTarget] = useState<TaskRow | null>(null);
   const [taskAuditTarget, setTaskAuditTarget] = useState<Row | null>(null);
+  const [manualPointTarget, setManualPointTarget] = useState<Row | null>(null);
 
   // Membros
   const { data: members } = useQuery({
@@ -235,12 +237,21 @@ function GestaoPonto() {
     setEditorMode("create");
     setInitialEntryKind(entryKind);
     setActiveEntry(null);
+    setManualPointTarget(null);
     setEditorOpen(true);
   };
   const openEdit = (r: Row) => {
     setEditorMode("edit");
     setInitialEntryKind("work");
     setActiveEntry(r);
+    setManualPointTarget(null);
+    setEditorOpen(true);
+  };
+  const openManualPoint = (r: Row) => {
+    setEditorMode("create");
+    setInitialEntryKind("work");
+    setActiveEntry(null);
+    setManualPointTarget(r);
     setEditorOpen(true);
   };
   const openAudit = (r: Row) => {
@@ -657,6 +668,11 @@ function GestaoPonto() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        {isAbsence(r) && (
+                          <DropdownMenuItem onClick={() => openManualPoint(r)}>
+                            <ClockPlus className="mr-2 h-4 w-4" /> Lançar ponto manual
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem onClick={() => isAbsence(r) ? openAbsenceEdit(r) : openEdit(r)}>
                           <Pencil className="mr-2 h-4 w-4" /> {isAbsence(r) ? "Editar falta" : "Editar"}
                         </DropdownMenuItem>
@@ -706,16 +722,24 @@ function GestaoPonto() {
 
       <PunchEditorDrawer
         open={editorOpen}
-        onOpenChange={setEditorOpen}
+        onOpenChange={(open) => {
+          setEditorOpen(open);
+          if (!open) setManualPointTarget(null);
+        }}
         mode={editorMode}
         companyId={currentCompanyId}
         entry={activeEntry}
-        entryTaskTitle={activeEntry?.tasks?.title ?? undefined}
-        entryUserName={activeEntry?.profiles?.full_name ?? undefined}
+        entryTaskTitle={(manualPointTarget ?? activeEntry)?.tasks?.title ?? undefined}
+        entryUserName={(manualPointTarget ?? activeEntry)?.profiles?.full_name ?? undefined}
         entryClientName={
-          activeEntry?.tasks?.client_id ? (clientsMap[activeEntry.tasks.client_id] ?? undefined) : undefined
+          (manualPointTarget ?? activeEntry)?.tasks?.client_id
+            ? (clientsMap[(manualPointTarget ?? activeEntry)!.tasks!.client_id!] ?? undefined)
+            : undefined
         }
         initialEntryKind={initialEntryKind}
+        initialUserId={manualPointTarget?.user_id}
+        initialTaskId={manualPointTarget?.task_id}
+        regularizeTaskAbsence={!!manualPointTarget}
       />
       <PunchAuditDrawer open={auditOpen} onOpenChange={setAuditOpen} timeEntryId={auditEntryId} />
       <PunchGeoDrawer

@@ -1,7 +1,13 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { TimeEntryRow } from "@/lib/tasks";
 
-export type PunchOrigin = "employee_punch" | "manager_manual" | "manager_correction" | "manager_voided" | "paid_leave";
+export type PunchOrigin =
+  | "employee_punch"
+  | "manager_manual"
+  | "manager_correction"
+  | "manager_voided"
+  | "manual_adjustment"
+  | "paid_leave";
 
 export interface AdminTimeEntry extends TimeEntryRow {
   origin: PunchOrigin;
@@ -50,6 +56,25 @@ export async function punchAdminCreate(payload: PunchCreatePayload, reason: stri
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase.rpc as any)("punch_admin_create", {
     _payload: payload,
+    _reason: reason,
+  });
+  if (error) throw error;
+  return data as AdminTimeEntry;
+}
+
+/** Regulariza uma falta existente com o horário real informado pelo gestor. */
+export async function punchAbsenceRegularize(
+  taskId: string,
+  startedAt: string,
+  endedAt: string | null,
+  reason: string,
+): Promise<AdminTimeEntry> {
+  // A RPC existente valida gestor, empresa, conflitos e grava a regularização numa transação.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("punch_employee_regularize", {
+    _task_id: taskId,
+    _started_at: startedAt,
+    _ended_at: endedAt,
     _reason: reason,
   });
   if (error) throw error;
@@ -121,6 +146,7 @@ export const ORIGIN_LABEL: Record<PunchOrigin, string> = {
   manager_manual: "Manual (gestor)",
   manager_correction: "Corrigido",
   manager_voided: "Anulado",
+  manual_adjustment: "Regularização manual",
   paid_leave: "Folga remunerada",
 };
 
@@ -129,6 +155,7 @@ export const ORIGIN_TONE: Record<PunchOrigin, string> = {
   manager_manual: "bg-warning/15 text-warning-foreground",
   manager_correction: "bg-info/15 text-info",
   manager_voided: "bg-destructive/15 text-destructive",
+  manual_adjustment: "bg-warning/15 text-warning-foreground",
   paid_leave: "bg-success/15 text-success",
 };
 

@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import {
   punchAdminCreate,
+  punchAbsenceRegularize,
   punchAdminUpdate,
   punchPaidLeaveCreate,
   toLocalInput,
@@ -32,6 +33,9 @@ interface Props {
   entryUserName?: string;
   entryClientName?: string;
   initialEntryKind?: "work" | "paid_leave";
+  initialUserId?: string | null;
+  initialTaskId?: string | null;
+  regularizeTaskAbsence?: boolean;
 }
 
 interface FormState {
@@ -86,6 +90,9 @@ export function PunchEditorDrawer({
   entryUserName,
   entryClientName,
   initialEntryKind = "work",
+  initialUserId = null,
+  initialTaskId = null,
+  regularizeTaskAbsence = false,
 }: Props) {
   const qc = useQueryClient();
   const [form, setForm] = useState<FormState>(emptyForm());
@@ -107,9 +114,13 @@ export function PunchEditorDrawer({
         reason: "",
       });
     } else if (mode === "create") {
-      setForm(emptyForm(initialEntryKind));
+      setForm({
+        ...emptyForm(initialEntryKind),
+        user_id: initialUserId ?? "",
+        task_id: initialTaskId ?? "",
+      });
     }
-  }, [open, mode, entry, initialEntryKind]);
+  }, [open, mode, entry, initialEntryKind, initialUserId, initialTaskId]);
 
   // Membros da empresa para o select de usuário (somente modo create)
   const { data: members } = useQuery({
@@ -192,6 +203,15 @@ export function PunchEditorDrawer({
         );
       }
 
+      if (regularizeTaskAbsence) {
+        return punchAbsenceRegularize(
+          form.task_id,
+          fromLocalInput(form.started_at)!,
+          fromLocalInput(form.ended_at),
+          form.reason,
+        );
+      }
+
       return punchAdminCreate(
         {
           task_id: form.task_id,
@@ -256,6 +276,10 @@ export function PunchEditorDrawer({
         toast.error("Funcionário, tarefa e início são obrigatórios");
         return;
       }
+      if (regularizeTaskAbsence && form.reason.trim().length < 3) {
+        toast.error("Informe o motivo da regularização");
+        return;
+      }
       createMut.mutate();
     } else {
       updateMut.mutate();
@@ -269,9 +293,13 @@ export function PunchEditorDrawer({
       <SheetContent className="w-full sm:max-w-lg">
         <ModalHeader
           icon={mode === "create" ? ClockPlus : Pencil}
-          title={mode === "create" ? "Adicionar ponto" : "Corrigir ponto"}
+          title={regularizeTaskAbsence ? "Regularizar falta" : mode === "create" ? "Adicionar ponto" : "Corrigir ponto"}
           description={
-            mode === "create" ? "Registro manual. Toda criação é auditada." : "Toda alteração é gravada no histórico."
+            regularizeTaskAbsence
+              ? "Informe o horário real. A falta será substituída por um ponto manual auditado."
+              : mode === "create"
+                ? "Registro manual. Toda criação é auditada."
+                : "Toda alteração é gravada no histórico."
           }
         />
 
@@ -299,7 +327,21 @@ export function PunchEditorDrawer({
             </div>
           )}
 
-          {mode === "create" && (
+          {mode === "create" && regularizeTaskAbsence && (
+            <div className="rounded-lg border border-warning/40 bg-warning/5 p-3 text-sm space-y-1">
+              <div>
+                <span className="text-muted-foreground">Funcionário:</span> {entryUserName ?? "Selecionado na ocorrência"}
+              </div>
+              <div>
+                <span className="text-muted-foreground">Tarefa:</span> {entryTaskTitle ?? "Selecionada na ocorrência"}
+              </div>
+              <div>
+                <span className="text-muted-foreground">Cliente:</span> {entryClientName ?? "Sem cliente"}
+              </div>
+            </div>
+          )}
+
+          {mode === "create" && !regularizeTaskAbsence && (
             <ModalSection title="Funcionário / tarefa / cliente" icon={Users}>
               <div>
                 <Label>Tipo de registro</Label>
@@ -398,22 +440,22 @@ export function PunchEditorDrawer({
                   onChange={(e) => setForm({ ...form, ended_at: e.target.value })}
                 />
               </div>
-              <div>
+              {!regularizeTaskAbsence && <div>
                 <Label>Pausa</Label>
                 <Input
                   type="datetime-local"
                   value={form.paused_at}
                   onChange={(e) => setForm({ ...form, paused_at: e.target.value })}
                 />
-              </div>
-              <div>
+              </div>}
+              {!regularizeTaskAbsence && <div>
                 <Label>Retorno</Label>
                 <Input
                   type="datetime-local"
                   value={form.resumed_at}
                   onChange={(e) => setForm({ ...form, resumed_at: e.target.value })}
                 />
-              </div>
+              </div>}
             </ModalSection>
           )}
 
@@ -442,7 +484,9 @@ export function PunchEditorDrawer({
               <Label>
                 Motivo{" "}
                 <span className="text-xs text-muted-foreground">
-                  (opcional — quando informado, fica registrado no histórico)
+                  {regularizeTaskAbsence
+                    ? "(obrigatório — fica registrado no histórico)"
+                    : "(opcional — quando informado, fica registrado no histórico)"}
                 </span>
               </Label>
               <Textarea
@@ -459,7 +503,13 @@ export function PunchEditorDrawer({
             Cancelar
           </Button>
           <Button onClick={submit} disabled={pending}>
-            {pending ? "Salvando..." : mode === "create" ? "Criar registro" : "Aplicar correção"}
+            {pending
+              ? "Salvando..."
+              : regularizeTaskAbsence
+                ? "Registrar ponto e regularizar"
+                : mode === "create"
+                  ? "Criar registro"
+                  : "Aplicar correção"}
           </Button>
         </ModalFooter>
       </SheetContent>
