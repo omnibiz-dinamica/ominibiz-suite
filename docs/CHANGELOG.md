@@ -5,6 +5,18 @@
 
 ---
 
+### 🚧 310826002 — Ações para faltas na Folha de Ponto
+
+#### Alterado
+- Faltas justificadas e injustificadas agora exibem o menu de ações de três pontos.
+- O gestor pode editar motivo e classificação, consultar o histórico da tarefa e
+  identifica claramente que ponto e geolocalização não se aplicam à falta.
+- A edição da falta é auditada e não cria `time_entry` nem altera dados históricos.
+
+#### Preservado
+- START/STOP, duração, geolocalização, RLS, RBAC, isolamento multiempresa,
+  recorrências e pontos trabalhados.
+
 ### 🚧 310826001 — Filtros múltiplos e fluxo operacional de tarefas
 
 #### Alterado

@@ -34,6 +34,8 @@ import {
 import { PunchEditorDrawer } from "@/components/ponto/PunchEditorDrawer";
 import { PunchAuditDrawer } from "@/components/ponto/PunchAuditDrawer";
 import { PunchGeoDrawer } from "@/components/ponto/PunchGeoDrawer";
+import { TaskAbsenceAuditDrawer } from "@/components/ponto/TaskAbsenceAuditDrawer";
+import { MarkAbsentDialog } from "@/components/tasks/MarkAbsentDialog";
 import { OpenPunchPanel } from "@/components/ponto/OpenPunchPanel";
 import {
   listOperationalPunches,
@@ -42,7 +44,7 @@ import {
   punchAdminVoidForRedo,
   type OperationalPunchRow,
 } from "@/lib/punch-admin";
-import { formatDuration } from "@/lib/tasks";
+import { formatDuration, type TaskRow } from "@/lib/tasks";
 import { formatWallDate, formatWallTime } from "@/lib/wall-clock";
 import { classifyEventStatus, type GeoPointRow } from "@/lib/punch/geo-view";
 import { exportToExcel, exportToPdf, type ExportColumn } from "@/lib/exports";
@@ -152,6 +154,8 @@ function GestaoPonto() {
   const [auditEntryId, setAuditEntryId] = useState<string | null>(null);
   const [geoOpen, setGeoOpen] = useState(false);
   const [geoEntry, setGeoEntry] = useState<Row | null>(null);
+  const [absenceEditTarget, setAbsenceEditTarget] = useState<TaskRow | null>(null);
+  const [taskAuditTarget, setTaskAuditTarget] = useState<Row | null>(null);
 
   // Membros
   const { data: members } = useQuery({
@@ -247,6 +251,36 @@ function GestaoPonto() {
     setGeoEntry(r);
     setGeoOpen(true);
   };
+  const openAbsenceEdit = (r: Row) => {
+    setAbsenceEditTarget({
+      id: r.task_id ?? r.id,
+      company_id: r.company_id,
+      title: r.tasks?.title ?? "Tarefa",
+      description: null,
+      status: "ausente",
+      priority: "media",
+      assigned_to: r.user_id,
+      created_by: r.created_by ?? r.user_id,
+      client_id: r.tasks?.client_id ?? null,
+      scheduled_for: r.tasks?.scheduled_for ?? null,
+      scheduled_end: r.tasks?.scheduled_end ?? null,
+      due_at: r.tasks?.due_at ?? null,
+      started_at: null,
+      completed_at: null,
+      authorized_at: null,
+      cancelled_at: null,
+      marked_absent_at: r.created_at,
+      marked_absent_by: r.created_by,
+      absence_reason: r.absence_reason,
+      absence_justified: r.absence_justified,
+      absence_source: r.absence_source,
+      absence_grace_minutes: 0,
+      created_at: r.created_at,
+      updated_at: r.updated_at,
+      recurrence_date: r.tasks?.recurrence_date ?? null,
+    });
+  };
+  const openTaskAudit = (r: Row) => setTaskAuditTarget(r);
 
   const voidMut = useMutation({
     mutationFn: async ({ id, reason, row }: { id: string; reason: string; row: Row }) => {
@@ -616,33 +650,41 @@ function GestaoPonto() {
                     {formatNotes(r) || "—"}
                   </TableCell>
                   <TableCell>
-                    {isNonWork(r) ? (
-                      <span className="text-muted-foreground">—</span>
-                    ) : (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => openEdit(r)}>
-                            <Pencil className="mr-2 h-4 w-4" /> Editar
+                    {isOperationalTask(r) ? <span className="text-muted-foreground">—</span> : <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Ações do registro">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => isAbsence(r) ? openAbsenceEdit(r) : openEdit(r)}>
+                          <Pencil className="mr-2 h-4 w-4" /> {isAbsence(r) ? "Editar falta" : "Editar"}
+                        </DropdownMenuItem>
+                        {isAbsence(r) ? (
+                          <DropdownMenuItem disabled title="Falta não possui ponto para devolver">
+                            <RotateCcw className="mr-2 h-4 w-4" /> Devolver para refazer
                           </DropdownMenuItem>
-                          {!r.voided_at && r.entry_kind !== "paid_leave" && (
+                        ) : (
+                          !r.voided_at && r.entry_kind !== "paid_leave" && (
                             <DropdownMenuItem onClick={() => requestVoid(r)} disabled={voidMut.isPending}>
                               <RotateCcw className="mr-2 h-4 w-4" /> Devolver para refazer
                             </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem onClick={() => openAudit(r)}>
-                            <History className="mr-2 h-4 w-4" /> Histórico
+                          )
+                        )}
+                        <DropdownMenuItem onClick={() => isAbsence(r) ? openTaskAudit(r) : openAudit(r)}>
+                          <History className="mr-2 h-4 w-4" /> Histórico
+                        </DropdownMenuItem>
+                        {isAbsence(r) ? (
+                          <DropdownMenuItem disabled title="Falta não possui geolocalização">
+                            <MapPin className="mr-2 h-4 w-4" /> Geolocalização
                           </DropdownMenuItem>
+                        ) : (
                           <DropdownMenuItem onClick={() => openGeo(r)}>
                             <MapPin className="mr-2 h-4 w-4" /> Geolocalização
                           </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>}
                   </TableCell>
                 </TableRow>
               ))}
@@ -685,6 +727,24 @@ function GestaoPonto() {
           task: geoEntry?.tasks?.title ?? null,
           client: geoEntry?.tasks?.client_id ? (clientsMap[geoEntry.tasks.client_id] ?? null) : null,
         }}
+      />
+      <MarkAbsentDialog
+        mode="edit"
+        task={absenceEditTarget}
+        employeeName={absenceEditTarget?.assigned_to ? (members?.find((member) => member.id === absenceEditTarget.assigned_to)?.name ?? undefined) : undefined}
+        clientName={absenceEditTarget?.client_id ? (clientsMap[absenceEditTarget.client_id] ?? undefined) : undefined}
+        open={!!absenceEditTarget}
+        onOpenChange={(open) => !open && setAbsenceEditTarget(null)}
+        onDone={() => {
+          setAbsenceEditTarget(null);
+          qc.invalidateQueries({ queryKey: ["punch-admin-list"] });
+        }}
+      />
+      <TaskAbsenceAuditDrawer
+        open={!!taskAuditTarget}
+        onOpenChange={(open) => !open && setTaskAuditTarget(null)}
+        taskId={taskAuditTarget?.task_id ?? null}
+        taskTitle={taskAuditTarget?.tasks?.title}
       />
     </div>
   );

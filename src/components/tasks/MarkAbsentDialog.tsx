@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { UserX } from "lucide-react";
-import { ABSENCE_REASONS, STATUS_LABELS, isOpenPunchError, markTaskAbsent, type TaskRow } from "@/lib/tasks";
+import { ABSENCE_REASONS, STATUS_LABELS, isOpenPunchError, markTaskAbsent, updateTaskAbsence, type TaskRow } from "@/lib/tasks";
 import { formatWallDate, formatWallTime } from "@/lib/wall-clock";
 
 export function MarkAbsentDialog({
@@ -25,6 +25,7 @@ export function MarkAbsentDialog({
   onOpenChange,
   onDone,
   onOpenPunch,
+  mode = "create",
 }: {
   task: TaskRow | null;
   employeeName?: string;
@@ -33,6 +34,7 @@ export function MarkAbsentDialog({
   onOpenChange: (v: boolean) => void;
   onDone: () => void;
   onOpenPunch?: () => void;
+  mode?: "create" | "edit";
 }) {
   const [reason, setReason] = useState("");
   const [other, setOther] = useState("");
@@ -43,19 +45,21 @@ export function MarkAbsentDialog({
     if (open) {
       setReason("");
       setOther("");
-      setJustified(false);
+      setJustified(mode === "edit" ? task?.absence_justified === true : false);
+      if (mode === "edit" && task?.absence_reason) setReason(task.absence_reason);
     }
-  }, [open, task?.id]);
+  }, [open, task?.id, mode, task?.absence_reason, task?.absence_justified]);
 
-  const finalReason = reason === "Outro" ? other.trim() : reason;
+  const finalReason = mode === "edit" ? reason.trim() : reason === "Outro" ? other.trim() : reason;
   const valid = finalReason.length > 0;
 
   const submit = async () => {
     if (!task || !valid) return;
     setSaving(true);
     try {
-      await markTaskAbsent(task.id, finalReason, justified);
-      toast.success(justified ? "Falta justificada registada." : "Falta registada.");
+      if (mode === "edit") await updateTaskAbsence(task.id, finalReason, justified);
+      else await markTaskAbsent(task.id, finalReason, justified);
+      toast.success(mode === "edit" ? "Falta atualizada." : justified ? "Falta justificada registada." : "Falta registada.");
       onDone();
       onOpenChange(false);
     } catch (e) {
@@ -82,8 +86,8 @@ export function MarkAbsentDialog({
       <DialogContent size="sm">
         <ModalHeader
           icon={UserX}
-          title="Marcar falta"
-          description="A falta exige motivo e fica registada no histórico da tarefa e do funcionário."
+            title={mode === "edit" ? "Editar falta" : "Marcar falta"}
+            description={mode === "edit" ? "Altere o motivo ou a classificação. A edição fica registada no histórico." : "A falta exige motivo e fica registada no histórico da tarefa e do funcionário."}
         />
 
         <ModalBody className="space-y-4">
@@ -96,21 +100,28 @@ export function MarkAbsentDialog({
             </div>
           </ModalSection>
 
-          <div className="space-y-1.5">
-            <Label>Motivo da falta *</Label>
-            <Select value={reason} onValueChange={setReason}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o motivo" />
-              </SelectTrigger>
-              <SelectContent>
-                {ABSENCE_REASONS.map((r) => (
-                  <SelectItem key={r} value={r}>
-                    {r}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {mode === "edit" ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="absence-edit-reason">Motivo da falta *</Label>
+              <Textarea id="absence-edit-reason" value={reason} onChange={(e) => setReason(e.target.value)} rows={3} placeholder="Explique o motivo da falta" />
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <Label>Motivo da falta *</Label>
+              <Select value={reason} onValueChange={setReason}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o motivo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ABSENCE_REASONS.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {r}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {reason === "Outro" && (
             <div className="space-y-1.5">
@@ -152,7 +163,7 @@ export function MarkAbsentDialog({
             Voltar
           </Button>
           <Button variant="destructive" disabled={saving || !valid} onClick={submit}>
-            {saving ? "Registando..." : "Confirmar falta"}
+              {saving ? "Guardando..." : mode === "edit" ? "Guardar alterações" : "Confirmar falta"}
           </Button>
         </ModalFooter>
       </DialogContent>

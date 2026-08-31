@@ -510,6 +510,19 @@ export async function recordNoStartReason(taskId: string, reason: string): Promi
   return data as TaskRow;
 }
 
+export async function updateTaskAbsence(taskId: string, reason: string, justified: boolean): Promise<TaskRow> {
+  const normalized = reason.trim();
+  if (!normalized) throw new Error("Informe o motivo da falta.");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("task_update_absence", {
+    _task_id: taskId,
+    _reason: normalized,
+    _justified: justified,
+  });
+  if (error) throw error;
+  return data as TaskRow;
+}
+
 /**
  * Ações permitidas para um usuário sobre uma tarefa.
  * Mantém UI espelhada às regras do banco (a regra final está em task_transition).
