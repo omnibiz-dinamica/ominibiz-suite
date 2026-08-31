@@ -5,6 +5,18 @@
 
 ---
 
+### 🐞 300826003 — Filtro de funcionário no calendário de tarefas
+
+#### Corrigido
+- O filtro de funcionário agora é aplicado antes do agrupamento do calendário,
+  usando o UUID canônico selecionado.
+- Tarefas e férias respeitam o mesmo filtro em Calendário, Por colaborador e Por
+  cliente; férias de outros funcionários não reintroduzem seus cards.
+
+#### Preservado
+- Lista de tarefas, filtros de cliente/status, recorrências, férias, RBAC, RLS,
+  isolamento multiempresa e demais fluxos operacionais não foram alterados.
+
 ## [Não lançado] — Sprint de Refinamento Operacional
 
 ### 🐞 300826002 — Solicitações de suporte e identidade de acesso

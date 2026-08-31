@@ -102,6 +102,7 @@ import {
 
 
 import { EmployeePicker } from "@/components/common/EmployeePicker";
+import { filterCalendarData } from "@/lib/tasks/calendar-filter";
 import {
   wallISOToDateInput,
   wallDateToEndOfDayISO,
@@ -577,6 +578,11 @@ function TasksPage() {
     });
   }, [tasks, search.status, search.employee, search.client, search.task]);
 
+  const filteredCalendarData = useMemo(
+    () => filterCalendarData(filteredTasks, approvedVacations ?? [], search.employee),
+    [filteredTasks, approvedVacations, search.employee],
+  );
+
   // Contador de recusas pendentes de decisão do gestor (SUP-2026-000077).
   const refusedCount = useMemo(() => (tasks ?? []).filter((t) => isRefused(t)).length, [tasks]);
 
@@ -1014,10 +1020,13 @@ function TasksPage() {
          />
       )}
 
-      {!isLoading && (filteredTasks.length > 0 || (approvedVacations?.length ?? 0) > 0) && isManager && taskView === "calendar" && (
+      {!isLoading &&
+        (filteredCalendarData.tasks.length > 0 || filteredCalendarData.vacations.length > 0) &&
+        isManager &&
+        taskView === "calendar" && (
         <TaskPlanningCalendar
-          tasks={filteredTasks}
-          vacations={approvedVacations ?? []}
+          tasks={filteredCalendarData.tasks}
+          vacations={filteredCalendarData.vacations}
           members={members ?? []}
           clients={clientsList ?? []}
           groupBy={calendarGroup}
@@ -1072,10 +1081,13 @@ function TasksPage() {
         </div>
       )}
 
-      {!isLoading && (filteredTasks.length > 0 || (approvedVacations?.length ?? 0) > 0) && !isManager && taskView === "calendar" && (
+      {!isLoading &&
+        (filteredCalendarData.tasks.length > 0 || filteredCalendarData.vacations.length > 0) &&
+        !isManager &&
+        taskView === "calendar" && (
         <TaskPlanningCalendar
-          tasks={filteredTasks}
-          vacations={approvedVacations ?? []}
+          tasks={filteredCalendarData.tasks}
+          vacations={filteredCalendarData.vacations}
           members={members ?? []}
           clients={clientsList ?? []}
           groupBy="client"
