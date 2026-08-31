@@ -30,3 +30,10 @@ test("calendar without employee filter keeps all authorized data", () => {
   assert.equal(result.tasks, tasks);
   assert.equal(result.vacations, vacations);
 });
+
+test("calendar multi-employee filter keeps only selected UUIDs", () => {
+  const result = filterCalendarData(tasks, vacations, ["veronica", "dayane"]);
+
+  assert.deepEqual(result.tasks.map((task) => task.id), ["task-veronica", "task-dayane"]);
+  assert.deepEqual(result.vacations.map((vacation) => vacation.id), ["vacation-veronica"]);
+});

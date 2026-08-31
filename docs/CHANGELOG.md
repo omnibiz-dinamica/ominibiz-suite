@@ -5,6 +5,24 @@
 
 ---
 
+### 🚧 310826001 — Filtros múltiplos e fluxo operacional de tarefas
+
+#### Alterado
+- A página de Tarefas aceita múltiplos funcionários por UUID e aplica a mesma
+  seleção na lista, calendário, agrupamentos, férias e filtro de cliente.
+- Gestores podem selecionar e arquivar ou excluir em massa apenas tarefas únicas;
+  recorrências continuam no fluxo individual existente.
+- O Ponto Gestão passa a receber tarefas operacionais sem ponto, além de pontos e
+  faltas, mantendo tarefas arquivadas ou excluídas fora do feed.
+- O atraso visual começa no horário previsto; a ausência automática só pode ocorrer
+  após 24 horas, com início e fim previstos e sem qualquer ponto válido.
+- Funcionários e gestores podem registrar o motivo de uma tarefa sem START, sem
+  criar horário ou `time_entry` fictício.
+
+#### Preservado
+- RLS, RBAC, isolamento multiempresa, UUIDs, recorrências, férias, START/STOP,
+  regularização e histórico operacional.
+
 ### 🐞 300826003 — Filtro de funcionário no calendário de tarefas
 
 #### Corrigido

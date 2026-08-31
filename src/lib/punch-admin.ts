@@ -133,11 +133,16 @@ export const ORIGIN_TONE: Record<PunchOrigin, string> = {
 };
 
 export type OperationalPunchRow = AdminTimeEntry & {
-  record_kind?: "work" | "paid_leave" | "absence";
+  record_kind?: "work" | "paid_leave" | "absence" | "task";
   absence_reason?: string | null;
   absence_justified?: boolean | null;
   absence_source?: string | null;
   absence_origin?: "employee" | "manager" | "automatic" | string | null;
+  task_status?: string | null;
+  operational_status?: "trabalhado" | "em_andamento" | "atrasada" | "pendente" | "absence" | string | null;
+  no_start_reason?: string | null;
+  no_start_reason_at?: string | null;
+  no_start_reason_by?: string | null;
   tasks: {
     title: string;
     client_id: string | null;

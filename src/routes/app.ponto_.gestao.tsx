@@ -307,11 +307,19 @@ function GestaoPonto() {
 
   const fmtDT = (s: string | null) => (s ? new Date(s).toLocaleString("pt-PT") : "");
   const isAbsence = (r: Row) => r.record_kind === "absence";
+  const isOperationalTask = (r: Row) => r.record_kind === "task";
+  const isNonWork = (r: Row) => isAbsence(r) || isOperationalTask(r);
   const formatSituation = (r: Row) => {
-    if (!isAbsence(r)) return r.entry_kind === "paid_leave" ? "Folga remunerada" : "Trabalhado";
+    if (isOperationalTask(r)) {
+      if (r.operational_status === "em_andamento") return "Em andamento";
+      if (r.operational_status === "atrasada") return "Atrasada";
+      return "Pendente";
+    }
+    if (!isAbsence(r)) return r.entry_kind === "paid_leave" ? "Folga remunerada" : r.operational_status === "em_andamento" ? "Em andamento" : "Trabalhado";
     return r.absence_justified ? "Falta · justificada" : "Falta · injustificada";
   };
   const formatOrigin = (r: Row) => {
+    if (isOperationalTask(r)) return "Tarefa operacional";
     if (isAbsence(r)) {
       if (r.absence_origin === "employee") return "Funcionário";
       if (r.absence_origin === "automatic") return "Falta automática";
@@ -320,7 +328,7 @@ function GestaoPonto() {
     }
     return ORIGIN_LABEL[r.origin] ?? r.origin;
   };
-  const formatNotes = (r: Row) => (isAbsence(r) ? (r.absence_reason ?? "") : (r.notes ?? ""));
+  const formatNotes = (r: Row) => (isAbsence(r) ? (r.absence_reason ?? "") : (r.no_start_reason ?? r.notes ?? ""));
 
   const exportColumns = (): ExportColumn<Row>[] => [
     { header: "Funcionário", accessor: (r) => r.profiles?.full_name ?? "" },
@@ -331,11 +339,11 @@ function GestaoPonto() {
     { header: "Cliente", accessor: (r) => (r.tasks?.client_id ? (clientsMap[r.tasks.client_id] ?? "") : "") },
     { header: "Previsto", accessor: (r) => formatPrevisto(r.tasks) },
     { header: "Situação", accessor: (r) => formatSituation(r) },
-    { header: "Início", accessor: (r) => (isAbsence(r) ? "" : fmtDT(r.started_at)) },
-    { header: "Fim", accessor: (r) => (isAbsence(r) ? "" : fmtDT(r.ended_at)) },
+    { header: "Início", accessor: (r) => (isNonWork(r) ? "" : fmtDT(r.started_at)) },
+    { header: "Fim", accessor: (r) => (isNonWork(r) ? "" : fmtDT(r.ended_at)) },
     {
       header: "Efetivo",
-      accessor: (r) => (isAbsence(r) ? "" : r.effective_minutes != null ? formatDuration(r.effective_minutes) : ""),
+      accessor: (r) => (isNonWork(r) ? "" : r.effective_minutes != null ? formatDuration(r.effective_minutes) : ""),
     },
     { header: "Origem", accessor: (r) => formatOrigin(r) },
     { header: "Notas", accessor: (r) => formatNotes(r) },
@@ -365,7 +373,7 @@ function GestaoPonto() {
       limit: 5000,
       offset: 0,
     });
-    const realRows = rows.filter((r) => r.record_kind !== "absence");
+    const realRows = rows.filter((r) => !isNonWork(r));
     const ids = realRows.map((r) => r.id);
     if (ids.length === 0) return rows;
 
@@ -386,7 +394,7 @@ function GestaoPonto() {
       geoByEntry.set(p.time_entry_id, summary);
     }
 
-    return rows.map((r) => ({ ...r, geo: isAbsence(r) ? null : geoByEntry.get(r.id) ?? null }));
+    return rows.map((r) => ({ ...r, geo: isNonWork(r) ? null : geoByEntry.get(r.id) ?? null }));
   };
 
   const handleExport = async (kind: "xlsx" | "pdf") => {
@@ -584,9 +592,9 @@ function GestaoPonto() {
                       {formatSituation(r)}
                     </span>
                   </TableCell>
-                  <TableCell className="text-sm">{isAbsence(r) ? "—" : new Date(r.started_at).toLocaleString()}</TableCell>
+                  <TableCell className="text-sm">{isNonWork(r) ? "—" : new Date(r.started_at).toLocaleString()}</TableCell>
                   <TableCell className="text-sm">
-                    {isAbsence(r) ? (
+                    {isNonWork(r) ? (
                       "—"
                     ) : r.ended_at ? (
                       new Date(r.ended_at).toLocaleString()
@@ -595,7 +603,7 @@ function GestaoPonto() {
                     )}
                   </TableCell>
                   <TableCell className="text-right font-mono">
-                    {isAbsence(r) ? "—" : r.effective_minutes != null ? formatDuration(r.effective_minutes) : "—"}
+                    {isNonWork(r) ? "—" : r.effective_minutes != null ? formatDuration(r.effective_minutes) : "—"}
                   </TableCell>
                   <TableCell>
                     <span
@@ -608,7 +616,7 @@ function GestaoPonto() {
                     {formatNotes(r) || "—"}
                   </TableCell>
                   <TableCell>
-                    {isAbsence(r) ? (
+                    {isNonWork(r) ? (
                       <span className="text-muted-foreground">—</span>
                     ) : (
                       <DropdownMenu>

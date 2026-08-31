@@ -77,6 +77,9 @@ import {
   canArchive,
   canMarkAbsent,
   addTaskCompletionNote,
+  isBulkArchiveEligible,
+  isBulkDeleteEligible,
+  recordNoStartReason,
 } from "@/lib/tasks";
 
 import { RecurrenceForm, emptyRecurrence, type RecurrenceFormValue } from "@/components/tasks/RecurrenceForm";
@@ -101,7 +104,7 @@ import {
 } from "@/lib/task-refusal-view";
 
 
-import { EmployeePicker } from "@/components/common/EmployeePicker";
+import { EmployeeMultiPicker } from "@/components/common/EmployeePicker";
 import { filterCalendarData } from "@/lib/tasks/calendar-filter";
 import {
   wallISOToDateInput,
@@ -191,6 +194,15 @@ function TasksPage() {
   const [view, setView] = useState<"active" | "archived">("active");
   const [taskView, setTaskView] = useState<"list" | "calendar">("list");
   const [calendarGroup, setCalendarGroup] = useState<"assignee" | "client">("assignee");
+  const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
+  const [bulkAction, setBulkAction] = useState<"archive" | "delete" | null>(null);
+  const [noStartTarget, setNoStartTarget] = useState<TaskRow | null>(null);
+  const [noStartReason, setNoStartReason] = useState("");
+
+  const selectedEmployeeIds = useMemo(
+    () => (search.employee ? search.employee.split(",").filter(Boolean) : []),
+    [search.employee],
+  );
 
   useEffect(() => {
     if (!editingSeries?.recurrence_id) {
@@ -471,6 +483,47 @@ function TasksPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const bulkActionMut = useMutation({
+    mutationFn: async ({ action, tasks: targets }: { action: "archive" | "delete"; tasks: TaskRow[] }) => {
+      const failed: string[] = [];
+      for (const task of targets) {
+        try {
+          if (action === "archive") await archiveTask(task.id, true);
+          else {
+            // A mesma RPC canônica da exclusão individual mantém auditoria e soft delete.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { error } = await (supabase.rpc as any)("task_soft_delete", { _task_id: task.id });
+            if (error) throw error;
+          }
+        } catch {
+          failed.push(task.id);
+        }
+      }
+      if (failed.length > 0) throw new Error(`${failed.length} tarefa(s) não puderam ser processadas.`);
+      return targets.length;
+    },
+    onSuccess: (_count, vars) => {
+      setSelectedTaskIds([]);
+      setBulkAction(null);
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+      toast.success(vars.action === "archive" ? "Tarefas arquivadas" : "Tarefas excluídas");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const noStartMut = useMutation({
+    mutationFn: ({ taskId, reason }: { taskId: string; reason: string }) => recordNoStartReason(taskId, reason),
+    onSuccess: () => {
+      setNoStartTarget(null);
+      setNoStartReason("");
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["punch-admin-list"] });
+      toast.success("Motivo registado");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const moveTaskDate = useMutation({
     mutationFn: async ({ id, dateKey }: { id: string; dateKey: string }) => {
       const task = (tasks ?? []).find((t) => t.id === id);
@@ -560,9 +613,10 @@ function TasksPage() {
   // Filtros derivados (status + funcionário) — Fase F.
   const filteredTasks = useMemo(() => {
     const all = tasks ?? [];
+    const selectedEmployees = new Set(selectedEmployeeIds);
     return all.filter((t) => {
       if (search.task && t.id !== search.task) return false;
-      if (search.employee && t.assigned_to !== search.employee) return false;
+      if (selectedEmployees.size > 0 && (!t.assigned_to || !selectedEmployees.has(t.assigned_to))) return false;
       if (search.client && t.client_id !== search.client) return false;
       if (!search.status) return true;
       if (search.status === "atrasadas") {
@@ -576,12 +630,19 @@ function TasksPage() {
       }
       return t.status === search.status;
     });
-  }, [tasks, search.status, search.employee, search.client, search.task]);
+  }, [tasks, search.status, search.employee, search.client, search.task, selectedEmployeeIds]);
 
   const filteredCalendarData = useMemo(
-    () => filterCalendarData(filteredTasks, approvedVacations ?? [], search.employee),
-    [filteredTasks, approvedVacations, search.employee],
+    () => filterCalendarData(filteredTasks, approvedVacations ?? [], selectedEmployeeIds),
+    [filteredTasks, approvedVacations, selectedEmployeeIds],
   );
+
+  const selectedTasks = useMemo(
+    () => (tasks ?? []).filter((task) => selectedTaskIds.includes(task.id)),
+    [tasks, selectedTaskIds],
+  );
+  const bulkArchiveTasks = useMemo(() => selectedTasks.filter(isBulkArchiveEligible), [selectedTasks]);
+  const bulkDeleteTasks = useMemo(() => selectedTasks.filter(isBulkDeleteEligible), [selectedTasks]);
 
   // Contador de recusas pendentes de decisão do gestor (SUP-2026-000077).
   const refusedCount = useMemo(() => (tasks ?? []).filter((t) => isRefused(t)).length, [tasks]);
@@ -593,9 +654,9 @@ function TasksPage() {
       replace: true,
     });
   };
-  const setEmployeeFilter = (next: string | undefined) => {
+  const setEmployeeFilter = (next: string[] | undefined) => {
     void navigate({
-      search: (prev: TasksSearch) => ({ ...prev, employee: next }),
+      search: (prev: TasksSearch) => ({ ...prev, employee: next?.length ? next.join(",") : undefined }),
       replace: true,
     });
   };
@@ -759,6 +820,48 @@ function TasksPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={!!bulkAction} onOpenChange={(open) => !open && !bulkActionMut.isPending && setBulkAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{bulkAction === "archive" ? "Arquivar tarefas selecionadas?" : "Excluir tarefas selecionadas?"}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {bulkAction === "archive"
+                ? `${bulkArchiveTasks.length} tarefa(s) única(s) serão arquivadas. Recorrências não participam desta ação.`
+                : `${bulkDeleteTasks.length} tarefa(s) única(s) serão excluídas pelo fluxo seguro existente. Recorrências não participam desta ação.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkActionMut.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={bulkActionMut.isPending || (bulkAction === "archive" ? bulkArchiveTasks.length === 0 : bulkDeleteTasks.length === 0)}
+              onClick={(event) => {
+                event.preventDefault();
+                if (bulkAction === "archive") bulkActionMut.mutate({ action: "archive", tasks: bulkArchiveTasks });
+                if (bulkAction === "delete") bulkActionMut.mutate({ action: "delete", tasks: bulkDeleteTasks });
+              }}
+            >
+              {bulkActionMut.isPending ? "Processando..." : "Confirmar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={!!noStartTarget} onOpenChange={(open) => !open && !noStartMut.isPending && setNoStartTarget(null)}>
+        <DialogContent size="sm">
+          <ModalHeader icon={FileText} title="Motivo de não ter iniciado" description="Registe uma justificativa operacional sem criar ponto ou horário fictício." />
+          <ModalBody>
+            <Label htmlFor="no-start-reason">Motivo</Label>
+            <Textarea id="no-start-reason" value={noStartReason} onChange={(event) => setNoStartReason(event.target.value)} placeholder="Ex.: Estava sem internet." className="mt-2 min-h-28" />
+          </ModalBody>
+          <ModalFooter>
+            <Button type="button" variant="outline" onClick={() => setNoStartTarget(null)} disabled={noStartMut.isPending}>Cancelar</Button>
+            <Button type="button" onClick={() => noStartTarget && noStartMut.mutate({ taskId: noStartTarget.id, reason: noStartReason })} disabled={noStartMut.isPending || !noStartReason.trim()}>
+              {noStartMut.isPending ? "Salvando..." : "Salvar motivo"}
+            </Button>
+          </ModalFooter>
+        </DialogContent>
+      </Dialog>
 
       <CancelTaskDialog
         task={cancelling}
@@ -941,14 +1044,14 @@ function TasksPage() {
 
           </div>
           <div className="ml-auto grid w-full gap-2 sm:w-auto sm:grid-cols-2">
-            <EmployeePicker
+            <EmployeeMultiPicker
               employees={(members ?? []).map((m) => ({
                 id: m.id,
                 full_name: m.full_name,
                 job_title: (m as { job_title?: string | null }).job_title ?? null,
               }))}
-              value={search.employee ?? null}
-              onChange={(id) => setEmployeeFilter(id || undefined)}
+              values={selectedEmployeeIds}
+              onValuesChange={setEmployeeFilter}
               placeholder="Todos os funcionários"
               ariaLabel="Filtrar por funcionário"
             />
@@ -968,7 +1071,7 @@ function TasksPage() {
                 ))}
               </SelectContent>
             </Select>
-            {search.employee && (
+            {selectedEmployeeIds.length > 0 && (
               <button
                 type="button"
                 onClick={() => setEmployeeFilter(undefined)}
@@ -989,11 +1092,32 @@ function TasksPage() {
           </div>
         </div>
       )}
+      {isManager && selectedTaskIds.length > 0 && (
+        <section className="flex flex-wrap items-center gap-2 rounded-2xl border border-primary/30 bg-primary/5 px-4 py-3">
+          <span className="mr-auto text-sm font-medium">{selectedTaskIds.length} tarefa(s) selecionada(s)</span>
+          <Button
+            variant="outline"
+            disabled={bulkArchiveTasks.length === 0 || bulkActionMut.isPending}
+            onClick={() => setBulkAction("archive")}
+            title="Somente tarefas únicas em estado terminal podem ser arquivadas"
+          >
+            <Archive className="mr-2 h-4 w-4" /> Arquivar selecionadas
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={bulkDeleteTasks.length === 0 || bulkActionMut.isPending}
+            onClick={() => setBulkAction("delete")}
+          >
+            <Trash2 className="mr-2 h-4 w-4" /> Excluir selecionadas
+          </Button>
+        </section>
+      )}
+
       {!isLoading && filteredTasks.length === 0 && (
         <div className="rounded-2xl border border-border bg-card px-5 py-12 text-center text-sm text-muted-foreground">
           {view === "archived"
             ? "Nenhuma tarefa arquivada."
-            : search.status || search.employee || search.client
+            : search.status || selectedEmployeeIds.length > 0 || search.client
               ? "Nenhuma tarefa corresponde ao filtro atual."
               : "Nenhuma tarefa ainda."}
         </div>
@@ -1017,6 +1141,9 @@ function TasksPage() {
           completionNotes={completionNoteByTask}
           refusalsByTask={refusalsByTask}
           memberNames={memberNames}
+          selectedTaskIds={new Set(selectedTaskIds)}
+          onToggleTaskSelection={(id) => setSelectedTaskIds((current) => current.includes(id) ? current.filter((x) => x !== id) : [...current, id])}
+          onNoStartReason={setNoStartTarget}
          />
       )}
 
@@ -1044,6 +1171,9 @@ function TasksPage() {
            completionNotes={completionNoteByTask}
            refusalsByTask={refusalsByTask}
            memberNames={memberNames}
+           selectedTaskIds={new Set(selectedTaskIds)}
+           onToggleTaskSelection={(id) => setSelectedTaskIds((current) => current.includes(id) ? current.filter((x) => x !== id) : [...current, id])}
+           onNoStartReason={setNoStartTarget}
          />
       )}
 
@@ -1075,6 +1205,9 @@ function TasksPage() {
                  completionNotes={completionNoteByTask}
                  refusalsByTask={refusalsByTask}
                  memberNames={memberNames}
+                 selectedTaskIds={new Set(selectedTaskIds)}
+                 onToggleTaskSelection={(id) => setSelectedTaskIds((current) => current.includes(id) ? current.filter((x) => x !== id) : [...current, id])}
+                 onNoStartReason={setNoStartTarget}
                />
             ))}
           </ul>
@@ -1105,6 +1238,9 @@ function TasksPage() {
           completionNotes={completionNoteByTask}
           refusalsByTask={refusalsByTask}
           memberNames={memberNames}
+          selectedTaskIds={new Set(selectedTaskIds)}
+          onToggleTaskSelection={(id) => setSelectedTaskIds((current) => current.includes(id) ? current.filter((x) => x !== id) : [...current, id])}
+          onNoStartReason={setNoStartTarget}
         />
       )}
     </div>
@@ -1146,6 +1282,9 @@ interface RowHandlers {
   completionNotes: ReadonlyMap<string, CompletionNote>;
   refusalsByTask: ReadonlyMap<string, TaskRefusalRecord[]>;
   memberNames: ReadonlyMap<string, string>;
+  selectedTaskIds?: ReadonlySet<string>;
+  onToggleTaskSelection?: (taskId: string) => void;
+  onNoStartReason?: (task: TaskRow) => void;
 }
 
 function TaskPlanningCalendar({
@@ -1688,6 +1827,9 @@ function CalendarTaskCard({
   transitionPending,
   refusalsByTask,
   memberNames,
+  selectedTaskIds,
+  onToggleTaskSelection,
+  onNoStartReason,
 }: RowHandlers & {
   task: TaskRow;
   members: { id: string; full_name: string | null }[];
@@ -1718,7 +1860,17 @@ function CalendarTaskCard({
       }}
     >
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
+        <div className="flex min-w-0 items-start gap-2">
+          {isManager && !task.recurrence_id && onToggleTaskSelection && (
+            <input
+              type="checkbox"
+              aria-label={`Selecionar tarefa ${task.title}`}
+              checked={selectedTaskIds?.has(task.id) ?? false}
+              onChange={() => onToggleTaskSelection(task.id)}
+              className="mt-1 h-4 w-4 accent-primary"
+            />
+          )}
+          <div className="min-w-0">
           <div className="truncate text-sm font-medium">{task.title}</div>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             {start || end ? (
@@ -1736,6 +1888,7 @@ function CalendarTaskCard({
         <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${STATUS_TONE[task.status]}`}>
           {STATUS_LABELS[task.status]}
         </span>
+      </div>
       </div>
       <div className="flex flex-wrap items-center gap-1">
         {late && (
@@ -1803,6 +1956,12 @@ function CalendarTaskCard({
               <Trash2 className="h-3 w-3" />
             </Button>
           </>
+        )}
+        {onNoStartReason && (task.status === "pendente" || task.status === "autorizado") && late && (
+          <Button size="sm" variant="ghost" title="Registar motivo de não ter iniciado" onClick={() => onNoStartReason(task)}>
+            <FileText className="h-3 w-3" />
+            <span className="ml-1 hidden sm:inline">Motivo</span>
+          </Button>
         )}
         {actions.map((action) => (
           <ActionButton
@@ -1917,6 +2076,9 @@ function TaskRowItem({
   completionNotes,
   refusalsByTask,
   memberNames,
+  selectedTaskIds,
+  onToggleTaskSelection,
+  onNoStartReason,
 }: RowHandlers & { task: TaskRow }) {
   const late = isVisuallyLate(t);
   const actions = availableActions(t, { userId, isManager });
@@ -1933,7 +2095,17 @@ function TaskRowItem({
 
   return (
     <li className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="min-w-0 flex-1">
+      <div className="flex min-w-0 flex-1 items-start gap-2">
+        {isManager && !t.recurrence_id && onToggleTaskSelection && (
+          <input
+            type="checkbox"
+            aria-label={`Selecionar tarefa ${t.title}`}
+            checked={selectedTaskIds?.has(t.id) ?? false}
+            onChange={() => onToggleTaskSelection(t.id)}
+            className="mt-1 h-4 w-4 accent-primary"
+          />
+        )}
+        <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-medium">{t.title}</span>
           <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_TONE[t.status]}`}>
@@ -2025,6 +2197,7 @@ function TaskRowItem({
           </div>
         )}
       </div>
+      </div>
       <div className="flex flex-wrap justify-end gap-2">
         {isManager && (
           <>
@@ -2087,6 +2260,12 @@ function TaskRowItem({
           >
             <UserX className="h-3 w-3" />
             <span className="ml-1 hidden sm:inline">{t.status === "ausente" ? "Registar falta" : "Marcar falta"}</span>
+          </Button>
+        )}
+        {onNoStartReason && (t.status === "pendente" || t.status === "autorizado") && late && (
+          <Button size="sm" variant="ghost" title="Registar motivo de não ter iniciado" onClick={() => onNoStartReason(t)}>
+            <FileText className="h-3 w-3" />
+            <span className="ml-1 hidden sm:inline">Motivo</span>
           </Button>
         )}
         {actions.map((a) => (

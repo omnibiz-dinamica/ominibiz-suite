@@ -217,3 +217,113 @@ export function EmployeePicker({
     </Popover>
   );
 }
+
+export interface EmployeeMultiPickerProps {
+  employees: EmployeeOption[];
+  values: string[];
+  onValuesChange: (ids: string[]) => void;
+  placeholder?: string;
+  emptyText?: string;
+  disabled?: boolean;
+  className?: string;
+  ariaLabel?: string;
+}
+
+/** Seletor múltiplo por UUID, mantendo a mesma busca e identidade do picker simples. */
+export function EmployeeMultiPicker({
+  employees,
+  values,
+  onValuesChange,
+  placeholder = "Todos os funcionários",
+  emptyText = "Nenhum funcionário encontrado",
+  disabled,
+  className,
+  ariaLabel,
+}: EmployeeMultiPickerProps) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const debounced = useDebouncedValue(query, 180);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const selectedIds = useMemo(() => new Set(values), [values]);
+
+  useEffect(() => {
+    if (open) requestAnimationFrame(() => inputRef.current?.focus());
+    else setQuery("");
+  }, [open]);
+
+  const filtered = useMemo(() => {
+    const q = normalize(debounced.trim());
+    if (!q) return employees;
+    const tokens = q.split(/\s+/g).filter(Boolean);
+    return employees.filter((e) => {
+      const haystack = [normalize(e.full_name), normalize(e.email), normalize(e.job_title), normalize(e.team)].join(" ");
+      return tokens.every((token) => haystack.includes(token));
+    });
+  }, [employees, debounced]);
+
+  const selectedLabels = employees.filter((e) => selectedIds.has(e.id)).map(labelFor);
+  const label = selectedLabels.length === 0
+    ? placeholder
+    : selectedLabels.length <= 2
+      ? selectedLabels.join(", ")
+      : `${selectedLabels.length} funcionários selecionados`;
+
+  const toggle = (id: string) => {
+    onValuesChange(selectedIds.has(id) ? values.filter((value) => value !== id) : [...values, id]);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          aria-label={ariaLabel ?? placeholder}
+          disabled={disabled}
+          className={cn("w-full justify-between font-normal", className)}
+        >
+          <span className="flex min-w-0 items-center gap-2 truncate">
+            <User className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+            <span className="truncate">{label}</span>
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" aria-hidden />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-[min(28rem,calc(100vw-2rem))] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
+        <div className="border-b border-border p-2">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+            <Input ref={inputRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar por nome, cargo, equipe…" className="h-9 pl-8" aria-label="Buscar funcionários" />
+          </div>
+        </div>
+        <ul role="listbox" aria-multiselectable="true" className="max-h-72 overflow-y-auto py-1" aria-label="Funcionários">
+          {filtered.length === 0 ? (
+            <li className="px-3 py-6 text-center text-sm text-muted-foreground">{emptyText}</li>
+          ) : filtered.map((e) => {
+            const isSelected = selectedIds.has(e.id);
+            const secondary = [e.job_title, e.team, e.email].filter(Boolean).join(" · ");
+            return (
+              <li key={e.id} role="option" aria-selected={isSelected}>
+                <button type="button" onClick={() => toggle(e.id)} className={cn("flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-accent focus-visible:bg-accent focus-visible:outline-none", isSelected && "bg-accent/50")}>
+                  <span className={cn("flex h-4 w-4 shrink-0 items-center justify-center rounded border", isSelected && "border-primary bg-primary text-primary-foreground")}>
+                    {isSelected && <Check className="h-3 w-3" aria-hidden />}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-medium">{labelFor(e)}</div>
+                    {secondary && <div className="truncate text-xs text-muted-foreground">{secondary}</div>}
+                  </div>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="flex items-center justify-between border-t border-border px-3 py-2 text-xs text-muted-foreground">
+          <span>{values.length ? `${values.length} selecionado(s)` : "Nenhum selecionado"}</span>
+          <button type="button" className="font-medium text-primary hover:underline" onClick={() => onValuesChange([])}>Limpar</button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}

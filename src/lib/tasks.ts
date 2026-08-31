@@ -1,4 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
+export {
+  automaticAbsenceAllowedAt,
+  isBulkArchiveEligible,
+  isBulkDeleteEligible,
+  isSingleTask,
+} from "@/lib/tasks/operational-rules";
 
 // Status persistidos (fonte única de verdade no banco)
 export const TASK_STATUSES = ["pendente", "autorizado", "em_andamento", "concluido", "cancelado", "ausente"] as const;
@@ -71,6 +77,10 @@ export interface TaskRow {
   archived_at?: string | null;
   archived_by?: string | null;
   deleted_at?: string | null;
+  /** Justificativa operacional quando a tarefa não recebeu START. */
+  no_start_reason?: string | null;
+  no_start_reason_at?: string | null;
+  no_start_reason_by?: string | null;
 }
 
 // =========================================================
@@ -442,8 +452,8 @@ export function isVisuallyLate(
   if (task.status === "concluido" || task.status === "cancelado" || task.status === "ausente") return false;
 
   if (task.scheduled_for) {
-    // Tarefa com horário só fica atrasada visualmente 1h após o início.
-    return new Date(task.scheduled_for).getTime() + 60 * 60 * 1000 <= Date.now();
+    // Atraso começa no horário previsto; a ausência automática só ocorre +24h.
+    return new Date(task.scheduled_for).getTime() <= Date.now();
   }
 
   const dateSource = task.recurrence_date ?? task.due_at;
@@ -486,6 +496,18 @@ export function canBecomeAbsent(
   }
 
   return now.getTime() >= threshold.getTime();
+}
+
+export async function recordNoStartReason(taskId: string, reason: string): Promise<TaskRow> {
+  const normalized = reason.trim();
+  if (!normalized) throw new Error("Informe o motivo de não ter iniciado a tarefa.");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("task_record_no_start_reason", {
+    _task_id: taskId,
+    _reason: normalized,
+  });
+  if (error) throw error;
+  return data as TaskRow;
 }
 
 /**
