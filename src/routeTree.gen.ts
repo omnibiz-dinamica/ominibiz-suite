@@ -70,6 +70,7 @@ import { Route as AppComercialContratosRouteImport } from './routes/app.comercia
 import { Route as AppComercialClientesRouteImport } from './routes/app.comercial.clientes'
 import { Route as AppAdminSuporteRouteImport } from './routes/app.admin.suporte'
 import { Route as ApiUsersEmailChangeRequestsRouteImport } from './routes/api/users/email-change-requests'
+import { Route as ApiEmailSendRouteImport } from './routes/api/email/send'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -399,6 +400,11 @@ const ApiUsersEmailChangeRequestsRoute =
     path: '/api/users/email-change-requests',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiEmailSendRoute = ApiEmailSendRouteImport.update({
+  id: '/api/email/send',
+  path: '/api/email/send',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailTransactionalSendRoute =
   LovableEmailTransactionalSendRouteImport.update({
     id: '/lovable/email/transactional/send',
@@ -477,6 +483,7 @@ export interface FileRoutesByFullPath {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/sign/$token': typeof SignTokenRoute
   '/app/': typeof AppIndexRoute
+  '/api/email/send': typeof ApiEmailSendRoute
   '/api/users/email-change-requests': typeof ApiUsersEmailChangeRequestsRoute
   '/app/admin/suporte': typeof AppAdminSuporteRoute
   '/app/comercial/clientes': typeof AppComercialClientesRoute
@@ -546,6 +553,7 @@ export interface FileRoutesByTo {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/sign/$token': typeof SignTokenRoute
   '/app': typeof AppIndexRoute
+  '/api/email/send': typeof ApiEmailSendRoute
   '/api/users/email-change-requests': typeof ApiUsersEmailChangeRequestsRoute
   '/app/admin/suporte': typeof AppAdminSuporteRoute
   '/app/comercial/clientes': typeof AppComercialClientesRoute
@@ -619,6 +627,7 @@ export interface FileRoutesById {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/sign/$token': typeof SignTokenRoute
   '/app/': typeof AppIndexRoute
+  '/api/email/send': typeof ApiEmailSendRoute
   '/api/users/email-change-requests': typeof ApiUsersEmailChangeRequestsRoute
   '/app/admin/suporte': typeof AppAdminSuporteRoute
   '/app/comercial/clientes': typeof AppComercialClientesRoute
@@ -693,6 +702,7 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/sign/$token'
     | '/app/'
+    | '/api/email/send'
     | '/api/users/email-change-requests'
     | '/app/admin/suporte'
     | '/app/comercial/clientes'
@@ -762,6 +772,7 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/sign/$token'
     | '/app'
+    | '/api/email/send'
     | '/api/users/email-change-requests'
     | '/app/admin/suporte'
     | '/app/comercial/clientes'
@@ -834,6 +845,7 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/sign/$token'
     | '/app/'
+    | '/api/email/send'
     | '/api/users/email-change-requests'
     | '/app/admin/suporte'
     | '/app/comercial/clientes'
@@ -889,6 +901,7 @@ export interface RootRouteChildren {
   UnsubscribeRoute: typeof UnsubscribeRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   SignTokenRoute: typeof SignTokenRoute
+  ApiEmailSendRoute: typeof ApiEmailSendRoute
   ApiUsersEmailChangeRequestsRoute: typeof ApiUsersEmailChangeRequestsRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiAdminUsersEmailRoute: typeof ApiAdminUsersEmailRoute
@@ -1329,6 +1342,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiUsersEmailChangeRequestsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/email/send': {
+      id: '/api/email/send'
+      path: '/api/email/send'
+      fullPath: '/api/email/send'
+      preLoaderRoute: typeof ApiEmailSendRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/transactional/send': {
       id: '/lovable/email/transactional/send'
       path: '/lovable/email/transactional/send'
@@ -1588,6 +1608,7 @@ const rootRouteChildren: RootRouteChildren = {
   UnsubscribeRoute: UnsubscribeRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   SignTokenRoute: SignTokenRoute,
+  ApiEmailSendRoute: ApiEmailSendRoute,
   ApiUsersEmailChangeRequestsRoute: ApiUsersEmailChangeRequestsRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiAdminUsersEmailRoute: ApiAdminUsersEmailRoute,
