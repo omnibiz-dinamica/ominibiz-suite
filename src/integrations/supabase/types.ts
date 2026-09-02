@@ -3452,109 +3452,6 @@ export type Database = {
           },
         ]
       }
-      user_email_change_requests: {
-        Row: {
-          company_id: string
-          current_email_redacted: string
-          decided_at: string | null
-          decided_by: string | null
-          decision_reason: string | null
-          id: string
-          reason: string
-          requested_at: string
-          requested_email: string
-          status: string
-          user_id: string
-        }
-        Insert: {
-          company_id: string
-          current_email_redacted: string
-          decided_at?: string | null
-          decided_by?: string | null
-          decision_reason?: string | null
-          id?: string
-          reason: string
-          requested_at?: string
-          requested_email: string
-          status?: string
-          user_id: string
-        }
-        Update: {
-          company_id?: string
-          current_email_redacted?: string
-          decided_at?: string | null
-          decided_by?: string | null
-          decision_reason?: string | null
-          id?: string
-          reason?: string
-          requested_at?: string
-          requested_email?: string
-          status?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_email_change_requests_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_identity_audit: {
-        Row: {
-          action: string
-          actor_id: string
-          company_id: string
-          completed_at: string | null
-          created_at: string
-          id: string
-          new_email_hash: string
-          new_email_redacted: string
-          old_email_hash: string
-          old_email_redacted: string
-          status: string
-          user_id: string
-        }
-        Insert: {
-          action: string
-          actor_id: string
-          company_id: string
-          completed_at?: string | null
-          created_at?: string
-          id?: string
-          new_email_hash: string
-          new_email_redacted: string
-          old_email_hash: string
-          old_email_redacted: string
-          status: string
-          user_id: string
-        }
-        Update: {
-          action?: string
-          actor_id?: string
-          company_id?: string
-          completed_at?: string | null
-          created_at?: string
-          id?: string
-          new_email_hash?: string
-          new_email_redacted?: string
-          old_email_hash?: string
-          old_email_redacted?: string
-          status?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_identity_audit_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       vacation_audit: {
         Row: {
           action: string
@@ -4043,13 +3940,6 @@ export type Database = {
           full_name: string
           is_active: boolean
           is_primary: boolean
-          user_id: string
-        }[]
-      }
-      company_member_emails: {
-        Args: { _company_id: string }
-        Returns: {
-          email: string
           user_id: string
         }[]
       }
@@ -5329,6 +5219,32 @@ export type Database = {
         }
         Returns: string
       }
+      task_add_completion_note: {
+        Args: { _note: string; _task_id: string }
+        Returns: {
+          action_scope: string | null
+          actor_role: string
+          actor_user_id: string
+          company_id: string
+          created_at: string
+          event: string
+          id: string
+          new_archived: boolean | null
+          new_status: Database["public"]["Enums"]["task_status"] | null
+          occurrence_date: string | null
+          previous_archived: boolean | null
+          previous_status: Database["public"]["Enums"]["task_status"] | null
+          reason: string | null
+          recurrence_id: string | null
+          task_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "task_audit_events"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       task_archive: {
         Args: { _archive?: boolean; _task_id: string }
         Returns: {
@@ -6352,12 +6268,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -6381,11 +6297,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -6406,11 +6322,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -6431,11 +6347,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -6448,11 +6364,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
