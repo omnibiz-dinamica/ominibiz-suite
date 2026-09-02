@@ -83,6 +83,78 @@ type NotificationRow = {
   state_changed_at: string | null;
 };
 
+type CancellationTaskContext = {
+  id: string;
+  title: string | null;
+  client_id: string | null;
+  cancellation_reason: string | null;
+  cancelled_at: string | null;
+  cancelled_by: string | null;
+  client?: { name?: string | null } | null;
+};
+
+function relatedClientName(value: unknown): string | null {
+  if (Array.isArray(value)) return relatedClientName(value[0]);
+  if (!value || typeof value !== "object") return null;
+  const name = (value as { name?: unknown }).name;
+  return typeof name === "string" && name.trim() ? name.trim() : null;
+}
+
+/** Completa notificacoes antigas que foram criadas antes do payload de cancelamento.
+ *  A busca e em lote e respeita os filtros de empresa da consulta principal. */
+async function enrichLegacyCancellationNotifications(rows: NotificationRow[]): Promise<NotificationRow[]> {
+  const taskIds = [...new Set(
+    rows
+      .filter((row) => row.event === "task_cancelled" && row.task_id && !row.metadata?.cancelled_by_name)
+      .map((row) => row.task_id as string),
+  )];
+  if (taskIds.length === 0) return rows;
+
+  const { data: taskData, error: taskError } = await supabase
+    .from("tasks")
+    .select("id,title,client_id,cancellation_reason,cancelled_at,cancelled_by,client:clients(name)")
+    .in("id", taskIds);
+  if (taskError) return rows;
+
+  const taskById = new Map(
+    ((taskData ?? []) as unknown as CancellationTaskContext[]).map((task) => [task.id, task]),
+  );
+  const actorIds = [...new Set(
+    [...taskById.values()]
+      .map((task) => task.cancelled_by)
+      .filter((id): id is string => !!id),
+  )];
+  const { data: actorData } = actorIds.length
+    ? await supabase.from("profiles").select("id,full_name").in("id", actorIds)
+    : { data: [] as { id: string; full_name: string | null }[] };
+  const actorById = new Map(
+    ((actorData ?? []) as { id: string; full_name: string | null }[]).map((actor) => [actor.id, actor.full_name]),
+  );
+
+  return rows.map((row) => {
+    if (row.event !== "task_cancelled" || !row.task_id || row.metadata?.cancelled_by_name) return row;
+    const task = taskById.get(row.task_id);
+    if (!task) return row;
+    const actorName = task.cancelled_by ? actorById.get(task.cancelled_by) : null;
+    if (!actorName && !task.cancelled_by) return row;
+    return {
+      ...row,
+      metadata: {
+        ...row.metadata,
+        cancelled_by: task.cancelled_by,
+        cancelled_by_name: actorName || "Usuario",
+        cancellation_reason: task.cancellation_reason,
+        cancelled_at: task.cancelled_at,
+        client_id: task.client_id,
+        client_name: relatedClientName(task.client),
+        task_id: task.id,
+        task_title: task.title,
+        link: `/app/tarefas?task=${task.id}`,
+      },
+    };
+  });
+}
+
 const STATE_LABEL: Record<NotificationState, string> = {
   nova: "Nova",
   em_tratamento: "Em tratamento",
@@ -165,7 +237,7 @@ function NotificationsPage() {
       if (currentCompanyId) query.eq("company_id", currentCompanyId);
       const { data, error } = await query.order("created_at", { ascending: false }).limit(200);
       if (error) throw error;
-      return (data ?? []) as unknown as NotificationRow[];
+      return enrichLegacyCancellationNotifications((data ?? []) as unknown as NotificationRow[]);
     },
     enabled: !!user,
   });
