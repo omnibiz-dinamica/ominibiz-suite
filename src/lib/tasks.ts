@@ -177,6 +177,8 @@ export interface RecurrenceRow {
    *  • `{ position, weekday }` → BYSETPOS/BYDAY (ex.: última sexta = position -1, weekday 5).
    */
   monthly_rule: { day_of_month?: number; position?: number; weekday?: number };
+  /** Explicit date-only occurrences for frequency=custom. */
+  selected_dates: string[];
   start_date: string;
   end_date: string | null;
   status: RecurrenceStatus;

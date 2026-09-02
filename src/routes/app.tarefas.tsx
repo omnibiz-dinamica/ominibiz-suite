@@ -96,6 +96,7 @@ import { ReassignDialog } from "@/components/tasks/ReassignDialog";
 import { EditRecurrenceDialog } from "@/components/tasks/EditRecurrenceDialog";
 import type { RecurrenceRow } from "@/lib/tasks";
 import { isRefused } from "@/lib/tasks";
+import { normalizeCustomRecurrenceDates } from "@/lib/tasks/custom-recurrence";
 import { CancelTaskDialog } from "@/components/tasks/CancelTaskDialog";
 import { DeleteRecurrenceDialog } from "@/components/tasks/DeleteRecurrenceDialog";
 import { MarkAbsentDialog } from "@/components/tasks/MarkAbsentDialog";
@@ -2465,6 +2466,16 @@ function TaskForm({
    */
   const submittingRef = useRef(false);
 
+  const handleRecurrenceChange = (next: RecurrenceFormValue) => {
+    setRecurrence(next);
+    if (next.enabled && next.frequency === "custom") {
+      // The explicit date selection is also the task's visible date range.
+      setTouchedDates(true);
+      setStartDate(next.startDate);
+      setEndDate(next.endDate);
+    }
+  };
+
   const timingMode: "start_stop" = "start_stop";
 
   // ---------------------------------------------------------------
@@ -2644,6 +2655,13 @@ function TaskForm({
       className="space-y-4"
       onSubmit={async (e) => {
         e.preventDefault();
+        if (!initial && recurrence.enabled && recurrence.frequency === "custom") {
+          const selectedDates = normalizeCustomRecurrenceDates(recurrence.selectedDates);
+          if (selectedDates.length === 0) {
+            toast.error("Selecione pelo menos uma data no calendário da recorrência.");
+            return;
+          }
+        }
         // Datas são obrigatórias; horas são opcionais e não criam horário falso.
         const datePattern = /^\d{4}-\d{2}-\d{2}$/;
         if (!startDate || !datePattern.test(startDate)) {
@@ -2784,6 +2802,10 @@ function TaskForm({
                   : {},
               start_date: recurrence.startDate,
               end_date: recurrence.endDate || null,
+              selected_dates:
+                recurrence.frequency === "custom"
+                  ? normalizeCustomRecurrenceDates(recurrence.selectedDates)
+                  : [],
               scheduled_time: derivedTime,
               duration_minutes: useContractedSchedule
                 ? distributedMinutes[index] ?? distributedMinutes[0] ?? derivedDuration
@@ -3152,7 +3174,7 @@ function TaskForm({
           </Select>
         </div>
       </div>
-      {!initial && <RecurrenceForm value={recurrence} onChange={setRecurrence} timingMode={timingMode} />}
+      {!initial && <RecurrenceForm value={recurrence} onChange={handleRecurrenceChange} timingMode={timingMode} />}
     </form>
     {documentsSlot && <div className="border-t border-border pt-4">{documentsSlot}</div>}
     </ModalBody>

@@ -2491,6 +2491,7 @@ export type Database = {
           priority: string
           punch_mode_override: Database["public"]["Enums"]["punch_mode"] | null
           scheduled_time: string | null
+          selected_dates: string[]
           start_date: string
           status: Database["public"]["Enums"]["recurrence_status"]
           task_group_id: string | null
@@ -2519,6 +2520,7 @@ export type Database = {
           priority?: string
           punch_mode_override?: Database["public"]["Enums"]["punch_mode"] | null
           scheduled_time?: string | null
+          selected_dates?: string[]
           start_date: string
           status?: Database["public"]["Enums"]["recurrence_status"]
           task_group_id?: string | null
@@ -2547,6 +2549,7 @@ export type Database = {
           priority?: string
           punch_mode_override?: Database["public"]["Enums"]["punch_mode"] | null
           scheduled_time?: string | null
+          selected_dates?: string[]
           start_date?: string
           status?: Database["public"]["Enums"]["recurrence_status"]
           task_group_id?: string | null

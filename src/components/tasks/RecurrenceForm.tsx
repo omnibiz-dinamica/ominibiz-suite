@@ -3,6 +3,13 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  customRecurrenceDateRange,
+  dateKeyToLocalDate,
+  localDateToDateKey,
+  normalizeCustomRecurrenceDates,
+} from "@/lib/tasks/custom-recurrence";
 import {
   MONTH_POSITIONS,
   UI_FREQUENCY_LABELS,
@@ -29,6 +36,8 @@ export interface RecurrenceFormValue {
   monthWeekday: number;
   startDate: string;
   endDate: string;
+  /** Explicit date-only occurrences used when frequency is custom. */
+  selectedDates: string[];
   scheduledTime: string;
   durationMinutes: number;
 }
@@ -43,6 +52,7 @@ export const emptyRecurrence = (): RecurrenceFormValue => ({
   monthWeekday: 5,
   startDate: new Date().toISOString().slice(0, 10),
   endDate: "",
+  selectedDates: [],
   // Sem defaults implícitos: horário/duração são derivados do topo do formulário
   // no submit (start_stop) ou fixados em 00:00 / 0 (manual). Nunca aplicar 60 min
   // como fallback silencioso.
@@ -83,7 +93,15 @@ export function RecurrenceForm({
     startDate: value.startDate,
     endDate: value.endDate || null,
   };
-  const nextDates = value.enabled ? previewRecurrenceDates(previewInput, 5) : [];
+  const customDates = normalizeCustomRecurrenceDates(value.selectedDates);
+  const nextDates = value.enabled
+    ? uiFrequency === "custom"
+      ? customDates.slice(0, 5).flatMap((date) => {
+          const parsed = dateKeyToLocalDate(date);
+          return parsed ? [parsed] : [];
+        })
+      : previewRecurrenceDates(previewInput, 5)
+    : [];
   // Recorrência opera apenas com datas.
   // • start_stop: horário e duração herdados do topo do formulário (Início/Fim).
   // • manual:     horário preenchido pelo funcionário no apontamento.
@@ -131,6 +149,9 @@ export function RecurrenceForm({
                   frequency: stored.frequency,
                   intervalWeeks: stored.intervalWeeks,
                   weekdays: v === "biweekly" ? [anchorDow] : value.weekdays,
+                  selectedDates: [],
+                  startDate: v === "custom" ? "" : value.startDate,
+                  endDate: v === "custom" ? "" : value.endDate,
                   monthPosition:
                     v === "monthly_pos" ? (value.monthPosition ?? -1) : null,
                   monthWeekday: v === "monthly_pos" ? (value.monthPosition != null ? value.monthWeekday : anchorDow) : value.monthWeekday,
@@ -227,15 +248,56 @@ export function RecurrenceForm({
             </div>
           )}
 
+          {uiFrequency === "custom" && (
+            <div className="space-y-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
+              <div>
+                <Label>Datas específicas</Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Clique nos dias que deseja incluir. Clique novamente para remover; apenas os dias selecionados serão criados.
+                </p>
+              </div>
+              <Calendar
+                mode="multiple"
+                selected={customDates.flatMap((date) => {
+                  const parsed = dateKeyToLocalDate(date);
+                  return parsed ? [parsed] : [];
+                })}
+                defaultMonth={dateKeyToLocalDate(customDates[0] ?? value.startDate) ?? new Date()}
+                onSelect={(dates) => {
+                  const selectedDates = normalizeCustomRecurrenceDates(
+                    (dates ?? []).map(localDateToDateKey),
+                  );
+                  const range = customRecurrenceDateRange(selectedDates);
+                  onChange({ ...value, selectedDates, startDate: range.startDate, endDate: range.endDate });
+                }}
+                className="mx-auto w-full max-w-sm rounded-md border bg-background"
+              />
+              <p className="text-xs font-medium">
+                {customDates.length === 0
+                  ? "Nenhuma data selecionada."
+                  : `${customDates.length} data(s) selecionada(s): ${customDates.join(", ")}`}
+              </p>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Data inicial</Label>
-              <Input type="date" value={value.startDate} onChange={(e) => set("startDate", e.target.value)} />
+              <Label>{uiFrequency === "custom" ? "Primeira data" : "Data inicial"}</Label>
+              <Input
+                type="date"
+                value={value.startDate}
+                disabled={uiFrequency === "custom"}
+                onChange={(e) => set("startDate", e.target.value)}
+              />
             </div>
             <div className="space-y-1.5">
-              <Label>Data final (opcional)</Label>
-              <Input type="date" value={value.endDate} onChange={(e) => set("endDate", e.target.value)} />
+              <Label>{uiFrequency === "custom" ? "Última data" : "Data final (opcional)"}</Label>
+              <Input
+                type="date"
+                value={value.endDate}
+                disabled={uiFrequency === "custom"}
+                onChange={(e) => set("endDate", e.target.value)}
+              />
             </div>
           </div>
 
@@ -243,7 +305,9 @@ export function RecurrenceForm({
             <div className="text-xs font-medium">Próximas ocorrências</div>
             {nextDates.length === 0 ? (
               <p className="mt-1 text-[11px] text-muted-foreground">
-                Nenhuma ocorrência prevista com esta configuração.
+                {uiFrequency === "custom"
+                  ? "Selecione pelo menos uma data no calendário."
+                  : "Nenhuma ocorrência prevista com esta configuração."}
               </p>
             ) : (
               <ul className="mt-1 space-y-0.5 text-[11px] text-muted-foreground">
