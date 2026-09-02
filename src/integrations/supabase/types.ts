@@ -1640,6 +1640,7 @@ export type Database = {
           rate_day_foreign: number | null
           rate_hour_week: number | null
           rate_hour_weekend: number | null
+          sector: string | null
           signature_url: string | null
           social_security_niss: string | null
           status: string | null
@@ -1707,6 +1708,7 @@ export type Database = {
           rate_day_foreign?: number | null
           rate_hour_week?: number | null
           rate_hour_weekend?: number | null
+          sector?: string | null
           signature_url?: string | null
           social_security_niss?: string | null
           status?: string | null
@@ -1774,6 +1776,7 @@ export type Database = {
           rate_day_foreign?: number | null
           rate_hour_week?: number | null
           rate_hour_weekend?: number | null
+          sector?: string | null
           signature_url?: string | null
           social_security_niss?: string | null
           status?: string | null
@@ -5916,6 +5919,7 @@ export type Database = {
           rate_day_foreign: number | null
           rate_hour_week: number | null
           rate_hour_weekend: number | null
+          sector: string | null
           signature_url: string | null
           social_security_niss: string | null
           status: string | null
