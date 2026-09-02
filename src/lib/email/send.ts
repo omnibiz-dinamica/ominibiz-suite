@@ -3,9 +3,8 @@
  * no hardcoded fetches scattered across the app.
  *
  * - Resolves company branding (name/logo/primary color) and injects into templateData
- * - Calls /lovable/email/transactional/send with current user JWT
- * - Records trigger_source/company_id in metadata so the queue worker can
- *   persist them on email_send_log (audit reforçada)
+ * - Calls /api/email/send with current user JWT
+ * - Envio síncrono através da infraestrutura de email gerida pela Lovable
  */
 import { supabase } from '@/integrations/supabase/client'
 
@@ -51,7 +50,7 @@ export async function sendTransactionalEmail(args: SendArgs) {
 
   const branding = await fetchBranding(args.companyId)
 
-  const res = await fetch('/lovable/email/transactional/send', {
+  const res = await fetch('/api/email/send', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
