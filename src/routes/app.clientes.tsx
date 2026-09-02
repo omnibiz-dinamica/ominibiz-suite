@@ -30,7 +30,7 @@ import { exportToExcel, exportToPdf, type ExportColumn } from "@/lib/exports";
 import { ClientGeoEditor, validateClientGeo, type ClientGeoValue } from "@/components/clientes/ClientGeoEditor";
 import { invalidateClientsCache } from "@/lib/cache/clients";
 import { parseHabitualSchedule, type ClientHabitualSchedule } from "@/lib/tasks/client-schedule";
-import { formatContractedMinutes } from "@/lib/tasks/contracted-hours";
+import { calculateWallDurationMinutes, formatContractedMinutes, isOvernightTimeRange } from "@/lib/tasks/contracted-hours";
 import { describeClientSchedule } from "@/lib/tasks/client-card";
 
 export const Route = createFileRoute("/app/clientes")({
@@ -516,7 +516,6 @@ function ClientForm({
           toast.error(geoError);
           return;
         }
-        setLoading(true);
         try {
           const parseRate = (s: string): number | null => {
             const n = Number(s.replace(",", "."));
@@ -554,8 +553,8 @@ function ClientForm({
             toast.error("Informe a hora de início e a hora de fim, ou escolha horário flexível.");
             return;
           }
-          if (scheduleEnabled && scheduleMode === "fixed" && scheduleEndTime <= scheduleStartTime) {
-            toast.error("A hora de fim deve ser posterior à hora de início.");
+          if (scheduleEnabled && scheduleMode === "fixed" && calculateWallDurationMinutes(scheduleStartTime, scheduleEndTime) == null) {
+            toast.error("Informe horários diferentes e válidos para início e fim.");
             return;
           }
           const habitualSchedule = scheduleEnabled
@@ -569,6 +568,7 @@ function ClientForm({
               ]
             : [];
 
+          setLoading(true);
           let clientId = initial?.id;
           if (initial) {
             const { error } = await (supabase.from("clients" as never) as any)
@@ -772,6 +772,9 @@ function ClientForm({
                 <div className="space-y-1.5">
                   <Label className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Hora de fim</Label>
                   <Input type="time" value={scheduleEndTime} onChange={(e) => setScheduleEndTime(e.target.value)} />
+                  {isOvernightTimeRange(scheduleStartTime, scheduleEndTime) && (
+                    <p className="text-xs text-muted-foreground">O fim será considerado no dia seguinte (+1 dia).</p>
+                  )}
                 </div>
               </div>
             ) : (

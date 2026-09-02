@@ -1,5 +1,5 @@
 import { parseHabitualSchedule, weekdayLabel } from "@/lib/tasks/client-schedule";
-import { addWallMinutes } from "@/lib/tasks/contracted-hours";
+import { addWallMinutes, isOvernightTimeRange } from "@/lib/tasks/contracted-hours";
 
 export type ClientCardScheduleData = {
   habitual_schedule?: unknown;
@@ -19,7 +19,7 @@ export function describeClientSchedule(client: ClientCardScheduleData): string[]
     }
     const time = schedule.startTime
       ? endTime
-        ? `${schedule.startTime} - ${endTime}`
+        ? `${schedule.startTime} - ${endTime}${isOvernightTimeRange(schedule.startTime, endTime) ? " (+1 dia)" : ""}`
         : `a partir de ${schedule.startTime}`
       : null;
     return [`Horário: ${mode}`, days, time].filter(Boolean).join(" · ");

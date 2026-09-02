@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { addWallMinutes, calculateWallDurationMinutes, isOvernightTimeRange } from "@/lib/tasks/contracted-hours";
 
 /**
  * SUP-2026-000110 — "Programação habitual do cliente".
@@ -69,10 +70,7 @@ export function parseHabitualSchedule(value: unknown): ClientHabitualSchedule[] 
 }
 
 function addMinutes(hhmm: string, minutes: number): string {
-  const [h, m] = hhmm.split(":").map(Number);
-  const total = (h * 60 + m + minutes) % (24 * 60);
-  const norm = total < 0 ? total + 24 * 60 : total;
-  return `${String(Math.floor(norm / 60)).padStart(2, "0")}:${String(norm % 60).padStart(2, "0")}`;
+  return addWallMinutes("2000-01-01", hhmm, minutes)?.time ?? hhmm;
 }
 
 export async function fetchClientSchedule(clientId: string): Promise<ClientScheduleSlot[]> {
@@ -107,8 +105,7 @@ export async function fetchClientSchedule(clientId: string): Promise<ClientSched
     durationMinutes:
       contractedMinutes ??
       (slot.startTime && slot.endTime
-        ? Math.max(0, (Number(slot.endTime.slice(0, 2)) * 60 + Number(slot.endTime.slice(3)) -
-            (Number(slot.startTime.slice(0, 2)) * 60 + Number(slot.startTime.slice(3)) + 1440)) % 1440)
+        ? calculateWallDurationMinutes(slot.startTime, slot.endTime)
         : null),
     punchMode: null,
     frequency: "weekly",
@@ -167,7 +164,7 @@ export function describeSlot(slot: ClientScheduleSlot): string {
     : "Todos os dias";
   const window =
     slot.startTime && slot.endTime
-      ? `${slot.startTime}–${slot.endTime}`
+      ? `${slot.startTime}–${slot.endTime}${isOvernightTimeRange(slot.startTime, slot.endTime) ? " (+1 dia)" : ""}`
       : slot.startTime
         ? `a partir de ${slot.startTime}`
         : "sem horário definido";

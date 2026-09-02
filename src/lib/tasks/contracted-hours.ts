@@ -18,6 +18,37 @@ export function distributeContractedMinutes(totalMinutes: number | null | undefi
   return Array.from({ length: employeeCount }, (_, index) => base + (index < remainder ? 1 : 0));
 }
 
+/** Converts a valid wall-clock time (HH:MM) to minutes since midnight. */
+export function wallTimeToMinutes(time: string | null | undefined): number | null {
+  if (!time || !/^\d{2}:\d{2}$/.test(time)) return null;
+  const [hours, minutes] = time.split(":").map(Number);
+  if (hours > 23 || minutes > 59) return null;
+  return hours * 60 + minutes;
+}
+
+/**
+ * Calculates a positive wall-clock interval. A finish before the start is an
+ * overnight interval; equal times remain invalid instead of meaning 24 hours.
+ */
+export function calculateWallDurationMinutes(
+  startTime: string | null | undefined,
+  endTime: string | null | undefined,
+): number | null {
+  const start = wallTimeToMinutes(startTime);
+  const end = wallTimeToMinutes(endTime);
+  if (start == null || end == null || start === end) return null;
+  return end > start ? end - start : 24 * 60 - start + end;
+}
+
+export function isOvernightTimeRange(
+  startTime: string | null | undefined,
+  endTime: string | null | undefined,
+): boolean {
+  const start = wallTimeToMinutes(startTime);
+  const end = wallTimeToMinutes(endTime);
+  return start != null && end != null && end < start;
+}
+
 export function addWallMinutes(
   date: string,
   time: string,

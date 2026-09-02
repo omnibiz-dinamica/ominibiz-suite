@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { addWallMinutes, distributeContractedMinutes, formatContractedMinutes } from "../src/lib/tasks/contracted-hours.ts";
+import {
+  addWallMinutes,
+  calculateWallDurationMinutes,
+  distributeContractedMinutes,
+  formatContractedMinutes,
+  isOvernightTimeRange,
+} from "../src/lib/tasks/contracted-hours.ts";
 
 test("distributes contracted minutes exactly among selected employees", () => {
   assert.deepEqual(distributeContractedMinutes(180, 1), [180]);
@@ -29,6 +35,15 @@ test("adds wall-clock minutes without applying a timezone conversion", () => {
   });
   assert.equal(addWallMinutes("31/08/2026", "15:00", 90), null);
   assert.equal(addWallMinutes("2026-08-31", "15:00", -1), null);
+});
+
+test("calculates overnight fixed schedules on the next wall-clock day", () => {
+  assert.equal(calculateWallDurationMinutes("18:30", "01:30"), 420);
+  assert.equal(calculateWallDurationMinutes("09:00", "10:00"), 60);
+  assert.equal(isOvernightTimeRange("18:30", "01:30"), true);
+  assert.equal(isOvernightTimeRange("09:00", "10:00"), false);
+  assert.equal(calculateWallDurationMinutes("09:00", "09:00"), null);
+  assert.equal(calculateWallDurationMinutes("invalid", "10:00"), null);
 });
 
 test("formats contracted minutes for client summaries", () => {

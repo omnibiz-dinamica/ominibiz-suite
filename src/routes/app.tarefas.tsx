@@ -37,6 +37,7 @@ import {
 } from "@/lib/tasks/client-schedule";
 import {
   addWallMinutes,
+  isOvernightTimeRange,
   distributeContractedMinutes,
   formatContractedMinutes,
 } from "@/lib/tasks/contracted-hours";
@@ -577,7 +578,10 @@ function TasksPage() {
       const startTime = formatWallTime(task.scheduled_for);
       const endTime = formatWallTime(task.scheduled_end);
       const scheduledFor = startTime ? wallDateTimeToISO(dateKey, startTime) : null;
-      const scheduledEnd = endTime ? wallDateTimeToISO(dateKey, endTime) : null;
+      const endDateKey = isOvernightTimeRange(startTime, endTime)
+        ? addWallMinutes(dateKey, "00:00", 24 * 60)?.date ?? dateKey
+        : dateKey;
+      const scheduledEnd = endTime ? wallDateTimeToISO(endDateKey, endTime) : null;
       const dueAt = scheduledEnd ?? wallDateToEndOfDayISO(dateKey);
       const { error } = await supabase
         .from("tasks")
@@ -2519,6 +2523,12 @@ function TaskForm({
     setEndTime((current) => (current === derivedEnd.time ? current : derivedEnd.time));
   }, [assignees.length, contractedMinutes, distributedMinutes, initial, manualEndOverride, startDate, startTime]);
 
+  useEffect(() => {
+    if (!startDate || !endDate || !isOvernightTimeRange(startTime, endTime) || endDate !== startDate) return;
+    const nextDate = addWallMinutes(startDate, "00:00", 24 * 60)?.date;
+    if (nextDate) setEndDate(nextDate);
+  }, [endDate, endTime, startDate, startTime]);
+
   const applySlot = (slot: ClientScheduleSlot, silent = false) => {
     setManualEndOverride(false);
     if (slot.scheduleType === "fixed") {
@@ -2673,7 +2683,11 @@ function TaskForm({
           return;
         }
         const startISO = startTime ? wallDateTimeToISO(startDate, startTime) : null;
-        const endISO = endTime ? wallDateTimeToISO(endDate, endTime) : null;
+        const resolvedEndDate =
+          startDate && endDate === startDate && isOvernightTimeRange(startTime, endTime)
+            ? addWallMinutes(startDate, "00:00", 24 * 60)?.date ?? endDate
+            : endDate;
+        const endISO = endTime ? wallDateTimeToISO(resolvedEndDate, endTime) : null;
         const dueISO = endISO ?? wallDateToEndOfDayISO(endDate);
         if (assignees.length === 0) {
           toast.error("Atribua a tarefa a um funcionario antes de salvar.");
