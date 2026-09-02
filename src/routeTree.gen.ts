@@ -40,6 +40,7 @@ import { Route as AppRestauranteIndexRouteImport } from './routes/app.restaurant
 import { Route as AppMaterialConstrucaoIndexRouteImport } from './routes/app.material-construcao.index'
 import { Route as AppComercialIndexRouteImport } from './routes/app.comercial.index'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
+import { Route as LovableEmailEventsRouteImport } from './routes/lovable/email/events'
 import { Route as AppTarefasRecorrentesRouteImport } from './routes/app.tarefas.recorrentes'
 import { Route as AppSuporteIdRouteImport } from './routes/app.suporte.$id'
 import { Route as AppRhRecibosRouteImport } from './routes/app.rh.recibos'
@@ -235,6 +236,11 @@ const AppComercialIndexRoute = AppComercialIndexRouteImport.update({
 const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
   id: '/lovable/email/suppression',
   path: '/lovable/email/suppression',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LovableEmailEventsRoute = LovableEmailEventsRouteImport.update({
+  id: '/lovable/email/events',
+  path: '/lovable/email/events',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppTarefasRecorrentesRoute = AppTarefasRecorrentesRouteImport.update({
@@ -514,6 +520,7 @@ export interface FileRoutesByFullPath {
   '/app/rh/recibos': typeof AppRhRecibosRoute
   '/app/suporte/$id': typeof AppSuporteIdRoute
   '/app/tarefas/recorrentes': typeof AppTarefasRecorrentesRoute
+  '/lovable/email/events': typeof LovableEmailEventsRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/app/comercial/': typeof AppComercialIndexRoute
   '/app/material-construcao/': typeof AppMaterialConstrucaoIndexRoute
@@ -584,6 +591,7 @@ export interface FileRoutesByTo {
   '/app/rh/recibos': typeof AppRhRecibosRoute
   '/app/suporte/$id': typeof AppSuporteIdRoute
   '/app/tarefas/recorrentes': typeof AppTarefasRecorrentesRoute
+  '/lovable/email/events': typeof LovableEmailEventsRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/app/comercial': typeof AppComercialIndexRoute
   '/app/material-construcao': typeof AppMaterialConstrucaoIndexRoute
@@ -658,6 +666,7 @@ export interface FileRoutesById {
   '/app/rh/recibos': typeof AppRhRecibosRoute
   '/app/suporte/$id': typeof AppSuporteIdRoute
   '/app/tarefas/recorrentes': typeof AppTarefasRecorrentesRoute
+  '/lovable/email/events': typeof LovableEmailEventsRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/app/comercial/': typeof AppComercialIndexRoute
   '/app/material-construcao/': typeof AppMaterialConstrucaoIndexRoute
@@ -733,6 +742,7 @@ export interface FileRouteTypes {
     | '/app/rh/recibos'
     | '/app/suporte/$id'
     | '/app/tarefas/recorrentes'
+    | '/lovable/email/events'
     | '/lovable/email/suppression'
     | '/app/comercial/'
     | '/app/material-construcao/'
@@ -803,6 +813,7 @@ export interface FileRouteTypes {
     | '/app/rh/recibos'
     | '/app/suporte/$id'
     | '/app/tarefas/recorrentes'
+    | '/lovable/email/events'
     | '/lovable/email/suppression'
     | '/app/comercial'
     | '/app/material-construcao'
@@ -876,6 +887,7 @@ export interface FileRouteTypes {
     | '/app/rh/recibos'
     | '/app/suporte/$id'
     | '/app/tarefas/recorrentes'
+    | '/lovable/email/events'
     | '/lovable/email/suppression'
     | '/app/comercial/'
     | '/app/material-construcao/'
@@ -903,6 +915,7 @@ export interface RootRouteChildren {
   SignTokenRoute: typeof SignTokenRoute
   ApiEmailSendRoute: typeof ApiEmailSendRoute
   ApiUsersEmailChangeRequestsRoute: typeof ApiUsersEmailChangeRequestsRoute
+  LovableEmailEventsRoute: typeof LovableEmailEventsRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiAdminUsersEmailRoute: typeof ApiAdminUsersEmailRoute
   ApiPublicWhatsappDispatchRoute: typeof ApiPublicWhatsappDispatchRoute
@@ -1130,6 +1143,13 @@ declare module '@tanstack/react-router' {
       path: '/lovable/email/suppression'
       fullPath: '/lovable/email/suppression'
       preLoaderRoute: typeof LovableEmailSuppressionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/events': {
+      id: '/lovable/email/events'
+      path: '/lovable/email/events'
+      fullPath: '/lovable/email/events'
+      preLoaderRoute: typeof LovableEmailEventsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app/tarefas/recorrentes': {
@@ -1610,6 +1630,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignTokenRoute: SignTokenRoute,
   ApiEmailSendRoute: ApiEmailSendRoute,
   ApiUsersEmailChangeRequestsRoute: ApiUsersEmailChangeRequestsRoute,
+  LovableEmailEventsRoute: LovableEmailEventsRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiAdminUsersEmailRoute: ApiAdminUsersEmailRoute,
   ApiPublicWhatsappDispatchRoute: ApiPublicWhatsappDispatchRoute,
