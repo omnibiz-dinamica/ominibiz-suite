@@ -36,6 +36,7 @@ import {
   resolveNotificationActions,
 } from "@/lib/notification-actions";
 import { taskRejectionNotificationDetails } from "@/lib/task-refusal-view";
+import { taskCancellationNotificationDetails } from "@/lib/task-cancellation-notification";
 
 type NotificationEvent =
   | "task_created"
@@ -155,14 +156,14 @@ function NotificationsPage() {
   const [forwardNote, setForwardNote] = useState("");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["notifications", user?.id],
+    queryKey: ["notifications", user?.id, currentCompanyId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const query = supabase
         .from("notifications" as never)
         .select("*")
-        .eq("user_id", user!.id)
-        .order("created_at", { ascending: false })
-        .limit(200);
+        .eq("user_id", user!.id);
+      if (currentCompanyId) query.eq("company_id", currentCompanyId);
+      const { data, error } = await query.order("created_at", { ascending: false }).limit(200);
       if (error) throw error;
       return (data ?? []) as unknown as NotificationRow[];
     },
@@ -172,7 +173,7 @@ function NotificationsPage() {
   // Realtime unificado (Fase 4): infra em `src/lib/realtime/subscribe.ts`
   // + helper de cache central em `src/lib/cache/notifications.ts`.
   useRealtimeInvalidate({
-    channel: `user:${user?.id ?? "anon"}:notifications`,
+    channel: `user:${user?.id ?? "anon"}:notifications:${currentCompanyId ?? "all"}`,
     table: "notifications",
     filter: user ? `user_id=eq.${user.id}` : undefined,
     enabled: !!user,
@@ -360,6 +361,7 @@ function NotificationsPage() {
               state,
             });
             const refusal = taskRejectionNotificationDetails(n.event, n.metadata);
+            const cancellation = taskCancellationNotificationDetails(n.event, n.metadata);
             return (
               <li
                 key={n.id}
@@ -412,6 +414,14 @@ function NotificationsPage() {
                             Recusada em: {new Date(refusal.refusedAt).toLocaleString("pt-PT")}
                           </p>
                         )}
+                      </div>
+                    ) : cancellation ? (
+                      <div className="mt-2 space-y-1 border-l-2 border-destructive/30 pl-3 text-sm">
+                        <p><span className="font-medium">Quem cancelou:</span>{" "}{cancellation.actorName}{cancellation.actorRole ? ` (${cancellation.actorRole})` : ""}</p>
+                        {cancellation.taskTitle && <p><span className="font-medium">Tarefa:</span> {cancellation.taskTitle}</p>}
+                        {cancellation.clientName && <p><span className="font-medium">Cliente:</span> {cancellation.clientName}</p>}
+                        <p><span className="font-medium">Motivo:</span> {cancellation.reason ?? "Motivo não informado"}</p>
+                        {cancellation.cancelledAt && <p className="text-xs text-muted-foreground">Cancelada em: {new Date(cancellation.cancelledAt).toLocaleString("pt-PT")}</p>}
                       </div>
                     ) : (
                       n.body && <p className="mt-0.5 break-words text-sm text-muted-foreground">{n.body}</p>

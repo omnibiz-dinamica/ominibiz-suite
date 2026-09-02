@@ -185,13 +185,15 @@ export function AppLayout({ children }: { children?: ReactNode }) {
   });
 
   const { data: unreadNotifications = 0 } = useQuery({
-    queryKey: ["notifications-unread-count", user?.id],
+    queryKey: ["notifications-unread-count", user?.id, currentCompanyId],
     enabled: !!user?.id,
     queryFn: async () => {
-      const { count, error } = await supabase
+      const query = supabase
         .from("notifications" as never)
         .select("*", { count: "exact", head: true })
-        .eq("user_id", user!.id)
+        .eq("user_id", user!.id);
+      if (currentCompanyId) query.eq("company_id", currentCompanyId);
+      const { count, error } = await query
         .is("read_at", null)
         .not("state", "in", "(resolvida,arquivada)");
       if (error) throw error;
