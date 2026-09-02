@@ -3416,6 +3416,109 @@ export type Database = {
           },
         ]
       }
+      user_email_change_requests: {
+        Row: {
+          company_id: string
+          current_email_redacted: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_reason: string | null
+          id: string
+          reason: string
+          requested_at: string
+          requested_email: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          current_email_redacted: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_reason?: string | null
+          id?: string
+          reason: string
+          requested_at?: string
+          requested_email: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          current_email_redacted?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_reason?: string | null
+          id?: string
+          reason?: string
+          requested_at?: string
+          requested_email?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_email_change_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_identity_audit: {
+        Row: {
+          action: string
+          actor_id: string
+          company_id: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          new_email_hash: string
+          new_email_redacted: string
+          old_email_hash: string
+          old_email_redacted: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          company_id: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          new_email_hash: string
+          new_email_redacted: string
+          old_email_hash: string
+          old_email_redacted: string
+          status: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          company_id?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          new_email_hash?: string
+          new_email_redacted?: string
+          old_email_hash?: string
+          old_email_redacted?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_identity_audit_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           company_id: string | null
@@ -3995,6 +4098,13 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      company_member_emails: {
+        Args: { _company_id: string }
+        Returns: {
+          email: string
+          user_id: string
+        }[]
       }
       contract_sign_get: {
         Args: { _token: string }
