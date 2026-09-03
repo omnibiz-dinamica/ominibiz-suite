@@ -252,8 +252,11 @@ function TasksPage() {
         .order("due_at", { ascending: true, nullsFirst: false })
         .order("scheduled_for", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: false });
+      // O contexto da empresa faz parte da identidade da consulta. Sem este
+      // filtro, uma sessão com mais de uma empresa podia carregar tarefas de
+      // outro contexto enquanto o AuthContext ainda era inicializado.
+      if (currentCompanyId) q = q.eq("company_id", currentCompanyId);
       if (!isManager) q = q.eq("assigned_to", user!.id);
-      else if (currentCompanyId) q = q.eq("company_id", currentCompanyId);
       if (search.task) q = q.eq("id", search.task);
       else if (view === "archived") q = q.not("archived_at", "is", null);
       else q = q.is("archived_at", null);
@@ -261,7 +264,8 @@ function TasksPage() {
       if (error) throw error;
       return (data ?? []) as unknown as TaskRow[];
     },
-    enabled: !!user,
+    enabled: !!user && !!currentCompanyId,
+    refetchOnWindowFocus: true,
   });
 
   // Uma consulta única vincula o ponto mais recente a cada tarefa exibida.
@@ -1406,14 +1410,12 @@ function TaskPlanningCalendar({
     members.find((m) => m.id === id)?.full_name ?? (id ? id.slice(0, 8) : "Sem responsavel");
   const clientName = (id: string | null) =>
     clients.find((c) => c.id === id)?.name ?? (id ? id.slice(0, 8) : "Sem cliente");
-  const taskDate = (task: TaskRow) => {
-    const source = task.scheduled_for ?? task.recurrence_date ?? task.due_at;
-    if (!source) return null;
-    const date = new Date(source);
-    return Number.isNaN(date.getTime()) ? null : date;
-  };
   const dateKey = (date: Date) =>
     `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  const taskDateKey = (task: TaskRow) => {
+    const source = task.scheduled_for ?? task.recurrence_date ?? task.due_at;
+    return wallISOToDateInput(source) || null;
+  };
   const startOfWeek = (date: Date) => {
     const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     const offset = (d.getDay() + 6) % 7;
@@ -1435,8 +1437,7 @@ function TaskPlanningCalendar({
       );
   const tasksForKey = (list: TaskRow[], key: string) =>
     sortTasks(list).filter((task) => {
-      const date = taskDate(task);
-      return date ? dateKey(date) === key : false;
+      return taskDateKey(task) === key;
     });
   const vacationsForKey = (list: ApprovedVacation[], key: string) =>
     list.filter((vacation) => vacation.start_date <= key && vacation.end_date >= key);
@@ -1637,11 +1638,8 @@ function TaskPlanningCalendar({
             {mode === "year" && (
               <div className="grid gap-3 p-4 md:grid-cols-3 xl:grid-cols-4">
                 {yearMonths.map((month) => {
-                  const monthTasks = sortTasks(groupTasks).filter((task) => {
-                    const date = taskDate(task);
-                    return date && date.getFullYear() === month.getFullYear() && date.getMonth() === month.getMonth();
-                  });
                   const monthKey = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
+                  const monthTasks = sortTasks(groupTasks).filter((task) => taskDateKey(task)?.slice(0, 7) === monthKey);
                   const monthVacations = groupVacations.filter(
                     (vacation) => vacation.start_date.slice(0, 7) <= monthKey && vacation.end_date.slice(0, 7) >= monthKey,
                   );
@@ -1822,13 +1820,7 @@ function TaskCalendar({
 
   const dayKey = (task: TaskRow) => {
     const daySource = task.scheduled_for ?? task.recurrence_date ?? task.due_at;
-    if (!daySource) return "__unscheduled__";
-    const date = new Date(daySource);
-    if (Number.isNaN(date.getTime())) return "__unscheduled__";
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
+    return wallISOToDateInput(daySource) || "__unscheduled__";
   };
   const dayLabel = (key: string) => {
     if (key === "__unscheduled__") return "Sem data";
