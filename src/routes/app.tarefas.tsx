@@ -1324,7 +1324,7 @@ function TasksPage() {
           vacations={filteredCalendarData.vacations}
           members={members ?? []}
           clients={clientsList ?? []}
-          groupBy="client"
+          groupBy="all"
           userId={user!.id}
           isManager={false}
           onEdit={() => {}}
@@ -1402,7 +1402,7 @@ function TaskPlanningCalendar({
   vacations: ApprovedVacation[];
   members: { id: string; full_name: string | null }[];
   clients: ClientOption[];
-  groupBy: "assignee" | "client";
+  groupBy: "assignee" | "client" | "all";
 }) {
   const [mode, setMode] = useState<CalendarMode>("week");
   const [cursor, setCursor] = useState(() => new Date());
@@ -1478,24 +1478,33 @@ function TaskPlanningCalendar({
 
   const groups = new Map<string, TaskRow[]>();
   for (const task of tasks) {
-    const key = groupBy === "assignee" ? (task.assigned_to ?? "__unassigned__") : (task.client_id ?? "__no_client__");
+    const key =
+      groupBy === "all"
+        ? "__all__"
+        : groupBy === "assignee"
+          ? (task.assigned_to ?? "__unassigned__")
+          : (task.client_id ?? "__no_client__");
     const list = groups.get(key) ?? [];
     list.push(task);
     groups.set(key, list);
   }
   for (const vacation of vacations) {
-    const key = groupBy === "assignee" ? vacation.user_id : "__no_client__";
+    const key = groupBy === "all" ? "__all__" : groupBy === "assignee" ? vacation.user_id : "__no_client__";
     if (!groups.has(key)) groups.set(key, []);
   }
   const groupEntries = Array.from(groups.entries()).sort(([a], [b]) => {
     const labelA =
-      groupBy === "assignee"
-        ? memberName(a === "__unassigned__" ? null : a)
-        : clientName(a === "__no_client__" ? null : a);
+      groupBy === "all"
+        ? "Meu calendário"
+        : groupBy === "assignee"
+          ? memberName(a === "__unassigned__" ? null : a)
+          : clientName(a === "__no_client__" ? null : a);
     const labelB =
-      groupBy === "assignee"
-        ? memberName(b === "__unassigned__" ? null : b)
-        : clientName(b === "__no_client__" ? null : b);
+      groupBy === "all"
+        ? "Meu calendário"
+        : groupBy === "assignee"
+          ? memberName(b === "__unassigned__" ? null : b)
+          : clientName(b === "__no_client__" ? null : b);
     return labelA.localeCompare(labelB);
   });
 
@@ -1530,21 +1539,31 @@ function TaskPlanningCalendar({
 
       {groupEntries.map(([key, groupTasks]) => {
         const groupVacations =
-          groupBy === "assignee"
-            ? vacations.filter((vacation) => vacation.user_id === key)
-            : key === "__no_client__"
-              ? vacations
-              : [];
+          groupBy === "all"
+            ? vacations
+            : groupBy === "assignee"
+              ? vacations.filter((vacation) => vacation.user_id === key)
+              : key === "__no_client__"
+                ? vacations
+                : [];
         const title =
-          groupBy === "assignee"
-            ? memberName(key === "__unassigned__" ? null : key)
-            : clientName(key === "__no_client__" ? null : key);
+          groupBy === "all"
+            ? "Meu calendário"
+            : groupBy === "assignee"
+              ? memberName(key === "__unassigned__" ? null : key)
+              : clientName(key === "__no_client__" ? null : key);
 
         return (
           <section key={key} className="rounded-2xl border border-border bg-card">
             <div className="flex items-center gap-3 border-b border-border px-5 py-4">
               <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                {groupBy === "assignee" ? <Users className="h-4 w-4" /> : <Building2 className="h-4 w-4" />}
+                {groupBy === "all" ? (
+                  <CalendarDays className="h-4 w-4" />
+                ) : groupBy === "assignee" ? (
+                  <Users className="h-4 w-4" />
+                ) : (
+                  <Building2 className="h-4 w-4" />
+                )}
               </span>
               <div>
                 <h2 className="font-display text-base font-semibold">{title}</h2>
@@ -1693,7 +1712,7 @@ function CalendarDayColumn({
   vacations: ApprovedVacation[];
   members: { id: string; full_name: string | null }[];
   clients: ClientOption[];
-  groupBy: "assignee" | "client";
+  groupBy: "assignee" | "client" | "all";
   handlers: RowHandlers;
 }) {
   return (
@@ -1927,7 +1946,7 @@ function CalendarTaskCard({
   task: TaskRow;
   members: { id: string; full_name: string | null }[];
   clients: ClientOption[];
-  groupBy: "assignee" | "client";
+  groupBy: "assignee" | "client" | "all";
 }) {
   const late = isVisuallyLate(task);
   const lateStartMinutes = startedLateMinutes(task);
@@ -1978,7 +1997,7 @@ function CalendarTaskCard({
             ) : (
               <span className="italic">Sem horário definido</span>
             )}
-            <span>{groupBy === "assignee" ? clientName : memberName}</span>
+            <span>{groupBy === "client" ? memberName : clientName}</span>
             {taskPunch && <PauseSummary entry={taskPunch} />}
           </div>
         </div>
