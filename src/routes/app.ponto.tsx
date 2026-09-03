@@ -1053,20 +1053,25 @@ function UpcomingTasks({
   // para dar contexto operacional imediato.
   // Prioriza tarefa pronta para iniciar; senão a primeira da fila.
   const nextStartable =
-    tasks.find((t) => t.status === "autorizado" || t.status === "pendente" || t.status === "em_andamento") ?? tasks[0];
+    tasks.find((t) => {
+      const status = resolveOperationalStatus(t);
+      return status === "autorizado" || status === "pendente" || status === "atrasada" || status === "em_andamento";
+    }) ?? tasks[0];
   // Fila limpa: primeiro o que exige ação; ausentes/canceladas ainda não
   // arquivadas ficam no fim, de forma compacta (ADR-036).
-  const queueWeight = (t: TaskRow) => (t.status === "ausente" || t.status === "cancelado" ? 1 : 0);
+  const queueWeight = (t: TaskRow) => {
+    const status = resolveOperationalStatus(t);
+    return status === "ausente" || status === "cancelado" ? 1 : 0;
+  };
   const rest = tasks
     .filter((t) => t.id !== nextStartable.id)
     .slice()
     .sort((a, b) => queueWeight(a) - queueWeight(b));
   const nextOperationalStatus = resolveOperationalStatus(nextStartable);
+  const nextActionStatus = nextOperationalStatus === "atrasada" ? "pendente" : nextOperationalStatus;
   const nextIsStartable =
     nextOperationalStatus !== "ausente" &&
-    (nextStartable.status === "autorizado" ||
-      nextStartable.status === "pendente" ||
-      nextStartable.status === "em_andamento");
+    (nextActionStatus === "autorizado" || nextActionStatus === "pendente" || nextActionStatus === "em_andamento");
   const nextIsAbsent = nextOperationalStatus === "ausente";
   const nextStarting = starting && startingId === nextStartable.id;
   const nextRequesting = requestingAuth && requestingAuthId === nextStartable.id;
@@ -1098,9 +1103,9 @@ function UpcomingTasks({
                 {nextStartable.priority}
               </span>
               <span
-                className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${nextOperationalStatus === "atrasada" ? "bg-destructive/15 text-destructive" : STATUS_TONE[nextStartable.status]}`}
+                className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${nextOperationalStatus === "atrasada" ? "bg-destructive/15 text-destructive" : STATUS_TONE[nextOperationalStatus]}`}
               >
-                {nextOperationalStatus === "atrasada" ? "Atrasada" : STATUS_LABELS[nextStartable.status]}
+                {nextOperationalStatus === "atrasada" ? "Atrasada" : STATUS_LABELS[nextOperationalStatus]}
               </span>
               <span className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
                 {effectiveMode(nextStartable) === "automatico" ? (
@@ -1220,9 +1225,10 @@ function UpcomingTasks({
               const clientName = t.client_id ? clientsMap[t.client_id] : undefined;
               const tMode = effectiveMode(t);
               const isOwn = !!currentUserId && t.assigned_to === currentUserId;
+              const actionStatus = operationalStatus === "atrasada" ? "pendente" : operationalStatus;
               const canStart =
                 operationalStatus !== "ausente" &&
-                (t.status === "pendente" || t.status === "autorizado" || t.status === "em_andamento") &&
+                (actionStatus === "pendente" || actionStatus === "autorizado" || actionStatus === "em_andamento") &&
                 isOwn;
               return (
                 <li
@@ -1242,9 +1248,9 @@ function UpcomingTasks({
                         </span>
                       )}
                       <span
-                        className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${operationalStatus === "atrasada" ? "bg-destructive/15 text-destructive" : STATUS_TONE[t.status]}`}
+                        className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${operationalStatus === "atrasada" ? "bg-destructive/15 text-destructive" : STATUS_TONE[operationalStatus]}`}
                       >
-                        {operationalStatus === "atrasada" ? "Atrasada" : STATUS_LABELS[t.status]}
+                        {operationalStatus === "atrasada" ? "Atrasada" : STATUS_LABELS[operationalStatus]}
                       </span>
                       <span className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
                         {tMode === "automatico" ? <Zap className="h-3 w-3" /> : <Hand className="h-3 w-3" />}

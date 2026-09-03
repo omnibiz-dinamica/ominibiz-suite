@@ -1976,8 +1976,8 @@ function CalendarTaskCard({
             {taskPunch && <PauseSummary entry={taskPunch} />}
           </div>
         </div>
-        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${operationalStatus === "atrasada" ? "bg-destructive/15 text-destructive" : STATUS_TONE[task.status]}`}>
-          {operationalStatus === "atrasada" ? "Atrasada" : STATUS_LABELS[task.status]}
+        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${operationalStatus === "atrasada" ? "bg-destructive/15 text-destructive" : STATUS_TONE[operationalStatus]}`}>
+          {operationalStatus === "atrasada" ? "Atrasada" : STATUS_LABELS[operationalStatus]}
         </span>
       </div>
       </div>
@@ -2202,8 +2202,8 @@ function TaskRowItem({
         <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-medium">{t.title}</span>
-          <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${operationalStatus === "atrasada" ? "bg-destructive/15 text-destructive" : STATUS_TONE[t.status]}`}>
-            {operationalStatus === "atrasada" ? "Atrasada" : STATUS_LABELS[t.status]}
+          <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${operationalStatus === "atrasada" ? "bg-destructive/15 text-destructive" : STATUS_TONE[operationalStatus]}`}>
+            {operationalStatus === "atrasada" ? "Atrasada" : STATUS_LABELS[operationalStatus]}
           </span>
           {late && operationalStatus !== "atrasada" && (
             <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-destructive">

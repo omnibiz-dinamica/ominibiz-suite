@@ -524,18 +524,32 @@ export function availableActions(
 ): TaskAction[] {
   const isAssignee = task.assigned_to === ctx.userId;
   const out: TaskAction[] = [];
-  if (TERMINAL_STATUSES.includes(task.status)) return out;
+  const operationalStatus = resolveOperationalStatus({
+    ...task,
+    scheduled_for: task.scheduled_for ?? null,
+    recurrence_date: task.recurrence_date ?? null,
+    due_at: task.due_at ?? null,
+  });
+  // Uma ausencia automatica antiga pode estar persistida antes do prazo. Nesse
+  // caso, trata-se como pendente/atrasada ate a migration normalizar a linha.
+  const actionableStatus: TaskStatus | "atrasada" =
+    operationalStatus === "atrasada"
+      ? task.status === "autorizado"
+        ? "autorizado"
+        : "pendente"
+      : operationalStatus;
+  if (TERMINAL_STATUSES.includes(actionableStatus as TaskStatus)) return out;
 
-  if (task.status === "pendente" && ctx.isManager) out.push("autorizar");
-  if ((task.status === "pendente" || task.status === "autorizado") && (isAssignee || ctx.isManager))
+  if (actionableStatus === "pendente" && ctx.isManager) out.push("autorizar");
+  if ((actionableStatus === "pendente" || actionableStatus === "autorizado") && (isAssignee || ctx.isManager))
     out.push("iniciar");
-  if ((task.status === "pendente" || task.status === "autorizado") && isAssignee) out.push("recusar");
-  if (task.status === "em_andamento" && (isAssignee || ctx.isManager)) out.push("concluir");
+  if ((actionableStatus === "pendente" || actionableStatus === "autorizado") && isAssignee) out.push("recusar");
+  if (actionableStatus === "em_andamento" && (isAssignee || ctx.isManager)) out.push("concluir");
   // A falta só pode ser registada depois da ocorrência: 1h após o horário
   // definido ou no dia seguinte quando a tarefa não tem horário.
   if (
     (ctx.isManager || isAssignee) &&
-    (task.status === "pendente" || task.status === "autorizado") &&
+    (actionableStatus === "pendente" || actionableStatus === "autorizado") &&
     canBecomeAbsent({
       ...task,
       scheduled_for: task.scheduled_for ?? null,

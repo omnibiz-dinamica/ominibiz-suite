@@ -79,6 +79,18 @@ test("recognizes legacy automatic source labels", () => {
   assert.equal(resolveOperationalStatus(task, new Date(2026, 8, 2, 21, 20)), "pendente");
 });
 
+test("keeps explicit manual and employee absences terminal", () => {
+  const scheduled = "2026-09-02T21:30:00.000Z";
+  assert.equal(
+    resolveOperationalStatus({ status: "ausente", scheduled_for: scheduled, absence_source: "manual" }, new Date(2026, 8, 2, 21, 20)),
+    "ausente",
+  );
+  assert.equal(
+    resolveOperationalStatus({ status: "ausente", scheduled_for: scheduled, absence_source: "employee" }, new Date(2026, 8, 2, 21, 20)),
+    "ausente",
+  );
+});
+
 test("bulk archive/delete eligibility excludes recurring tasks", () => {
   assert.equal(isSingleTask(task()), true);
   assert.equal(isBulkArchiveEligible(task()), true);
