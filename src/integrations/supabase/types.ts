@@ -4180,17 +4180,8 @@ export type Database = {
           ticket_number: string
         }[]
       }
-      delete_email: {
-        Args: { message_id: number; queue_name: string }
-        Returns: boolean
-      }
       effective_minutes_round: {
         Args: { _pause_seconds: number; _total_seconds: number }
-        Returns: number
-      }
-      email_queue_dispatch: { Args: never; Returns: undefined }
-      enqueue_email: {
-        Args: { payload: Json; queue_name: string }
         Returns: number
       }
       enqueue_ticket_whatsapp: {
@@ -4383,15 +4374,6 @@ export type Database = {
       manager_request_information: {
         Args: { _message: string; _ticket_id: string }
         Returns: undefined
-      }
-      move_to_dlq: {
-        Args: {
-          dlq_name: string
-          message_id: number
-          payload: Json
-          source_queue: string
-        }
-        Returns: number
       }
       notification_mark_read: {
         Args: { _all?: boolean; _id?: string }
@@ -5006,14 +4988,6 @@ export type Database = {
       punch_resume_v2: { Args: { p_input: Json }; Returns: Json }
       punch_start_v2: { Args: { p_input: Json }; Returns: Json }
       punch_stop_v2: { Args: { p_input: Json }; Returns: Json }
-      read_email_batch: {
-        Args: { batch_size: number; queue_name: string; vt: number }
-        Returns: {
-          message: Json
-          msg_id: number
-          read_ct: number
-        }[]
-      }
       recalculate_period: {
         Args: {
           _company_id: string
@@ -5046,6 +5020,7 @@ export type Database = {
           priority: string
           punch_mode_override: Database["public"]["Enums"]["punch_mode"] | null
           scheduled_time: string | null
+          selected_dates: string[]
           start_date: string
           status: Database["public"]["Enums"]["recurrence_status"]
           task_group_id: string | null
