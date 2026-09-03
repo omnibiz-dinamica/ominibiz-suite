@@ -1,6 +1,19 @@
 export type OperationalTaskStatus = "pendente" | "autorizado" | "em_andamento" | "concluido" | "cancelado" | "ausente";
 export type ResolvedOperationalStatus = OperationalTaskStatus | "atrasada";
 
+/** Converts the device's local wall clock into a comparable UTC-like value. */
+export function wallClockEpoch(date: Date): number {
+  return Date.UTC(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    date.getHours(),
+    date.getMinutes(),
+    date.getSeconds(),
+    date.getMilliseconds(),
+  );
+}
+
 export function automaticAbsenceAllowedAt(task: { scheduled_for: string | null | undefined }): Date | null {
   if (!task.scheduled_for) return null;
   const start = new Date(task.scheduled_for);
@@ -34,21 +47,21 @@ export function resolveOperationalStatus(
     if (!day || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return task.status;
     const nextDay = new Date(`${day}T00:00:00.000Z`);
     nextDay.setUTCDate(nextDay.getUTCDate() + 1);
-    return now.getTime() >= nextDay.getTime() ? "atrasada" : task.status;
+    return wallClockEpoch(now) >= nextDay.getTime() ? "atrasada" : task.status;
   }
 
   if (task.status === "ausente" && task.absence_source === "automatica") {
     const threshold = automaticAbsenceAllowedAt(task);
-    if (threshold && now.getTime() < threshold.getTime()) {
-      return now.getTime() >= start.getTime() ? "atrasada" : "pendente";
+    if (threshold && wallClockEpoch(now) < threshold.getTime()) {
+      return wallClockEpoch(now) >= start.getTime() ? "atrasada" : "pendente";
     }
     return task.status;
   }
 
   if (task.status !== "pendente" && task.status !== "autorizado") return task.status;
   const threshold = automaticAbsenceAllowedAt(task);
-  if (threshold && now.getTime() >= threshold.getTime()) return "ausente";
-  if (now.getTime() >= start.getTime()) return "atrasada";
+  if (threshold && wallClockEpoch(now) >= threshold.getTime()) return "ausente";
+  if (wallClockEpoch(now) >= start.getTime()) return "atrasada";
   return task.status;
 }
 

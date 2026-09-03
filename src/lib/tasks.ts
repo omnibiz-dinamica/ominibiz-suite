@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { pauseMinutesNow } from "@/lib/punch/pause";
-import { resolveOperationalStatus } from "@/lib/tasks/operational-rules";
+import { resolveOperationalStatus, wallClockEpoch } from "@/lib/tasks/operational-rules";
 export { pauseMinutesNow } from "@/lib/punch/pause";
 export {
   automaticAbsenceAllowedAt,
@@ -485,7 +485,7 @@ export function canBecomeAbsent(
     threshold.setUTCDate(threshold.getUTCDate() + 1);
   }
 
-  return now.getTime() >= threshold.getTime();
+  return wallClockEpoch(now) >= threshold.getTime();
 }
 
 export async function recordNoStartReason(taskId: string, reason: string): Promise<TaskRow> {

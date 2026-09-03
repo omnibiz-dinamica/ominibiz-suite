@@ -23,27 +23,27 @@ test("automatic absence is exactly 24 hours after a scheduled start", () => {
 
 test("resolves the same pending, late and absent state for every role", () => {
   const task = { status: "pendente" as const, scheduled_for: "2026-09-02T13:00:00.000Z" };
-  assert.equal(resolveOperationalStatus(task, new Date("2026-09-02T12:25:00.000Z")), "pendente");
-  assert.equal(resolveOperationalStatus(task, new Date("2026-09-02T13:01:00.000Z")), "atrasada");
-  assert.equal(resolveOperationalStatus(task, new Date("2026-09-02T15:01:00.000Z")), "atrasada");
-  assert.equal(resolveOperationalStatus(task, new Date("2026-09-03T12:59:59.000Z")), "atrasada");
-  assert.equal(resolveOperationalStatus(task, new Date("2026-09-03T13:00:00.000Z")), "ausente");
+  assert.equal(resolveOperationalStatus(task, new Date(2026, 8, 2, 12, 25)), "pendente");
+  assert.equal(resolveOperationalStatus(task, new Date(2026, 8, 2, 13, 1)), "atrasada");
+  assert.equal(resolveOperationalStatus(task, new Date(2026, 8, 2, 15, 1)), "atrasada");
+  assert.equal(resolveOperationalStatus(task, new Date(2026, 8, 3, 12, 59, 59)), "atrasada");
+  assert.equal(resolveOperationalStatus(task, new Date(2026, 8, 3, 13, 0)), "ausente");
 });
 
 test("keeps overnight timing anchored to the start date", () => {
   const task = { status: "pendente" as const, scheduled_for: "2026-09-02T23:00:00.000Z" };
-  assert.equal(resolveOperationalStatus(task, new Date("2026-09-02T22:00:00.000Z")), "pendente");
-  assert.equal(resolveOperationalStatus(task, new Date("2026-09-03T00:30:00.000Z")), "atrasada");
-  assert.equal(resolveOperationalStatus(task, new Date("2026-09-03T22:59:59.000Z")), "atrasada");
-  assert.equal(resolveOperationalStatus(task, new Date("2026-09-03T23:00:00.000Z")), "ausente");
+  assert.equal(resolveOperationalStatus(task, new Date(2026, 8, 2, 22, 0)), "pendente");
+  assert.equal(resolveOperationalStatus(task, new Date(2026, 8, 3, 0, 30)), "atrasada");
+  assert.equal(resolveOperationalStatus(task, new Date(2026, 8, 3, 22, 59, 59)), "atrasada");
+  assert.equal(resolveOperationalStatus(task, new Date(2026, 8, 3, 23, 0)), "ausente");
 });
 
 test("does not apply automatic timing to tasks without a scheduled start", () => {
-  assert.equal(resolveOperationalStatus({ status: "pendente", scheduled_for: null }, new Date("2026-09-10T12:00:00.000Z")), "pendente");
+  assert.equal(resolveOperationalStatus({ status: "pendente", scheduled_for: null }, new Date(2026, 8, 10, 12, 0)), "pendente");
   assert.equal(
     resolveOperationalStatus(
       { status: "pendente", scheduled_for: null, recurrence_date: "2026-09-02", due_at: "2026-09-02T23:59:59.000Z" },
-      new Date("2026-09-03T00:00:00.000Z"),
+      new Date(2026, 8, 3, 0, 0),
     ),
     "atrasada",
   );
