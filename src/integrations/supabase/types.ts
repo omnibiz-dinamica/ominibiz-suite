@@ -1571,24 +1571,18 @@ export type Database = {
           created_at: string
           default_support_super_admin_id: string | null
           id: number
-          support_email_notifications_enabled: boolean
-          support_notification_email: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           default_support_super_admin_id?: string | null
           id: number
-          support_email_notifications_enabled?: boolean
-          support_notification_email?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           default_support_super_admin_id?: string | null
           id?: number
-          support_email_notifications_enabled?: boolean
-          support_notification_email?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -2496,6 +2490,7 @@ export type Database = {
           monthly_rule: Json
           priority: string
           punch_mode_override: Database["public"]["Enums"]["punch_mode"] | null
+          schedule_rules: Json
           scheduled_time: string | null
           selected_dates: string[]
           start_date: string
@@ -2525,6 +2520,7 @@ export type Database = {
           monthly_rule?: Json
           priority?: string
           punch_mode_override?: Database["public"]["Enums"]["punch_mode"] | null
+          schedule_rules?: Json
           scheduled_time?: string | null
           selected_dates?: string[]
           start_date: string
@@ -2554,6 +2550,7 @@ export type Database = {
           monthly_rule?: Json
           priority?: string
           punch_mode_override?: Database["public"]["Enums"]["punch_mode"] | null
+          schedule_rules?: Json
           scheduled_time?: string | null
           selected_dates?: string[]
           start_date?: string
@@ -5025,6 +5022,7 @@ export type Database = {
           monthly_rule: Json
           priority: string
           punch_mode_override: Database["public"]["Enums"]["punch_mode"] | null
+          schedule_rules: Json
           scheduled_time: string | null
           selected_dates: string[]
           start_date: string
@@ -5622,6 +5620,26 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      task_schedule_conflicts: {
+        Args: {
+          _company_id: string
+          _exclude_task_id?: string
+          _proposals: Json
+        }
+        Returns: {
+          assignee_id: string
+          assignee_name: string
+          conflicting_client_name: string
+          conflicting_end: string
+          conflicting_start: string
+          conflicting_task_id: string
+          conflicting_title: string
+          overlap_end: string
+          overlap_start: string
+          proposed_end: string
+          proposed_start: string
+        }[]
       }
       task_series_delete: {
         Args: { _reason?: string; _scope?: string; _task_id: string }
