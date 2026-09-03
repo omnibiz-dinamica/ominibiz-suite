@@ -14,6 +14,32 @@ export function wallClockEpoch(date: Date): number {
   );
 }
 
+/**
+ * Returns the delay between the scheduled wall-clock start and the recorded
+ * start. `scheduled_for` is stored as a wall-clock ISO value, while
+ * `started_at` is a real timestamp captured by the punch flow.
+ */
+export function startedLateMinutes(task: {
+  scheduled_for: string | null | undefined;
+  started_at: string | null | undefined;
+}): number | null {
+  if (!task.scheduled_for || !task.started_at) return null;
+  const scheduled = new Date(task.scheduled_for);
+  const started = new Date(task.started_at);
+  if (!Number.isFinite(scheduled.getTime()) || !Number.isFinite(started.getTime())) return null;
+
+  const delayMinutes = Math.floor((wallClockEpoch(started) - scheduled.getTime()) / 60000);
+  return delayMinutes > 0 ? delayMinutes : null;
+}
+
+export function formatStartedLateMinutes(minutes: number): string {
+  const total = Math.max(0, Math.floor(minutes));
+  if (total < 60) return `${total} min`;
+  const hours = Math.floor(total / 60);
+  const remaining = total % 60;
+  return remaining ? `${hours}h ${remaining}min` : `${hours}h`;
+}
+
 export function automaticAbsenceAllowedAt(task: { scheduled_for: string | null | undefined }): Date | null {
   if (!task.scheduled_for) return null;
   const start = new Date(task.scheduled_for);

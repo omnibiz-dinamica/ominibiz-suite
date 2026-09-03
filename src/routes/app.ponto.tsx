@@ -37,6 +37,7 @@ import {
   type PunchMode,
   punchState,
   effectiveSecondsNow,
+  formatStartedLateMinutes,
   formatDuration,
   formatHMS,
   transitionTask,
@@ -47,6 +48,7 @@ import {
   STATUS_LABELS,
   STATUS_TONE,
   isVisuallyLate,
+  startedLateMinutes,
   resolveOperationalStatus,
   canBecomeAbsent,
   canArchiveBy,
@@ -1076,6 +1078,7 @@ function UpcomingTasks({
   const nextStarting = starting && startingId === nextStartable.id;
   const nextRequesting = requestingAuth && requestingAuthId === nextStartable.id;
   const nextLate = isVisuallyLate(nextStartable);
+  const nextLateStartMinutes = startedLateMinutes(nextStartable);
   const nextClient = nextStartable.client_id ? clientsMap[nextStartable.client_id] : undefined;
 
   return (
@@ -1115,11 +1118,15 @@ function UpcomingTasks({
                 )}
                 {PUNCH_MODE_LABELS[effectiveMode(nextStartable)]}
               </span>
-              {nextLate && nextOperationalStatus !== "atrasada" && (
+              {nextLateStartMinutes != null ? (
+                <span className="inline-flex items-center gap-1 rounded bg-destructive/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-destructive">
+                  <AlertCircle className="h-3 w-3" /> Início com atraso · {formatStartedLateMinutes(nextLateStartMinutes)}
+                </span>
+              ) : nextLate && nextOperationalStatus !== "atrasada" ? (
                 <span className="inline-flex items-center gap-1 rounded bg-destructive/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-destructive">
                   <AlertCircle className="h-3 w-3" /> atrasada
                 </span>
-              )}
+              ) : null}
             </div>
             <h2 className="mt-2 font-display text-2xl font-semibold leading-tight sm:text-3xl">
               {nextStartable.title}
@@ -1220,6 +1227,7 @@ function UpcomingTasks({
           <ul className="divide-y divide-border">
             {rest.map((t) => {
               const late = isVisuallyLate(t);
+              const lateStartMinutes = startedLateMinutes(t);
               const operationalStatus = resolveOperationalStatus(t);
               const isStarting = starting && startingId === t.id;
               const clientName = t.client_id ? clientsMap[t.client_id] : undefined;
@@ -1242,11 +1250,15 @@ function UpcomingTasks({
                       >
                         {t.priority}
                       </span>
-                      {late && operationalStatus !== "atrasada" && (
+                      {lateStartMinutes != null ? (
+                        <span className="inline-flex items-center gap-1 rounded bg-destructive/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-destructive">
+                          <AlertCircle className="h-3 w-3" /> Início atrasado · {formatStartedLateMinutes(lateStartMinutes)}
+                        </span>
+                      ) : late && operationalStatus !== "atrasada" ? (
                         <span className="inline-flex items-center gap-1 rounded bg-destructive/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-destructive">
                           <AlertCircle className="h-3 w-3" /> atrasada
                         </span>
-                      )}
+                      ) : null}
                       <span
                         className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${operationalStatus === "atrasada" ? "bg-destructive/15 text-destructive" : STATUS_TONE[operationalStatus]}`}
                       >

@@ -76,8 +76,10 @@ import {
   type PunchMode,
   ACTION_LABELS,
   availableActions,
+  formatStartedLateMinutes,
   isVisuallyLate,
   resolveOperationalStatus,
+  startedLateMinutes,
   sweepAbsent,
   transitionTask,
   archiveTask,
@@ -1737,13 +1739,14 @@ function CalendarDayColumn({
 
 function MiniTaskChip({ task, onClick }: { task: TaskRow; onClick: () => void }) {
   const start = formatWallTime(task.scheduled_for);
+  const lateMinutes = startedLateMinutes(task);
   return (
     <button
       type="button"
       draggable={false}
       onClick={onClick}
       className="block w-full truncate rounded-md bg-primary/10 px-2 py-1 text-left text-[11px] font-medium text-primary hover:bg-primary/15"
-      title={task.title}
+      title={lateMinutes != null ? `${task.title} · Início com atraso · ${formatStartedLateMinutes(lateMinutes)}` : task.title}
     >
       {start ? `${start} ` : ""}
       {task.title}
@@ -1931,6 +1934,7 @@ function CalendarTaskCard({
   groupBy: "assignee" | "client";
 }) {
   const late = isVisuallyLate(task);
+  const lateStartMinutes = startedLateMinutes(task);
   const operationalStatus = resolveOperationalStatus(task);
   const actions = availableActions(task, { userId, isManager });
   const start = formatWallTime(task.scheduled_for);
@@ -1988,11 +1992,15 @@ function CalendarTaskCard({
       </div>
       </div>
       <div className="flex flex-wrap items-center gap-1">
-        {late && operationalStatus !== "atrasada" && (
+        {lateStartMinutes != null ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-destructive">
+            <Clock className="h-3 w-3" /> Início com atraso · {formatStartedLateMinutes(lateStartMinutes)}
+          </span>
+        ) : late && operationalStatus !== "atrasada" ? (
           <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-destructive">
             <Clock className="h-3 w-3" /> atrasado
           </span>
-        )}
+        ) : null}
         {task.task_group_id && (
           <span
             className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
@@ -2179,6 +2187,7 @@ function TaskRowItem({
   taskPunches,
 }: RowHandlers & { task: TaskRow }) {
   const late = isVisuallyLate(t);
+  const lateStartMinutes = startedLateMinutes(t);
   const operationalStatus = resolveOperationalStatus(t);
   const actions = availableActions(t, { userId, isManager });
   const archived = !!t.archived_at;
@@ -2211,11 +2220,15 @@ function TaskRowItem({
           <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${operationalStatus === "atrasada" ? "bg-destructive/15 text-destructive" : STATUS_TONE[operationalStatus]}`}>
             {operationalStatus === "atrasada" ? "Atrasada" : STATUS_LABELS[operationalStatus]}
           </span>
-          {late && operationalStatus !== "atrasada" && (
+          {lateStartMinutes != null ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-destructive">
+              <Clock className="h-3 w-3" /> Início com atraso · {formatStartedLateMinutes(lateStartMinutes)}
+            </span>
+          ) : late && operationalStatus !== "atrasada" ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-destructive">
               <Clock className="h-3 w-3" /> atrasado
             </span>
-          )}
+          ) : null}
         </div>
         {refusal && (
           <div className="mt-2 space-y-0.5 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs">

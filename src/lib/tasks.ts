@@ -1,10 +1,17 @@
 import { supabase } from "@/integrations/supabase/client";
 import { pauseMinutesNow } from "@/lib/punch/pause";
-import { resolveOperationalStatus, wallClockEpoch } from "@/lib/tasks/operational-rules";
+import {
+  formatStartedLateMinutes,
+  resolveOperationalStatus,
+  startedLateMinutes,
+  wallClockEpoch,
+} from "@/lib/tasks/operational-rules";
 export { pauseMinutesNow } from "@/lib/punch/pause";
 export {
   automaticAbsenceAllowedAt,
+  formatStartedLateMinutes,
   resolveOperationalStatus,
+  startedLateMinutes,
   isBulkArchiveEligible,
   isBulkDeleteEligible,
   isSingleTask,

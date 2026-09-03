@@ -45,7 +45,15 @@ import {
   punchAdminVoidForRedo,
   type OperationalPunchRow,
 } from "@/lib/punch-admin";
-import { formatDuration, pauseMinutesNow, resolveOperationalStatus, type TaskRow, type TaskStatus } from "@/lib/tasks";
+import {
+  formatDuration,
+  formatStartedLateMinutes,
+  pauseMinutesNow,
+  resolveOperationalStatus,
+  startedLateMinutes,
+  type TaskRow,
+  type TaskStatus,
+} from "@/lib/tasks";
 import { formatWallDate, formatWallTime } from "@/lib/wall-clock";
 import { classifyEventStatus, type GeoPointRow } from "@/lib/punch/geo-view";
 import { exportToExcel, exportToPdf, type ExportColumn } from "@/lib/exports";
@@ -392,6 +400,11 @@ function GestaoPonto() {
     return ORIGIN_LABEL[r.origin] ?? r.origin;
   };
   const formatNotes = (r: Row) => (isAbsence(r) ? (r.absence_reason ?? "") : (r.no_start_reason ?? r.notes ?? ""));
+  const formatStartDelay = (r: Row) => {
+    if (!r.tasks || !r.started_at || isNonWork(r)) return "";
+    const minutes = startedLateMinutes({ scheduled_for: r.tasks.scheduled_for, started_at: r.started_at });
+    return minutes == null ? "" : `Início com atraso · ${formatStartedLateMinutes(minutes)}`;
+  };
   const formatPause = (r: Row) => {
     const minutes = pauseMinutesNow(r);
     if (minutes == null) return "—";
@@ -415,7 +428,7 @@ function GestaoPonto() {
     },
     { header: "Pausa", accessor: (r) => formatPause(r) },
     { header: "Origem", accessor: (r) => formatOrigin(r) },
-    { header: "Notas", accessor: (r) => formatNotes(r) },
+    { header: "Notas", accessor: (r) => [formatStartDelay(r), formatNotes(r)].filter(Boolean).join(" · ") },
     { header: "Geo entrada", accessor: (r) => fmtCoord(r.geo?.start) },
     { header: "Geo saída", accessor: (r) => fmtCoord(r.geo?.end) },
     { header: "Status geo entrada", accessor: (r) => fmtGeoStatus(r.geo?.start) },
@@ -684,7 +697,7 @@ function GestaoPonto() {
                     </span>
                   </TableCell>
                   <TableCell className="max-w-[240px] truncate text-sm text-muted-foreground">
-                    {formatNotes(r) || "—"}
+                    {[formatStartDelay(r), formatNotes(r)].filter(Boolean).join(" · ") || "—"}
                   </TableCell>
                   <TableCell>
                     {isOperationalTask(r) ? <span className="text-muted-foreground">—</span> : <DropdownMenu>
