@@ -68,6 +68,7 @@ import { Route as AppComercialContratosRouteImport } from './routes/app.comercia
 import { Route as AppComercialClientesRouteImport } from './routes/app.comercial.clientes'
 import { Route as AppAdminSuporteRouteImport } from './routes/app.admin.suporte'
 import { Route as ApiUsersEmailChangeRequestsRouteImport } from './routes/api/users/email-change-requests'
+import { Route as ApiSupportTicketCreatedEmailRouteImport } from './routes/api/support/ticket-created-email'
 import { Route as ApiEmailSendRouteImport } from './routes/api/email/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
@@ -386,6 +387,12 @@ const ApiUsersEmailChangeRequestsRoute =
     path: '/api/users/email-change-requests',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiSupportTicketCreatedEmailRoute =
+  ApiSupportTicketCreatedEmailRouteImport.update({
+    id: '/api/support/ticket-created-email',
+    path: '/api/support/ticket-created-email',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiEmailSendRoute = ApiEmailSendRouteImport.update({
   id: '/api/email/send',
   path: '/api/email/send',
@@ -456,6 +463,7 @@ export interface FileRoutesByFullPath {
   '/sign/$token': typeof SignTokenRoute
   '/app/': typeof AppIndexRoute
   '/api/email/send': typeof ApiEmailSendRoute
+  '/api/support/ticket-created-email': typeof ApiSupportTicketCreatedEmailRoute
   '/api/users/email-change-requests': typeof ApiUsersEmailChangeRequestsRoute
   '/app/admin/suporte': typeof AppAdminSuporteRoute
   '/app/comercial/clientes': typeof AppComercialClientesRoute
@@ -522,6 +530,7 @@ export interface FileRoutesByTo {
   '/sign/$token': typeof SignTokenRoute
   '/app': typeof AppIndexRoute
   '/api/email/send': typeof ApiEmailSendRoute
+  '/api/support/ticket-created-email': typeof ApiSupportTicketCreatedEmailRoute
   '/api/users/email-change-requests': typeof ApiUsersEmailChangeRequestsRoute
   '/app/admin/suporte': typeof AppAdminSuporteRoute
   '/app/comercial/clientes': typeof AppComercialClientesRoute
@@ -592,6 +601,7 @@ export interface FileRoutesById {
   '/sign/$token': typeof SignTokenRoute
   '/app/': typeof AppIndexRoute
   '/api/email/send': typeof ApiEmailSendRoute
+  '/api/support/ticket-created-email': typeof ApiSupportTicketCreatedEmailRoute
   '/api/users/email-change-requests': typeof ApiUsersEmailChangeRequestsRoute
   '/app/admin/suporte': typeof AppAdminSuporteRoute
   '/app/comercial/clientes': typeof AppComercialClientesRoute
@@ -663,6 +673,7 @@ export interface FileRouteTypes {
     | '/sign/$token'
     | '/app/'
     | '/api/email/send'
+    | '/api/support/ticket-created-email'
     | '/api/users/email-change-requests'
     | '/app/admin/suporte'
     | '/app/comercial/clientes'
@@ -729,6 +740,7 @@ export interface FileRouteTypes {
     | '/sign/$token'
     | '/app'
     | '/api/email/send'
+    | '/api/support/ticket-created-email'
     | '/api/users/email-change-requests'
     | '/app/admin/suporte'
     | '/app/comercial/clientes'
@@ -798,6 +810,7 @@ export interface FileRouteTypes {
     | '/sign/$token'
     | '/app/'
     | '/api/email/send'
+    | '/api/support/ticket-created-email'
     | '/api/users/email-change-requests'
     | '/app/admin/suporte'
     | '/app/comercial/clientes'
@@ -850,6 +863,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignTokenRoute: typeof SignTokenRoute
   ApiEmailSendRoute: typeof ApiEmailSendRoute
+  ApiSupportTicketCreatedEmailRoute: typeof ApiSupportTicketCreatedEmailRoute
   ApiUsersEmailChangeRequestsRoute: typeof ApiUsersEmailChangeRequestsRoute
   LovableEmailEventsRoute: typeof LovableEmailEventsRoute
   ApiAdminUsersEmailRoute: typeof ApiAdminUsersEmailRoute
@@ -1274,6 +1288,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiUsersEmailChangeRequestsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/support/ticket-created-email': {
+      id: '/api/support/ticket-created-email'
+      path: '/api/support/ticket-created-email'
+      fullPath: '/api/support/ticket-created-email'
+      preLoaderRoute: typeof ApiSupportTicketCreatedEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/email/send': {
       id: '/api/email/send'
       path: '/api/email/send'
@@ -1525,6 +1546,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SignTokenRoute: SignTokenRoute,
   ApiEmailSendRoute: ApiEmailSendRoute,
+  ApiSupportTicketCreatedEmailRoute: ApiSupportTicketCreatedEmailRoute,
   ApiUsersEmailChangeRequestsRoute: ApiUsersEmailChangeRequestsRoute,
   LovableEmailEventsRoute: LovableEmailEventsRoute,
   ApiAdminUsersEmailRoute: ApiAdminUsersEmailRoute,

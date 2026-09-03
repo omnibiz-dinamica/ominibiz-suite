@@ -1571,18 +1571,24 @@ export type Database = {
           created_at: string
           default_support_super_admin_id: string | null
           id: number
+          support_email_notifications_enabled: boolean
+          support_notification_email: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           default_support_super_admin_id?: string | null
           id: number
+          support_email_notifications_enabled?: boolean
+          support_notification_email?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           default_support_super_admin_id?: string | null
           id?: number
+          support_email_notifications_enabled?: boolean
+          support_notification_email?: string | null
           updated_at?: string
         }
         Relationships: []

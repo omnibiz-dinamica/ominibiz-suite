@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getAppVersion } from "@/lib/app-version";
 import { buildCreateTicketArgs, type CreateTicketInput } from "./create-ticket-payload";
 import { getSupportErrorDetails } from "./errors";
+import { dispatchTicketCreatedEmail } from "./ticket-email-dispatch";
 import {
   ALLOWED_ATTACHMENT_MIME,
   MAX_ATTACHMENT_SIZE_BYTES,
@@ -50,6 +51,11 @@ export async function createTicket(input: CreateTicketInput): Promise<{ id: stri
   }
   const row = Array.isArray(data) ? data[0] : data;
   if (!row?.id) throw new Error("Falha ao criar ticket");
+  // The ticket is already committed by the RPC. Email delivery is best effort
+  // and must never turn a successful ticket creation into a UI failure.
+  void dispatchTicketCreatedEmail(row.id as string).catch((error) => {
+    console.error("[support-ticket-email] dispatch request failed", { ticketId: row.id, error });
+  });
   return { id: row.id as string, ticket_number: row.ticket_number as string };
 }
 

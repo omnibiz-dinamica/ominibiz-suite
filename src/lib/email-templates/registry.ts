@@ -7,6 +7,7 @@ import { template as vacationRejectedTemplate } from './vacation-rejected'
 import { template as vacationCreatedByManagerTemplate } from './vacation-created-by-manager'
 import { template as vacationChangeRequestedTemplate } from './vacation-change-requested'
 import { template as payslipPublishedTemplate } from './payslip-published'
+import { template as supportTicketCreatedTemplate } from './support-ticket-created'
 
 export interface TemplateEntry {
   component: ComponentType<any>
@@ -34,4 +35,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   vacation_created_by_manager: vacationCreatedByManagerTemplate,
   vacation_change_requested: vacationChangeRequestedTemplate,
   payslip_published: payslipPublishedTemplate,
+  support_ticket_created: supportTicketCreatedTemplate,
 }

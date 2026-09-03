@@ -23,6 +23,7 @@ import {
 import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
 import { invalidateSupportCache } from "@/lib/cache/support";
 import { DuplicateClustersPanel } from "@/components/support/DuplicateClustersPanel";
+import { PlatformSupportSettingsCard } from "@/components/support/PlatformSupportSettingsCard";
 
 
 export const Route = createFileRoute("/app/admin/suporte")({
@@ -269,6 +270,8 @@ function SupportAdminPage() {
       </div>
 
       <DuplicateClustersPanel companyNames={companyNameMap} />
+
+      <PlatformSupportSettingsCard />
 
       <section className="rounded-xl border border-border bg-card p-4">
 
