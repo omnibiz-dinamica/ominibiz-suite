@@ -45,7 +45,7 @@ import {
   punchAdminVoidForRedo,
   type OperationalPunchRow,
 } from "@/lib/punch-admin";
-import { formatDuration, pauseMinutesNow, type TaskRow } from "@/lib/tasks";
+import { formatDuration, pauseMinutesNow, resolveOperationalStatus, type TaskRow, type TaskStatus } from "@/lib/tasks";
 import { formatWallDate, formatWallTime } from "@/lib/wall-clock";
 import { classifyEventStatus, type GeoPointRow } from "@/lib/punch/geo-view";
 import { exportToExcel, exportToPdf, type ExportColumn } from "@/lib/exports";
@@ -351,13 +351,30 @@ function GestaoPonto() {
   });
 
   const fmtDT = (s: string | null) => (s ? new Date(s).toLocaleString("pt-PT") : "");
-  const isAbsence = (r: Row) => r.record_kind === "absence";
-  const isOperationalTask = (r: Row) => r.record_kind === "task";
+  const resolvedTaskStatus = (r: Row) => {
+    if (!r.tasks || !r.task_status) return r.operational_status ?? null;
+    const status = r.task_status as TaskStatus;
+    if (!["pendente", "autorizado", "em_andamento", "concluido", "cancelado", "ausente"].includes(status)) {
+      return r.operational_status ?? null;
+    }
+    return resolveOperationalStatus({
+      status,
+      scheduled_for: r.tasks.scheduled_for,
+      recurrence_date: r.tasks.recurrence_date,
+      due_at: r.tasks.due_at,
+      absence_source: r.absence_source,
+    });
+  };
+  // Uma ausência automática antiga pode chegar persistida antes do prazo por
+  // causa de uma versão anterior. A lista deve mostrar seu estado canônico.
+  const isAbsence = (r: Row) => r.record_kind === "absence" && resolvedTaskStatus(r) === "ausente";
+  const isOperationalTask = (r: Row) => r.record_kind === "task" || (r.record_kind === "absence" && !isAbsence(r));
   const isNonWork = (r: Row) => isAbsence(r) || isOperationalTask(r);
   const formatSituation = (r: Row) => {
     if (isOperationalTask(r)) {
-      if (r.operational_status === "em_andamento") return "Em andamento";
-      if (r.operational_status === "atrasada") return "Atrasada";
+      const status = resolvedTaskStatus(r);
+      if (status === "em_andamento") return "Em andamento";
+      if (status === "atrasada") return "Atrasada";
       return "Pendente";
     }
     if (!isAbsence(r)) return r.entry_kind === "paid_leave" ? "Folga remunerada" : r.operational_status === "em_andamento" ? "Em andamento" : "Trabalhado";

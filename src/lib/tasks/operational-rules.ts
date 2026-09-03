@@ -50,7 +50,8 @@ export function resolveOperationalStatus(
     return wallClockEpoch(now) >= nextDay.getTime() ? "atrasada" : task.status;
   }
 
-  if (task.status === "ausente" && task.absence_source === "automatica") {
+  const isAutomaticAbsence = task.absence_source === "automatica" || task.absence_source === "automatic";
+  if (task.status === "ausente" && isAutomaticAbsence) {
     const threshold = automaticAbsenceAllowedAt(task);
     if (threshold && wallClockEpoch(now) < threshold.getTime()) {
       return wallClockEpoch(now) >= start.getTime() ? "atrasada" : "pendente";

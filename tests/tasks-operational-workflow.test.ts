@@ -49,6 +49,17 @@ test("does not apply automatic timing to tasks without a scheduled start", () =>
   );
 });
 
+test("does not display a premature persisted automatic absence", () => {
+  const task = {
+    status: "ausente" as const,
+    absence_source: "automatica",
+    scheduled_for: "2026-09-02T21:30:00.000Z",
+  };
+  assert.equal(resolveOperationalStatus(task, new Date(2026, 8, 2, 21, 3)), "pendente");
+  assert.equal(resolveOperationalStatus(task, new Date(2026, 8, 3, 21, 29, 59)), "atrasada");
+  assert.equal(resolveOperationalStatus(task, new Date(2026, 8, 3, 21, 30)), "ausente");
+});
+
 test("bulk archive/delete eligibility excludes recurring tasks", () => {
   assert.equal(isSingleTask(task()), true);
   assert.equal(isBulkArchiveEligible(task()), true);
