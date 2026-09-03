@@ -66,6 +66,7 @@ import {
   ListTodo,
   XCircle,
   Search,
+  AlertTriangle,
 } from "lucide-react";
 import {
   STATUS_LABELS,
@@ -92,6 +93,9 @@ import {
   isBulkDeleteEligible,
   type TimeEntryRow,
   recordNoStartReason,
+  checkTaskScheduleConflicts,
+  type TaskScheduleConflict,
+  previewRecurrenceDates,
 } from "@/lib/tasks";
 
 import { RecurrenceForm, emptyRecurrence, type RecurrenceFormValue } from "@/components/tasks/RecurrenceForm";
@@ -100,7 +104,7 @@ import { ReassignDialog } from "@/components/tasks/ReassignDialog";
 import { EditRecurrenceDialog } from "@/components/tasks/EditRecurrenceDialog";
 import type { RecurrenceRow } from "@/lib/tasks";
 import { isRefused } from "@/lib/tasks";
-import { normalizeCustomRecurrenceDates } from "@/lib/tasks/custom-recurrence";
+import { localDateToDateKey, normalizeCustomRecurrenceDates } from "@/lib/tasks/custom-recurrence";
 import { CancelTaskDialog } from "@/components/tasks/CancelTaskDialog";
 import { DeleteRecurrenceDialog } from "@/components/tasks/DeleteRecurrenceDialog";
 import { MarkAbsentDialog } from "@/components/tasks/MarkAbsentDialog";
@@ -2491,6 +2495,8 @@ function TaskForm({
    * mesmo tick, antes de qualquer INSERT.
    */
   const submittingRef = useRef(false);
+  const [scheduleConflicts, setScheduleConflicts] = useState<TaskScheduleConflict[]>([]);
+  const confirmedConflictsRef = useRef(false);
 
   const handleRecurrenceChange = (next: RecurrenceFormValue) => {
     setRecurrence(next);
@@ -2795,6 +2801,68 @@ function TaskForm({
           const scheduledEnd = wallDateTimeToISO(end.date, end.time);
           return { scheduled_for: startISO, scheduled_end: scheduledEnd, due_at: scheduledEnd ?? dueISO };
         };
+
+        // SUP-2026-000140 — consulta definitiva imediatamente antes da gravação.
+        // Para recorrências, cada data é enviada como uma proposta separada;
+        // assim overnight e conflitos pontuais não viram um bloqueio da série.
+        if (!confirmedConflictsRef.current) {
+          const recurrenceDates = recurrence.enabled
+            ? recurrence.frequency === "custom"
+              ? normalizeCustomRecurrenceDates(recurrence.selectedDates)
+              : previewRecurrenceDates(
+                  {
+                    frequency: recurrence.frequency,
+                    intervalWeeks: recurrence.intervalWeeks,
+                    weekdays: recurrence.weekdays,
+                    monthlyRule:
+                      recurrence.monthPosition != null
+                        ? { position: recurrence.monthPosition, weekday: recurrence.monthWeekday }
+                        : { day_of_month: recurrence.dayOfMonth },
+                    startDate: recurrence.startDate,
+                    endDate: recurrence.endDate || null,
+                  },
+                  400,
+                ).map(localDateToDateKey)
+            : [startDate];
+          const proposals = recurrence.enabled
+            ? recurrenceDates.flatMap((dateKey) =>
+                assignees.flatMap((memberId, index) => {
+                  if (!startTime) return [];
+                  const minutes = useContractedSchedule
+                    ? distributedMinutes[index] ?? distributedMinutes[0] ?? 0
+                    : manualDurationMinutes;
+                  const end = addWallMinutes(dateKey, startTime, minutes);
+                  if (!end) return [];
+                  const proposedStart = wallDateTimeToISO(dateKey, startTime);
+                  const proposedEnd = wallDateTimeToISO(end.date, end.time);
+                  return proposedStart && proposedEnd
+                    ? [{ assignee_id: memberId, start_at: proposedStart, end_at: proposedEnd }]
+                    : [];
+                }),
+              )
+            : assignees.flatMap((memberId, index) => {
+                const times = taskTimesFor(index);
+                return times.scheduled_for && times.scheduled_end
+                  ? [{ assignee_id: memberId, start_at: times.scheduled_for, end_at: times.scheduled_end }]
+                  : [];
+              });
+          try {
+            const conflicts = await checkTaskScheduleConflicts(companyId, proposals, initial?.id);
+            if (conflicts.length > 0) {
+              setScheduleConflicts(conflicts);
+              submittingRef.current = false;
+              setLoading(false);
+              return;
+            }
+          } catch (conflictError) {
+            console.error("[task-schedule-conflicts] failed", conflictError);
+            submittingRef.current = false;
+            setLoading(false);
+            toast.error("Não foi possível verificar a sobreposição de horários.");
+            return;
+          }
+        }
+        confirmedConflictsRef.current = false;
         let error: { message: string } | null = null;
         const createdTaskIds: string[] = [];
         // Fase B: lote multi-responsável. Cada responsável mantém a SUA tarefa
@@ -3222,6 +3290,60 @@ function TaskForm({
         {loading ? "Salvando..." : initial ? "Salvar alterações" : "Criar tarefa"}
       </Button>
     </ModalFooter>
+    <AlertDialog
+      open={scheduleConflicts.length > 0}
+      onOpenChange={(open) => {
+        if (!open) {
+          setScheduleConflicts([]);
+        }
+      }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2 text-warning-foreground">
+            <AlertTriangle className="h-5 w-5" /> Atenção: sobreposição de tarefas
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            Uma ou mais pessoas selecionadas já possuem tarefas neste período. A criação continua disponível.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <div className="max-h-72 space-y-3 overflow-y-auto rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+          {scheduleConflicts.map((conflict, index) => {
+            const employee = conflict.assignee_name?.trim() || members.find((m) => m.id === conflict.assignee_id)?.full_name || "Funcionário";
+            return (
+              <div key={`${conflict.assignee_id}-${conflict.conflicting_task_id}-${conflict.proposed_start}-${index}`} className="space-y-1">
+                <p className="font-semibold text-foreground">{employee}</p>
+                <p className="text-muted-foreground">
+                  Tarefa existente: <span className="font-medium text-foreground">{conflict.conflicting_client_name || conflict.conflicting_title}</span>
+                </p>
+                <p className="text-muted-foreground">
+                  {formatWallDate(conflict.conflicting_start)} · {formatWallTime(conflict.conflicting_start)} → {formatWallTime(conflict.conflicting_end)}
+                </p>
+                <p className="text-muted-foreground">
+                  Nova tarefa: {formatWallDate(conflict.proposed_start)} · {formatWallTime(conflict.proposed_start)} → {formatWallTime(conflict.proposed_end)}
+                </p>
+                <p className="font-medium text-warning-foreground">
+                  Conflito: {formatWallTime(conflict.overlap_start)} → {formatWallTime(conflict.overlap_end)}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => setScheduleConflicts([])}>Voltar e ajustar</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={(event) => {
+              event.preventDefault();
+              confirmedConflictsRef.current = true;
+              setScheduleConflicts([]);
+              (document.getElementById(formId) as HTMLFormElement | null)?.requestSubmit();
+            }}
+          >
+            Criar mesmo assim
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 }

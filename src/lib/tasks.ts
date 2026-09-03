@@ -6,6 +6,9 @@ import {
   startedLateMinutes,
   wallClockEpoch,
 } from "@/lib/tasks/operational-rules";
+import type { ScheduleProposal, TaskScheduleConflict } from "@/lib/tasks/schedule-conflicts";
+export { intervalsOverlap, overlapInterval } from "@/lib/tasks/schedule-conflicts";
+export type { ScheduleProposal, TaskScheduleConflict } from "@/lib/tasks/schedule-conflicts";
 export { pauseMinutesNow } from "@/lib/punch/pause";
 export {
   automaticAbsenceAllowedAt,
@@ -463,6 +466,26 @@ export function isVisuallyLate(
   task: Pick<TaskRow, "status" | "scheduled_for" | "recurrence_date" | "due_at" | "absence_source">,
 ): boolean {
   return resolveOperationalStatus(task) === "atrasada";
+}
+
+/**
+ * Consulta em lote os compromissos que colidem com os intervalos propostos.
+ * A RPC aplica company_id/RLS no banco; a UI nunca carrega a agenda inteira.
+ */
+export async function checkTaskScheduleConflicts(
+  companyId: string,
+  proposals: ScheduleProposal[],
+  excludeTaskId?: string | null,
+): Promise<TaskScheduleConflict[]> {
+  if (!companyId || proposals.length === 0) return [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("task_schedule_conflicts", {
+    _company_id: companyId,
+    _proposals: proposals,
+    _exclude_task_id: excludeTaskId ?? null,
+  });
+  if (error) throw error;
+  return (data ?? []) as TaskScheduleConflict[];
 }
 
 export function absenceAllowedAt(task: Pick<TaskRow, "scheduled_for" | "recurrence_date" | "due_at">): Date | null {
