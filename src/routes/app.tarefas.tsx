@@ -2496,6 +2496,7 @@ function TaskForm({
    */
   const submittingRef = useRef(false);
   const [scheduleConflicts, setScheduleConflicts] = useState<TaskScheduleConflict[]>([]);
+  const [scheduleCheckError, setScheduleCheckError] = useState<string | null>(null);
   const confirmedConflictsRef = useRef(false);
 
   const handleRecurrenceChange = (next: RecurrenceFormValue) => {
@@ -2855,10 +2856,30 @@ function TaskForm({
               return;
             }
           } catch (conflictError) {
-            console.error("[task-schedule-conflicts] failed", conflictError);
+            const technicalError = conflictError as {
+              code?: string;
+              message?: string;
+              details?: string;
+              hint?: string;
+            };
+            const diagnostic = [
+              technicalError.code ? `Código: ${technicalError.code}` : null,
+              technicalError.message ?? "Falha desconhecida na consulta de sobreposição.",
+              technicalError.details ? `Detalhes: ${technicalError.details}` : null,
+              technicalError.hint ? `Orientação: ${technicalError.hint}` : null,
+            ]
+              .filter(Boolean)
+              .join("\n");
+            console.error("[task-schedule-conflicts] failed", {
+              code: technicalError.code,
+              message: technicalError.message,
+              details: technicalError.details,
+              hint: technicalError.hint,
+              error: conflictError,
+            });
             submittingRef.current = false;
             setLoading(false);
-            toast.error("Não foi possível verificar a sobreposição de horários.");
+            setScheduleCheckError(diagnostic);
             return;
           }
         }
@@ -3308,23 +3329,35 @@ function TaskForm({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="max-h-72 space-y-3 overflow-y-auto rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
-          {scheduleConflicts.map((conflict, index) => {
-            const employee = conflict.assignee_name?.trim() || members.find((m) => m.id === conflict.assignee_id)?.full_name || "Funcionário";
+          {assignees.map((assigneeId) => {
+            const employeeConflicts = scheduleConflicts.filter((conflict) => conflict.assignee_id === assigneeId);
+            const member = members.find((m) => m.id === assigneeId);
+            const employee = member?.full_name?.trim() || member?.email?.trim() || "Funcionário";
             return (
-              <div key={`${conflict.assignee_id}-${conflict.conflicting_task_id}-${conflict.proposed_start}-${index}`} className="space-y-1">
-                <p className="font-semibold text-foreground">{employee}</p>
-                <p className="text-muted-foreground">
-                  Tarefa existente: <span className="font-medium text-foreground">{conflict.conflicting_client_name || conflict.conflicting_title}</span>
+              <div key={assigneeId} className="space-y-2 rounded-md border border-border/70 bg-background/70 p-3">
+                <p className="font-semibold text-foreground">
+                  {employeeConflicts.length > 0 ? "⚠" : "✓"} {employee}
                 </p>
-                <p className="text-muted-foreground">
-                  {formatWallDate(conflict.conflicting_start)} · {formatWallTime(conflict.conflicting_start)} → {formatWallTime(conflict.conflicting_end)}
-                </p>
-                <p className="text-muted-foreground">
-                  Nova tarefa: {formatWallDate(conflict.proposed_start)} · {formatWallTime(conflict.proposed_start)} → {formatWallTime(conflict.proposed_end)}
-                </p>
-                <p className="font-medium text-warning-foreground">
-                  Conflito: {formatWallTime(conflict.overlap_start)} → {formatWallTime(conflict.overlap_end)}
-                </p>
+                {employeeConflicts.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Disponível neste horário</p>
+                ) : (
+                  employeeConflicts.map((conflict, index) => (
+                    <div key={`${conflict.conflicting_task_id}-${conflict.proposed_start}-${index}`} className="space-y-1">
+                      <p className="text-muted-foreground">
+                        Tarefa existente: <span className="font-medium text-foreground">{conflict.conflicting_client_name || conflict.conflicting_title}</span>
+                      </p>
+                      <p className="text-muted-foreground">
+                        {formatWallDate(conflict.conflicting_start)} · {formatWallTime(conflict.conflicting_start)} → {formatWallTime(conflict.conflicting_end)}
+                      </p>
+                      <p className="text-muted-foreground">
+                        Nova tarefa: {formatWallDate(conflict.proposed_start)} · {formatWallTime(conflict.proposed_start)} → {formatWallTime(conflict.proposed_end)}
+                      </p>
+                      <p className="font-medium text-warning-foreground">
+                        Conflito: {formatWallTime(conflict.overlap_start)} → {formatWallTime(conflict.overlap_end)}
+                      </p>
+                    </div>
+                  ))
+                )}
               </div>
             );
           })}
@@ -3341,6 +3374,27 @@ function TaskForm({
           >
             Criar mesmo assim
           </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    <AlertDialog
+      open={scheduleCheckError !== null}
+      onOpenChange={(open) => {
+        if (!open) setScheduleCheckError(null);
+      }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Falha técnica na verificação</AlertDialogTitle>
+          <AlertDialogDescription>
+            A tarefa não foi criada. Corrija a configuração do banco e tente novamente.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded-md border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">
+          {scheduleCheckError}
+        </pre>
+        <AlertDialogFooter>
+          <AlertDialogAction onClick={() => setScheduleCheckError(null)}>Voltar ao formulário</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
