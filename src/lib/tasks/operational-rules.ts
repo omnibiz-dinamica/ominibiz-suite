@@ -34,6 +34,7 @@ export function resolveOperationalStatus(
     recurrence_date?: string | null;
     due_at?: string | null;
     absence_source?: string | null;
+    absence_reason?: string | null;
   },
   now = new Date(),
 ): ResolvedOperationalStatus {
@@ -50,7 +51,10 @@ export function resolveOperationalStatus(
     return wallClockEpoch(now) >= nextDay.getTime() ? "atrasada" : task.status;
   }
 
-  const isAutomaticAbsence = task.absence_source === "automatica" || task.absence_source === "automatic";
+  const isAutomaticAbsence =
+    task.absence_source === "automatica" ||
+    task.absence_source === "automatic" ||
+    (task.absence_source == null && !task.absence_reason);
   if (task.status === "ausente" && isAutomaticAbsence) {
     const threshold = automaticAbsenceAllowedAt(task);
     if (threshold && wallClockEpoch(now) < threshold.getTime()) {

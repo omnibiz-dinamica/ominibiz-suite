@@ -363,6 +363,7 @@ function GestaoPonto() {
       recurrence_date: r.tasks.recurrence_date,
       due_at: r.tasks.due_at,
       absence_source: r.absence_source,
+      absence_reason: r.absence_reason,
     });
   };
   // Uma ausência automática antiga pode chegar persistida antes do prazo por

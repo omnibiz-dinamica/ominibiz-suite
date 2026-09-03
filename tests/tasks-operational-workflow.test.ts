@@ -60,6 +60,16 @@ test("does not display a premature persisted automatic absence", () => {
   assert.equal(resolveOperationalStatus(task, new Date(2026, 8, 3, 21, 30)), "ausente");
 });
 
+test("recognizes legacy automatic absence without source or reason", () => {
+  const task = {
+    status: "ausente" as const,
+    scheduled_for: "2026-09-02T21:30:00.000Z",
+    absence_source: null,
+    absence_reason: null,
+  };
+  assert.equal(resolveOperationalStatus(task, new Date(2026, 8, 2, 21, 3)), "pendente");
+});
+
 test("bulk archive/delete eligibility excludes recurring tasks", () => {
   assert.equal(isSingleTask(task()), true);
   assert.equal(isBulkArchiveEligible(task()), true);
