@@ -1571,18 +1571,24 @@ export type Database = {
           created_at: string
           default_support_super_admin_id: string | null
           id: number
+          support_email_notifications_enabled: boolean
+          support_notification_email: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           default_support_super_admin_id?: string | null
           id: number
+          support_email_notifications_enabled?: boolean
+          support_notification_email?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           default_support_super_admin_id?: string | null
           id?: number
+          support_email_notifications_enabled?: boolean
+          support_notification_email?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1947,6 +1953,66 @@ export type Database = {
             columns: ["uploaded_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_ticket_email_outbox: {
+        Row: {
+          attempts: number
+          company_id: string
+          created_at: string
+          event_type: string
+          id: string
+          last_error: string | null
+          payload: Json
+          recipient_email: string
+          sent_at: string | null
+          status: string
+          ticket_id: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          company_id: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          last_error?: string | null
+          payload?: Json
+          recipient_email: string
+          sent_at?: string | null
+          status?: string
+          ticket_id: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          company_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          last_error?: string | null
+          payload?: Json
+          recipient_email?: string
+          sent_at?: string | null
+          status?: string
+          ticket_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_email_outbox_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_ticket_email_outbox_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
             referencedColumns: ["id"]
           },
         ]
