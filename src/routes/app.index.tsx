@@ -2,10 +2,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { ClipboardList, CheckCircle2, Clock, AlertTriangle, Building2 } from "lucide-react";
+import { ClipboardList, CheckCircle2, Clock, AlertTriangle, Building2, Ban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmployeeDashboard } from "@/components/dashboards/EmployeeDashboard";
 import { SuperAdminDashboard } from "@/components/dashboards/SuperAdminDashboard";
+import { isDashboardCancelled, isDashboardLateStart } from "@/lib/tasks/dashboard-rules";
 
 export const Route = createFileRoute("/app/")({
   component: Dashboard,
@@ -24,7 +25,9 @@ function ManagerDashboard() {
   const { data: tasks } = useQuery({
     queryKey: ["dashboard-tasks", currentCompanyId, user?.id, isManager],
     queryFn: async () => {
-      let q = supabase.from("tasks").select("id, status, due_at, title");
+      let q = supabase
+        .from("tasks")
+        .select("id, status, scheduled_for, started_at, archived_at, deleted_at, refused_by, title");
       if (!isManager) q = q.eq("assigned_to", user!.id);
       else if (currentCompanyId) q = q.eq("company_id", currentCompanyId);
       const { data, error } = await q;
@@ -35,12 +38,11 @@ function ManagerDashboard() {
   });
 
   const counts = {
-    pendente: tasks?.filter((t) => t.status === "pendente").length ?? 0,
+    pendente: tasks?.filter((t) => t.status === "pendente" && !isDashboardLateStart(t)).length ?? 0,
     em_andamento: tasks?.filter((t) => t.status === "em_andamento").length ?? 0,
     concluido: tasks?.filter((t) => t.status === "concluido").length ?? 0,
-    atrasadas:
-      tasks?.filter((t) => t.due_at && new Date(t.due_at) < new Date() && t.status !== "concluido")
-        .length ?? 0,
+    atrasadas: tasks?.filter((t) => isDashboardLateStart(t)).length ?? 0,
+    canceladas: tasks?.filter((t) => isDashboardCancelled(t)).length ?? 0,
   };
 
   const cards = [
@@ -48,6 +50,7 @@ function ManagerDashboard() {
     { label: "Em andamento", value: counts.em_andamento, icon: Clock, tone: "text-primary", status: "em_andamento" as const },
     { label: "Concluídas", value: counts.concluido, icon: CheckCircle2, tone: "text-success", status: "concluido" as const },
     { label: "Atrasadas", value: counts.atrasadas, icon: AlertTriangle, tone: "text-destructive", status: "atrasadas" as const },
+    { label: "Canceladas", value: counts.canceladas, icon: Ban, tone: "text-muted-foreground", status: "canceladas" as const },
   ];
 
   return (

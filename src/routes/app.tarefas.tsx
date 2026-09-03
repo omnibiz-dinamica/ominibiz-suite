@@ -117,6 +117,7 @@ import {
 
 import { EmployeeMultiPicker } from "@/components/common/EmployeePicker";
 import { filterCalendarData } from "@/lib/tasks/calendar-filter";
+import { isDashboardCancelled, isDashboardLateStart } from "@/lib/tasks/dashboard-rules";
 import {
   wallISOToDateInput,
   wallDateToEndOfDayISO,
@@ -126,8 +127,8 @@ import {
   formatLocalTime,
 } from "@/lib/wall-clock";
 
-// Filtros aceitos via search-params. `atrasadas` é filtro derivado
-// (não é status persistido) — combina "não concluído" + due_at no passado.
+// Filtros aceitos via search-params. `atrasadas` e `canceladas` são filtros
+// derivados e compartilham as regras canônicas do dashboard.
 const STATUS_FILTERS = [
   "pendente",
   "autorizado",
@@ -136,6 +137,7 @@ const STATUS_FILTERS = [
   "cancelado",
   "ausente",
   "atrasadas",
+  "canceladas",
   "recusadas",
 ] as const;
 
@@ -671,13 +673,16 @@ function TasksPage() {
       if (search.client && t.client_id !== search.client) return false;
       if (!search.status) return true;
       if (search.status === "atrasadas") {
-        return isVisuallyLate(t);
+        return isDashboardLateStart(t);
+      }
+      if (search.status === "canceladas") {
+        return isDashboardCancelled(t);
       }
       if (search.status === "recusadas") {
         return isRefused(t);
       }
       if (search.status === "pendente") {
-        return t.status === "pendente" && !isVisuallyLate(t);
+        return t.status === "pendente" && !isDashboardLateStart(t);
       }
       return t.status === search.status;
     });
@@ -1091,6 +1096,7 @@ function TasksPage() {
                 ["em_andamento", "Em andamento"],
                 ["concluido", "Concluídas"],
                 ["atrasadas", "Atrasadas"],
+                ["canceladas", "Canceladas"],
                 ["recusadas", refusedCount > 0 ? `Recusadas (${refusedCount})` : "Recusadas"],
               ] as const
             ).map(([key, label]) => (
