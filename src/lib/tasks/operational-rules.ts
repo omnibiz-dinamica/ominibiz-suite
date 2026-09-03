@@ -51,10 +51,9 @@ export function resolveOperationalStatus(
     return wallClockEpoch(now) >= nextDay.getTime() ? "atrasada" : task.status;
   }
 
-  const isAutomaticAbsence =
-    task.absence_source === "automatica" ||
-    task.absence_source === "automatic" ||
-    (task.absence_source == null && !task.absence_reason);
+  // Legacy rows may use another automatic label (or have no source at all).
+  // Only explicit manual/employee sources must remain terminal immediately.
+  const isAutomaticAbsence = task.absence_source !== "manual" && task.absence_source !== "employee";
   if (task.status === "ausente" && isAutomaticAbsence) {
     const threshold = automaticAbsenceAllowedAt(task);
     if (threshold && wallClockEpoch(now) < threshold.getTime()) {
