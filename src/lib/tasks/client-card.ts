@@ -14,14 +14,21 @@ export function describeClientSchedule(client: ClientCardScheduleData): string[]
     const mode = schedule.mode === "flexible" ? "Flexível" : "Fixo";
     const days = schedule.weekdays.map(weekdayLabel).join(", ");
     let endTime = schedule.endTime;
-    if (schedule.mode === "fixed" && schedule.startTime && !endTime && client.contracted_minutes != null) {
-      endTime = addWallMinutes("2000-01-01", schedule.startTime, client.contracted_minutes)?.time ?? null;
+    const contractedMinutes = schedule.contractedMinutes ?? client.contracted_minutes;
+    if (schedule.mode === "fixed" && schedule.startTime && !endTime && contractedMinutes != null) {
+      endTime = addWallMinutes("2000-01-01", schedule.startTime, contractedMinutes)?.time ?? null;
     }
     const time = schedule.startTime
       ? endTime
         ? `${schedule.startTime} - ${endTime}${isOvernightTimeRange(schedule.startTime, endTime) ? " (+1 dia)" : ""}`
         : `a partir de ${schedule.startTime}`
       : null;
-    return [`Horário: ${mode}`, days, time].filter(Boolean).join(" · ");
+    const load = contractedMinutes != null ? formatScheduleMinutes(contractedMinutes) : null;
+    const cycle = schedule.frequency === "cycle" ? `Semana ${(schedule.cyclePosition ?? 0) + 1}` : null;
+    return [schedule.label, cycle, `Horário: ${mode}`, days, time, load].filter(Boolean).join(" · ");
   });
+}
+
+function formatScheduleMinutes(minutes: number): string {
+  return `Carga: ${Math.floor(minutes / 60)}h${minutes % 60 ? String(minutes % 60).padStart(2, "0") : ""}`;
 }

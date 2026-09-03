@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { addWallMinutes, calculateWallDurationMinutes, isOvernightTimeRange } from "@/lib/tasks/contracted-hours";
+import { scheduleRuleAppliesToDate } from "@/lib/tasks/client-schedule-rules";
 
 /**
  * SUP-2026-000110 — "Programação habitual do cliente".
@@ -16,17 +17,30 @@ export type ClientScheduleSlot = {
   startTime: string | null; // "HH:MM"
   endTime: string | null; // "HH:MM" derivado de duration_minutes
   durationMinutes: number | null;
+  contractedMinutes: number | null;
   punchMode: string | null;
   frequency: string;
   intervalWeeks: number | null;
   scheduleType: "fixed" | "flexible";
+  cycleLengthWeeks?: number | null;
+  cyclePosition?: number | null;
+  cycleAnchorDate?: string | null;
 };
 
 export type ClientHabitualSchedule = {
+  id?: string;
+  label?: string | null;
   weekdays: number[];
   mode: "fixed" | "flexible";
   startTime: string | null;
   endTime: string | null;
+  contractedMinutes?: number | null;
+  frequency?: "weekly" | "cycle";
+  cycleLengthWeeks?: number | null;
+  cyclePosition?: number | null;
+  cycleAnchorDate?: string | null;
+  active?: boolean;
+  sortOrder?: number;
 };
 
 const WEEKDAY_LONG = [
@@ -53,6 +67,14 @@ function normaliseMode(value: unknown): "fixed" | "flexible" {
   return value === "flexible" ? "flexible" : "fixed";
 }
 
+function positiveInteger(value: unknown): number | null {
+  return Number.isInteger(value) && (value as number) > 0 ? (value as number) : null;
+}
+
+function normaliseDate(value: unknown): string | null {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
+}
+
 export function parseHabitualSchedule(value: unknown): ClientHabitualSchedule[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((item) => {
@@ -65,7 +87,28 @@ export function parseHabitualSchedule(value: unknown): ClientHabitualSchedule[] 
     const mode = normaliseMode(row.mode);
     const startTime = mode === "fixed" && typeof row.start_time === "string" ? toHHMM(row.start_time) : null;
     const endTime = mode === "fixed" && typeof row.end_time === "string" ? toHHMM(row.end_time) : null;
-    return [{ weekdays: [...new Set(weekdays)].sort(), mode, startTime, endTime }];
+    const cycleLengthWeeks = positiveInteger(row.cycle_length_weeks);
+    const cyclePosition = cycleLengthWeeks
+      ? Number.isInteger(row.cycle_position) && (row.cycle_position as number) >= 0 && (row.cycle_position as number) < cycleLengthWeeks
+        ? (row.cycle_position as number)
+        : 0
+      : null;
+    const contractedMinutes = positiveInteger(row.contracted_minutes);
+    return [{
+      id: typeof row.id === "string" ? row.id : undefined,
+      label: typeof row.label === "string" ? row.label : null,
+      weekdays: [...new Set(weekdays)].sort(),
+      mode,
+      startTime,
+      endTime,
+      contractedMinutes,
+      frequency: row.frequency === "cycle" || cycleLengthWeeks ? "cycle" : "weekly",
+      cycleLengthWeeks,
+      cyclePosition,
+      cycleAnchorDate: normaliseDate(row.cycle_anchor_date),
+      active: row.active !== false,
+      sortOrder: Number.isInteger(row.sort_order) ? (row.sort_order as number) : undefined,
+    }];
   });
 }
 
@@ -93,24 +136,30 @@ export async function fetchClientSchedule(clientId: string): Promise<ClientSched
     Number.isInteger(clientResult.data?.contracted_minutes) && clientResult.data.contracted_minutes > 0
       ? clientResult.data.contracted_minutes
       : null;
-  const configured = parseHabitualSchedule(clientResult.data?.habitual_schedule).map((slot, index) => ({
-    id: `client-habitual:${clientId}:${index}`,
-    title: "Programação habitual do cliente",
+  const configured = parseHabitualSchedule(clientResult.data?.habitual_schedule)
+    .filter((slot) => slot.active !== false)
+    .map((slot, index) => ({
+    id: `client-habitual:${clientId}:${slot.id || index}`,
+    title: slot.label?.trim() || `Programação ${index + 1}`,
     weekdays: slot.weekdays,
     startTime: slot.startTime,
     endTime:
-      slot.startTime && contractedMinutes != null
-        ? addMinutes(slot.startTime, contractedMinutes)
+      slot.startTime && (slot.contractedMinutes ?? contractedMinutes) != null
+        ? addMinutes(slot.startTime, slot.contractedMinutes ?? contractedMinutes!)
         : slot.endTime,
     durationMinutes:
-      contractedMinutes ??
+      slot.contractedMinutes ?? contractedMinutes ??
       (slot.startTime && slot.endTime
         ? calculateWallDurationMinutes(slot.startTime, slot.endTime)
         : null),
+    contractedMinutes: slot.contractedMinutes ?? contractedMinutes,
     punchMode: null,
-    frequency: "weekly",
-    intervalWeeks: 1,
+    frequency: slot.frequency === "cycle" ? "cycle" : "weekly",
+    intervalWeeks: slot.cycleLengthWeeks ?? 1,
     scheduleType: slot.mode,
+    cycleLengthWeeks: slot.cycleLengthWeeks,
+    cyclePosition: slot.cyclePosition,
+    cycleAnchorDate: slot.cycleAnchorDate,
   } satisfies ClientScheduleSlot));
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -124,6 +173,7 @@ export async function fetchClientSchedule(clientId: string): Promise<ClientSched
       startTime,
       endTime: startTime && duration ? addMinutes(startTime, duration) : null,
       durationMinutes: duration,
+      contractedMinutes: duration,
       punchMode: (r.punch_mode_override as string | null) ?? null,
       frequency: (r.frequency as string) ?? "weekly",
       intervalWeeks: (r.interval_weeks as number | null) ?? null,
@@ -136,10 +186,7 @@ export async function fetchClientSchedule(clientId: string): Promise<ClientSched
 /** Slots que se aplicam a uma data (YYYY-MM-DD) informada pelo Gestor. */
 export function slotsForDate(slots: ClientScheduleSlot[], dateKey: string): ClientScheduleSlot[] {
   if (!dateKey) return [];
-  const [y, m, d] = dateKey.split("-").map(Number);
-  if (!y || !m || !d) return [];
-  const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
-  return slots.filter((s) => s.weekdays.length === 0 || s.weekdays.includes(dow));
+  return slots.filter((s) => scheduleRuleAppliesToDate(s, dateKey));
 }
 
 /** Próxima data local que atende a uma programação semanal. */
@@ -169,5 +216,9 @@ export function describeSlot(slot: ClientScheduleSlot): string {
         ? `a partir de ${slot.startTime}`
         : "sem horário definido";
   const mode = slot.scheduleType === "flexible" ? "horário flexível" : "horário fixo";
-  return `${days} • ${window} • ${mode}`;
+  const cycle = slot.cycleLengthWeeks && slot.cycleLengthWeeks > 1
+    ? ` • semana ${(slot.cyclePosition ?? 0) + 1}/${slot.cycleLengthWeeks}`
+    : "";
+  const load = slot.contractedMinutes ? ` • ${Math.floor(slot.contractedMinutes / 60)}h${slot.contractedMinutes % 60 ? String(slot.contractedMinutes % 60).padStart(2, "0") : ""}` : "";
+  return `${slot.title} • ${days} • ${window} • ${mode}${load}${cycle}`;
 }

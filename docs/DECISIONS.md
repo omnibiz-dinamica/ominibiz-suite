@@ -1248,3 +1248,19 @@ recebe a marca técnica `super_admin_mirror` no metadata.
 RBAC, roles por empresa, emails transacionais, tarefas, pontos, recorrências ou
 dados históricos. O Super Admin continua global e a UI continua condicionando
 a operação empresarial à empresa selecionada.
+
+## ADR-057 — Múltiplas programações habituais de cliente (SUP-2026-000141)
+
+**Contexto.** `clients.habitual_schedule` já era um array JSONB, mas o formulário
+editava apenas o primeiro item e `contracted_minutes` era usado como carga global.
+
+**Decisão.** Evoluir o array existente de forma aditiva: cada item pode ter nome,
+carga, frequência e posição/âncora de ciclo, mantendo o formato legado válido e
+usando `contracted_minutes` como fallback. A tarefa escolhe explicitamente a
+programação aplicável; recorrências alternadas guardam `schedule_rules` como um
+snapshot na série, e o materializador calcula a carga da ocorrência pela âncora
+da própria série.
+
+**Consequências.** Não há duplicação de clientes nem alteração retroativa de
+tarefas materializadas. A migration `20260903090000_client_schedule_rules.sql`
+é aditiva e precisa ser publicada no Cloud Database junto com o código.

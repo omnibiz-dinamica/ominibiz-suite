@@ -462,17 +462,25 @@ function ClientForm({
     initial?.daily_rate != null ? String(initial.daily_rate) : "",
   );
   const existingSchedule = parseHabitualSchedule(initial?.habitual_schedule);
-  const firstSchedule = existingSchedule[0];
   const [scheduleEnabled, setScheduleEnabled] = useState(existingSchedule.length > 0);
-  const [scheduleWeekdays, setScheduleWeekdays] = useState<number[]>(firstSchedule?.weekdays ?? [1]);
-  const [scheduleMode, setScheduleMode] = useState<ClientHabitualSchedule["mode"]>(firstSchedule?.mode ?? "fixed");
-  const [scheduleStartTime, setScheduleStartTime] = useState(firstSchedule?.startTime ?? "");
-  const [scheduleEndTime, setScheduleEndTime] = useState(firstSchedule?.endTime ?? "");
   const [contractedHours, setContractedHours] = useState(
     initial?.contracted_minutes != null ? String(Math.floor(initial.contracted_minutes / 60)) : "",
   );
   const [contractedRemainder, setContractedRemainder] = useState(
     initial?.contracted_minutes != null ? String(initial.contracted_minutes % 60) : "",
+  );
+  type ScheduleDraft = ClientHabitualSchedule & { hours: string; minutes: string };
+  const scheduleDraft = (schedule: ClientHabitualSchedule, index: number): ScheduleDraft => {
+    const total = schedule.contractedMinutes ?? initial?.contracted_minutes ?? null;
+    return {
+      ...schedule,
+      id: schedule.id ?? `schedule-${index + 1}`,
+      hours: total != null ? String(Math.floor(total / 60)) : "",
+      minutes: total != null ? String(total % 60) : "",
+    };
+  };
+  const [schedules, setSchedules] = useState<ScheduleDraft[]>(() =>
+    existingSchedule.map(scheduleDraft),
   );
 
   const [geo, setGeo] = useState<ClientGeoValue>({
@@ -545,28 +553,66 @@ function ClientForm({
             monthly_rate: parseRate(monthlyRate),
             daily_rate: parseRate(dailyRate),
           };
-          if (scheduleEnabled && scheduleWeekdays.length === 0) {
-            toast.error("Selecione pelo menos um dia para a programação habitual.");
-            return;
-          }
-          if (scheduleEnabled && scheduleMode === "fixed" && (!scheduleStartTime || !scheduleEndTime)) {
-            toast.error("Informe a hora de início e a hora de fim, ou escolha horário flexível.");
-            return;
-          }
-          if (scheduleEnabled && scheduleMode === "fixed" && calculateWallDurationMinutes(scheduleStartTime, scheduleEndTime) == null) {
-            toast.error("Informe horários diferentes e válidos para início e fim.");
+          if (scheduleEnabled && schedules.length === 0) {
+            toast.error("Adicione pelo menos uma programação habitual.");
             return;
           }
           const habitualSchedule = scheduleEnabled
-            ? [
-                {
-                  weekdays: [...scheduleWeekdays].sort((a, b) => a - b),
-                  mode: scheduleMode,
-                  start_time: scheduleMode === "fixed" ? scheduleStartTime : null,
-                  end_time: scheduleMode === "fixed" ? scheduleEndTime : null,
-                },
-              ]
+            ? schedules.map((schedule, index) => {
+                if (schedule.weekdays.length === 0) throw new Error(`Selecione pelo menos um dia na programação ${index + 1}.`);
+                if (schedule.mode === "fixed" && (!schedule.startTime || !schedule.endTime)) {
+                  throw new Error(`Informe início e fim na programação ${index + 1}, ou escolha horário flexível.`);
+                }
+                if (schedule.mode === "fixed" && calculateWallDurationMinutes(schedule.startTime!, schedule.endTime!) == null) {
+                  throw new Error(`Informe horários diferentes e válidos na programação ${index + 1}.`);
+                }
+                if (schedule.frequency === "cycle" && !schedule.cycleAnchorDate) {
+                  throw new Error(`Informe o início do ciclo na programação ${index + 1}.`);
+                }
+                const hours = parseWhole(schedule.hours);
+                const minutes = parseWhole(schedule.minutes);
+                if (hours == null || minutes == null || minutes > 59) {
+                  throw new Error(`Carga inválida na programação ${index + 1}.`);
+                }
+                const total = hours === 0 && minutes === 0 ? null : hours * 60 + minutes;
+                if (schedule.hours.trim() !== "" || schedule.minutes.trim() !== "") {
+                  if (total == null) throw new Error(`A carga da programação ${index + 1} deve ser maior que zero.`);
+                }
+                return {
+                  id: schedule.id,
+                  label: schedule.label?.trim() || null,
+                  weekdays: [...schedule.weekdays].sort((a, b) => a - b),
+                  mode: schedule.mode,
+                  start_time: schedule.mode === "fixed" ? schedule.startTime : null,
+                  end_time: schedule.mode === "fixed" ? schedule.endTime : null,
+                  ...(total != null ? { contracted_minutes: total } : {}),
+                  frequency: schedule.frequency === "cycle" ? "cycle" : "weekly",
+                  ...(schedule.frequency === "cycle"
+                    ? {
+                        cycle_length_weeks: Math.max(2, schedule.cycleLengthWeeks ?? 2),
+                        cycle_position: Math.max(0, schedule.cyclePosition ?? 0),
+                        cycle_anchor_date: schedule.cycleAnchorDate || null,
+                      }
+                    : {}),
+                  active: schedule.active !== false,
+                  sort_order: index,
+                };
+              })
             : [];
+          const cycleGroups = new Map<string, Set<number>>();
+          for (const schedule of habitualSchedule) {
+            if (schedule.frequency !== "cycle") continue;
+            const key = `${schedule.cycle_anchor_date ?? ""}:${schedule.cycle_length_weeks}`;
+            const positions = cycleGroups.get(key) ?? new Set<number>();
+            positions.add(schedule.cycle_position ?? 0);
+            cycleGroups.set(key, positions);
+          }
+          for (const [key, positions] of cycleGroups) {
+            const length = Number(key.split(":").pop());
+            if (positions.size < length) {
+              throw new Error(`Preencha todas as posições do ciclo alternado (${length} semanas).`);
+            }
+          }
 
           setLoading(true);
           let clientId = initial?.id;
@@ -724,65 +770,89 @@ function ClientForm({
         </div>
 
         {scheduleEnabled && (
-          <>
-            <div className="space-y-1.5">
-              <Label>Dias habituais</Label>
-              <div className="grid grid-cols-7 gap-1.5">
-                {["D", "S", "T", "Q", "Q", "S", "S"].map((label, day) => {
-                  const active = scheduleWeekdays.includes(day);
-                  return (
-                    <button
-                      key={`${label}-${day}`}
-                      type="button"
-                      aria-pressed={active}
-                      onClick={() =>
-                        setScheduleWeekdays((current) =>
-                          active ? current.filter((value) => value !== day) : [...current, day].sort((a, b) => a - b),
-                        )
-                      }
-                      className={`h-9 rounded-md border text-sm font-medium ${active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:border-primary/50"}`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-              <p className="text-[10px] text-muted-foreground">D = domingo; S = segunda-feira e sábado.</p>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>Tipo de horário</Label>
-              <Select value={scheduleMode} onValueChange={(value) => setScheduleMode(value as typeof scheduleMode)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="fixed">Horário fixo</SelectItem>
-                  <SelectItem value="flexible">Horário flexível</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {scheduleMode === "fixed" ? (
-              <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-3">
+            {schedules.map((schedule, index) => (
+              <div key={schedule.id ?? index} className="space-y-3 rounded-lg border border-border bg-muted/20 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <Label>Programação {index + 1}</Label>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    title="Remover programação"
+                    onClick={() => setSchedules((current) => current.filter((_, i) => i !== index))}
+                    disabled={schedules.length === 1}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                <Input
+                  value={schedule.label ?? ""}
+                  onChange={(e) => setSchedules((current) => current.map((s, i) => i === index ? { ...s, label: e.target.value } : s))}
+                  placeholder="Nome opcional (ex.: Semana A)"
+                  aria-label={`Nome da programação ${index + 1}`}
+                />
                 <div className="space-y-1.5">
-                  <Label className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Hora de início</Label>
-                  <Input type="time" value={scheduleStartTime} onChange={(e) => setScheduleStartTime(e.target.value)} />
+                  <Label>Dias habituais</Label>
+                  <div className="grid grid-cols-7 gap-1.5">
+                    {["D", "S", "T", "Q", "Q", "S", "S"].map((label, day) => {
+                      const active = schedule.weekdays.includes(day);
+                      return (
+                        <button
+                          key={`${label}-${day}`}
+                          type="button"
+                          aria-pressed={active}
+                          onClick={() => setSchedules((current) => current.map((s, i) => i === index
+                            ? { ...s, weekdays: active ? s.weekdays.filter((value) => value !== day) : [...s.weekdays, day].sort((a, b) => a - b) }
+                            : s))}
+                          className={`h-9 rounded-md border text-sm font-medium ${active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:border-primary/50"}`}
+                        >{label}</button>
+                      );
+                    })}
+                  </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Hora de fim</Label>
-                  <Input type="time" value={scheduleEndTime} onChange={(e) => setScheduleEndTime(e.target.value)} />
-                  {isOvernightTimeRange(scheduleStartTime, scheduleEndTime) && (
-                    <p className="text-xs text-muted-foreground">O fim será considerado no dia seguinte (+1 dia).</p>
-                  )}
+                  <Label>Tipo de horário</Label>
+                  <Select value={schedule.mode} onValueChange={(value) => setSchedules((current) => current.map((s, i) => i === index ? { ...s, mode: value as ClientHabitualSchedule["mode"] } : s))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="fixed">Horário fixo</SelectItem>
+                      <SelectItem value="flexible">Horário flexível</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+                {schedule.mode === "fixed" && (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Hora de início</Label>
+                      <Input type="time" value={schedule.startTime ?? ""} onChange={(e) => setSchedules((current) => current.map((s, i) => i === index ? { ...s, startTime: e.target.value } : s))} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Hora de fim</Label>
+                      <Input type="time" value={schedule.endTime ?? ""} onChange={(e) => setSchedules((current) => current.map((s, i) => i === index ? { ...s, endTime: e.target.value } : s))} />
+                      {isOvernightTimeRange(schedule.startTime ?? "", schedule.endTime ?? "") && <p className="text-xs text-muted-foreground">O fim será considerado no dia seguinte (+1 dia).</p>}
+                    </div>
+                  </div>
+                )}
+                {schedule.mode === "flexible" && <p className="rounded-md border border-border bg-background p-2 text-xs text-muted-foreground">A data segue os dias selecionados; o horário será definido manualmente na tarefa.</p>}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5"><Label>Carga da programação · horas</Label><Input type="number" min="0" step="1" value={schedule.hours} onChange={(e) => setSchedules((current) => current.map((s, i) => i === index ? { ...s, hours: e.target.value } : s))} placeholder="3" /></div>
+                  <div className="space-y-1.5"><Label>Carga · minutos</Label><Input type="number" min="0" max="59" step="1" value={schedule.minutes} onChange={(e) => setSchedules((current) => current.map((s, i) => i === index ? { ...s, minutes: e.target.value } : s))} placeholder="00" /></div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5"><Label>Frequência</Label><Select value={schedule.frequency === "cycle" ? "cycle" : "weekly"} onValueChange={(value) => setSchedules((current) => current.map((s, i) => i === index ? { ...s, frequency: value as "weekly" | "cycle", cycleLengthWeeks: value === "cycle" ? (s.cycleLengthWeeks ?? 2) : null, cyclePosition: value === "cycle" ? (s.cyclePosition ?? 0) : null } : s))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="weekly">Toda semana</SelectItem><SelectItem value="cycle">Ciclo alternado</SelectItem></SelectContent></Select></div>
+                  {schedule.frequency === "cycle" && <>
+                    <div className="space-y-1.5"><Label>Tamanho do ciclo</Label><Select value={String(schedule.cycleLengthWeeks ?? 2)} onValueChange={(value) => setSchedules((current) => current.map((s, i) => i === index ? { ...s, cycleLengthWeeks: Number(value), cyclePosition: Math.min(s.cyclePosition ?? 0, Number(value) - 1) } : s))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{[2, 3, 4].map((size) => <SelectItem key={size} value={String(size)}>{size} semanas</SelectItem>)}</SelectContent></Select></div>
+                    <div className="space-y-1.5"><Label>Posição no ciclo</Label><Select value={String((schedule.cyclePosition ?? 0) + 1)} onValueChange={(value) => setSchedules((current) => current.map((s, i) => i === index ? { ...s, cyclePosition: Number(value) - 1 } : s))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Array.from({ length: schedule.cycleLengthWeeks ?? 2 }, (_, n) => <SelectItem key={n} value={String(n + 1)}>Semana {String.fromCharCode(65 + n)} ({n + 1})</SelectItem>)}</SelectContent></Select></div>
+                  </>}
+                </div>
+                {schedule.frequency === "cycle" && <div className="space-y-1.5"><Label>Início do ciclo</Label><Input type="date" value={schedule.cycleAnchorDate ?? ""} onChange={(e) => setSchedules((current) => current.map((s, i) => i === index ? { ...s, cycleAnchorDate: e.target.value } : s))} /><p className="text-[10px] text-muted-foreground">A primeira semana começa nesta data; o ciclo não depende do número da semana no calendário.</p></div>}
               </div>
-            ) : (
-              <p className="rounded-lg border border-border bg-muted/20 p-3 text-xs text-muted-foreground">
-                A data será sugerida pelos dias selecionados. O funcionário registrará o horário no início e no fim.
-              </p>
-            )}
-          </>
+            ))}
+            <Button type="button" variant="outline" onClick={() => setSchedules((current) => [...current, scheduleDraft({ weekdays: [1], mode: "fixed", startTime: "", endTime: "", frequency: "weekly" }, current.length)])}>
+              <Plus className="mr-1 h-4 w-4" /> Adicionar programação
+            </Button>
+          </div>
         )}
         <div className="space-y-1.5 rounded-lg border border-border bg-muted/20 p-3">
           <Label>Horas totais contratadas</Label>

@@ -2532,9 +2532,11 @@ function TaskForm({
   const [touchedDates, setTouchedDates] = useState(false);
   const [schedulePrompt, setSchedulePrompt] = useState<ClientScheduleSlot[]>([]);
   const [scheduleHint, setScheduleHint] = useState<string | null>(null);
+  const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(null);
 
   const selectedClient = clients.find((client) => client.id === clientId);
-  const contractedMinutes = selectedClient?.contracted_minutes ?? null;
+  const selectedSchedule = clientSchedule.find((schedule) => schedule.id === selectedScheduleId) ?? null;
+  const contractedMinutes = selectedSchedule?.contractedMinutes ?? selectedClient?.contracted_minutes ?? null;
   const distributedMinutes = useMemo(
     () => distributeContractedMinutes(contractedMinutes, assignees.length),
     [contractedMinutes, assignees.length],
@@ -2559,6 +2561,7 @@ function TaskForm({
   }, [endDate, endTime, startDate, startTime]);
 
   const applySlot = (slot: ClientScheduleSlot, silent = false) => {
+    setSelectedScheduleId(slot.id);
     setManualEndOverride(false);
     if (slot.scheduleType === "fixed") {
       setStartTime(slot.startTime ?? "");
@@ -2578,9 +2581,7 @@ function TaskForm({
     const effectiveDate = dateKey || (!touchedDates ? nextDateForSchedule(slots) : null);
     if (!effectiveDate) return;
     const matches = slotsForDate(slots, effectiveDate);
-    const unique = matches.filter(
-      (s, i, arr) => arr.findIndex((o) => o.startTime === s.startTime && o.endTime === s.endTime) === i,
-    );
+    const unique = matches.filter((s, i, arr) => arr.findIndex((o) => o.id === s.id) === i);
     if (unique.length === 1) {
       if (!dateKey && !startDate && !touchedDates) {
         setStartDate(effectiveDate);
@@ -2611,11 +2612,13 @@ function TaskForm({
       setClientSchedule([]);
       setSchedulePrompt([]);
       setScheduleHint(null);
+      setSelectedScheduleId(null);
       return;
     }
     try {
       const slots = await fetchClientSchedule(cid);
       setClientSchedule(slots);
+      setSelectedScheduleId(null);
       setScheduleHint(null);
       suggestFromSchedule(slots, startDate);
     } catch {
@@ -2790,6 +2793,25 @@ function TaskForm({
         };
         const useContractedSchedule =
           contractedMinutes != null && !manualEndOverride && startDate !== "" && startTime !== "";
+        const scheduleRulesByEmployee = selectedSchedule?.cycleLengthWeeks && selectedSchedule.cycleLengthWeeks > 1
+          ? assignees.map((_, employeeIndex) => clientSchedule
+              .filter((slot) =>
+                slot.id.startsWith(`client-habitual:${clientId}:`) &&
+                slot.cycleLengthWeeks === selectedSchedule.cycleLengthWeeks &&
+                slot.cycleAnchorDate === selectedSchedule.cycleAnchorDate,
+              )
+              .map((slot) => ({
+                weekdays: slot.weekdays,
+                start_time: slot.startTime,
+                duration_minutes: distributeContractedMinutes(
+                  slot.contractedMinutes ?? slot.durationMinutes,
+                  assignees.length,
+                )[employeeIndex] ?? slot.contractedMinutes ?? slot.durationMinutes,
+                cycle_length_weeks: slot.cycleLengthWeeks,
+                cycle_position: slot.cyclePosition,
+                cycle_anchor_date: slot.cycleAnchorDate,
+              })))
+          : [];
         const manualDurationMinutes =
           startISO && endISO ? Math.max(0, Math.round((new Date(endISO).getTime() - new Date(startISO).getTime()) / 60000)) : 0;
         const taskTimesFor = (index: number) => {
@@ -2935,6 +2957,7 @@ function TaskForm({
               duration_minutes: useContractedSchedule
                 ? distributedMinutes[index] ?? distributedMinutes[0] ?? derivedDuration
                 : derivedDuration,
+              schedule_rules: scheduleRulesByEmployee[index] ?? [],
               task_group_id: groupId,
             });
             if (ins.error) {
@@ -3064,7 +3087,7 @@ function TaskForm({
                 <div className="flex flex-wrap gap-1.5">
                   {schedulePrompt.map((s) => (
                     <Button key={s.id} type="button" size="sm" variant="outline" onClick={() => applySlot(s)}>
-                      {s.startTime}
+                      {s.title}: {s.startTime ?? "flexível"}
                       {s.endTime ? `–${s.endTime}` : ""}
                     </Button>
                   ))}
