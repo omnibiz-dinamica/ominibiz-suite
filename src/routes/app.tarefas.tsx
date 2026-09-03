@@ -77,6 +77,7 @@ import {
   ACTION_LABELS,
   availableActions,
   isVisuallyLate,
+  resolveOperationalStatus,
   sweepAbsent,
   transitionTask,
   archiveTask,
@@ -1924,6 +1925,7 @@ function CalendarTaskCard({
   groupBy: "assignee" | "client";
 }) {
   const late = isVisuallyLate(task);
+  const operationalStatus = resolveOperationalStatus(task);
   const actions = availableActions(task, { userId, isManager });
   const start = formatWallTime(task.scheduled_for);
   const end = formatWallTime(task.scheduled_end);
@@ -1974,13 +1976,13 @@ function CalendarTaskCard({
             {taskPunch && <PauseSummary entry={taskPunch} />}
           </div>
         </div>
-        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${STATUS_TONE[task.status]}`}>
-          {STATUS_LABELS[task.status]}
+        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${operationalStatus === "atrasada" ? "bg-destructive/15 text-destructive" : STATUS_TONE[task.status]}`}>
+          {operationalStatus === "atrasada" ? "Atrasada" : STATUS_LABELS[task.status]}
         </span>
       </div>
       </div>
       <div className="flex flex-wrap items-center gap-1">
-        {late && (
+        {late && operationalStatus !== "atrasada" && (
           <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-destructive">
             <Clock className="h-3 w-3" /> atrasado
           </span>
@@ -2171,6 +2173,7 @@ function TaskRowItem({
   taskPunches,
 }: RowHandlers & { task: TaskRow }) {
   const late = isVisuallyLate(t);
+  const operationalStatus = resolveOperationalStatus(t);
   const actions = availableActions(t, { userId, isManager });
   const archived = !!t.archived_at;
   const archivable = canArchive(t);
@@ -2199,10 +2202,10 @@ function TaskRowItem({
         <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-medium">{t.title}</span>
-          <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_TONE[t.status]}`}>
-            {STATUS_LABELS[t.status]}
+          <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${operationalStatus === "atrasada" ? "bg-destructive/15 text-destructive" : STATUS_TONE[t.status]}`}>
+            {operationalStatus === "atrasada" ? "Atrasada" : STATUS_LABELS[t.status]}
           </span>
-          {late && (
+          {late && operationalStatus !== "atrasada" && (
             <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-destructive">
               <Clock className="h-3 w-3" /> atrasado
             </span>
@@ -2243,7 +2246,7 @@ function TaskRowItem({
           </div>
         )}
         <TaskRefusalHistory records={refusalHistory} memberNames={memberNames} />
-        {t.status === "ausente" && (
+        {operationalStatus === "ausente" && (
           <div className="mt-2 space-y-0.5 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs">
             <div className="font-semibold uppercase tracking-wide text-destructive">
               {t.absence_source === "employee"

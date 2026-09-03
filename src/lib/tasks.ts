@@ -1,8 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
 import { pauseMinutesNow } from "@/lib/punch/pause";
+import { resolveOperationalStatus } from "@/lib/tasks/operational-rules";
 export { pauseMinutesNow } from "@/lib/punch/pause";
 export {
   automaticAbsenceAllowedAt,
+  resolveOperationalStatus,
   isBulkArchiveEligible,
   isBulkDeleteEligible,
   isSingleTask,
@@ -451,25 +453,9 @@ export async function recurrenceUpdateOccurrence(taskId: string, payload: Editab
  * Calculado apenas para renderização.
  */
 export function isVisuallyLate(
-  task: Pick<TaskRow, "status" | "scheduled_for" | "recurrence_date" | "due_at">,
+  task: Pick<TaskRow, "status" | "scheduled_for" | "recurrence_date" | "due_at" | "absence_source">,
 ): boolean {
-  if (task.status === "concluido" || task.status === "cancelado" || task.status === "ausente") return false;
-
-  if (task.scheduled_for) {
-    // Atraso começa no horário previsto; a ausência automática só ocorre +24h.
-    return new Date(task.scheduled_for).getTime() <= Date.now();
-  }
-
-  const dateSource = task.recurrence_date ?? task.due_at;
-  if (!dateSource) return false;
-
-  const day = dateSource.slice(0, 10);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return false;
-
-  // Tarefa sem horario definido vence visualmente apenas no dia seguinte.
-  const nextDay = new Date(`${day}T00:00:00.000Z`);
-  nextDay.setUTCDate(nextDay.getUTCDate() + 1);
-  return Date.now() >= nextDay.getTime();
+  return resolveOperationalStatus(task) === "atrasada";
 }
 
 export function absenceAllowedAt(task: Pick<TaskRow, "scheduled_for" | "recurrence_date" | "due_at">): Date | null {

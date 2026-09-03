@@ -47,6 +47,7 @@ import {
   STATUS_LABELS,
   STATUS_TONE,
   isVisuallyLate,
+  resolveOperationalStatus,
   canBecomeAbsent,
   canArchiveBy,
   canCancelTask,
@@ -1060,11 +1061,13 @@ function UpcomingTasks({
     .filter((t) => t.id !== nextStartable.id)
     .slice()
     .sort((a, b) => queueWeight(a) - queueWeight(b));
+  const nextOperationalStatus = resolveOperationalStatus(nextStartable);
   const nextIsStartable =
-    nextStartable.status === "autorizado" ||
-    nextStartable.status === "pendente" ||
-    nextStartable.status === "em_andamento";
-  const nextIsAbsent = nextStartable.status === "ausente";
+    nextOperationalStatus !== "ausente" &&
+    (nextStartable.status === "autorizado" ||
+      nextStartable.status === "pendente" ||
+      nextStartable.status === "em_andamento");
+  const nextIsAbsent = nextOperationalStatus === "ausente";
   const nextStarting = starting && startingId === nextStartable.id;
   const nextRequesting = requestingAuth && requestingAuthId === nextStartable.id;
   const nextLate = isVisuallyLate(nextStartable);
@@ -1095,9 +1098,9 @@ function UpcomingTasks({
                 {nextStartable.priority}
               </span>
               <span
-                className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${STATUS_TONE[nextStartable.status]}`}
+                className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${nextOperationalStatus === "atrasada" ? "bg-destructive/15 text-destructive" : STATUS_TONE[nextStartable.status]}`}
               >
-                {STATUS_LABELS[nextStartable.status]}
+                {nextOperationalStatus === "atrasada" ? "Atrasada" : STATUS_LABELS[nextStartable.status]}
               </span>
               <span className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
                 {effectiveMode(nextStartable) === "automatico" ? (
@@ -1107,7 +1110,7 @@ function UpcomingTasks({
                 )}
                 {PUNCH_MODE_LABELS[effectiveMode(nextStartable)]}
               </span>
-              {nextLate && (
+              {nextLate && nextOperationalStatus !== "atrasada" && (
                 <span className="inline-flex items-center gap-1 rounded bg-destructive/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-destructive">
                   <AlertCircle className="h-3 w-3" /> atrasada
                 </span>
@@ -1212,12 +1215,15 @@ function UpcomingTasks({
           <ul className="divide-y divide-border">
             {rest.map((t) => {
               const late = isVisuallyLate(t);
+              const operationalStatus = resolveOperationalStatus(t);
               const isStarting = starting && startingId === t.id;
               const clientName = t.client_id ? clientsMap[t.client_id] : undefined;
               const tMode = effectiveMode(t);
               const isOwn = !!currentUserId && t.assigned_to === currentUserId;
               const canStart =
-                (t.status === "pendente" || t.status === "autorizado" || t.status === "em_andamento") && isOwn;
+                operationalStatus !== "ausente" &&
+                (t.status === "pendente" || t.status === "autorizado" || t.status === "em_andamento") &&
+                isOwn;
               return (
                 <li
                   key={t.id}
@@ -1230,15 +1236,15 @@ function UpcomingTasks({
                       >
                         {t.priority}
                       </span>
-                      {late && (
+                      {late && operationalStatus !== "atrasada" && (
                         <span className="inline-flex items-center gap-1 rounded bg-destructive/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-destructive">
                           <AlertCircle className="h-3 w-3" /> atrasada
                         </span>
                       )}
                       <span
-                        className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${STATUS_TONE[t.status]}`}
+                        className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${operationalStatus === "atrasada" ? "bg-destructive/15 text-destructive" : STATUS_TONE[t.status]}`}
                       >
-                        {STATUS_LABELS[t.status]}
+                        {operationalStatus === "atrasada" ? "Atrasada" : STATUS_LABELS[t.status]}
                       </span>
                       <span className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
                         {tMode === "automatico" ? <Zap className="h-3 w-3" /> : <Hand className="h-3 w-3" />}
@@ -1267,12 +1273,12 @@ function UpcomingTasks({
                         variant={t.status === "ausente" ? "outline" : "default"}
                         disabled={
                           isStarting ||
-                          (t.status !== "ausente" && !canStart) ||
-                          (t.status === "ausente" && requestingAuth && requestingAuthId === t.id)
+                          (operationalStatus !== "ausente" && !canStart) ||
+                          (operationalStatus === "ausente" && requestingAuth && requestingAuthId === t.id)
                         }
-                        onClick={() => (t.status === "ausente" ? onRequestAuth(t.id) : onStart(t))}
+                        onClick={() => (operationalStatus === "ausente" ? onRequestAuth(t.id) : onStart(t))}
                       >
-                        {t.status === "ausente" ? (
+                        {operationalStatus === "ausente" ? (
                           <>
                             <Send className="mr-2 h-5 w-5" />
                             Solicitar autorização

@@ -5,6 +5,7 @@ import {
   isBulkArchiveEligible,
   isBulkDeleteEligible,
   isSingleTask,
+  resolveOperationalStatus,
 } from "../src/lib/tasks/operational-rules.ts";
 
 const task = (overrides: Record<string, unknown> = {}) => ({
@@ -18,6 +19,34 @@ test("automatic absence is exactly 24 hours after a scheduled start", () => {
   const start = "2026-08-28T09:00:00.000Z";
   assert.equal(automaticAbsenceAllowedAt({ scheduled_for: start })?.toISOString(), "2026-08-29T09:00:00.000Z");
   assert.equal(automaticAbsenceAllowedAt({ scheduled_for: null }), null);
+});
+
+test("resolves the same pending, late and absent state for every role", () => {
+  const task = { status: "pendente" as const, scheduled_for: "2026-09-02T13:00:00.000Z" };
+  assert.equal(resolveOperationalStatus(task, new Date("2026-09-02T12:25:00.000Z")), "pendente");
+  assert.equal(resolveOperationalStatus(task, new Date("2026-09-02T13:01:00.000Z")), "atrasada");
+  assert.equal(resolveOperationalStatus(task, new Date("2026-09-02T15:01:00.000Z")), "atrasada");
+  assert.equal(resolveOperationalStatus(task, new Date("2026-09-03T12:59:59.000Z")), "atrasada");
+  assert.equal(resolveOperationalStatus(task, new Date("2026-09-03T13:00:00.000Z")), "ausente");
+});
+
+test("keeps overnight timing anchored to the start date", () => {
+  const task = { status: "pendente" as const, scheduled_for: "2026-09-02T23:00:00.000Z" };
+  assert.equal(resolveOperationalStatus(task, new Date("2026-09-02T22:00:00.000Z")), "pendente");
+  assert.equal(resolveOperationalStatus(task, new Date("2026-09-03T00:30:00.000Z")), "atrasada");
+  assert.equal(resolveOperationalStatus(task, new Date("2026-09-03T22:59:59.000Z")), "atrasada");
+  assert.equal(resolveOperationalStatus(task, new Date("2026-09-03T23:00:00.000Z")), "ausente");
+});
+
+test("does not apply automatic timing to tasks without a scheduled start", () => {
+  assert.equal(resolveOperationalStatus({ status: "pendente", scheduled_for: null }, new Date("2026-09-10T12:00:00.000Z")), "pendente");
+  assert.equal(
+    resolveOperationalStatus(
+      { status: "pendente", scheduled_for: null, recurrence_date: "2026-09-02", due_at: "2026-09-02T23:59:59.000Z" },
+      new Date("2026-09-03T00:00:00.000Z"),
+    ),
+    "atrasada",
+  );
 });
 
 test("bulk archive/delete eligibility excludes recurring tasks", () => {

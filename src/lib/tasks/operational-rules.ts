@@ -1,8 +1,55 @@
 export type OperationalTaskStatus = "pendente" | "autorizado" | "em_andamento" | "concluido" | "cancelado" | "ausente";
+export type ResolvedOperationalStatus = OperationalTaskStatus | "atrasada";
 
 export function automaticAbsenceAllowedAt(task: { scheduled_for: string | null | undefined }): Date | null {
   if (!task.scheduled_for) return null;
-  return new Date(new Date(task.scheduled_for).getTime() + 24 * 60 * 60 * 1000);
+  const start = new Date(task.scheduled_for);
+  if (!Number.isFinite(start.getTime())) return null;
+  return new Date(start.getTime() + 24 * 60 * 60 * 1000);
+}
+
+/**
+ * Resolves the temporal state once for every UI consumer. Persisted terminal
+ * states and permissions remain authoritative; only pending work receives a
+ * time-derived state. `absence_source=automatica` also protects the UI from
+ * showing an old premature automatic absence before its +24h threshold.
+ */
+export function resolveOperationalStatus(
+  task: {
+    status: OperationalTaskStatus;
+    scheduled_for: string | null | undefined;
+    recurrence_date?: string | null;
+    due_at?: string | null;
+    absence_source?: string | null;
+  },
+  now = new Date(),
+): ResolvedOperationalStatus {
+  const start = task.scheduled_for ? new Date(task.scheduled_for) : null;
+  if (!start || !Number.isFinite(start.getTime())) {
+    // Tarefas sem hora nunca entram no ciclo automático de ausência. Mantemos,
+    // porém, a indicação visual legada de atraso no dia seguinte à ocorrência.
+    if (task.status !== "pendente" && task.status !== "autorizado") return task.status;
+    const dateSource = task.recurrence_date ?? task.due_at;
+    const day = dateSource?.slice(0, 10);
+    if (!day || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return task.status;
+    const nextDay = new Date(`${day}T00:00:00.000Z`);
+    nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+    return now.getTime() >= nextDay.getTime() ? "atrasada" : task.status;
+  }
+
+  if (task.status === "ausente" && task.absence_source === "automatica") {
+    const threshold = automaticAbsenceAllowedAt(task);
+    if (threshold && now.getTime() < threshold.getTime()) {
+      return now.getTime() >= start.getTime() ? "atrasada" : "pendente";
+    }
+    return task.status;
+  }
+
+  if (task.status !== "pendente" && task.status !== "autorizado") return task.status;
+  const threshold = automaticAbsenceAllowedAt(task);
+  if (threshold && now.getTime() >= threshold.getTime()) return "ausente";
+  if (now.getTime() >= start.getTime()) return "atrasada";
+  return task.status;
 }
 
 export function isSingleTask(t: { recurrence_id?: string | null }): boolean {
