@@ -1957,6 +1957,66 @@ export type Database = {
           },
         ]
       }
+      support_ticket_email_outbox: {
+        Row: {
+          attempts: number
+          company_id: string
+          created_at: string
+          event_type: string
+          id: string
+          last_error: string | null
+          payload: Json
+          recipient_email: string
+          sent_at: string | null
+          status: string
+          ticket_id: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          company_id: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          last_error?: string | null
+          payload?: Json
+          recipient_email: string
+          sent_at?: string | null
+          status?: string
+          ticket_id: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          company_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          last_error?: string | null
+          payload?: Json
+          recipient_email?: string
+          sent_at?: string | null
+          status?: string
+          ticket_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_email_outbox_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_ticket_email_outbox_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_ticket_events: {
         Row: {
           actor_user_id: string | null
@@ -2496,6 +2556,7 @@ export type Database = {
           monthly_rule: Json
           priority: string
           punch_mode_override: Database["public"]["Enums"]["punch_mode"] | null
+          schedule_rules: Json
           scheduled_time: string | null
           selected_dates: string[]
           start_date: string
@@ -2525,6 +2586,7 @@ export type Database = {
           monthly_rule?: Json
           priority?: string
           punch_mode_override?: Database["public"]["Enums"]["punch_mode"] | null
+          schedule_rules?: Json
           scheduled_time?: string | null
           selected_dates?: string[]
           start_date: string
@@ -2554,6 +2616,7 @@ export type Database = {
           monthly_rule?: Json
           priority?: string
           punch_mode_override?: Database["public"]["Enums"]["punch_mode"] | null
+          schedule_rules?: Json
           scheduled_time?: string | null
           selected_dates?: string[]
           start_date?: string
@@ -5025,6 +5088,7 @@ export type Database = {
           monthly_rule: Json
           priority: string
           punch_mode_override: Database["public"]["Enums"]["punch_mode"] | null
+          schedule_rules: Json
           scheduled_time: string | null
           selected_dates: string[]
           start_date: string
@@ -5622,6 +5686,26 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      task_schedule_conflicts: {
+        Args: {
+          _company_id: string
+          _exclude_task_id?: string
+          _proposals: Json
+        }
+        Returns: {
+          assignee_id: string
+          assignee_name: string
+          conflicting_client_name: string
+          conflicting_end: string
+          conflicting_start: string
+          conflicting_task_id: string
+          conflicting_title: string
+          overlap_end: string
+          overlap_start: string
+          proposed_end: string
+          proposed_start: string
+        }[]
       }
       task_series_delete: {
         Args: { _reason?: string; _scope?: string; _task_id: string }
