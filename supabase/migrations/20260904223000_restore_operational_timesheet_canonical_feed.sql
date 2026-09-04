@@ -21,16 +21,16 @@ SET search_path = public
 AS $function$
 DECLARE
   v_uid uuid := auth.uid();
+  v_result jsonb;
 BEGIN
   IF v_uid IS NULL THEN RAISE EXCEPTION 'NOT_AUTHENTICATED'; END IF;
   IF NOT (public.is_company_manager(v_uid, _company_id) OR public.is_super_admin(v_uid)) THEN
     RAISE EXCEPTION 'FORBIDDEN';
   END IF;
-  IF _status NOT IN ('all', 'open', 'closed') THEN RAISE EXCEPTION 'INVALID_STATUS_FILTER'; END IF;
+  IF NOT (_status = ANY (ARRAY['all', 'open', 'closed']::text[])) THEN RAISE EXCEPTION 'INVALID_STATUS_FILTER'; END IF;
   IF _limit < 1 OR _limit > 5000 OR _offset < 0 THEN RAISE EXCEPTION 'INVALID_PAGINATION'; END IF;
 
-  RETURN (
-    WITH work_rows AS (
+  WITH work_rows AS (
       SELECT te.id, te.company_id, te.task_id, te.user_id, te.started_at, te.ended_at,
         te.paused_at, te.resumed_at, te.effective_minutes, te.notes, te.created_at, te.updated_at,
         te.origin::text AS origin, te.created_by, te.last_edited_by, te.last_edited_at, te.last_edit_reason,
@@ -154,8 +154,8 @@ BEGIN
           'scheduled_end', x.scheduled_end, 'recurrence_date', x.recurrence_date, 'due_at', x.due_at),
         'profiles', jsonb_build_object('full_name', x.employee_name)
       ) ORDER BY x.sort_at DESC NULLS LAST, x.id DESC) FROM page AS x), '[]'::jsonb)
-    )
-  );
+    ) INTO v_result;
+  RETURN v_result;
 END;
 $function$;
 
