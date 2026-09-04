@@ -122,6 +122,20 @@
 - Deep links, leitura, filtros, tempo real, histórico, UUID, RBAC, RLS e isolamento
   multiempresa não foram alterados.
 
+### 🐞 SUP-2026-000087 — Ator nas notificações de suporte
+
+#### Corrigido
+- Notificações de abertura e resposta de ticket passam a carregar `actor_id`
+  canônico, nome do perfil e e-mail de fallback no `metadata`, sem expor UUID.
+- A caixa de notificações mostra quem abriu ou respondeu e abre o ticket correto
+  pelo `metadata.ticket_id`.
+- Duplicidades entre a fila de destino e a notificação de gestão são evitadas;
+  respostas distintas continuam identificadas pelo `message_id`.
+
+#### Preservado
+- Roteamento por empresa/destino, RLS, RBAC, histórico, mensagens, anexos e
+  ações administrativas existentes.
+
 ### 🐞 SUP-2026-000093 — Motivo da recusa visível para a gestão
 
 #### Corrigido

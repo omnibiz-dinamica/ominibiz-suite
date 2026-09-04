@@ -31,12 +31,13 @@ import {
 import { transitionTask } from "@/lib/tasks";
 import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
 import { invalidateNotificationsCache } from "@/lib/cache/notifications";
-import {
-  canManageNotification,
-  resolveNotificationActions,
-} from "@/lib/notification-actions";
+import { canManageNotification, resolveNotificationActions } from "@/lib/notification-actions";
 import { taskRejectionNotificationDetails } from "@/lib/task-refusal-view";
 import { taskCancellationNotificationDetails } from "@/lib/task-cancellation-notification";
+import {
+  ticketNotificationDisplay,
+  type TicketNotificationIdentity,
+} from "@/lib/support/ticket-notification";
 
 type NotificationEvent =
   | "task_created"
@@ -58,7 +59,9 @@ type NotificationEvent =
   | "vacation_declined"
   | "expense_created"
   | "expense_approved"
-  | "expense_rejected";
+  | "expense_rejected"
+  | "ticket_created"
+  | "ticket_message_added";
 
 type NotificationPriority = "baixa" | "media" | "alta" | "urgente";
 
@@ -93,6 +96,19 @@ type CancellationTaskContext = {
   client?: { name?: string | null } | null;
 };
 
+type SupportTicketContext = {
+  id: string;
+  ticket_number: string;
+  requester_user_id: string;
+};
+
+type SupportMessageContext = {
+  id: string;
+  ticket_id: string;
+  author_user_id: string;
+  created_at: string;
+};
+
 function relatedClientName(value: unknown): string | null {
   if (Array.isArray(value)) return relatedClientName(value[0]);
   if (!value || typeof value !== "object") return null;
@@ -102,12 +118,19 @@ function relatedClientName(value: unknown): string | null {
 
 /** Completa notificacoes antigas que foram criadas antes do payload de cancelamento.
  *  A busca e em lote e respeita os filtros de empresa da consulta principal. */
-async function enrichLegacyCancellationNotifications(rows: NotificationRow[]): Promise<NotificationRow[]> {
-  const taskIds = [...new Set(
-    rows
-      .filter((row) => row.event === "task_cancelled" && row.task_id && !row.metadata?.cancelled_by_name)
-      .map((row) => row.task_id as string),
-  )];
+async function enrichLegacyCancellationNotifications(
+  rows: NotificationRow[],
+): Promise<NotificationRow[]> {
+  const taskIds = [
+    ...new Set(
+      rows
+        .filter(
+          (row) =>
+            row.event === "task_cancelled" && row.task_id && !row.metadata?.cancelled_by_name,
+        )
+        .map((row) => row.task_id as string),
+    ),
+  ];
   if (taskIds.length === 0) return rows;
 
   const { data: taskData, error: taskError } = await supabase
@@ -119,20 +142,24 @@ async function enrichLegacyCancellationNotifications(rows: NotificationRow[]): P
   const taskById = new Map(
     ((taskData ?? []) as unknown as CancellationTaskContext[]).map((task) => [task.id, task]),
   );
-  const actorIds = [...new Set(
-    [...taskById.values()]
-      .map((task) => task.cancelled_by)
-      .filter((id): id is string => !!id),
-  )];
+  const actorIds = [
+    ...new Set(
+      [...taskById.values()].map((task) => task.cancelled_by).filter((id): id is string => !!id),
+    ),
+  ];
   const { data: actorData } = actorIds.length
     ? await supabase.from("profiles").select("id,full_name").in("id", actorIds)
     : { data: [] as { id: string; full_name: string | null }[] };
   const actorById = new Map(
-    ((actorData ?? []) as { id: string; full_name: string | null }[]).map((actor) => [actor.id, actor.full_name]),
+    ((actorData ?? []) as { id: string; full_name: string | null }[]).map((actor) => [
+      actor.id,
+      actor.full_name,
+    ]),
   );
 
   return rows.map((row) => {
-    if (row.event !== "task_cancelled" || !row.task_id || row.metadata?.cancelled_by_name) return row;
+    if (row.event !== "task_cancelled" || !row.task_id || row.metadata?.cancelled_by_name)
+      return row;
     const task = taskById.get(row.task_id);
     if (!task) return row;
     const actorName = task.cancelled_by ? actorById.get(task.cancelled_by) : null;
@@ -152,6 +179,118 @@ async function enrichLegacyCancellationNotifications(rows: NotificationRow[]): P
         link: `/app/tarefas?task=${task.id}`,
       },
     };
+  });
+}
+
+function supportTicketId(row: NotificationRow): string | null {
+  if (row.event !== "ticket_created" && row.event !== "ticket_message_added") return null;
+  const metadataId = row.metadata?.ticket_id;
+  return typeof metadataId === "string" && metadataId.trim() ? metadataId : row.task_id;
+}
+
+/** Resolve ticket actors in one batch. New rows carry actor metadata from the
+ * database; legacy rows are completed from their ticket/message relationships. */
+async function enrichTicketNotifications(
+  rows: NotificationRow[],
+  companyId: string | null,
+): Promise<NotificationRow[]> {
+  const ticketIds = [...new Set(rows.map(supportTicketId).filter((id): id is string => !!id))];
+  if (ticketIds.length === 0) return rows;
+
+  let ticketQuery = supabase
+    .from("support_tickets")
+    .select("id,ticket_number,requester_user_id")
+    .in("id", ticketIds);
+  if (companyId) ticketQuery = ticketQuery.eq("company_id", companyId);
+  const { data: ticketData } = await ticketQuery;
+  const tickets = (ticketData ?? []) as SupportTicketContext[];
+  const ticketById = new Map(tickets.map((ticket) => [ticket.id, ticket]));
+
+  const { data: messageData } = await supabase
+    .from("support_ticket_messages")
+    .select("id,ticket_id,author_user_id,created_at")
+    .in(
+      "ticket_id",
+      tickets.map((ticket) => ticket.id),
+    )
+    .eq("is_internal", false)
+    .order("created_at", { ascending: true });
+  const messages = (messageData ?? []) as SupportMessageContext[];
+  const messageById = new Map(messages.map((message) => [message.id, message]));
+  const actorIds = new Set<string>();
+
+  for (const row of rows) {
+    const ticketId = supportTicketId(row);
+    const ticket = ticketId ? ticketById.get(ticketId) : undefined;
+    const actorId = typeof row.metadata?.actor_id === "string" ? row.metadata.actor_id : null;
+    const messageId = typeof row.metadata?.message_id === "string" ? row.metadata.message_id : null;
+    const message = messageId
+      ? messageById.get(messageId)
+      : messages
+          .filter((item) => item.ticket_id === ticketId && item.created_at <= row.created_at)
+          .at(-1);
+    const resolvedActorId =
+      actorId ??
+      (row.event === "ticket_created" ? ticket?.requester_user_id : message?.author_user_id);
+    if (resolvedActorId) actorIds.add(resolvedActorId);
+  }
+
+  const { data: actorData } = actorIds.size
+    ? await supabase
+        .from("profiles")
+        .select("id,full_name")
+        .in("id", [...actorIds])
+    : { data: [] as { id: string; full_name: string | null }[] };
+  const actorById = new Map(
+    ((actorData ?? []) as { id: string; full_name: string | null }[]).map((actor) => [
+      actor.id,
+      actor,
+    ]),
+  );
+
+  return rows.map((row) => {
+    const ticketId = supportTicketId(row);
+    if (!ticketId) return row;
+    const ticket = ticketById.get(ticketId);
+    const actorId = typeof row.metadata?.actor_id === "string" ? row.metadata.actor_id : null;
+    const messageId = typeof row.metadata?.message_id === "string" ? row.metadata.message_id : null;
+    const message = messageId
+      ? messageById.get(messageId)
+      : messages
+          .filter((item) => item.ticket_id === ticketId && item.created_at <= row.created_at)
+          .at(-1);
+    const resolvedActorId =
+      actorId ??
+      (row.event === "ticket_created" ? ticket?.requester_user_id : message?.author_user_id);
+    const actor = resolvedActorId ? actorById.get(resolvedActorId) : undefined;
+    const identity: TicketNotificationIdentity = {
+      fullName: actor?.full_name,
+      email: typeof row.metadata?.actor_email === "string" ? row.metadata.actor_email : null,
+    };
+    const details = ticketNotificationDisplay(
+      row.event as "ticket_created" | "ticket_message_added",
+      {
+        ...row.metadata,
+        ticket_number: row.metadata?.ticket_number ?? ticket?.ticket_number,
+        actor_id: resolvedActorId ?? row.metadata?.actor_id,
+        actor_name: row.metadata?.actor_name ?? actor?.full_name,
+      },
+      row.title,
+      row.body,
+      identity,
+    );
+
+    return details
+      ? {
+          ...row,
+          metadata: {
+            ...row.metadata,
+            actor_id: resolvedActorId,
+            actor_name: details.actorName,
+            ticket_number: ticket?.ticket_number ?? row.metadata?.ticket_number,
+          },
+        }
+      : row;
   });
 }
 
@@ -205,6 +344,8 @@ const EVENT_LABEL: Record<NotificationEvent, string> = {
   expense_created: "Despesa — solicitação",
   expense_approved: "Despesa — aprovada",
   expense_rejected: "Despesa — rejeitada",
+  ticket_created: "Ticket — aberto",
+  ticket_message_added: "Ticket — resposta",
 };
 
 const PRIORITY_TONE: Record<NotificationPriority, string> = {
@@ -237,7 +378,10 @@ function NotificationsPage() {
       if (currentCompanyId) query.eq("company_id", currentCompanyId);
       const { data, error } = await query.order("created_at", { ascending: false }).limit(200);
       if (error) throw error;
-      return enrichLegacyCancellationNotifications((data ?? []) as unknown as NotificationRow[]);
+      const rows = await enrichLegacyCancellationNotifications(
+        (data ?? []) as unknown as NotificationRow[],
+      );
+      return enrichTicketNotifications(rows, currentCompanyId);
     },
     enabled: !!user,
   });
@@ -301,7 +445,8 @@ function NotificationsPage() {
   });
 
   const transition = useMutation({
-    mutationFn: ({ id, action }: { id: string; action: "autorizar" | "cancelar" }) => transitionTask(id, action),
+    mutationFn: ({ id, action }: { id: string; action: "autorizar" | "cancelar" }) =>
+      transitionTask(id, action),
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
       invalidateNotificationsCache(qc);
@@ -314,7 +459,9 @@ function NotificationsPage() {
   const counts = useMemo(() => {
     const map = {} as Record<TabKey, number>;
     for (const t of TABS) {
-      map[t.key] = t.states ? rows.filter((n) => t.states!.includes(n.state ?? "nova")).length : rows.length;
+      map[t.key] = t.states
+        ? rows.filter((n) => t.states!.includes(n.state ?? "nova")).length
+        : rows.length;
     }
     return map;
   }, [rows]);
@@ -326,7 +473,8 @@ function NotificationsPage() {
   }, [rows, tab]);
 
   const unreadCount = useMemo(
-    () => rows.filter((n) => !n.read_at && n.state !== "resolvida" && n.state !== "arquivada").length,
+    () =>
+      rows.filter((n) => !n.read_at && n.state !== "resolvida" && n.state !== "arquivada").length,
     [rows],
   );
 
@@ -336,6 +484,8 @@ function NotificationsPage() {
       nav({ to: "/app/ferias" });
     } else if (n.event.startsWith("expense_")) {
       nav({ to: "/app/despesas" });
+    } else if (supportTicketId(n)) {
+      nav({ to: "/app/suporte/$id", params: { id: supportTicketId(n)! } });
     } else if (n.task_id) {
       nav({ to: "/app/tarefas", search: { task: n.task_id } });
     } else {
@@ -406,7 +556,9 @@ function NotificationsPage() {
       </div>
 
       {isLoading ? (
-        <div className="rounded-lg border border-border p-8 text-center text-sm text-muted-foreground">Carregando…</div>
+        <div className="rounded-lg border border-border p-8 text-center text-sm text-muted-foreground">
+          Carregando…
+        </div>
       ) : visible.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-12 text-center">
           <Bell className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
@@ -429,11 +581,18 @@ function NotificationsPage() {
             const actions = resolveNotificationActions({
               canManage,
               canOpen:
-                !!n.task_id || n.event.startsWith("vacation_") || n.event.startsWith("expense_"),
+                !!n.task_id ||
+                !!supportTicketId(n) ||
+                n.event.startsWith("vacation_") ||
+                n.event.startsWith("expense_"),
               state,
             });
             const refusal = taskRejectionNotificationDetails(n.event, n.metadata);
             const cancellation = taskCancellationNotificationDetails(n.event, n.metadata);
+            const ticketDisplay =
+              n.event === "ticket_created" || n.event === "ticket_message_added"
+                ? ticketNotificationDisplay(n.event, n.metadata, n.title, n.body)
+                : null;
             return (
               <li
                 key={n.id}
@@ -469,13 +628,17 @@ function NotificationsPage() {
                         {STATE_LABEL[state]}
                         {state === "encaminhada" && n.forwarded_to ? ` · ${n.forwarded_to}` : ""}
                       </span>
-                      <span className="text-xs text-muted-foreground">{new Date(n.created_at).toLocaleString()}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(n.created_at).toLocaleString()}
+                      </span>
                     </div>
-                    <p className="mt-1 font-medium">{n.title}</p>
+                    <p className="mt-1 font-medium">{ticketDisplay?.title ?? n.title}</p>
                     {refusal ? (
                       <div className="mt-2 space-y-1 border-l-2 border-destructive/30 pl-3 text-sm">
                         <p className="text-muted-foreground">
-                          {refusal.employeeName ? `${refusal.employeeName} recusou a tarefa.` : "Tarefa recusada pelo funcionário."}
+                          {refusal.employeeName
+                            ? `${refusal.employeeName} recusou a tarefa.`
+                            : "Tarefa recusada pelo funcionário."}
                         </p>
                         <p className="whitespace-pre-wrap break-words">
                           <span className="font-medium">Motivo da recusa:</span>{" "}
@@ -489,17 +652,47 @@ function NotificationsPage() {
                       </div>
                     ) : cancellation ? (
                       <div className="mt-2 space-y-1 border-l-2 border-destructive/30 pl-3 text-sm">
-                        <p><span className="font-medium">Quem cancelou:</span>{" "}{cancellation.actorName}{cancellation.actorRole ? ` (${cancellation.actorRole})` : ""}</p>
-                        {cancellation.taskTitle && <p><span className="font-medium">Tarefa:</span> {cancellation.taskTitle}</p>}
-                        {cancellation.clientName && <p><span className="font-medium">Cliente:</span> {cancellation.clientName}</p>}
-                        <p><span className="font-medium">Motivo:</span> {cancellation.reason ?? "Motivo não informado"}</p>
-                        {cancellation.cancelledAt && <p className="text-xs text-muted-foreground">Cancelada em: {new Date(cancellation.cancelledAt).toLocaleString("pt-PT")}</p>}
+                        <p>
+                          <span className="font-medium">Quem cancelou:</span>{" "}
+                          {cancellation.actorName}
+                          {cancellation.actorRole ? ` (${cancellation.actorRole})` : ""}
+                        </p>
+                        {cancellation.taskTitle && (
+                          <p>
+                            <span className="font-medium">Tarefa:</span> {cancellation.taskTitle}
+                          </p>
+                        )}
+                        {cancellation.clientName && (
+                          <p>
+                            <span className="font-medium">Cliente:</span> {cancellation.clientName}
+                          </p>
+                        )}
+                        <p>
+                          <span className="font-medium">Motivo:</span>{" "}
+                          {cancellation.reason ?? "Motivo não informado"}
+                        </p>
+                        {cancellation.cancelledAt && (
+                          <p className="text-xs text-muted-foreground">
+                            Cancelada em:{" "}
+                            {new Date(cancellation.cancelledAt).toLocaleString("pt-PT")}
+                          </p>
+                        )}
                       </div>
+                    ) : ticketDisplay ? (
+                      ticketDisplay.body && (
+                        <p className="mt-0.5 break-words text-sm text-muted-foreground">
+                          {ticketDisplay.body}
+                        </p>
+                      )
                     ) : (
-                      n.body && <p className="mt-0.5 break-words text-sm text-muted-foreground">{n.body}</p>
+                      n.body && (
+                        <p className="mt-0.5 break-words text-sm text-muted-foreground">{n.body}</p>
+                      )
                     )}
                     {n.state_note && (
-                      <p className="mt-1 text-xs italic text-muted-foreground">Nota: {n.state_note}</p>
+                      <p className="mt-1 text-xs italic text-muted-foreground">
+                        Nota: {n.state_note}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -591,7 +784,8 @@ function NotificationsPage() {
           <DialogHeader>
             <DialogTitle>Encaminhar notificação</DialogTitle>
             <DialogDescription>
-              Registe para quem enviou este assunto. A notificação fica em “Em tratamento” até ser resolvida.
+              Registe para quem enviou este assunto. A notificação fica em “Em tratamento” até ser
+              resolvida.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -605,7 +799,13 @@ function NotificationsPage() {
               />
               <div className="flex flex-wrap gap-1.5">
                 {FORWARD_SUGGESTIONS.map((s) => (
-                  <Button key={s} type="button" size="sm" variant="outline" onClick={() => setForwardTo(s)}>
+                  <Button
+                    key={s}
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setForwardTo(s)}
+                  >
                     {s}
                   </Button>
                 ))}
