@@ -2700,6 +2700,9 @@ export type Database = {
           location: string | null
           marked_absent_at: string | null
           marked_absent_by: string | null
+          no_start_reason: string | null
+          no_start_reason_at: string | null
+          no_start_reason_by: string | null
           notes: string | null
           priority: Database["public"]["Enums"]["task_priority"]
           punch_mode_override: Database["public"]["Enums"]["punch_mode"] | null
@@ -2743,6 +2746,9 @@ export type Database = {
           location?: string | null
           marked_absent_at?: string | null
           marked_absent_by?: string | null
+          no_start_reason?: string | null
+          no_start_reason_at?: string | null
+          no_start_reason_by?: string | null
           notes?: string | null
           priority?: Database["public"]["Enums"]["task_priority"]
           punch_mode_override?: Database["public"]["Enums"]["punch_mode"] | null
@@ -2786,6 +2792,9 @@ export type Database = {
           location?: string | null
           marked_absent_at?: string | null
           marked_absent_by?: string | null
+          no_start_reason?: string | null
+          no_start_reason_at?: string | null
+          no_start_reason_by?: string | null
           notes?: string | null
           priority?: Database["public"]["Enums"]["task_priority"]
           punch_mode_override?: Database["public"]["Enums"]["punch_mode"] | null
@@ -2834,6 +2843,13 @@ export type Database = {
           {
             foreignKeyName: "tasks_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_no_start_reason_by_fkey"
+            columns: ["no_start_reason_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -5151,6 +5167,9 @@ export type Database = {
           location: string | null
           marked_absent_at: string | null
           marked_absent_by: string | null
+          no_start_reason: string | null
+          no_start_reason_at: string | null
+          no_start_reason_by: string | null
           notes: string | null
           priority: Database["public"]["Enums"]["task_priority"]
           punch_mode_override: Database["public"]["Enums"]["punch_mode"] | null
@@ -5435,6 +5454,9 @@ export type Database = {
           location: string | null
           marked_absent_at: string | null
           marked_absent_by: string | null
+          no_start_reason: string | null
+          no_start_reason_at: string | null
+          no_start_reason_by: string | null
           notes: string | null
           priority: Database["public"]["Enums"]["task_priority"]
           punch_mode_override: Database["public"]["Enums"]["punch_mode"] | null
@@ -5487,6 +5509,9 @@ export type Database = {
           location: string | null
           marked_absent_at: string | null
           marked_absent_by: string | null
+          no_start_reason: string | null
+          no_start_reason_at: string | null
+          no_start_reason_by: string | null
           notes: string | null
           priority: Database["public"]["Enums"]["task_priority"]
           punch_mode_override: Database["public"]["Enums"]["punch_mode"] | null
@@ -5544,6 +5569,9 @@ export type Database = {
           location: string | null
           marked_absent_at: string | null
           marked_absent_by: string | null
+          no_start_reason: string | null
+          no_start_reason_at: string | null
+          no_start_reason_by: string | null
           notes: string | null
           priority: Database["public"]["Enums"]["task_priority"]
           punch_mode_override: Database["public"]["Enums"]["punch_mode"] | null
@@ -5596,6 +5624,9 @@ export type Database = {
           location: string | null
           marked_absent_at: string | null
           marked_absent_by: string | null
+          no_start_reason: string | null
+          no_start_reason_at: string | null
+          no_start_reason_by: string | null
           notes: string | null
           priority: Database["public"]["Enums"]["task_priority"]
           punch_mode_override: Database["public"]["Enums"]["punch_mode"] | null
@@ -5664,6 +5695,9 @@ export type Database = {
           location: string | null
           marked_absent_at: string | null
           marked_absent_by: string | null
+          no_start_reason: string | null
+          no_start_reason_at: string | null
+          no_start_reason_by: string | null
           notes: string | null
           priority: Database["public"]["Enums"]["task_priority"]
           punch_mode_override: Database["public"]["Enums"]["punch_mode"] | null
@@ -5740,6 +5774,9 @@ export type Database = {
           location: string | null
           marked_absent_at: string | null
           marked_absent_by: string | null
+          no_start_reason: string | null
+          no_start_reason_at: string | null
+          no_start_reason_by: string | null
           notes: string | null
           priority: Database["public"]["Enums"]["task_priority"]
           punch_mode_override: Database["public"]["Enums"]["punch_mode"] | null
@@ -5793,6 +5830,9 @@ export type Database = {
           location: string | null
           marked_absent_at: string | null
           marked_absent_by: string | null
+          no_start_reason: string | null
+          no_start_reason_at: string | null
+          no_start_reason_by: string | null
           notes: string | null
           priority: Database["public"]["Enums"]["task_priority"]
           punch_mode_override: Database["public"]["Enums"]["punch_mode"] | null
