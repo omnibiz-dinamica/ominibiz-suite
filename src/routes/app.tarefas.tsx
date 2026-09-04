@@ -460,6 +460,9 @@ function TasksPage() {
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "task_refusals" }, () =>
         qc.invalidateQueries({ queryKey: ["task-refusals"] }),
       )
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "task_audit_events" }, () =>
+        qc.invalidateQueries({ queryKey: ["task-completion-notes"] }),
+      )
       .on("postgres_changes", { event: "*", schema: "public", table: "time_entries" }, () =>
         qc.invalidateQueries({ queryKey: ["task-punches"] }),
       )
@@ -513,6 +516,7 @@ function TasksPage() {
       setCompletionNote("");
       qc.invalidateQueries({ queryKey: ["tasks"] });
       qc.invalidateQueries({ queryKey: ["task-completion-notes"] });
+      qc.invalidateQueries({ queryKey: ["notifications"] });
       if (noteSaved) toast.success("Tarefa concluída");
       else toast.warning("Tarefa concluída, mas a observação não foi salva.");
     },
@@ -1942,6 +1946,7 @@ function CalendarTaskCard({
   onToggleTaskSelection,
   onNoStartReason,
   taskPunches,
+  completionNotes,
 }: RowHandlers & {
   task: TaskRow;
   members: { id: string; full_name: string | null }[];
@@ -1961,6 +1966,7 @@ function CalendarTaskCard({
   const memberName = members.find((m) => m.id === task.assigned_to)?.full_name ?? "Sem responsável";
   const clientName = clients.find((c) => c.id === task.client_id)?.name ?? "Sem cliente";
   const taskPunch = taskPunches.get(task.id);
+  const completionNote = completionNotes.get(task.id);
   const refusalHistory = refusalsByTask.get(task.id) ?? [];
   const refusal = currentTaskRefusal(task, refusalHistory);
   const cancellation = currentTaskCancellation(task);
@@ -2048,6 +2054,15 @@ function CalendarTaskCard({
             <div className="text-muted-foreground">Cancelada em: {formatLocalTime(cancellation.cancelledAt)}</div>
           )}
         </div>
+      )}
+      {completionNote && (
+        <CompletionNoteBlock
+          note={completionNote}
+          memberNames={memberNames}
+          assignedTo={task.assigned_to}
+          completedAt={task.completed_at}
+          compact
+        />
       )}
       <TaskRefusalHistory records={refusalHistory} memberNames={memberNames} compact />
 
@@ -2319,11 +2334,12 @@ function TaskRowItem({
         </div>
         {t.description && <div className="mt-1 line-clamp-1 text-xs text-muted-foreground">{t.description}</div>}
         {completionNote && (
-          <div className="mt-2 rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-xs">
-            <div className="font-semibold text-primary">Observação da conclusão</div>
-            <div className="mt-0.5 whitespace-pre-wrap text-foreground">{completionNote.reason}</div>
-            <div className="mt-1 text-muted-foreground">Registada em {formatLocalTime(completionNote.created_at)}</div>
-          </div>
+          <CompletionNoteBlock
+            note={completionNote}
+            memberNames={memberNames}
+            assignedTo={t.assigned_to}
+            completedAt={t.completed_at}
+          />
         )}
       </div>
       </div>
@@ -3433,5 +3449,38 @@ function TaskForm({
       </AlertDialogContent>
     </AlertDialog>
     </>
+  );
+}
+
+function CompletionNoteBlock({
+  note,
+  memberNames,
+  assignedTo,
+  completedAt,
+  compact = false,
+}: {
+  note: CompletionNote;
+  memberNames: ReadonlyMap<string, string>;
+  assignedTo: string | null;
+  completedAt: string | null;
+  compact?: boolean;
+}) {
+  const actorName = memberNames.get(note.actor_user_id) ?? "Funcionário";
+  const byEmployee = assignedTo === note.actor_user_id;
+  const timestamp = completedAt ?? note.created_at;
+
+  return (
+    <div className={`${compact ? "mt-2 px-2 py-1.5 text-[11px]" : "mt-2 px-3 py-2 text-xs"} rounded-md border border-success/30 bg-success/10`}>
+      <div className="font-semibold uppercase tracking-wide text-success-foreground">
+        {byEmployee ? "Concluída pelo funcionário" : "Observação da conclusão"}
+      </div>
+      <div className="mt-0.5 text-foreground">
+        <span className="font-medium">Funcionário:</span> {actorName}
+      </div>
+      <div className="mt-0.5 whitespace-pre-wrap break-words text-foreground">
+        <span className="font-medium">Observação:</span> {note.reason}
+      </div>
+      <div className="mt-1 text-muted-foreground">Concluída em: {formatLocalTime(timestamp)}</div>
+    </div>
   );
 }

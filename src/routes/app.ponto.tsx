@@ -359,6 +359,7 @@ function PontoPage() {
       qc.invalidateQueries({ queryKey: ["punch-history"] });
       qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
       qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["notifications"] });
       if (noteSaved) toast.success("Tarefa concluída");
       else toast.warning("Tarefa concluída, mas a observação não foi salva.");
     },
@@ -454,6 +455,7 @@ function PontoPage() {
       qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
       qc.invalidateQueries({ queryKey: ["punch-history"] });
       qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["notifications"] });
       if (noteSaved) toast.success("Saida manual registrada.");
       else toast.warning("Saida manual registrada, mas a observação não foi salva.");
     },
