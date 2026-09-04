@@ -104,6 +104,14 @@ import { ReassignDialog } from "@/components/tasks/ReassignDialog";
 import { EditRecurrenceDialog } from "@/components/tasks/EditRecurrenceDialog";
 import type { RecurrenceRow } from "@/lib/tasks";
 import { isRefused } from "@/lib/tasks";
+import {
+  formatTaskFileSize,
+  mergeTaskFiles,
+  TASK_DOCUMENT_ACCEPT,
+  removeTaskDocuments,
+  uploadTaskDocuments,
+  type TaskDocument,
+} from "@/lib/tasks/task-documents";
 import { localDateToDateKey, normalizeCustomRecurrenceDates } from "@/lib/tasks/custom-recurrence";
 import { CancelTaskDialog } from "@/components/tasks/CancelTaskDialog";
 import { DeleteRecurrenceDialog } from "@/components/tasks/DeleteRecurrenceDialog";
@@ -170,10 +178,6 @@ type ApprovedVacation = {
   status: "aprovado";
 };
 type CalendarMode = "day" | "week" | "month" | "year";
-const TASK_DOC_ACCEPT = "application/pdf,image/png,image/jpeg,image/jpg";
-const TASK_DOC_MAX_SIZE = 10 * 1024 * 1024;
-const TASK_DOC_ALLOWED_MIME = new Set(["application/pdf", "image/png", "image/jpeg", "image/jpg"]);
-
 export const Route = createFileRoute("/app/tarefas")({
   component: TasksPage,
   validateSearch: (raw): TasksSearch => {
@@ -2522,6 +2526,7 @@ function TaskForm({
    * mesmo tick, antes de qualquer INSERT.
    */
   const submittingRef = useRef(false);
+  const createdTaskIdsRef = useRef<string[]>([]);
   const [scheduleConflicts, setScheduleConflicts] = useState<TaskScheduleConflict[]>([]);
   const [scheduleCheckError, setScheduleCheckError] = useState<string | null>(null);
   const confirmedConflictsRef = useRef(false);
@@ -2685,36 +2690,6 @@ function TaskForm({
     setTeamPrompt({ clientName, team });
   };
 
-
-  const uploadCreationDocs = async (taskId: string) => {
-    for (const file of pendingDocs) {
-      if (file.size > TASK_DOC_MAX_SIZE) {
-        throw new Error(`${file.name}: arquivo maior que 10 MB`);
-      }
-      if (!TASK_DOC_ALLOWED_MIME.has(file.type)) {
-        throw new Error(`${file.name}: tipo de arquivo nao permitido. Use PDF, PNG ou JPG.`);
-      }
-      const kind = file.type === "application/pdf" ? "pdf" : "image";
-      const safe = file.name.replace(/[^\w.\-]+/g, "_");
-      const path = `${companyId}/${taskId}/${Date.now()}_${safe}`;
-      const up = await supabase.storage.from("task-docs").upload(path, file, {
-        contentType: file.type,
-        upsert: false,
-      });
-      if (up.error) throw up.error;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase.from("task_documents" as any) as any).insert({
-        task_id: taskId,
-        company_id: companyId,
-        kind,
-        title: file.name,
-        storage_path: path,
-        mime_type: file.type,
-        size_bytes: file.size,
-      });
-      if (error) throw error;
-    }
-  };
 
   return (
     <>
@@ -2934,7 +2909,7 @@ function TaskForm({
         }
         confirmedConflictsRef.current = false;
         let error: { message: string } | null = null;
-        const createdTaskIds: string[] = [];
+        const createdTaskIds: string[] = [...createdTaskIdsRef.current];
         // Fase B: lote multi-responsável. Cada responsável mantém a SUA tarefa
         // (estado, ponto, recusa e conclusão próprios); o grupo só correlaciona.
         const groupId = assignees.length > 1 ? crypto.randomUUID() : null;
@@ -3025,7 +3000,7 @@ function TaskForm({
               );
             }
           }
-        } else {
+        } else if (createdTaskIds.length === 0) {
           // Uma tarefa por funcionário selecionado (tasks.assigned_to segue único).
           const inserted = await supabase
             .from("tasks")
@@ -3043,6 +3018,7 @@ function TaskForm({
           ;
           error = inserted.error;
           for (const row of inserted.data ?? []) createdTaskIds.push(row.id);
+          if (!error) createdTaskIdsRef.current = [...createdTaskIds];
         }
 
         if (error) {
@@ -3053,7 +3029,20 @@ function TaskForm({
         }
         if (!initial && createdTaskIds.length > 0 && pendingDocs.length > 0) {
           try {
-            for (const taskId of createdTaskIds) await uploadCreationDocs(taskId);
+            const uploadedForAllTasks: TaskDocument[] = [];
+            try {
+              for (const taskId of createdTaskIds) {
+                uploadedForAllTasks.push(...(await uploadTaskDocuments({
+                  taskId,
+                  companyId,
+                  files: pendingDocs,
+                  uploadedBy: userId,
+                })));
+              }
+            } catch (uploadError) {
+              await removeTaskDocuments(uploadedForAllTasks);
+              throw uploadError;
+            }
           } catch (e) {
             submittingRef.current = false;
             setLoading(false);
@@ -3182,10 +3171,13 @@ function TaskForm({
           <Input
             id="task-docs-create"
             type="file"
-            accept={TASK_DOC_ACCEPT}
+            accept={TASK_DOCUMENT_ACCEPT}
             multiple
             className="hidden"
-            onChange={(e) => setPendingDocs(Array.from(e.target.files ?? []))}
+            onChange={(e) => {
+              setPendingDocs((current) => mergeTaskFiles(current, Array.from(e.target.files ?? [])));
+              e.target.value = "";
+            }}
           />
           {pendingDocs.length > 0 && (
             <ul className="space-y-1">
@@ -3195,11 +3187,27 @@ function TaskForm({
                   className="flex items-center gap-2 text-xs text-muted-foreground"
                 >
                   <FileText className="h-3.5 w-3.5" />
-                  <span className="truncate">{file.name}</span>
+                  <span className="min-w-0 flex-1 truncate">{file.name}</span>
+                  <span className="shrink-0">{formatTaskFileSize(file.size)}</span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2"
+                    title={`Remover ${file.name}`}
+                    onClick={() => setPendingDocs((current) => current.filter((item) => item !== file))}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
                 </li>
               ))}
             </ul>
           )}
+          <p className="text-xs text-muted-foreground">
+            {pendingDocs.length === 0
+              ? "Nenhum ficheiro selecionado."
+              : `${pendingDocs.length} ${pendingDocs.length === 1 ? "ficheiro selecionado" : "ficheiros selecionados"}.`}
+          </p>
         </div>
       )}
       <div className="grid grid-cols-2 gap-3">

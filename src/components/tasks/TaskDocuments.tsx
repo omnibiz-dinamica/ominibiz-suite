@@ -4,23 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { FileText, Image as ImageIcon, Trash2, Upload, ExternalLink } from "lucide-react";
-
-interface TaskDocRow {
-  id: string;
-  task_id: string;
-  company_id: string;
-  kind: "pdf" | "image" | "checklist" | "video";
-  title: string;
-  storage_path: string;
-  mime_type: string | null;
-  size_bytes: number | null;
-  created_at: string;
-}
-
-const ACCEPT = "application/pdf,image/png,image/jpeg,image/jpg";
-const MAX_SIZE = 10 * 1024 * 1024;
-const ALLOWED_MIME = new Set(["application/pdf", "image/png", "image/jpeg", "image/jpg"]);
+import { FileText, Image as ImageIcon, Trash2, Upload, ExternalLink, X } from "lucide-react";
+import {
+  formatTaskFileSize,
+  mergeTaskFiles,
+  TASK_DOCUMENT_ACCEPT,
+  uploadTaskDocuments,
+  type TaskDocument,
+} from "@/lib/tasks/task-documents";
 
 export function TaskDocuments({
   taskId,
@@ -34,6 +25,7 @@ export function TaskDocuments({
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   const { data: docs, isLoading } = useQuery({
     queryKey: ["task-docs", taskId],
@@ -44,44 +36,20 @@ export function TaskDocuments({
         .eq("task_id", taskId)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []) as TaskDocRow[];
+      return (data ?? []) as TaskDocument[];
     },
   });
 
-  const upload = async (file: File) => {
-    if (file.size > MAX_SIZE) {
-      toast.error("Arquivo maior que 10 MB");
-      return;
-    }
-    if (!ALLOWED_MIME.has(file.type)) {
-      toast.error("Tipo de arquivo não permitido. Use PDF, PNG ou JPG.");
-      return;
-    }
-    const kind: TaskDocRow["kind"] = file.type === "application/pdf" ? "pdf" : "image";
-    const safe = file.name.replace(/[^\w.\-]+/g, "_");
-    const path = `${companyId}/${taskId}/${Date.now()}_${safe}`;
+  const upload = async () => {
+    if (selectedFiles.length === 0) return;
     setUploading(true);
     try {
-      const up = await supabase.storage.from("task-docs").upload(path, file, {
-        contentType: file.type,
-        upsert: false,
-      });
-      if (up.error) throw up.error;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase.from("task_documents" as any) as any).insert({
-        task_id: taskId,
-        company_id: companyId,
-        kind,
-        title: file.name,
-        storage_path: path,
-        mime_type: file.type,
-        size_bytes: file.size,
-      });
-      if (error) throw error;
-      toast.success("Documento enviado");
+      await uploadTaskDocuments({ taskId, companyId, files: selectedFiles });
+      toast.success(`${selectedFiles.length} ${selectedFiles.length === 1 ? "documento enviado" : "documentos enviados"}`);
+      setSelectedFiles([]);
       qc.invalidateQueries({ queryKey: ["task-docs", taskId] });
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error((e as Error).message || "Não foi possível enviar os documentos");
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
@@ -89,7 +57,7 @@ export function TaskDocuments({
   };
 
   const remove = useMutation({
-    mutationFn: async (doc: TaskDocRow) => {
+    mutationFn: async (doc: TaskDocument) => {
       await supabase.storage.from("task-docs").remove([doc.storage_path]);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await (supabase.from("task_documents" as any) as any).delete().eq("id", doc.id);
@@ -102,7 +70,7 @@ export function TaskDocuments({
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const openDoc = async (doc: TaskDocRow) => {
+  const openDoc = async (doc: TaskDocument) => {
     const { data, error } = await supabase.storage.from("task-docs").createSignedUrl(doc.storage_path, 60 * 10);
     if (error || !data) {
       toast.error(error?.message ?? "Erro ao abrir");
@@ -120,20 +88,49 @@ export function TaskDocuments({
             <Input
               ref={fileRef}
               type="file"
-              accept={ACCEPT}
+              accept={TASK_DOCUMENT_ACCEPT}
+              multiple
               className="hidden"
               onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) void upload(f);
+                const incoming = Array.from(e.target.files ?? []);
+                setSelectedFiles((current) => mergeTaskFiles(current, incoming));
+                e.target.value = "";
               }}
             />
             <Button size="sm" variant="outline" disabled={uploading} onClick={() => fileRef.current?.click()}>
               <Upload className="mr-1 h-3.5 w-3.5" />
-              {uploading ? "Enviando..." : "Adicionar"}
+              {uploading ? "Enviando..." : "Selecionar ficheiros"}
             </Button>
           </>
         )}
       </div>
+      {canManage && selectedFiles.length > 0 && (
+        <div className="space-y-2 rounded-lg border border-dashed border-border bg-muted/20 p-3">
+          <p className="text-xs font-medium">Selecionados ({selectedFiles.length})</p>
+          <ul className="space-y-1">
+            {selectedFiles.map((file) => (
+              <li key={`${file.name}-${file.lastModified}-${file.size}`} className="flex items-center gap-2 text-xs">
+                <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <span className="min-w-0 flex-1 truncate">{file.name}</span>
+                <span className="text-muted-foreground">{formatTaskFileSize(file.size)}</span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2"
+                  title={`Remover ${file.name}`}
+                  onClick={() => setSelectedFiles((current) => current.filter((item) => item !== file))}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </li>
+            ))}
+          </ul>
+          <Button type="button" size="sm" disabled={uploading} onClick={() => void upload()}>
+            <Upload className="mr-1 h-3.5 w-3.5" /> Enviar {selectedFiles.length === 1 ? "documento" : "documentos"}
+          </Button>
+        </div>
+      )}
       {isLoading ? (
         <div className="text-xs text-muted-foreground">Carregando...</div>
       ) : (docs ?? []).length === 0 ? (
@@ -168,7 +165,7 @@ export function TaskDocuments({
         </ul>
       )}
       <p className="text-[11px] text-muted-foreground">
-        PDF, JPG ou PNG até 10 MB. Suporte futuro: checklist e vídeo.
+        PDF, JPG ou PNG até 10 MB por ficheiro. É possível adicionar vários documentos.
       </p>
     </div>
   );
