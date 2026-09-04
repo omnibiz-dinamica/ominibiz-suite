@@ -1264,3 +1264,20 @@ da própria série.
 **Consequências.** Não há duplicação de clientes nem alteração retroativa de
 tarefas materializadas. A migration `20260903090000_client_schedule_rules.sql`
 é aditiva e precisa ser publicada no Cloud Database junto com o código.
+
+## ADR-058 — Feed operacional baseado em fatos reais
+
+**Contexto.** A Gestão de Ponto passou a misturar milhares de tarefas futuras
+com pontos já registrados. Além de distorcer total e paginação, uma falha da RPC
+era apresentada pela interface como uma lista vazia.
+
+**Decisão.** `time_entries` não anulados permanecem a fonte canónica dos pontos,
+inclusive quando a tarefa associada foi arquivada ou excluída. Faltas persistidas
+e férias aprovadas são eventos complementares, nunca pontos sintéticos; férias
+ocupam uma linha por período. Tarefas sem ponto só entram depois do momento
+operacional previsto, ou quando já estão em andamento. A função é versionada por
+uma definição completa e auditável, sem substituição textual de SQL.
+
+**Consequências.** Tarefas futuras continuam disponíveis nos módulos de tarefas e
+calendário, mas não inflam a Folha de Ponto. O total passa a contar o mesmo feed
+das linhas paginadas, e falhas da RPC são mostradas explicitamente ao gestor.

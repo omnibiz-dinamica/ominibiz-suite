@@ -16,6 +16,13 @@ const performanceRepair = readFileSync(
   ),
   "utf8",
 );
+const canonicalRepair = readFileSync(
+  new URL(
+    "../supabase/migrations/20260904223301_01227e71-9bb3-4465-90b0-e9dc84720b0d.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
 
 test("approved vacations are included in the protected operational feed without synthetic punches", () => {
   assert.match(migration, /CREATE OR REPLACE FUNCTION public\.timesheet_operational_list/);
@@ -51,4 +58,24 @@ test("operational vacation feed keeps one row per approved period and cannot blo
   assert.match(performanceRepair, /vr\.start_date <= _to_date/);
   assert.doesNotMatch(performanceRepair, /generate_series/);
   assert.doesNotMatch(performanceRepair, /INSERT INTO public\.time_entries/);
+});
+
+test("canonical operational feed preserves real punches and excludes future tasks", () => {
+  assert.match(canonicalRepair, /LEFT JOIN public\.tasks t ON t\.id = te\.task_id AND t\.company_id = te\.company_id/);
+  assert.doesNotMatch(canonicalRepair, /t\.id IS NULL OR \(t\.archived_at IS NULL/);
+  assert.match(canonicalRepair, /t\.scheduled_for <= now\(\)/);
+  assert.match(canonicalRepair, /NOT EXISTS \(SELECT 1 FROM public\.time_entries te WHERE te\.task_id = t\.id AND te\.voided_at IS NULL\)/);
+  assert.match(canonicalRepair, /FROM page AS x/);
+  assert.match(canonicalRepair, /EXISTS \(SELECT 1 FROM public\.user_roles ur WHERE ur\.company_id = vr\.company_id AND ur\.user_id = vr\.user_id\)/);
+  assert.doesNotMatch(canonicalRepair, /generate_series|pg_get_functiondef|INSERT INTO public\.time_entries/);
+});
+
+test("management page exposes RPC failures instead of silently showing zero", () => {
+  const managementPage = readFileSync(new URL("../src/routes/app.ponto_.gestao.tsx", import.meta.url), "utf8");
+  const punchAdmin = readFileSync(new URL("../src/lib/punch-admin.ts", import.meta.url), "utf8");
+  assert.match(managementPage, /isError, error, refetch/);
+  assert.match(managementPage, /Não foi possível carregar a Folha de Ponto/);
+  assert.match(managementPage, /isError \? "Falha ao carregar registros"/);
+  assert.match(punchAdmin, /resposta inválida do servidor/);
+  assert.doesNotMatch(punchAdmin, /data \?\? \{\}/);
 });

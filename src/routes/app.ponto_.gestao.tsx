@@ -31,6 +31,7 @@ import {
   MapPin,
   RotateCcw,
   ClockPlus,
+  AlertCircle,
 } from "lucide-react";
 import { PunchEditorDrawer } from "@/components/ponto/PunchEditorDrawer";
 import { PunchAuditDrawer } from "@/components/ponto/PunchAuditDrawer";
@@ -205,7 +206,7 @@ function GestaoPonto() {
   });
 
   // Feed canónico: pontos reais e faltas sem criar time_entry artificial.
-  const { data: result, isLoading } = useQuery({
+  const { data: result, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["punch-admin-list", currentCompanyId, filters, page],
     enabled: !!currentCompanyId,
     queryFn: async () => {
@@ -646,9 +647,23 @@ function GestaoPonto() {
       {/* Tabela */}
       <section className="rounded-2xl border border-border bg-card overflow-hidden">
         <div className="flex items-center justify-between border-b border-border px-4 py-2 text-xs text-muted-foreground">
-          <span>{result?.total ?? 0} registro(s)</span>
+          <span>{isError ? "Falha ao carregar registros" : `${result?.total ?? 0} registro(s)`}</span>
           <span>{PAGE_SIZE} por página</span>
         </div>
+        {isError && (
+          <div role="alert" className="m-4 flex items-start justify-between gap-4 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <div>
+                <p className="font-medium">Não foi possível carregar a Folha de Ponto.</p>
+                <p className="mt-1 text-xs opacity-90">{error instanceof Error ? error.message : "Erro técnico inesperado."}</p>
+              </div>
+            </div>
+            <Button type="button" variant="outline" size="sm" onClick={() => void refetch()}>
+              Tentar novamente
+            </Button>
+          </div>
+        )}
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -675,7 +690,7 @@ function GestaoPonto() {
                   </TableCell>
                 </TableRow>
               )}
-              {!isLoading && (result?.rows ?? []).length === 0 && (
+              {!isLoading && !isError && (result?.rows ?? []).length === 0 && (
                 <TableRow>
                   <TableCell colSpan={12} className="text-center py-8 text-sm text-muted-foreground">
                     Nenhum registro encontrado.

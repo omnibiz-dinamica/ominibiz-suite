@@ -215,6 +215,12 @@ export async function listOperationalPunches(filters: OperationalPunchFilters) {
     _offset: filters.offset ?? 0,
   });
   if (error) throw error;
-  const result = (data ?? {}) as { rows?: OperationalPunchRow[]; total?: number };
-  return { rows: result.rows ?? [], total: result.total ?? 0 };
+  if (!data || typeof data !== "object") {
+    throw new Error("A Folha de Ponto recebeu uma resposta inválida do servidor.");
+  }
+  const result = data as { rows?: OperationalPunchRow[]; total?: number };
+  if (!Array.isArray(result.rows) || typeof result.total !== "number") {
+    throw new Error("A Folha de Ponto recebeu dados incompletos do servidor.");
+  }
+  return { rows: result.rows, total: result.total };
 }
