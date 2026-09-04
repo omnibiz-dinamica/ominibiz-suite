@@ -782,9 +782,25 @@ function FeriasPage() {
                     {fmt(r.start_date)} → {fmt(r.end_date)}
                   </div>
                 </div>
-                <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_TONE.pendente_confirmacao}`}>
-                  {STATUS_LABEL.pendente_confirmacao}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_TONE.pendente_confirmacao}`}>
+                    {STATUS_LABEL.pendente_confirmacao}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() =>
+                      setCancelTarget({
+                        id: r.id,
+                        employeeName: nameOf(r.user_id),
+                        periodLabel: `${fmt(r.start_date)} → ${fmt(r.end_date)}`,
+                        statusLabel: STATUS_LABEL[r.status],
+                      })
+                    }
+                  >
+                    Cancelar
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>
