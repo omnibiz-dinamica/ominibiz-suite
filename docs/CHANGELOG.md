@@ -5,6 +5,13 @@
 
 ---
 
+### 🚧 040926007 — Estabilidade da Folha de Ponto
+
+#### Corrigido
+- O evento de férias na Gestão de Ponto passa a representar o período aprovado
+  em uma única linha. Isso evita expansão de férias históricas e preserva o
+  carregamento de todos os registros reais de ponto.
+
 ### 🚧 040926006 — Férias automáticas na Gestão de Ponto
 
 #### Alterado

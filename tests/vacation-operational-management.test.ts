@@ -9,6 +9,13 @@ const migration = readFileSync(
   ),
   "utf8",
 );
+const performanceRepair = readFileSync(
+  new URL(
+    "../supabase/migrations/20260904200000_fix_operational_vacation_feed_performance.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
 
 test("approved vacations are included in the protected operational feed without synthetic punches", () => {
   assert.match(migration, /CREATE OR REPLACE FUNCTION public\.timesheet_operational_list/);
@@ -36,4 +43,12 @@ test("vacation entries are non-editable operational records with a visible label
     /r\.tasks\?\.recurrence_date\s*\?\s*formatWallDate\(r\.tasks\.recurrence_date\)/,
   );
   assert.match(managementPage, /isOperationalTask\(r\) \|\| isVacation\(r\)/);
+});
+
+test("operational vacation feed keeps one row per approved period and cannot block real punches", () => {
+  assert.match(performanceRepair, /SELECT vr\.id, vr\.company_id/);
+  assert.match(performanceRepair, /vr\.end_date >= _from_date/);
+  assert.match(performanceRepair, /vr\.start_date <= _to_date/);
+  assert.doesNotMatch(performanceRepair, /generate_series/);
+  assert.doesNotMatch(performanceRepair, /INSERT INTO public\.time_entries/);
 });
