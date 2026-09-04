@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -248,6 +248,22 @@ function GestaoPonto() {
     setManualPointTarget(null);
     setEditorOpen(true);
   };
+
+  // Férias aprovadas/canceladas entram no feed sem que o gestor precise alterar a folha manualmente.
+  useEffect(() => {
+    if (!currentCompanyId) return;
+    const channel = supabase
+      .channel(`company:${currentCompanyId}:ponto-gestao-vacations`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "vacation_requests", filter: `company_id=eq.${currentCompanyId}` },
+        () => qc.invalidateQueries({ queryKey: ["punch-admin-list"] }),
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [currentCompanyId, qc]);
   const openEdit = (r: Row) => {
     setEditorMode("edit");
     setInitialEntryKind("work");
@@ -377,9 +393,11 @@ function GestaoPonto() {
   // Uma ausência automática antiga pode chegar persistida antes do prazo por
   // causa de uma versão anterior. A lista deve mostrar seu estado canônico.
   const isAbsence = (r: Row) => r.record_kind === "absence" && resolvedTaskStatus(r) === "ausente";
+  const isVacation = (r: Row) => r.record_kind === "vacation";
   const isOperationalTask = (r: Row) => r.record_kind === "task" || (r.record_kind === "absence" && !isAbsence(r));
-  const isNonWork = (r: Row) => isAbsence(r) || isOperationalTask(r);
+  const isNonWork = (r: Row) => isAbsence(r) || isVacation(r) || isOperationalTask(r);
   const formatSituation = (r: Row) => {
+    if (isVacation(r)) return "Férias";
     if (isOperationalTask(r)) {
       const status = resolvedTaskStatus(r);
       if (status === "em_andamento") return "Em andamento";
@@ -390,6 +408,7 @@ function GestaoPonto() {
     return r.absence_justified ? "Falta · justificada" : "Falta · injustificada";
   };
   const formatOrigin = (r: Row) => {
+    if (isVacation(r)) return "Férias aprovadas";
     if (isOperationalTask(r)) return "Tarefa operacional";
     if (isAbsence(r)) {
       if (r.absence_origin === "employee") return "Funcionário";
@@ -400,6 +419,13 @@ function GestaoPonto() {
     return ORIGIN_LABEL[r.origin] ?? r.origin;
   };
   const formatNotes = (r: Row) => (isAbsence(r) ? (r.absence_reason ?? "") : (r.no_start_reason ?? r.notes ?? ""));
+  // A data de férias é civil (DATE). Prefira recurrence_date para não converter meia-noite entre fusos.
+  const formatVacationDate = (r: Row) =>
+    r.tasks?.recurrence_date
+      ? formatWallDate(r.tasks.recurrence_date)
+      : r.tasks?.scheduled_for
+        ? formatWallDate(r.tasks.scheduled_for)
+        : "";
   const formatStartDelay = (r: Row) => {
     if (!r.tasks || !r.started_at || isNonWork(r)) return "";
     const minutes = startedLateMinutes({ scheduled_for: r.tasks.scheduled_for, started_at: r.started_at });
@@ -415,10 +441,10 @@ function GestaoPonto() {
     { header: "Funcionário", accessor: (r) => r.profiles?.full_name ?? "" },
     {
       header: "Tarefa",
-      accessor: (r) => (r.entry_kind === "paid_leave" ? "Folga remunerada" : (r.tasks?.title ?? "")),
+      accessor: (r) => (isVacation(r) ? "Férias" : r.entry_kind === "paid_leave" ? "Folga remunerada" : (r.tasks?.title ?? "")),
     },
     { header: "Cliente", accessor: (r) => (r.tasks?.client_id ? (clientsMap[r.tasks.client_id] ?? "") : "") },
-    { header: "Previsto", accessor: (r) => formatPrevisto(r.tasks) },
+    { header: "Previsto", accessor: (r) => (isVacation(r) ? formatVacationDate(r) : formatPrevisto(r.tasks)) },
     { header: "Situação", accessor: (r) => formatSituation(r) },
     { header: "Início", accessor: (r) => (isNonWork(r) ? "" : fmtDT(r.started_at)) },
     { header: "Fim", accessor: (r) => (isNonWork(r) ? "" : fmtDT(r.ended_at)) },
@@ -659,17 +685,21 @@ function GestaoPonto() {
               {(result?.rows ?? []).map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="font-medium">{r.profiles?.full_name ?? r.user_id.slice(0, 8)}</TableCell>
-                  <TableCell className="max-w-[260px] truncate">{r.tasks?.title ?? "—"}</TableCell>
+                  <TableCell className="max-w-[260px] truncate">{isVacation(r) ? "Férias" : r.tasks?.title ?? "—"}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {r.tasks?.client_id ? (clientsMap[r.tasks.client_id] ?? "—") : "—"}
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
-                    {formatPrevisto(r.tasks) || "—"}
+                    {(isVacation(r) ? formatVacationDate(r) : formatPrevisto(r.tasks)) || "—"}
                   </TableCell>
                   <TableCell>
                     <span
                       className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                        isAbsence(r) ? "bg-destructive/15 text-destructive" : "bg-muted text-muted-foreground"
+                        isAbsence(r)
+                          ? "bg-destructive/15 text-destructive"
+                          : isVacation(r)
+                            ? "bg-success/15 text-success"
+                            : "bg-muted text-muted-foreground"
                       }`}
                     >
                       {formatSituation(r)}
@@ -700,7 +730,7 @@ function GestaoPonto() {
                     {[formatStartDelay(r), formatNotes(r)].filter(Boolean).join(" · ") || "—"}
                   </TableCell>
                   <TableCell>
-                    {isOperationalTask(r) ? <span className="text-muted-foreground">—</span> : <DropdownMenu>
+                    {isOperationalTask(r) || isVacation(r) ? <span className="text-muted-foreground">—</span> : <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Ações do registro">
                           <MoreHorizontal className="h-4 w-4" />

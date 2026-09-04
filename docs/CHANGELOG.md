@@ -5,6 +5,15 @@
 
 ---
 
+### 🚧 040926006 — Férias automáticas na Gestão de Ponto
+
+#### Alterado
+- A Gestão de Ponto exibe automaticamente cada dia de férias aprovadas, sem
+  criar ponto fictício, permitir edição indevida ou alterar horas efetivamente
+  trabalhadas.
+- A Folha de Ponto e o calendário preservam a exibição automática já baseada
+  em férias aprovadas.
+
 ### 🚧 310826003 — Regularização de faltas com ponto manual
 
 #### Alterado

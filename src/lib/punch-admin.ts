@@ -7,7 +7,8 @@ export type PunchOrigin =
   | "manager_correction"
   | "manager_voided"
   | "manual_adjustment"
-  | "paid_leave";
+  | "paid_leave"
+  | "vacation";
 
 export interface AdminTimeEntry extends TimeEntryRow {
   origin: PunchOrigin;
@@ -148,6 +149,7 @@ export const ORIGIN_LABEL: Record<PunchOrigin, string> = {
   manager_voided: "Anulado",
   manual_adjustment: "Regularização manual",
   paid_leave: "Folga remunerada",
+  vacation: "Férias aprovadas",
 };
 
 export const ORIGIN_TONE: Record<PunchOrigin, string> = {
@@ -157,10 +159,11 @@ export const ORIGIN_TONE: Record<PunchOrigin, string> = {
   manager_voided: "bg-destructive/15 text-destructive",
   manual_adjustment: "bg-warning/15 text-warning-foreground",
   paid_leave: "bg-success/15 text-success",
+  vacation: "bg-success/15 text-success",
 };
 
 export type OperationalPunchRow = AdminTimeEntry & {
-  record_kind?: "work" | "paid_leave" | "absence" | "task";
+  record_kind?: "work" | "paid_leave" | "absence" | "task" | "vacation";
   absence_reason?: string | null;
   absence_justified?: boolean | null;
   absence_source?: string | null;
