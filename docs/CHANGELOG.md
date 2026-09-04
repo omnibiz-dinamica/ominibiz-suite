@@ -5,6 +5,20 @@
 
 ---
 
+### 🚧 040926008 — Integridade da Folha de Ponto Gestão
+
+#### Corrigido
+- A listagem volta a priorizar fatos operacionais reais: preserva todos os pontos
+  existentes, não mistura tarefas futuras e evita duplicar faltas que já possuem ponto.
+- Férias aprovadas permanecem complementares, em uma linha por período e somente
+  para funcionários vinculados à empresa ativa.
+- Falhas da consulta deixam de aparecer como “0 registros” e passam a ser exibidas
+  com uma mensagem técnica e opção de nova tentativa.
+
+#### Segurança
+- A função canónica mantém validação de Gestor/Super Admin, isolamento por
+  `company_id`, `search_path` fixo e execução anónima revogada.
+
 ### 🚧 040926007 — Estabilidade da Folha de Ponto
 
 #### Corrigido
