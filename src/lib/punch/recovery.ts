@@ -10,6 +10,7 @@
  * A regra de um único ponto aberto (`uniq_open_punch_per_user`) permanece intacta.
  */
 import { supabase } from "@/integrations/supabase/client";
+export { defaultRecoveryEndInput } from "@/lib/punch/recovery-time";
 
 export interface OpenEntrySelf {
   time_entry_id: string;

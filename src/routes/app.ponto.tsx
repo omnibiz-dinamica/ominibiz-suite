@@ -63,7 +63,8 @@ import { OpenPunchRecoveryDialog } from "@/components/ponto/OpenPunchRecoveryDia
 import { CancelTaskDialog } from "@/components/tasks/CancelTaskDialog";
 import { ArchiveTaskDialog } from "@/components/tasks/ArchiveTaskDialog";
 import { MarkAbsentDialog } from "@/components/tasks/MarkAbsentDialog";
-import { fetchOpenEntrySelf } from "@/lib/punch/recovery";
+import { fetchOpenEntrySelf, recoverOpenEntry } from "@/lib/punch/recovery";
+import { defaultRecoveryEndInput } from "@/lib/punch/recovery-time";
 
 export const Route = createFileRoute("/app/ponto")({ component: PontoPage });
 
@@ -188,6 +189,8 @@ function PontoPage() {
     queryFn: fetchOpenEntrySelf,
     enabled: !!user && !!openEntry?.id,
   });
+
+  const isLateOpenEntry = !!openEntry && new Date(openEntry.started_at).toDateString() !== new Date().toDateString();
 
   // Próximas tarefas do dia (quando não há ponto aberto)
   const { data: upcoming } = useQuery({
@@ -359,6 +362,9 @@ function PontoPage() {
       if (noteSaved) toast.success("Tarefa concluída");
       else toast.warning("Tarefa concluída, mas a observação não foi salva.");
     },
+    onError: (error: Error) => {
+      toast.error(error.message || "Não foi possível concluir a tarefa.");
+    },
     // Atualiza a folha mesmo quando a transição da tarefa falhar depois do stop.
     // O ponto já pode ter sido fechado pela RPC e não deve ficar visível como aberto.
     onSettled: () => {
@@ -414,7 +420,20 @@ function PontoPage() {
       if (!openEntry) {
         throw new Error("Sem ponto aberto.");
       }
-      const entry = await punchEmployeeManualEnd(entryId, localInputToIso(endedAt), true, reason);
+      const endedAtIso = localInputToIso(endedAt);
+      const entry = isLateOpenEntry
+        ? await (async () => {
+            const res = await recoverOpenEntry({
+              timeEntryId: entryId,
+              endedAtIso,
+              reasonCode: "outro",
+              reasonText: reason ?? null,
+              completeTask: true,
+            });
+            if (!res.success) throw new Error(res.message ?? res.code ?? "Não foi possível regularizar o ponto.");
+            return res;
+          })()
+        : await punchEmployeeManualEnd(entryId, endedAtIso, true, reason);
       let noteSaved = true;
       if (note.trim() && openTask) {
         try {
@@ -437,6 +456,9 @@ function PontoPage() {
       qc.invalidateQueries({ queryKey: ["tasks"] });
       if (noteSaved) toast.success("Saida manual registrada.");
       else toast.warning("Saida manual registrada, mas a observação não foi salva.");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Não foi possível finalizar o ponto.");
     },
   });
   const requestAuthMut = useMutation({
@@ -468,12 +490,11 @@ function PontoPage() {
 
   const openTaskMode = openTask ? effectiveMode(openTask) : "automatico";
   const isManualOpenTask = openTaskMode === "manual" || openEntry?.notes === "Apontamento manual pelo funcionario";
-  const isLateOpenEntry = !!openEntry && new Date(openEntry.started_at).toDateString() !== new Date().toDateString();
   const manualStartingId = manualStartMut.variables?.taskId ?? null;
 
   function openManualEndDialog(requiresReason = false) {
     if (!openEntry || !openTask) return;
-    setManualEndAt(manualDefaultDateTime(openTask));
+    setManualEndAt(defaultRecoveryEndInput(openEntry.started_at));
     setManualEndReason("");
     setManualCompletionNote("");
     setManualEndRequiresReason(requiresReason);
