@@ -5,6 +5,18 @@ import test from "node:test";
 import { buildCreateTicketArgs } from "../src/lib/support/create-ticket-payload.ts";
 import { getSupportErrorDetails, getSupportErrorMessage } from "../src/lib/support/errors.ts";
 
+const destinationPolicyMigration = readFileSync(
+  new URL(
+    "../supabase/migrations/20260906110000_sup_2026_000105_employee_tickets_route_to_secretary.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
+const newTicketDialog = readFileSync(
+  new URL("../src/components/support/NewTicketDialog.tsx", import.meta.url),
+  "utf8",
+);
+
 test("builds the canonical RPC payload and normalizes optional fields", () => {
   assert.deepEqual(
     buildCreateTicketArgs({
@@ -58,6 +70,19 @@ test("maps known support validation failures to actionable messages", () => {
     getSupportErrorMessage({ code: "42501", message: "not_authorized" }),
     "Não tem permissão para criar uma solicitação nesta empresa.",
   );
+});
+
+test("employee ticket destinations are forced to the Secretary queue by the RPC", () => {
+  assert.match(destinationPolicyMigration, /WHEN v_is_sa OR v_is_mgr THEN[\s\S]*ELSE 'secretary'/);
+  assert.match(destinationPolicyMigration, /WHERE code = v_destination_code AND is_active/);
+  assert.match(destinationPolicyMigration, /status, destination_code\s+\) VALUES \([\s\S]*v_dest\.code/);
+});
+
+test("only management sees the destination selector in the new-ticket dialog", () => {
+  assert.match(newTicketDialog, /const canChooseDestination = isManager \|\| isSuperAdmin/);
+  assert.match(newTicketDialog, /enabled: canChooseDestination/);
+  assert.match(newTicketDialog, /const EMPLOYEE_DESTINATION_CODE = "secretary"/);
+  assert.match(newTicketDialog, /A gestora ou o Super Admin poderá reencaminhar o ticket depois/);
 });
 
 test("support notification migration never stores a ticket UUID in task_id", () => {

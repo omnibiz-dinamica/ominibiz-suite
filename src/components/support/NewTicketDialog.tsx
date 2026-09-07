@@ -57,6 +57,7 @@ import {
   supportDestinationsQueryKey,
 } from "@/lib/support/destinations";
 
+const EMPLOYEE_DESTINATION_CODE = "secretary";
 
 const schema = z.object({
   type: z.string().min(1),
@@ -117,7 +118,8 @@ export function NewTicketDialog({
   defaultType,
   defaultTitle,
 }: NewTicketDialogProps) {
-  const { currentCompanyId } = useAuth();
+  const { currentCompanyId, isManager, isSuperAdmin } = useAuth();
+  const canChooseDestination = isManager || isSuperAdmin;
   const qc = useQueryClient();
   const nav = useNavigate();
   const route = useRouterState({ select: (s) => s.location.pathname });
@@ -143,6 +145,7 @@ export function NewTicketDialog({
   const destinationsQ = useQuery({
     queryKey: supportDestinationsQueryKey,
     queryFn: fetchSupportDestinations,
+    enabled: canChooseDestination,
     staleTime: 5 * 60 * 1000,
   });
   const destinations = destinationsQ.data ?? [];
@@ -153,7 +156,9 @@ export function NewTicketDialog({
       const draft = readDraft();
       setType((draft?.type as SupportTicketType) ?? defaultType ?? "duvida");
       setPriority((draft?.priority as SupportTicketPriority) ?? "normal");
-      setDestinationCode(draft?.destinationCode ?? "");
+      setDestinationCode(
+        canChooseDestination ? draft?.destinationCode ?? "" : EMPLOYEE_DESTINATION_CODE,
+      );
       setTitle(draft?.title ?? defaultTitle ?? "");
       setDescription(draft?.description ?? "");
       setModule(draft?.module ?? defaultModule ?? "");
@@ -163,7 +168,7 @@ export function NewTicketDialog({
       setSimilarOpen(false);
 
     }
-  }, [open, defaultType, defaultTitle, defaultModule]);
+  }, [open, defaultType, defaultTitle, defaultModule, canChooseDestination]);
 
   // Rascunho persistido: anexar imagem (input file) não pode perder o que foi digitado.
   useEffect(() => {
@@ -299,41 +304,52 @@ export function NewTicketDialog({
             </div>
           )}
 
-          <ModalSection
-            title="Destino do ticket *"
-            description="Para quem deseja enviar este ticket? O destino é a fila de atendimento — o responsável é atribuído depois."
-          >
-            {destinationsQ.isLoading ? (
-              <div className="text-sm text-muted-foreground">Carregando destinos…</div>
-            ) : (
-              <div className="grid gap-2 sm:grid-cols-3">
-                {destinations.map((d) => {
-                  const Icon = destinationIcon(d.icon);
-                  const active = destinationCode === d.code;
-                  return (
-                    <button
-                      key={d.code}
-                      type="button"
-                      aria-pressed={active}
-                      onClick={() => setDestinationCode(d.code)}
-                      className={
-                        "flex h-full flex-col gap-1 rounded-xl border p-3 text-left transition-colors " +
-                        (active
-                          ? "border-primary bg-primary/10 ring-1 ring-primary"
-                          : "border-border bg-card hover:border-primary/50")
-                      }
-                    >
-                      <span className="flex items-center gap-2 text-sm font-medium">
-                        <Icon className="h-4 w-4 text-primary" />
-                        {d.label}
-                      </span>
-                      <span className="text-xs leading-snug text-muted-foreground">{d.description}</span>
-                    </button>
-                  );
-                })}
+          {canChooseDestination ? (
+            <ModalSection
+              title="Destino do ticket *"
+              description="Para quem deseja enviar este ticket? O destino é a fila de atendimento — o responsável é atribuído depois."
+            >
+              {destinationsQ.isLoading ? (
+                <div className="text-sm text-muted-foreground">Carregando destinos…</div>
+              ) : (
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {destinations.map((d) => {
+                    const Icon = destinationIcon(d.icon);
+                    const active = destinationCode === d.code;
+                    return (
+                      <button
+                        key={d.code}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => setDestinationCode(d.code)}
+                        className={
+                          "flex h-full flex-col gap-1 rounded-xl border p-3 text-left transition-colors " +
+                          (active
+                            ? "border-primary bg-primary/10 ring-1 ring-primary"
+                            : "border-border bg-card hover:border-primary/50")
+                        }
+                      >
+                        <span className="flex items-center gap-2 text-sm font-medium">
+                          <Icon className="h-4 w-4 text-primary" />
+                          {d.label}
+                        </span>
+                        <span className="text-xs leading-snug text-muted-foreground">{d.description}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </ModalSection>
+          ) : (
+            <ModalSection
+              title="Destino do ticket"
+              description="O destino é definido automaticamente para a Secretária. A gestora ou o Super Admin poderá reencaminhar o ticket depois."
+            >
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm font-medium">
+                {DESTINATION_EMOJI[EMPLOYEE_DESTINATION_CODE]} Secretária
               </div>
-            )}
-          </ModalSection>
+            </ModalSection>
+          )}
 
           <ModalSection title="Dados do ticket">
             <div className="grid gap-4 sm:grid-cols-2">
