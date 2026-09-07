@@ -20,7 +20,7 @@ export function taskListTimestamp(task: TaskListDateFields): number {
 
 export function sortTasksForList<T extends TaskListDateFields>(
   tasks: readonly T[],
-  sort: TaskListSort = "recent",
+  sort: TaskListSort = "nearest",
   now = Date.now(),
 ) {
   return [...tasks].sort((a, b) => {

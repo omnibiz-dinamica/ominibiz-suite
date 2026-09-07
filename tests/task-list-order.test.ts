@@ -11,11 +11,10 @@ const task = (id: string, date: string, createdAt = `${date}T08:00:00Z`) => ({
 });
 
 test("orders task list with the most recent scheduled task first", () => {
-  const result = sortTasksForList([
-    task("old", "2026-07-15"),
-    task("today", "2026-09-06"),
-    task("new", "2026-09-07"),
-  ]);
+  const result = sortTasksForList(
+    [task("old", "2026-07-15"), task("today", "2026-09-06"), task("new", "2026-09-07")],
+    "recent",
+  );
   assert.deepEqual(
     result.map((item) => item.id),
     ["new", "today", "old"],
@@ -37,6 +36,10 @@ test("supports nearest and oldest task ordering without changing the source arra
   );
   assert.deepEqual(
     sortTasksForList(source, "nearest", now).map((item) => item.id),
+    ["today", "future", "old"],
+  );
+  assert.deepEqual(
+    sortTasksForList(source, undefined, now).map((item) => item.id),
     ["today", "future", "old"],
   );
   assert.deepEqual(

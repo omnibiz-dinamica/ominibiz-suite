@@ -218,7 +218,7 @@ function TasksPage() {
   const [refusalReason, setRefusalReason] = useState("");
   const [view, setView] = useState<"active" | "archived">("active");
   const [taskView, setTaskView] = useState<"list" | "calendar">("list");
-  const [taskSort, setTaskSort] = useState<TaskListSort>("recent");
+  const [taskSort, setTaskSort] = useState<TaskListSort>("nearest");
   const [calendarGroup, setCalendarGroup] = useState<"assignee" | "client">("assignee");
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
   const [bulkAction, setBulkAction] = useState<"archive" | "delete" | null>(null);
