@@ -8,6 +8,8 @@ export interface TaskRefusalRecord {
   previous_status: string;
   new_status: string;
   created_at: string;
+  schedule_change_requested_date?: string | null;
+  schedule_change_needs_reassignment?: boolean | null;
 }
 
 type RefusedTaskSnapshot = {
@@ -19,12 +21,16 @@ type RefusedTaskSnapshot = {
   refusal_reason?: string | null;
   refused_at?: string | null;
   refused_by?: string | null;
+  schedule_change_requested_date?: string | null;
+  schedule_change_needs_reassignment?: boolean | null;
 };
 
 export interface TaskRefusalDetails {
   employeeId: string;
   reason: string | null;
   refusedAt: string | null;
+  requestedDate: string | null;
+  needsReassignment: boolean | null;
 }
 
 export interface TaskRejectionNotificationDetails extends TaskRefusalDetails {
@@ -36,6 +42,8 @@ export interface TaskCancellationDetails {
   reason: string | null;
   cancelledAt: string | null;
   byEmployee: boolean;
+  requestedDate: string | null;
+  needsReassignment: boolean | null;
 }
 
 function nonBlank(value: unknown): string | null {
@@ -73,6 +81,15 @@ export function currentTaskRefusal(
     employeeId,
     reason: nonBlank(task.refusal_reason) ?? nonBlank(matchingHistory?.reason),
     refusedAt: nonBlank(task.refused_at) ?? nonBlank(matchingHistory?.created_at),
+    requestedDate:
+      nonBlank(task.schedule_change_requested_date) ??
+      nonBlank(matchingHistory?.schedule_change_requested_date),
+    needsReassignment:
+      typeof task.schedule_change_needs_reassignment === "boolean"
+        ? task.schedule_change_needs_reassignment
+        : typeof matchingHistory?.schedule_change_needs_reassignment === "boolean"
+          ? matchingHistory.schedule_change_needs_reassignment
+          : null,
   };
 }
 
@@ -84,6 +101,11 @@ export function currentTaskCancellation(task: RefusedTaskSnapshot): TaskCancella
     reason: nonBlank(task.cancellation_reason),
     cancelledAt: nonBlank(task.cancelled_at),
     byEmployee: !!cancelledBy && cancelledBy === nonBlank(task.assigned_to),
+    requestedDate: nonBlank(task.schedule_change_requested_date),
+    needsReassignment:
+      typeof task.schedule_change_needs_reassignment === "boolean"
+        ? task.schedule_change_needs_reassignment
+        : null,
   };
 }
 
@@ -100,5 +122,15 @@ export function taskRejectionNotificationDetails(
     employeeName: nonBlank(metadata.employee_name),
     reason: nonBlank(metadata.refusal_reason),
     refusedAt: nonBlank(metadata.refused_at),
+    requestedDate: nonBlank(metadata.schedule_change_requested_date),
+    needsReassignment:
+      typeof metadata.schedule_change_needs_reassignment === "boolean"
+        ? metadata.schedule_change_needs_reassignment
+        : null,
   };
+}
+
+export function isEmployeeCancelledTask(task: Pick<RefusedTaskSnapshot, "status" | "assigned_to" | "cancelled_by" | "refused_by">, userId: string): boolean {
+  if (task.status !== "cancelado" || task.assigned_to !== userId) return false;
+  return task.cancelled_by === userId || task.refused_by === userId;
 }

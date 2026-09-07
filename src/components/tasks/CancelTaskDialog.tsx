@@ -11,10 +11,18 @@ import { Dialog, DialogContent, ModalBody, ModalFooter, ModalHeader, ModalSectio
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { AlertTriangle, Ban } from "lucide-react";
-import { CANCEL_REASONS, STATUS_LABELS, cancelTask, isOpenPunchError, type TaskRow } from "@/lib/tasks";
+import {
+  CANCEL_REASONS,
+  STATUS_LABELS,
+  cancelTask,
+  cancelTaskWithScheduleRequest,
+  isOpenPunchError,
+  type TaskRow,
+} from "@/lib/tasks";
 import { formatWallDate, formatWallTime } from "@/lib/wall-clock";
 
 export function CancelTaskDialog({
@@ -35,6 +43,8 @@ export function CancelTaskDialog({
 }) {
   const [reason, setReason] = useState<string>("");
   const [other, setOther] = useState("");
+  const [requestedDate, setRequestedDate] = useState("");
+  const [needsReassignment, setNeedsReassignment] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -42,18 +52,28 @@ export function CancelTaskDialog({
     if (open) {
       setReason("");
       setOther("");
+      setRequestedDate("");
+      setNeedsReassignment(false);
       setConfirming(false);
     }
   }, [open, task?.id]);
 
   const finalReason = reason === "Outro" ? other.trim() : reason;
-  const valid = finalReason.length > 0;
+  const isScheduleChange = reason === "Alteração de programação";
+  const valid = finalReason.length > 0 && (!isScheduleChange || !!requestedDate);
 
   const submit = async () => {
     if (!task || !valid) return;
     setSaving(true);
     try {
-      await cancelTask(task.id, finalReason);
+      if (isScheduleChange) {
+        await cancelTaskWithScheduleRequest(task.id, finalReason, {
+          requestedDate,
+          needsReassignment,
+        });
+      } else {
+        await cancelTask(task.id, finalReason);
+      }
       toast.success("Tarefa cancelada. O histórico foi preservado.");
       onDone();
       onOpenChange(false);
@@ -121,6 +141,29 @@ export function CancelTaskDialog({
                   />
                 </div>
               )}
+              {isScheduleChange && (
+                <div className="space-y-3 rounded-md border border-primary/30 bg-primary/5 p-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="schedule-change-date">Nova data desejada *</Label>
+                    <Input
+                      id="schedule-change-date"
+                      type="date"
+                      value={requestedDate}
+                      onChange={(event) => setRequestedDate(event.target.value)}
+                      required
+                    />
+                  </div>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={needsReassignment}
+                      onChange={(event) => setNeedsReassignment(event.target.checked)}
+                      className="h-4 w-4 rounded border-border"
+                    />
+                    Necessita reatribuição para outro funcionário
+                  </label>
+                </div>
+              )}
             </>
           ) : (
             <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-sm">
@@ -129,6 +172,11 @@ export function CancelTaskDialog({
                 <div className="font-medium">Tem certeza de que deseja cancelar esta tarefa?</div>
                 <div className="text-xs text-muted-foreground">O histórico será preservado.</div>
                 <div className="text-xs">Motivo: {finalReason}</div>
+                {isScheduleChange && (
+                  <div className="text-xs">
+                    Nova data: {requestedDate} · Reatribuição: {needsReassignment ? "sim" : "não"}
+                  </div>
+                )}
               </div>
             </div>
           )}

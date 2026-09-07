@@ -93,6 +93,8 @@ type CancellationTaskContext = {
   cancellation_reason: string | null;
   cancelled_at: string | null;
   cancelled_by: string | null;
+  schedule_change_requested_date?: string | null;
+  schedule_change_needs_reassignment?: boolean | null;
   client?: { name?: string | null } | null;
 };
 
@@ -649,6 +651,17 @@ function NotificationsPage() {
                             Recusada em: {new Date(refusal.refusedAt).toLocaleString("pt-PT")}
                           </p>
                         )}
+                        {refusal.requestedDate && (
+                          <p>
+                            <span className="font-medium">Nova data desejada:</span> {refusal.requestedDate}
+                          </p>
+                        )}
+                        {refusal.needsReassignment != null && (
+                          <p>
+                            <span className="font-medium">Reatribuição necessária:</span>{" "}
+                            {refusal.needsReassignment ? "Sim" : "Não"}
+                          </p>
+                        )}
                       </div>
                     ) : cancellation ? (
                       <div className="mt-2 space-y-1 border-l-2 border-destructive/30 pl-3 text-sm">
@@ -675,6 +688,17 @@ function NotificationsPage() {
                           <p className="text-xs text-muted-foreground">
                             Cancelada em:{" "}
                             {new Date(cancellation.cancelledAt).toLocaleString("pt-PT")}
+                          </p>
+                        )}
+                        {cancellation.requestedDate && (
+                          <p>
+                            <span className="font-medium">Nova data desejada:</span> {cancellation.requestedDate}
+                          </p>
+                        )}
+                        {cancellation.needsReassignment != null && (
+                          <p>
+                            <span className="font-medium">Reatribuição necessária:</span>{" "}
+                            {cancellation.needsReassignment ? "Sim" : "Não"}
                           </p>
                         )}
                       </div>

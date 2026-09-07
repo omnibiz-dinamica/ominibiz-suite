@@ -83,6 +83,7 @@ import {
   startedLateMinutes,
   sweepAbsent,
   transitionTask,
+  transitionTaskWithScheduleRequest,
   archiveTask,
   canArchive,
   canMarkAbsent,
@@ -216,6 +217,9 @@ function TasksPage() {
   // SUP-2026-000074 — ponto esquecido bloqueia a conclusão: regularizar + concluir.
   const [recovering, setRecovering] = useState<RecoveryEntry | null>(null);
   const [refusalReason, setRefusalReason] = useState("");
+  const [refusalReasonType, setRefusalReasonType] = useState("Outro");
+  const [refusalRequestedDate, setRefusalRequestedDate] = useState("");
+  const [refusalNeedsReassignment, setRefusalNeedsReassignment] = useState(false);
   const [view, setView] = useState<"active" | "archived">("active");
   const [taskView, setTaskView] = useState<"list" | "calendar">("calendar");
   const [calendarGroup, setCalendarGroup] = useState<"assignee" | "client">("assignee");
@@ -366,7 +370,7 @@ function TasksPage() {
       if (!isManager) q = q.eq("employee_id", user.id);
       const { data, error } = await q;
       if (error) throw error;
-      return (data ?? []) as TaskRefusalRecord[];
+      return (data ?? []) as unknown as TaskRefusalRecord[];
     },
     enabled: !!user?.id && !!currentCompanyId,
   });
@@ -482,8 +486,19 @@ function TasksPage() {
   }, [user?.id, qc]);
 
   const transition = useMutation({
-    mutationFn: ({ id, action, reason }: { id: string; action: TaskAction; reason?: string }) =>
-      transitionTask(id, action, reason),
+    mutationFn: ({ id, action, reason, requestedDate, needsReassignment }: {
+      id: string;
+      action: TaskAction;
+      reason?: string;
+      requestedDate?: string;
+      needsReassignment?: boolean;
+    }) =>
+      requestedDate && needsReassignment !== undefined
+        ? transitionTaskWithScheduleRequest(id, action, reason ?? "", {
+            requestedDate,
+            needsReassignment,
+          })
+        : transitionTask(id, action, reason),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
       qc.invalidateQueries({ queryKey: ["tasks-open-punches"] });
@@ -491,6 +506,9 @@ function TasksPage() {
       toast.success("Tarefa atualizada");
       setRefusing(null);
       setRefusalReason("");
+      setRefusalReasonType("Outro");
+      setRefusalRequestedDate("");
+      setRefusalNeedsReassignment(false);
     },
     onError: (e: Error, vars) => {
       // SUP-2026-000074 — ponto esquecido: oferecer regularização em vez de erro seco.
@@ -646,6 +664,9 @@ function TasksPage() {
     if (action === "recusar") {
       setRefusing(task);
       setRefusalReason("");
+      setRefusalReasonType("Outro");
+      setRefusalRequestedDate("");
+      setRefusalNeedsReassignment(false);
       return;
     }
     if (action === "marcar_ausente") {
@@ -680,7 +701,17 @@ function TasksPage() {
       toast.error("Informe o motivo da recusa.");
       return;
     }
-    transition.mutate({ id: refusing.id, action: "recusar", reason });
+    if (refusalReasonType === "Alteração de programação" && !refusalRequestedDate) {
+      toast.error("Informe a nova data desejada para a alteração de programação.");
+      return;
+    }
+    transition.mutate({
+      id: refusing.id,
+      action: "recusar",
+      reason,
+      requestedDate: refusalReasonType === "Alteração de programação" ? refusalRequestedDate : undefined,
+      needsReassignment: refusalReasonType === "Alteração de programação" ? refusalNeedsReassignment : undefined,
+    });
   };
 
   // Filtros derivados (status + funcionário) — Fase F.
@@ -1058,6 +1089,18 @@ function TasksPage() {
               </div>
             )}
             <div className="space-y-2">
+              <Label htmlFor="task-refusal-type">Tipo de recusa</Label>
+              <Select value={refusalReasonType} onValueChange={setRefusalReasonType}>
+                <SelectTrigger id="task-refusal-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Outro">Outro motivo</SelectItem>
+                  <SelectItem value="Alteração de programação">Alteração de programação</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="task-refusal-reason">Motivo *</Label>
               <Textarea
                 id="task-refusal-reason"
@@ -1067,6 +1110,28 @@ function TasksPage() {
                 placeholder="Ex.: vou faltar, cliente desistiu, não posso fazer, transferir para outra pessoa..."
               />
             </div>
+            {refusalReasonType === "Alteração de programação" && (
+              <div className="space-y-3 rounded-md border border-primary/30 bg-primary/5 p-3">
+                <div className="space-y-2">
+                  <Label htmlFor="task-refusal-date">Nova data desejada *</Label>
+                  <Input
+                    id="task-refusal-date"
+                    type="date"
+                    value={refusalRequestedDate}
+                    onChange={(event) => setRefusalRequestedDate(event.target.value)}
+                  />
+                </div>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={refusalNeedsReassignment}
+                    onChange={(event) => setRefusalNeedsReassignment(event.target.checked)}
+                    className="h-4 w-4 rounded border-border"
+                  />
+                  Necessita reatribuição para outro funcionário
+                </label>
+              </div>
+            )}
           </ModalBody>
           <ModalFooter>
             <Button type="button" variant="outline" disabled={transition.isPending} onClick={() => setRefusing(null)}>
@@ -2026,6 +2091,10 @@ function CalendarTaskCard({
           {refusal.refusedAt && (
             <div className="text-muted-foreground">Recusada em: {formatLocalTime(refusal.refusedAt)}</div>
           )}
+          {refusal.requestedDate && <div>Nova data: {formatWallDate(refusal.requestedDate)}</div>}
+          {refusal.needsReassignment != null && (
+            <div>Reatribuição: {refusal.needsReassignment ? "Sim" : "Não"}</div>
+          )}
         </div>
       )}
       {cancellation && (
@@ -2038,6 +2107,10 @@ function CalendarTaskCard({
           </div>
           {cancellation.cancelledAt && (
             <div className="text-muted-foreground">Cancelada em: {formatLocalTime(cancellation.cancelledAt)}</div>
+          )}
+          {cancellation.requestedDate && <div>Nova data: {formatWallDate(cancellation.requestedDate)}</div>}
+          {cancellation.needsReassignment != null && (
+            <div>Reatribuição: {cancellation.needsReassignment ? "Sim" : "Não"}</div>
           )}
         </div>
       )}
@@ -2325,6 +2398,10 @@ function TaskRowItem({
             {refusal.refusedAt && (
               <div className="text-muted-foreground">Recusada em: {formatLocalTime(refusal.refusedAt)}</div>
             )}
+            {refusal.requestedDate && <div>Nova data desejada: {formatWallDate(refusal.requestedDate)}</div>}
+            {refusal.needsReassignment != null && (
+              <div>Reatribuição necessária: {refusal.needsReassignment ? "Sim" : "Não"}</div>
+            )}
             {isManager && (
               <button
                 type="button"
@@ -2346,6 +2423,10 @@ function TaskRowItem({
             </div>
             {cancellation.cancelledAt && (
               <div className="text-muted-foreground">Cancelada em: {formatLocalTime(cancellation.cancelledAt)}</div>
+            )}
+            {cancellation.requestedDate && <div>Nova data desejada: {formatWallDate(cancellation.requestedDate)}</div>}
+            {cancellation.needsReassignment != null && (
+              <div>Reatribuição necessária: {cancellation.needsReassignment ? "Sim" : "Não"}</div>
             )}
           </div>
         )}

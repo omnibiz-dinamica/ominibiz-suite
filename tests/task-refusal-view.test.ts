@@ -4,6 +4,7 @@ import {
   currentTaskCancellation,
   currentTaskRefusal,
   groupTaskRefusals,
+  isEmployeeCancelledTask,
   taskRejectionNotificationDetails,
   type TaskRefusalRecord,
 } from "../src/lib/task-refusal-view.ts";
@@ -30,6 +31,8 @@ test("uses persisted history as fallback for an active refusal", () => {
     employeeId: "employee-a",
     reason: "Consulta médica",
     refusedAt: "2026-08-29T19:41:00.000Z",
+    requestedDate: null,
+    needsReassignment: null,
   });
 });
 
@@ -62,6 +65,8 @@ test("does not classify a manager cancellation as an employee refusal", () => {
       reason: "Alteração de programação",
       cancelledAt: "2026-08-29T20:40:00.000Z",
       byEmployee: false,
+      requestedDate: null,
+      needsReassignment: null,
     },
   );
 });
@@ -92,6 +97,47 @@ test("reads structured employee refusal metadata from the notification", () => {
       employeeName: "Sara",
       reason: "Consulta médica",
       refusedAt: "2026-08-29T19:41:00.000Z",
+      requestedDate: null,
+      needsReassignment: null,
+    },
+  );
+});
+
+test("hides only the employee's own cancelled task from the operational queue", () => {
+  assert.equal(
+    isEmployeeCancelledTask(
+      { status: "cancelado", assigned_to: "employee-a", cancelled_by: "employee-a", refused_by: null },
+      "employee-a",
+    ),
+    true,
+  );
+  assert.equal(
+    isEmployeeCancelledTask(
+      { status: "cancelado", assigned_to: "employee-a", cancelled_by: "manager-a", refused_by: null },
+      "employee-a",
+    ),
+    false,
+  );
+});
+
+test("reads an alteration request without changing the employee refusal identity", () => {
+  assert.deepEqual(
+    currentTaskRefusal(
+      {
+        status: "cancelado",
+        assigned_to: "employee-a",
+        refused_by: "employee-a",
+        schedule_change_requested_date: "2026-09-12",
+        schedule_change_needs_reassignment: true,
+      },
+      [],
+    ),
+    {
+      employeeId: "employee-a",
+      reason: null,
+      refusedAt: null,
+      requestedDate: "2026-09-12",
+      needsReassignment: true,
     },
   );
 });

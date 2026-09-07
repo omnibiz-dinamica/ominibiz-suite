@@ -66,6 +66,8 @@ export interface TaskRow {
   cancelled_at: string | null;
   cancelled_by?: string | null;
   cancellation_reason?: string | null;
+  schedule_change_requested_date?: string | null;
+  schedule_change_needs_reassignment?: boolean | null;
   refusal_reason?: string | null;
   refused_at?: string | null;
   refused_by?: string | null;
@@ -658,6 +660,30 @@ export async function transitionTask(taskId: string, action: TaskAction, reason?
   return data as TaskRow;
 }
 
+export type ScheduleChangeRequest = {
+  requestedDate: string;
+  needsReassignment: boolean;
+};
+
+/** Recusa com pedido estruturado de alteracao para a ocorrencia atual. */
+export async function transitionTaskWithScheduleRequest(
+  taskId: string,
+  action: TaskAction,
+  reason: string,
+  request: ScheduleChangeRequest,
+): Promise<TaskRow> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("task_transition_with_schedule_request", {
+    _task_id: taskId,
+    _action: action,
+    _reason: reason,
+    _requested_date: request.requestedDate,
+    _needs_reassignment: request.needsReassignment,
+  });
+  if (error) throw error;
+  return data as TaskRow;
+}
+
 /** Registra a observação histórica da conclusão sem alterar o estado da tarefa. */
 export async function addTaskCompletionNote(taskId: string, note: string): Promise<void> {
   const normalized = note.trim();
@@ -715,6 +741,23 @@ export async function cancelTask(taskId: string, reason: string): Promise<TaskRo
   const { data, error } = await (supabase.rpc as any)("task_cancel", {
     _task_id: taskId,
     _reason: reason,
+  });
+  if (error) throw error;
+  return data as TaskRow;
+}
+
+/** Cancelamento com dados complementares de alteracao de programacao. */
+export async function cancelTaskWithScheduleRequest(
+  taskId: string,
+  reason: string,
+  request: ScheduleChangeRequest,
+): Promise<TaskRow> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("task_cancel_with_schedule_request", {
+    _task_id: taskId,
+    _reason: reason,
+    _requested_date: request.requestedDate,
+    _needs_reassignment: request.needsReassignment,
   });
   if (error) throw error;
   return data as TaskRow;

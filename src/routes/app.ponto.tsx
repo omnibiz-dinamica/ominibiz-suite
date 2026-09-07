@@ -65,6 +65,7 @@ import { ArchiveTaskDialog } from "@/components/tasks/ArchiveTaskDialog";
 import { MarkAbsentDialog } from "@/components/tasks/MarkAbsentDialog";
 import { fetchOpenEntrySelf, recoverOpenEntry } from "@/lib/punch/recovery";
 import { defaultRecoveryEndInput } from "@/lib/punch/recovery-time";
+import { isEmployeeCancelledTask } from "@/lib/task-refusal-view";
 
 export const Route = createFileRoute("/app/ponto")({ component: PontoPage });
 
@@ -94,7 +95,7 @@ function localInputToIso(value: string): string {
 }
 
 function PontoPage() {
-  const { user, isManager, currentCompanyId } = useAuth();
+  const { user, isManager, isSuperAdmin, currentCompanyId } = useAuth();
   const qc = useQueryClient();
   const [, setNow] = useState(() => Date.now());
   const [modeChoice, setModeChoice] = useState<TaskRow | null>(null);
@@ -194,7 +195,7 @@ function PontoPage() {
 
   // Próximas tarefas do dia (quando não há ponto aberto)
   const { data: upcoming } = useQuery({
-    queryKey: ["punch-upcoming", user?.id, isManager, currentCompanyId],
+    queryKey: ["punch-upcoming", user?.id, isManager, isSuperAdmin, currentCompanyId],
     queryFn: async () => {
       if (!user) return [];
       let q = supabase
@@ -209,14 +210,17 @@ function PontoPage() {
         .limit(20);
       // Gestor/super admin: vê tarefas da empresa (toda a operação).
       // Funcionário: vê apenas as suas.
-      if (isManager) {
+      if (isManager || isSuperAdmin) {
         if (currentCompanyId) q = q.eq("company_id", currentCompanyId);
       } else {
         q = q.eq("assigned_to", user.id);
       }
       const { data, error } = await q;
       if (error) throw error;
-      return (data ?? []) as unknown as TaskRow[];
+      const rows = (data ?? []) as unknown as TaskRow[];
+      return isManager || isSuperAdmin
+        ? rows
+        : rows.filter((task) => !isEmployeeCancelledTask(task, user.id));
     },
     enabled: !!user && !openEntry,
   });
