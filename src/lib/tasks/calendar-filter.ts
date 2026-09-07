@@ -1,5 +1,11 @@
+import { wallISOToDateInput } from "../wall-clock.ts";
+import { sortTasksForList } from "./list-order.ts";
+
 export type CalendarTaskAssignment = {
   assigned_to: string | null;
+  scheduled_for?: string | null;
+  recurrence_date?: string | null;
+  due_at?: string | null;
 };
 
 export type CalendarVacationAssignment = {
@@ -19,4 +25,15 @@ export function filterCalendarData<
     tasks: tasks.filter((task) => task.assigned_to != null && selected.has(task.assigned_to)),
     vacations: vacations.filter((vacation) => selected.has(vacation.user_id)),
   };
+}
+
+/** Uses the same wall-clock date source as the task calendar. */
+export function taskCalendarDateKey(task: CalendarTaskAssignment): string | null {
+  const source = task.scheduled_for ?? task.recurrence_date ?? task.due_at;
+  return wallISOToDateInput(source) || null;
+}
+
+/** Returns the canonical task order for a calendar day without mutating input. */
+export function tasksForCalendarDay<T extends CalendarTaskAssignment>(tasks: readonly T[], dateKey: string) {
+  return sortTasksForList(tasks.filter((task) => taskCalendarDateKey(task) === dateKey));
 }

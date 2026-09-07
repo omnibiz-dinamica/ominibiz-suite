@@ -130,8 +130,8 @@ import {
 
 
 import { EmployeeMultiPicker } from "@/components/common/EmployeePicker";
-import { filterCalendarData } from "@/lib/tasks/calendar-filter";
-import { compareTasksForList, sortTasksForList, type TaskListSort } from "@/lib/tasks/list-order";
+import { filterCalendarData, tasksForCalendarDay } from "@/lib/tasks/calendar-filter";
+import { compareTasksForList, sortTasksForList } from "@/lib/tasks/list-order";
 import { isDashboardCancelled, isDashboardLateStart } from "@/lib/tasks/dashboard-rules";
 import {
   wallISOToDateInput,
@@ -218,7 +218,6 @@ function TasksPage() {
   const [refusalReason, setRefusalReason] = useState("");
   const [view, setView] = useState<"active" | "archived">("active");
   const [taskView, setTaskView] = useState<"list" | "calendar">("calendar");
-  const [taskSort, setTaskSort] = useState<TaskListSort>("nearest");
   const [calendarGroup, setCalendarGroup] = useState<"assignee" | "client">("assignee");
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
   const [bulkAction, setBulkAction] = useState<"archive" | "delete" | null>(null);
@@ -255,9 +254,10 @@ function TasksPage() {
       let q = supabase
         .from("tasks")
         .select("*")
-        .order("due_at", { ascending: false, nullsFirst: false })
-        .order("scheduled_for", { ascending: false, nullsFirst: false })
-        .order("created_at", { ascending: false });
+        .order("scheduled_for", { ascending: true, nullsFirst: false })
+        .order("recurrence_date", { ascending: true, nullsFirst: false })
+        .order("due_at", { ascending: true, nullsFirst: false })
+        .order("created_at", { ascending: true, nullsFirst: false });
       // O contexto da empresa faz parte da identidade da consulta. Sem este
       // filtro, uma sessão com mais de uma empresa podia carregar tarefas de
       // outro contexto enquanto o AuthContext ainda era inicializado.
@@ -713,7 +713,7 @@ function TasksPage() {
     [filteredTasks, approvedVacations, selectedEmployeeIds],
   );
 
-  const orderedTasks = useMemo(() => sortTasksForList(filteredTasks, taskSort), [filteredTasks, taskSort]);
+  const orderedTasks = useMemo(() => sortTasksForList(filteredTasks), [filteredTasks]);
 
   const selectedTasks = useMemo(
     () => (tasks ?? []).filter((task) => selectedTaskIds.includes(task.id)),
@@ -1098,20 +1098,18 @@ function TasksPage() {
             <FilterChip label="Lista" active={taskView === "list"} onClick={() => setTaskView("list")} />
             <FilterChip label="Calendário" active={taskView === "calendar"} onClick={() => setTaskView("calendar")} />
           </div>
-          {taskView === "calendar" && (
-            <div className="flex flex-wrap items-center gap-1">
-              <FilterChip
-                label="Por colaborador"
-                active={calendarGroup === "assignee"}
-                onClick={() => setCalendarGroup("assignee")}
-              />
-              <FilterChip
-                label="Por cliente"
-                active={calendarGroup === "client"}
-                onClick={() => setCalendarGroup("client")}
-              />
-            </div>
-          )}
+          <div className="flex flex-wrap items-center gap-1">
+            <FilterChip
+              label="Por colaborador"
+              active={calendarGroup === "assignee"}
+              onClick={() => setCalendarGroup("assignee")}
+            />
+            <FilterChip
+              label="Por cliente"
+              active={calendarGroup === "client"}
+              onClick={() => setCalendarGroup("client")}
+            />
+          </div>
           <div className="flex flex-wrap items-center gap-1">
             <FilterChip label="Todos" active={!search.status} onClick={() => setStatusFilter(undefined)} />
             {(
@@ -1180,7 +1178,6 @@ function TasksPage() {
               </button>
             )}
           </div>
-          {taskView === "list" && <TaskListSortSelect value={taskSort} onChange={setTaskSort} />}
         </div>
       )}
       {isManager && selectedTaskIds.length > 0 && (
@@ -1237,9 +1234,11 @@ function TasksPage() {
       )}
 
       {!isLoading && filteredTasks.length > 0 && isManager && taskView === "list" && (
-        <GroupedByAssignee
+        <GroupedTaskList
           tasks={orderedTasks}
           members={members ?? []}
+          clients={clientsList ?? []}
+          groupBy={calendarGroup}
           userId={user!.id}
           isManager={isManager}
           onEdit={setEditing}
@@ -1248,17 +1247,17 @@ function TasksPage() {
           onDelete={handleDeleteRequest}
           onTransition={handleTransition}
           onArchive={(id, archive) => archiveMut.mutate({ id, archive })}
-           onMoveDate={(id, dateKey) => moveTaskDate.mutate({ id, dateKey })}
-           transitionPending={transition.isPending}
+          onMoveDate={(id, dateKey) => moveTaskDate.mutate({ id, dateKey })}
+          transitionPending={transition.isPending}
           archivePending={archiveMut.isPending}
           completionNotes={completionNoteByTask}
           refusalsByTask={refusalsByTask}
           memberNames={memberNames}
-           selectedTaskIds={new Set(selectedTaskIds)}
-           taskPunches={taskPunchByTask}
+          selectedTaskIds={new Set(selectedTaskIds)}
+          taskPunches={taskPunchByTask}
           onToggleTaskSelection={(id) => setSelectedTaskIds((current) => current.includes(id) ? current.filter((x) => x !== id) : [...current, id])}
           onNoStartReason={setNoStartTarget}
-         />
+        />
       )}
 
       {!isLoading &&
@@ -1296,7 +1295,6 @@ function TasksPage() {
         <div className="flex flex-wrap items-center gap-1 rounded-2xl border border-border bg-card px-3 py-2">
           <FilterChip label="Lista" active={taskView === "list"} onClick={() => setTaskView("list")} />
           <FilterChip label="Calendário" active={taskView === "calendar"} onClick={() => setTaskView("calendar")} />
-          {taskView === "list" && <TaskListSortSelect value={taskSort} onChange={setTaskSort} />}
         </div>
       )}
 
@@ -1428,10 +1426,6 @@ function TaskPlanningCalendar({
     clients.find((c) => c.id === id)?.name ?? (id ? id.slice(0, 8) : "Sem cliente");
   const dateKey = (date: Date) =>
     `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-  const taskDateKey = (task: TaskRow) => {
-    const source = task.scheduled_for ?? task.recurrence_date ?? task.due_at;
-    return wallISOToDateInput(source) || null;
-  };
   const startOfWeek = (date: Date) => {
     const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     const offset = (d.getDay() + 6) % 7;
@@ -1443,18 +1437,7 @@ function TaskPlanningCalendar({
     d.setDate(d.getDate() + days);
     return d;
   };
-  const sortTasks = (list: TaskRow[]) =>
-    list
-      .slice()
-      .sort((a, b) =>
-        (a.scheduled_for ?? a.recurrence_date ?? a.due_at ?? "").localeCompare(
-          b.scheduled_for ?? b.recurrence_date ?? b.due_at ?? "",
-        ),
-      );
-  const tasksForKey = (list: TaskRow[], key: string) =>
-    sortTasks(list).filter((task) => {
-      return taskDateKey(task) === key;
-    });
+  const tasksForKey = (list: TaskRow[], key: string) => tasksForCalendarDay(list, key);
   const vacationsForKey = (list: ApprovedVacation[], key: string) =>
     list.filter((vacation) => vacation.start_date <= key && vacation.end_date >= key);
   const addPeriod = (direction: -1 | 1) => {
@@ -1679,7 +1662,10 @@ function TaskPlanningCalendar({
               <div className="grid gap-3 p-4 md:grid-cols-3 xl:grid-cols-4">
                 {yearMonths.map((month) => {
                   const monthKey = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
-                  const monthTasks = sortTasks(groupTasks).filter((task) => taskDateKey(task)?.slice(0, 7) === monthKey);
+                  const monthTasks = sortTasksForList(groupTasks).filter((task) => {
+                    const source = task.scheduled_for ?? task.recurrence_date ?? task.due_at;
+                    return wallISOToDateInput(source).slice(0, 7) === monthKey;
+                  });
                   const monthVacations = groupVacations.filter(
                     (vacation) => vacation.start_date.slice(0, 7) <= monthKey && vacation.end_date.slice(0, 7) >= monthKey,
                   );
@@ -2141,45 +2127,55 @@ function CalendarTaskCard({
   );
 }
 
-function GroupedByAssignee({
+function GroupedTaskList({
   tasks,
   members,
+  clients,
+  groupBy,
   ...handlers
 }: RowHandlers & {
   tasks: TaskRow[];
   members: { id: string; full_name: string | null }[];
+  clients: ClientOption[];
+  groupBy: "assignee" | "client";
 }) {
-  const nameOf = (id: string | null) =>
-    members.find((m) => m.id === id)?.full_name ?? (id ? id.slice(0, 8) : "Sem responsável");
+  const labelOf = (id: string | null) => {
+    if (groupBy === "client") {
+      return clients.find((client) => client.id === id)?.name ?? (id ? id.slice(0, 8) : "Sem cliente");
+    }
+    return members.find((member) => member.id === id)?.full_name ?? (id ? id.slice(0, 8) : "Sem responsável");
+  };
 
   const groups = new Map<string, TaskRow[]>();
   for (const t of tasks) {
-    const k = t.assigned_to ?? "__unassigned__";
+    const k = (groupBy === "client" ? t.client_id : t.assigned_to) ?? (groupBy === "client" ? "__no_client__" : "__unassigned__");
     const arr = groups.get(k) ?? [];
     arr.push(t);
     groups.set(k, arr);
   }
   const entries = Array.from(groups.entries()).sort(([a, tasksA], [b, tasksB]) => {
-    const firstA = sortTasksForList(tasksA, "nearest")[0];
-    const firstB = sortTasksForList(tasksB, "nearest")[0];
+    const firstA = sortTasksForList(tasksA)[0];
+    const firstB = sortTasksForList(tasksB)[0];
     if (firstA && firstB) {
-      const nextTaskOrder = compareTasksForList(firstA, firstB, "nearest");
+      const nextTaskOrder = compareTasksForList(firstA, firstB);
       if (nextTaskOrder !== 0) return nextTaskOrder;
     }
-    return nameOf(a === "__unassigned__" ? null : a).localeCompare(nameOf(b === "__unassigned__" ? null : b));
+    const emptyKey = groupBy === "client" ? "__no_client__" : "__unassigned__";
+    return labelOf(a === emptyKey ? null : a).localeCompare(labelOf(b === emptyKey ? null : b));
   });
 
   return (
     <div className="rounded-2xl border border-border bg-card">
       <Accordion type="multiple" className="divide-y divide-border">
         {entries.map(([key, list]) => {
-          const name = nameOf(key === "__unassigned__" ? null : key);
+          const emptyKey = groupBy === "client" ? "__no_client__" : "__unassigned__";
+          const name = labelOf(key === emptyKey ? null : key);
           return (
             <AccordionItem key={key} value={key} className="border-b-0">
               <AccordionTrigger className="px-5 hover:no-underline">
                 <div className="flex items-center gap-3">
                   <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <Users className="h-4 w-4" />
+                    {groupBy === "client" ? <Building2 className="h-4 w-4" /> : <Users className="h-4 w-4" />}
                   </span>
                   <span className="font-display text-base font-semibold">{name}</span>
                   <span className="text-xs text-muted-foreground">
@@ -2198,24 +2194,6 @@ function GroupedByAssignee({
           );
         })}
       </Accordion>
-    </div>
-  );
-}
-
-function TaskListSortSelect({ value, onChange }: { value: TaskListSort; onChange: (value: TaskListSort) => void }) {
-  return (
-    <div className="ml-auto flex items-center gap-2 text-sm">
-      <span className="text-muted-foreground">Ordenar:</span>
-      <Select value={value} onValueChange={(next) => onChange(next as TaskListSort)}>
-        <SelectTrigger className="h-9 w-[170px]" aria-label="Ordenar lista de tarefas">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="recent">Mais recentes</SelectItem>
-          <SelectItem value="nearest">Data mais próxima</SelectItem>
-          <SelectItem value="oldest">Mais antigas</SelectItem>
-        </SelectContent>
-      </Select>
     </div>
   );
 }

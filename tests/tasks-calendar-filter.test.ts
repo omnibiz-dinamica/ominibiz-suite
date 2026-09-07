@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { filterCalendarData } from "../src/lib/tasks/calendar-filter.ts";
+import { filterCalendarData, tasksForCalendarDay } from "../src/lib/tasks/calendar-filter.ts";
 
 const tasksPage = readFileSync(new URL("../src/routes/app.tarefas.tsx", import.meta.url), "utf8");
 
@@ -41,9 +41,25 @@ test("calendar multi-employee filter keeps only selected UUIDs", () => {
   assert.deepEqual(result.vacations.map((vacation) => vacation.id), ["vacation-veronica"]);
 });
 
+test("calendar day uses the same canonical task dates and order as the list", () => {
+  const result = tasksForCalendarDay(
+    [
+      { id: "far", assigned_to: "keila", scheduled_for: "2027-06-24T10:00:00.000Z" },
+      { id: "near-late", assigned_to: "keila", scheduled_for: "2026-09-08T12:00:00.000Z" },
+      { id: "near-early", assigned_to: "keila", scheduled_for: "2026-09-08T09:00:00.000Z" },
+    ],
+    "2026-09-08",
+  );
+
+  assert.deepEqual(result.map((task) => task.id), ["near-early", "near-late"]);
+});
+
 test("task calendar defaults to week while management data stays company-scoped", () => {
   assert.match(tasksPage, /const \[taskView, setTaskView\] = useState<"list" \| "calendar">\("calendar"\)/);
   assert.match(tasksPage, /const \[mode, setMode\] = useState<CalendarMode>\("week"\)/);
   assert.match(tasksPage, /if \(currentCompanyId\) q = q\.eq\("company_id", currentCompanyId\)/);
   assert.match(tasksPage, /if \(!isManager\) q = q\.eq\("assigned_to", user!\.id\)/);
+  assert.match(tasksPage, /\.order\("scheduled_for", \{ ascending: true, nullsFirst: false \}\)/);
+  assert.doesNotMatch(tasksPage, /TaskListSortSelect|Ordenar lista de tarefas/);
+  assert.doesNotMatch(tasksPage, /\.limit\(|\.range\(/);
 });

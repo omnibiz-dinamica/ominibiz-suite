@@ -10,37 +10,33 @@ const task = (id: string, date: string, createdAt = `${date}T08:00:00Z`) => ({
   created_at: createdAt,
 });
 
-test("orders task list with the most recent scheduled task first", () => {
+test("orders task list chronologically from the nearest date to the farthest", () => {
   const result = sortTasksForList(
-    [task("old", "2026-07-15"), task("today", "2026-09-06"), task("new", "2026-09-07")],
-    "recent",
+    [task("far", "2027-06-24"), task("near", "2026-09-08"), task("middle", "2026-09-10")],
   );
   assert.deepEqual(
     result.map((item) => item.id),
-    ["new", "today", "old"],
+    ["near", "middle", "far"],
   );
 });
 
-test("supports nearest and oldest task ordering without changing the source array", () => {
+test("keeps the source array unchanged and places undated tasks at the end", () => {
   const source = [
-    task("old", "2026-09-01"),
-    task("today", "2026-09-06"),
-    task("future", "2026-09-10"),
+    task("far", "2027-06-24"),
+    task("near", "2026-09-08"),
+    {
+      id: "undated",
+      scheduled_for: null,
+      recurrence_date: null,
+      due_at: null,
+      created_at: null,
+    },
   ];
   const originalOrder = source.map((item) => item.id);
 
-  const now = Date.parse("2026-09-06T12:00:00Z");
   assert.deepEqual(
-    sortTasksForList(source, "oldest", now).map((item) => item.id),
-    ["old", "today", "future"],
-  );
-  assert.deepEqual(
-    sortTasksForList(source, "nearest", now).map((item) => item.id),
-    ["today", "future", "old"],
-  );
-  assert.deepEqual(
-    sortTasksForList(source, undefined, now).map((item) => item.id),
-    ["today", "future", "old"],
+    sortTasksForList(source).map((item) => item.id),
+    ["near", "far", "undated"],
   );
   assert.deepEqual(
     source.map((item) => item.id),
@@ -48,18 +44,14 @@ test("supports nearest and oldest task ordering without changing the source arra
   );
 });
 
-test("nearest ordering always puts today and future tasks before past tasks", () => {
-  const now = Date.parse("2026-09-07T12:00:00Z");
+test("includes a large employee dataset without losing nearby dates", () => {
+  const dates = ["2026-09-08", "2026-09-10", "2027-06-24", "2027-06-25"];
   const result = sortTasksForList(
-    [task("past", "2026-09-06"), task("future", "2026-09-09"), task("later", "2026-09-10")],
-    "nearest",
-    now,
+    Array.from({ length: 132 }, (_, index) => task(`task-${index}`, dates[index % dates.length])),
   );
 
-  assert.deepEqual(
-    result.map((item) => item.id),
-    ["future", "later", "past"],
-  );
+  assert.deepEqual(result.slice(0, 2).map((item) => item.scheduled_for?.slice(0, 10)), ["2026-09-08", "2026-09-08"]);
+  assert.ok(result.findIndex((item) => item.scheduled_for?.startsWith("2027-06-24")) > 1);
 });
 
 test("falls back to creation date when a task has no scheduled date", () => {
@@ -79,8 +71,5 @@ test("falls back to creation date when a task has no scheduled date", () => {
       created_at: "2026-09-06T08:00:00Z",
     },
   ]);
-  assert.deepEqual(
-    result.map((item) => item.id),
-    ["newer", "older"],
-  );
+  assert.deepEqual(result.map((item) => item.id), ["older", "newer"]);
 });
