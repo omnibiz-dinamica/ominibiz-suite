@@ -131,6 +131,7 @@ import {
 
 import { EmployeeMultiPicker } from "@/components/common/EmployeePicker";
 import { filterCalendarData } from "@/lib/tasks/calendar-filter";
+import { sortTasksForList, taskListTimestamp, type TaskListSort } from "@/lib/tasks/list-order";
 import { isDashboardCancelled, isDashboardLateStart } from "@/lib/tasks/dashboard-rules";
 import {
   wallISOToDateInput,
@@ -217,6 +218,7 @@ function TasksPage() {
   const [refusalReason, setRefusalReason] = useState("");
   const [view, setView] = useState<"active" | "archived">("active");
   const [taskView, setTaskView] = useState<"list" | "calendar">("list");
+  const [taskSort, setTaskSort] = useState<TaskListSort>("recent");
   const [calendarGroup, setCalendarGroup] = useState<"assignee" | "client">("assignee");
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
   const [bulkAction, setBulkAction] = useState<"archive" | "delete" | null>(null);
@@ -253,8 +255,8 @@ function TasksPage() {
       let q = supabase
         .from("tasks")
         .select("*")
-        .order("due_at", { ascending: true, nullsFirst: false })
-        .order("scheduled_for", { ascending: true, nullsFirst: false })
+        .order("due_at", { ascending: false, nullsFirst: false })
+        .order("scheduled_for", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false });
       // O contexto da empresa faz parte da identidade da consulta. Sem este
       // filtro, uma sessão com mais de uma empresa podia carregar tarefas de
@@ -710,6 +712,8 @@ function TasksPage() {
     () => filterCalendarData(filteredTasks, approvedVacations ?? [], selectedEmployeeIds),
     [filteredTasks, approvedVacations, selectedEmployeeIds],
   );
+
+  const orderedTasks = useMemo(() => sortTasksForList(filteredTasks, taskSort), [filteredTasks, taskSort]);
 
   const selectedTasks = useMemo(
     () => (tasks ?? []).filter((task) => selectedTaskIds.includes(task.id)),
@@ -1174,6 +1178,7 @@ function TasksPage() {
               </button>
             )}
           </div>
+          {taskView === "list" && <TaskListSortSelect value={taskSort} onChange={setTaskSort} />}
         </div>
       )}
       {isManager && selectedTaskIds.length > 0 && (
@@ -1231,7 +1236,7 @@ function TasksPage() {
 
       {!isLoading && filteredTasks.length > 0 && isManager && taskView === "list" && (
         <GroupedByAssignee
-          tasks={filteredTasks}
+          tasks={orderedTasks}
           members={members ?? []}
           userId={user!.id}
           isManager={isManager}
@@ -1289,13 +1294,14 @@ function TasksPage() {
         <div className="flex flex-wrap items-center gap-1 rounded-2xl border border-border bg-card px-3 py-2">
           <FilterChip label="Lista" active={taskView === "list"} onClick={() => setTaskView("list")} />
           <FilterChip label="Calendário" active={taskView === "calendar"} onClick={() => setTaskView("calendar")} />
+          {taskView === "list" && <TaskListSortSelect value={taskSort} onChange={setTaskSort} />}
         </div>
       )}
 
       {!isLoading && filteredTasks.length > 0 && !isManager && taskView === "list" && (
         <div className="rounded-2xl border border-border bg-card">
           <ul className="divide-y divide-border">
-            {filteredTasks.map((t) => (
+            {orderedTasks.map((t) => (
               <TaskRowItem
                 key={t.id}
                 task={t}
@@ -2133,9 +2139,12 @@ function GroupedByAssignee({
     arr.push(t);
     groups.set(k, arr);
   }
-  const entries = Array.from(groups.entries()).sort(([a], [b]) =>
-    nameOf(a === "__unassigned__" ? null : a).localeCompare(nameOf(b === "__unassigned__" ? null : b)),
-  );
+  const entries = Array.from(groups.entries()).sort(([a, tasksA], [b, tasksB]) => {
+    const latestA = Math.max(...tasksA.map(taskListTimestamp));
+    const latestB = Math.max(...tasksB.map(taskListTimestamp));
+    if (latestA !== latestB) return latestB - latestA;
+    return nameOf(a === "__unassigned__" ? null : a).localeCompare(nameOf(b === "__unassigned__" ? null : b));
+  });
 
   return (
     <div className="rounded-2xl border border-border bg-card">
@@ -2166,6 +2175,24 @@ function GroupedByAssignee({
           );
         })}
       </Accordion>
+    </div>
+  );
+}
+
+function TaskListSortSelect({ value, onChange }: { value: TaskListSort; onChange: (value: TaskListSort) => void }) {
+  return (
+    <div className="ml-auto flex items-center gap-2 text-sm">
+      <span className="text-muted-foreground">Ordenar:</span>
+      <Select value={value} onValueChange={(next) => onChange(next as TaskListSort)}>
+        <SelectTrigger className="h-9 w-[170px]" aria-label="Ordenar lista de tarefas">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="recent">Mais recentes</SelectItem>
+          <SelectItem value="nearest">Data mais próxima</SelectItem>
+          <SelectItem value="oldest">Mais antigas</SelectItem>
+        </SelectContent>
+      </Select>
     </div>
   );
 }
