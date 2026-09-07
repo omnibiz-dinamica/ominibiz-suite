@@ -534,7 +534,7 @@ function FeriasPage() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <header className="flex items-center gap-3">
         <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary/15 text-primary">
           <Plane className="h-5 w-5" />
@@ -551,9 +551,9 @@ function FeriasPage() {
 
       {/* New request form — any member can request */}
       {!!user && !!currentCompanyId && (
-        <section className="rounded-2xl border border-border bg-card p-5">
+        <section className="order-40 rounded-2xl border border-border bg-card p-5">
           <h2 className="mb-3 flex items-center gap-2 font-semibold">
-            <Plus className="h-4 w-4" /> Nova solicitação
+            <Plus className="h-4 w-4" /> Nova Solicitação
           </h2>
           <div className="grid gap-3 md:grid-cols-3">
             <div>
@@ -630,7 +630,7 @@ function FeriasPage() {
 
       {/* Manager: pending */}
       {(isManager || toApprove.length > 0) && (
-        <section className="rounded-2xl border border-border bg-card p-5">
+        <section className="order-10 rounded-2xl border border-border bg-card p-5">
           <h2 className="mb-3 font-semibold">Aguardando sua decisão ({toApprove.length})</h2>
           {toApprove.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nada para aprovar agora.</p>
@@ -660,7 +660,7 @@ function FeriasPage() {
       )}
 
       {isManager && forwardedByMe.length > 0 && (
-        <section className="rounded-2xl border border-border bg-card p-5">
+        <section className="order-15 rounded-2xl border border-border bg-card p-5">
           <h2 className="mb-3 font-semibold">Enviados para autorização ({forwardedByMe.length})</h2>
           <ul className="space-y-2">
             {forwardedByMe.map((r) => (
@@ -691,9 +691,9 @@ function FeriasPage() {
 
       {/* Manager: agendar férias para um colaborador */}
       {isManager && (
-        <section className="rounded-2xl border border-border bg-card p-5">
+        <section className="order-50 rounded-2xl border border-border bg-card p-5">
           <h2 className="mb-3 flex items-center gap-2 font-semibold">
-            <Plus className="h-4 w-4" /> Agendar férias para um colaborador
+            <Plus className="h-4 w-4" /> Agendar Férias para um colaborador
           </h2>
           <p className="mb-3 text-xs text-muted-foreground">
             O colaborador receberá uma notificação para confirmar ou solicitar alteração.
@@ -747,7 +747,7 @@ function FeriasPage() {
 
       {/* Employee: vacations awaiting MY confirmation */}
       {awaitingMyConfirm.length > 0 && (
-        <section className="rounded-2xl border border-amber-500/40 bg-amber-500/5 p-5">
+        <section className="order-16 rounded-2xl border border-amber-500/40 bg-amber-500/5 p-5">
           <h2 className="mb-3 font-semibold">Aguardando sua confirmação ({awaitingMyConfirm.length})</h2>
           <p className="mb-3 text-xs text-muted-foreground">
             O gestor agendou estas férias em seu nome. Confirme ou solicite alteração.
@@ -777,7 +777,7 @@ function FeriasPage() {
 
       {/* Manager view: vacations awaiting employee confirmation */}
       {isManager && awaitingTheirConfirm.length > 0 && (
-        <section className="rounded-2xl border border-border bg-card p-5">
+        <section className="order-17 rounded-2xl border border-border bg-card p-5">
           <h2 className="mb-3 font-semibold">
             Pendentes de confirmação do funcionário ({awaitingTheirConfirm.length})
           </h2>
@@ -816,7 +816,7 @@ function FeriasPage() {
       )}
 
       {/* Approved calendar */}
-      <section className="rounded-2xl border border-border bg-card p-5">
+      <section className="order-30 rounded-2xl border border-border bg-card p-5">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="flex items-center gap-2 font-semibold">
             <CalendarIcon className="h-4 w-4" /> Aprovadas ({approved.length})
@@ -953,7 +953,7 @@ function FeriasPage() {
 
       {/* Own pending list */}
       {pending.some((r) => r.user_id === user?.id) && (
-        <section className="rounded-2xl border border-border bg-card p-5">
+        <section className="order-20 rounded-2xl border border-border bg-card p-5">
           <h2 className="mb-3 font-semibold">Aguardando aprovação</h2>
           <ul className="divide-y divide-border">
             {pending
@@ -991,7 +991,7 @@ function FeriasPage() {
       )}
 
       {/* History */}
-      <section className="rounded-2xl border border-border bg-card p-5">
+      <section className="order-60 rounded-2xl border border-border bg-card p-5">
         <h2 className="mb-3 font-semibold">Histórico</h2>
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Carregando…</p>
