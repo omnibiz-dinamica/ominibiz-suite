@@ -761,6 +761,14 @@ function FeriasPage() {
                 onRequestChange={(reason) =>
                   confirmMutation.mutate({ id: r.id, action: "solicitar_alteracao", reason })
                 }
+                onCancel={() =>
+                  setCancelTarget({
+                    id: r.id,
+                    employeeName: "Você",
+                    periodLabel: `${fmt(r.start_date)} → ${fmt(r.end_date)}`,
+                    statusLabel: STATUS_LABEL[r.status],
+                  })
+                }
               />
             ))}
           </ul>
@@ -888,6 +896,14 @@ function FeriasPage() {
             </div>
           </div>
         )}
+        {!isManager && approved.length > 0 && (
+          <div role="note" className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-200">
+            <div className="font-medium">Aviso sobre férias aprovadas</div>
+            <div className="mt-1">
+              Depois de aprovadas, as férias não podem ser canceladas pelo funcionário. O gestor mantém a opção de cancelar o pedido.
+            </div>
+          </div>
+        )}
         {approved.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nenhuma férias aprovada.</p>
         ) : (
@@ -912,7 +928,7 @@ function FeriasPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_TONE.aprovado}`}>aprovado</span>
-                  {(r.user_id === user?.id || isManager) && (
+                  {isManager && (
                     <Button
                       size="sm"
                       variant="ghost"
@@ -1080,10 +1096,12 @@ function ConfirmRow({
   row,
   onAccept,
   onRequestChange,
+  onCancel,
 }: {
   row: VacationRow;
   onAccept: () => void;
   onRequestChange: (reason: string) => void;
+  onCancel: () => void;
 }) {
   const [requesting, setRequesting] = useState(false);
   const [reason, setReason] = useState("");
@@ -1105,6 +1123,9 @@ function ConfirmRow({
             </Button>
             <Button size="sm" variant="outline" onClick={() => setRequesting(true)}>
               <Pencil className="h-4 w-4" /> Solicitar alteração
+            </Button>
+            <Button size="sm" variant="ghost" onClick={onCancel}>
+              <XIcon className="h-4 w-4" /> Cancelar pedido
             </Button>
           </div>
         ) : null}
