@@ -1233,12 +1233,13 @@ function TasksPage() {
         </div>
       )}
 
-      {!isLoading && filteredTasks.length > 0 && isManager && taskView === "list" && (
-        <GroupedTaskList
+      {!isLoading && filteredTasks.length > 0 && taskView === "list" && (
+        <TaskListSections
           tasks={orderedTasks}
+          splitCompleted={!search.status}
           members={members ?? []}
           clients={clientsList ?? []}
-          groupBy={calendarGroup}
+          groupBy={isManager ? calendarGroup : "all"}
           userId={user!.id}
           isManager={isManager}
           onEdit={setEditing}
@@ -1295,37 +1296,6 @@ function TasksPage() {
         <div className="flex flex-wrap items-center gap-1 rounded-2xl border border-border bg-card px-3 py-2">
           <FilterChip label="Lista" active={taskView === "list"} onClick={() => setTaskView("list")} />
           <FilterChip label="Calendário" active={taskView === "calendar"} onClick={() => setTaskView("calendar")} />
-        </div>
-      )}
-
-      {!isLoading && filteredTasks.length > 0 && !isManager && taskView === "list" && (
-        <div className="rounded-2xl border border-border bg-card">
-          <ul className="divide-y divide-border">
-            {orderedTasks.map((t) => (
-              <TaskRowItem
-                key={t.id}
-                task={t}
-                userId={user!.id}
-                isManager={isManager}
-                onEdit={setEditing}
-                onEditSeries={setEditingSeries}
-                onReassign={setReassigning}
-                onDelete={handleDeleteRequest}
-                onTransition={handleTransition}
-                onArchive={(id, archive) => archiveMut.mutate({ id, archive })}
-                 onMoveDate={(id, dateKey) => moveTaskDate.mutate({ id, dateKey })}
-                 transitionPending={transition.isPending}
-                 archivePending={archiveMut.isPending}
-                 completionNotes={completionNoteByTask}
-                 refusalsByTask={refusalsByTask}
-                 memberNames={memberNames}
-                 selectedTaskIds={new Set(selectedTaskIds)}
-                 taskPunches={taskPunchByTask}
-                 onToggleTaskSelection={(id) => setSelectedTaskIds((current) => current.includes(id) ? current.filter((x) => x !== id) : [...current, id])}
-                 onNoStartReason={setNoStartTarget}
-               />
-            ))}
-          </ul>
         </div>
       )}
 
@@ -2124,6 +2094,59 @@ function CalendarTaskCard({
         ))}
       </div>
     </li>
+  );
+}
+
+function TaskListSections({
+  tasks,
+  splitCompleted,
+  members,
+  clients,
+  groupBy,
+  ...handlers
+}: RowHandlers & {
+  tasks: TaskRow[];
+  splitCompleted: boolean;
+  members: { id: string; full_name: string | null }[];
+  clients: ClientOption[];
+  groupBy: "assignee" | "client" | "all";
+}) {
+  const openTasks = tasks.filter((task) => task.status !== "concluido");
+  const completedTasks = tasks.filter((task) => task.status === "concluido");
+
+  const renderTasks = (items: TaskRow[]) => {
+    if (items.length === 0) return null;
+    if (groupBy === "all") {
+      return (
+        <div className="rounded-2xl border border-border bg-card">
+          <ul className="divide-y divide-border">
+            {items.map((task) => (
+              <TaskRowItem key={task.id} task={task} {...handlers} />
+            ))}
+          </ul>
+        </div>
+      );
+    }
+    return <GroupedTaskList tasks={items} members={members} clients={clients} groupBy={groupBy} {...handlers} />;
+  };
+
+  if (!splitCompleted) return renderTasks(tasks);
+
+  return (
+    <div className="space-y-5">
+      {openTasks.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="px-1 text-base font-semibold">Tarefas em aberto</h2>
+          {renderTasks(openTasks)}
+        </section>
+      )}
+      {completedTasks.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="px-1 text-base font-semibold">Tarefas concluídas</h2>
+          {renderTasks(completedTasks)}
+        </section>
+      )}
+    </div>
   );
 }
 

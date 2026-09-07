@@ -67,15 +67,15 @@ export function resolveOperationalStatus(
 ): ResolvedOperationalStatus {
   const start = task.scheduled_for ? new Date(task.scheduled_for) : null;
   if (!start || !Number.isFinite(start.getTime())) {
-    // Tarefas sem hora nunca entram no ciclo automático de ausência. Mantemos,
-    // porém, a indicação visual legada de atraso no dia seguinte à ocorrência.
+    // Sem horário não há atraso possível: a tarefa permanece pendente durante
+    // o dia programado e só se torna ausente no dia seguinte.
     if (task.status !== "pendente" && task.status !== "autorizado") return task.status;
     const dateSource = task.recurrence_date ?? task.due_at;
     const day = dateSource?.slice(0, 10);
     if (!day || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return task.status;
     const nextDay = new Date(`${day}T00:00:00.000Z`);
     nextDay.setUTCDate(nextDay.getUTCDate() + 1);
-    return wallClockEpoch(now) >= nextDay.getTime() ? "atrasada" : task.status;
+    return wallClockEpoch(now) >= nextDay.getTime() ? "ausente" : task.status;
   }
 
   // Legacy rows may use another automatic label (or have no source at all).

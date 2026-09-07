@@ -38,14 +38,38 @@ test("keeps overnight timing anchored to the start date", () => {
   assert.equal(resolveOperationalStatus(task, new Date(2026, 8, 3, 23, 0)), "ausente");
 });
 
-test("does not apply automatic timing to tasks without a scheduled start", () => {
+test("keeps no-time tasks pending during the day and marks them absent next day", () => {
   assert.equal(resolveOperationalStatus({ status: "pendente", scheduled_for: null }, new Date(2026, 8, 10, 12, 0)), "pendente");
   assert.equal(
     resolveOperationalStatus(
       { status: "pendente", scheduled_for: null, recurrence_date: "2026-09-02", due_at: "2026-09-02T23:59:59.000Z" },
+      new Date(2026, 8, 2, 23, 59, 59),
+    ),
+    "pendente",
+  );
+  assert.equal(
+    resolveOperationalStatus(
+      { status: "pendente", scheduled_for: null, recurrence_date: "2026-09-02" },
       new Date(2026, 8, 3, 0, 0),
     ),
-    "atrasada",
+    "ausente",
+  );
+  assert.equal(
+    resolveOperationalStatus(
+      { status: "em_andamento", scheduled_for: null, recurrence_date: "2026-09-02" },
+      new Date(2026, 8, 3, 0, 0),
+    ),
+    "em_andamento",
+  );
+});
+
+test("does not classify a completed no-time task as late or absent", () => {
+  assert.equal(
+    resolveOperationalStatus(
+      { status: "concluido", scheduled_for: null, recurrence_date: "2026-09-02" },
+      new Date(2026, 8, 3, 12, 0),
+    ),
+    "concluido",
   );
 });
 

@@ -60,6 +60,9 @@ test("task calendar defaults to week while management data stays company-scoped"
   assert.match(tasksPage, /if \(currentCompanyId\) q = q\.eq\("company_id", currentCompanyId\)/);
   assert.match(tasksPage, /if \(!isManager\) q = q\.eq\("assigned_to", user!\.id\)/);
   assert.match(tasksPage, /\.order\("scheduled_for", \{ ascending: true, nullsFirst: false \}\)/);
+  assert.match(tasksPage, /splitCompleted=\{!search\.status\}/);
+  assert.match(tasksPage, /Tarefas em aberto/);
+  assert.match(tasksPage, /Tarefas concluídas/);
   assert.doesNotMatch(tasksPage, /TaskListSortSelect|Ordenar lista de tarefas/);
   assert.doesNotMatch(tasksPage, /\.limit\(|\.range\(/);
 });
