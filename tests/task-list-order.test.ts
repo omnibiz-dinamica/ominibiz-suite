@@ -48,6 +48,20 @@ test("supports nearest and oldest task ordering without changing the source arra
   );
 });
 
+test("nearest ordering always puts today and future tasks before past tasks", () => {
+  const now = Date.parse("2026-09-07T12:00:00Z");
+  const result = sortTasksForList(
+    [task("past", "2026-09-06"), task("future", "2026-09-09"), task("later", "2026-09-10")],
+    "nearest",
+    now,
+  );
+
+  assert.deepEqual(
+    result.map((item) => item.id),
+    ["future", "later", "past"],
+  );
+});
+
 test("falls back to creation date when a task has no scheduled date", () => {
   const result = sortTasksForList([
     {

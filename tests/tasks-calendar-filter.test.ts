@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { filterCalendarData } from "../src/lib/tasks/calendar-filter.ts";
+
+const tasksPage = readFileSync(new URL("../src/routes/app.tarefas.tsx", import.meta.url), "utf8");
 
 const tasks = [
   { id: "task-veronica", assigned_to: "veronica" },
@@ -36,4 +39,11 @@ test("calendar multi-employee filter keeps only selected UUIDs", () => {
 
   assert.deepEqual(result.tasks.map((task) => task.id), ["task-veronica", "task-dayane"]);
   assert.deepEqual(result.vacations.map((vacation) => vacation.id), ["vacation-veronica"]);
+});
+
+test("task calendar defaults to week while management data stays company-scoped", () => {
+  assert.match(tasksPage, /const \[taskView, setTaskView\] = useState<"list" \| "calendar">\("calendar"\)/);
+  assert.match(tasksPage, /const \[mode, setMode\] = useState<CalendarMode>\("week"\)/);
+  assert.match(tasksPage, /if \(currentCompanyId\) q = q\.eq\("company_id", currentCompanyId\)/);
+  assert.match(tasksPage, /if \(!isManager\) q = q\.eq\("assigned_to", user!\.id\)/);
 });

@@ -131,7 +131,7 @@ import {
 
 import { EmployeeMultiPicker } from "@/components/common/EmployeePicker";
 import { filterCalendarData } from "@/lib/tasks/calendar-filter";
-import { sortTasksForList, taskListTimestamp, type TaskListSort } from "@/lib/tasks/list-order";
+import { compareTasksForList, sortTasksForList, type TaskListSort } from "@/lib/tasks/list-order";
 import { isDashboardCancelled, isDashboardLateStart } from "@/lib/tasks/dashboard-rules";
 import {
   wallISOToDateInput,
@@ -195,7 +195,7 @@ export const Route = createFileRoute("/app/tarefas")({
 });
 
 function TasksPage() {
-  const { user, profile, isManager, currentCompanyId } = useAuth();
+  const { user, profile, isManager, isSuperAdmin, currentCompanyId } = useAuth();
   const qc = useQueryClient();
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
@@ -217,7 +217,7 @@ function TasksPage() {
   const [recovering, setRecovering] = useState<RecoveryEntry | null>(null);
   const [refusalReason, setRefusalReason] = useState("");
   const [view, setView] = useState<"active" | "archived">("active");
-  const [taskView, setTaskView] = useState<"list" | "calendar">("list");
+  const [taskView, setTaskView] = useState<"list" | "calendar">("calendar");
   const [taskSort, setTaskSort] = useState<TaskListSort>("nearest");
   const [calendarGroup, setCalendarGroup] = useState<"assignee" | "client">("assignee");
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
@@ -1081,7 +1081,9 @@ function TasksPage() {
 
       {!currentCompanyId && isManager && (
         <div className="rounded-2xl border border-warning/40 bg-warning/10 p-4 text-sm text-warning-foreground">
-          Sua empresa ainda está aguardando aprovação. Você poderá criar tarefas assim que for liberada.
+          {isSuperAdmin
+            ? "Selecione uma empresa ativa para visualizar e gerir as tarefas desse contexto."
+            : "Sua empresa ainda está aguardando aprovação. Você poderá criar tarefas assim que for liberada."}
         </div>
       )}
 
@@ -2158,9 +2160,12 @@ function GroupedByAssignee({
     groups.set(k, arr);
   }
   const entries = Array.from(groups.entries()).sort(([a, tasksA], [b, tasksB]) => {
-    const latestA = Math.max(...tasksA.map(taskListTimestamp));
-    const latestB = Math.max(...tasksB.map(taskListTimestamp));
-    if (latestA !== latestB) return latestB - latestA;
+    const firstA = sortTasksForList(tasksA, "nearest")[0];
+    const firstB = sortTasksForList(tasksB, "nearest")[0];
+    if (firstA && firstB) {
+      const nextTaskOrder = compareTasksForList(firstA, firstB, "nearest");
+      if (nextTaskOrder !== 0) return nextTaskOrder;
+    }
     return nameOf(a === "__unassigned__" ? null : a).localeCompare(nameOf(b === "__unassigned__" ? null : b));
   });
 
