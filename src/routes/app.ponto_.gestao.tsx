@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -59,6 +60,7 @@ import { formatWallDate, formatWallTime } from "@/lib/wall-clock";
 import { classifyEventStatus, type GeoPointRow } from "@/lib/punch/geo-view";
 import { exportToExcel, exportToPdf, type ExportColumn } from "@/lib/exports";
 import { toast } from "sonner";
+import { formatCivilDate, type TaskOperationalNote } from "@/lib/ponto/task-notes";
 
 export const Route = createFileRoute("/app/ponto_/gestao")({ component: Page });
 
@@ -122,6 +124,58 @@ type GeoSummary = {
   start?: GeoPoint;
   end?: GeoPoint;
 };
+
+type DisplayNote = Pick<TaskOperationalNote, "label" | "text" | "createdAt" | "requestedDate" | "needsReassignment">;
+
+function formatNoteTimestamp(value: string | null | undefined) {
+  return value ? new Date(value).toLocaleString("pt-PT") : "";
+}
+
+function formatNoteForExport(note: DisplayNote) {
+  const details = [
+    note.requestedDate ? `Nova data: ${formatCivilDate(note.requestedDate)}` : "",
+    note.needsReassignment !== null && note.needsReassignment !== undefined
+      ? `Troca de funcionário: ${note.needsReassignment ? "Sim" : "Não"}`
+      : "",
+  ].filter(Boolean);
+  return `${note.label}: ${note.text}${details.length ? ` (${details.join("; ")})` : ""}`;
+}
+
+function TaskNotesCell({ notes }: { notes: DisplayNote[] }) {
+  if (notes.length === 0) return <span>—</span>;
+  const preview = notes.map((note) => formatNoteForExport(note)).join(" · ");
+  const compactPreview = preview.length > 150 ? `${preview.slice(0, 147)}...` : preview;
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="block max-w-[240px] truncate text-left text-sm text-muted-foreground underline decoration-dotted underline-offset-2 hover:text-foreground"
+          aria-label="Ver notas do registro"
+        >
+          {compactPreview}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-[min(360px,calc(100vw-2rem))]">
+        <div className="space-y-3">
+          <p className="text-sm font-semibold">Notas do registro</p>
+          {notes.map((note, index) => (
+            <div key={`${note.label}-${note.createdAt ?? "sem-data"}-${index}`} className="border-t border-border pt-3 first:border-t-0 first:pt-0">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{note.label}</p>
+              <p className="mt-1 whitespace-pre-wrap break-words text-sm">{note.text}</p>
+              {note.requestedDate && <p className="mt-2 text-xs text-muted-foreground">Nova data: {formatCivilDate(note.requestedDate)}</p>}
+              {note.needsReassignment !== null && note.needsReassignment !== undefined && (
+                <p className="text-xs text-muted-foreground">Troca de funcionário: {note.needsReassignment ? "Sim" : "Não"}</p>
+              )}
+              {note.createdAt && <p className="mt-1 text-xs text-muted-foreground">Registrado em: {formatNoteTimestamp(note.createdAt)}</p>}
+            </div>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 const fmtCoord = (p?: GeoPoint) => (p?.lat != null && p.lng != null ? `${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}` : "");
 const fmtMeters = (n: number | null | undefined) => (n != null ? `${Math.round(n)} m` : "");
@@ -419,7 +473,23 @@ function GestaoPonto() {
     }
     return ORIGIN_LABEL[r.origin] ?? r.origin;
   };
-  const formatNotes = (r: Row) => (isAbsence(r) ? (r.absence_reason ?? "") : (r.no_start_reason ?? r.notes ?? ""));
+  const getRowNoteItems = (r: Row): DisplayNote[] => {
+    const notes: DisplayNote[] = [];
+    if (isAbsence(r)) {
+      if (r.absence_reason?.trim()) {
+        notes.push({ label: "Motivo da falta", text: r.absence_reason.trim(), createdAt: r.created_at, requestedDate: null, needsReassignment: null });
+      }
+    } else {
+      if (r.no_start_reason?.trim()) {
+        notes.push({ label: "Motivo de não início", text: r.no_start_reason.trim(), createdAt: r.no_start_reason_at ?? null, requestedDate: null, needsReassignment: null });
+      }
+      if (r.notes?.trim()) {
+        notes.push({ label: "Nota do ponto", text: r.notes.trim(), createdAt: r.updated_at, requestedDate: null, needsReassignment: null });
+      }
+    }
+    return [...notes, ...(r.task_notes ?? [])];
+  };
+  const formatNotes = (r: Row) => getRowNoteItems(r).map(formatNoteForExport).join(" · ");
   // A data de férias é civil (DATE). Prefira recurrence_date para não converter meia-noite entre fusos.
   const formatVacationDate = (r: Row) =>
     r.tasks?.recurrence_date
@@ -741,8 +811,15 @@ function GestaoPonto() {
                       {formatOrigin(r)}
                     </span>
                   </TableCell>
-                  <TableCell className="max-w-[240px] truncate text-sm text-muted-foreground">
-                    {[formatStartDelay(r), formatNotes(r)].filter(Boolean).join(" · ") || "—"}
+                  <TableCell>
+                    <TaskNotesCell
+                      notes={[
+                        ...(formatStartDelay(r)
+                          ? [{ label: "Início com atraso", text: formatStartDelay(r), createdAt: r.started_at, requestedDate: null, needsReassignment: null }]
+                          : []),
+                        ...getRowNoteItems(r),
+                      ]}
+                    />
                   </TableCell>
                   <TableCell>
                     {isOperationalTask(r) || isVacation(r) ? <span className="text-muted-foreground">—</span> : <DropdownMenu>
