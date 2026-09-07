@@ -22,10 +22,11 @@ export function wallClockEpoch(date: Date): number {
 export function startedLateMinutes(task: {
   scheduled_for: string | null | undefined;
   started_at: string | null | undefined;
-}): number | null {
-  if (!task.scheduled_for || !task.started_at) return null;
+}, fallbackStartedAt?: string | null): number | null {
+  const actualStartedAt = task.started_at ?? fallbackStartedAt;
+  if (!task.scheduled_for || !actualStartedAt) return null;
   const scheduled = new Date(task.scheduled_for);
-  const started = new Date(task.started_at);
+  const started = new Date(actualStartedAt);
   if (!Number.isFinite(scheduled.getTime()) || !Number.isFinite(started.getTime())) return null;
 
   const delayMinutes = Math.floor((wallClockEpoch(started) - scheduled.getTime()) / 60000);

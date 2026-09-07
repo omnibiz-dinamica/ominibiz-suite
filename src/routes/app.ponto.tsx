@@ -266,7 +266,7 @@ function PontoPage() {
     queryFn: async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let q: any = (supabase.from("time_entries" as any) as any)
-        .select("*, tasks(title)")
+        .select("*, tasks(title, scheduled_for, scheduled_end)")
         .not("ended_at", "is", null)
         .order("ended_at", { ascending: false })
         .limit(15);
@@ -274,7 +274,9 @@ function PontoPage() {
       else if (currentCompanyId) q = q.eq("company_id", currentCompanyId);
       const { data, error } = await q;
       if (error) throw error;
-      return (data ?? []) as (TimeEntryRow & { tasks: { title: string } | null })[];
+      return (data ?? []) as (TimeEntryRow & {
+        tasks: { title: string; scheduled_for: string | null; scheduled_end: string | null } | null;
+      })[];
     },
     enabled: !!user,
   });
@@ -584,6 +586,20 @@ function PontoPage() {
                     {new Date(h.started_at).toLocaleString()} →{" "}
                     {h.ended_at ? new Date(h.ended_at).toLocaleTimeString() : "—"}
                   </div>
+                  {startedLateMinutes({
+                    scheduled_for: h.tasks?.scheduled_for,
+                    started_at: h.started_at,
+                  }) != null && (
+                    <span className="mt-1 inline-flex items-center gap-1 rounded bg-destructive/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-destructive">
+                      <AlertCircle className="h-3 w-3" /> Início com atraso ·{" "}
+                      {formatStartedLateMinutes(
+                        startedLateMinutes({
+                          scheduled_for: h.tasks?.scheduled_for,
+                          started_at: h.started_at,
+                        })!,
+                      )}
+                    </span>
+                  )}
                 </div>
                 <div className="col-span-2 text-xs text-muted-foreground">{h.paused_at ? "c/ pausa" : "s/ pausa"}</div>
                 <div className="col-span-3 text-right font-mono text-sm">

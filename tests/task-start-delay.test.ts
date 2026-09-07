@@ -30,6 +30,16 @@ test("preserves overnight scheduled starts and formats useful delay labels", () 
   assert.equal(formatStartedLateMinutes(120), "2h");
 });
 
+test("uses the operational punch start when the task start is not hydrated", () => {
+  assert.equal(
+    startedLateMinutes(
+      { scheduled_for: "2026-09-02T22:00:00.000Z", started_at: null },
+      localISO(22, 42),
+    ),
+    42,
+  );
+});
+
 test("does not invent a delay when one of the timestamps is missing or invalid", () => {
   assert.equal(startedLateMinutes({ scheduled_for: null, started_at: localISO(22, 42) }), null);
   assert.equal(startedLateMinutes({ scheduled_for: "invalid", started_at: localISO(22, 42) }), null);

@@ -1653,7 +1653,12 @@ function TaskPlanningCalendar({
                       </div>
                       <ul className="space-y-1">
                         {dayTasks.slice(0, 4).map((task) => (
-                          <MiniTaskChip key={task.id} task={task} onClick={() => handlers.onEdit(task)} />
+                          <MiniTaskChip
+                            key={task.id}
+                            task={task}
+                            startedAt={handlers.taskPunches.get(task.id)?.started_at}
+                            onClick={() => handlers.onEdit(task)}
+                          />
                         ))}
                         {dayVacations.map((vacation) => (
                           <MiniVacationChip key={vacation.id} vacation={vacation} />
@@ -1686,7 +1691,12 @@ function TaskPlanningCalendar({
                       </div>
                       <ul className="space-y-1">
                         {monthTasks.slice(0, 5).map((task) => (
-                          <MiniTaskChip key={task.id} task={task} onClick={() => handlers.onEdit(task)} />
+                          <MiniTaskChip
+                            key={task.id}
+                            task={task}
+                            startedAt={handlers.taskPunches.get(task.id)?.started_at}
+                            onClick={() => handlers.onEdit(task)}
+                          />
                         ))}
                         {monthVacations.slice(0, 5).map((vacation) => (
                           <MiniVacationChip key={vacation.id} vacation={vacation} />
@@ -1772,9 +1782,17 @@ function CalendarDayColumn({
   );
 }
 
-function MiniTaskChip({ task, onClick }: { task: TaskRow; onClick: () => void }) {
+function MiniTaskChip({
+  task,
+  startedAt,
+  onClick,
+}: {
+  task: TaskRow;
+  startedAt?: string;
+  onClick: () => void;
+}) {
   const start = formatWallTime(task.scheduled_for);
-  const lateMinutes = startedLateMinutes(task);
+  const lateMinutes = startedLateMinutes(task, startedAt);
   return (
     <button
       type="button"
@@ -1964,7 +1982,6 @@ function CalendarTaskCard({
   groupBy: "assignee" | "client" | "all";
 }) {
   const late = isVisuallyLate(task);
-  const lateStartMinutes = startedLateMinutes(task);
   const operationalStatus = resolveOperationalStatus(task);
   const actions = availableActions(task, { userId, isManager });
   const start = formatWallTime(task.scheduled_for);
@@ -1976,6 +1993,7 @@ function CalendarTaskCard({
   const memberName = members.find((m) => m.id === task.assigned_to)?.full_name ?? "Sem responsável";
   const clientName = clients.find((c) => c.id === task.client_id)?.name ?? "Sem cliente";
   const taskPunch = taskPunches.get(task.id);
+  const lateStartMinutes = startedLateMinutes(task, taskPunch?.started_at);
   const completionNote = completionNotes.get(task.id);
   const refusalHistory = refusalsByTask.get(task.id) ?? [];
   const refusal = currentTaskRefusal(task, refusalHistory);
@@ -2248,7 +2266,6 @@ function TaskRowItem({
   taskPunches,
 }: RowHandlers & { task: TaskRow }) {
   const late = isVisuallyLate(t);
-  const lateStartMinutes = startedLateMinutes(t);
   const operationalStatus = resolveOperationalStatus(t);
   const actions = availableActions(t, { userId, isManager });
   const archived = !!t.archived_at;
@@ -2262,6 +2279,7 @@ function TaskRowItem({
   const refusal = currentTaskRefusal(t, refusalHistory);
   const cancellation = currentTaskCancellation(t);
   const taskPunch = taskPunches.get(t.id);
+  const lateStartMinutes = startedLateMinutes(t, taskPunch?.started_at);
 
   return (
     <li className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
