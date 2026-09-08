@@ -22,6 +22,34 @@ test("schedule change is additive, tenant-scoped and occurrence-specific", () =>
   assert.doesNotMatch(migration, /UPDATE public\.tasks\s+SET\s+recurrence_id/);
 });
 
+test("repair migration exposes the exact named RPC signature used by the frontend", () => {
+  const repairMigration = readFileSync(
+    new URL(
+      "../supabase/migrations/20260908093000_sup_2026_000143_repair_schedule_cancel_rpc.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.match(repairMigration, /CREATE OR REPLACE FUNCTION public\.task_cancel_with_schedule_request\(/);
+  assert.match(repairMigration, /_task_id uuid[\s\S]*_reason text[\s\S]*_requested_date date[\s\S]*_needs_reassignment boolean/);
+  assert.match(repairMigration, /REVOKE ALL ON FUNCTION public\.task_cancel_with_schedule_request\(uuid, text, date, boolean\)/);
+  assert.match(repairMigration, /CREATE OR REPLACE FUNCTION public\.tasks_notify_update\(\)/);
+  assert.match(repairMigration, /'schedule_change_requested_date', NEW\.schedule_change_requested_date/);
+  assert.match(repairMigration, /'schedule_change_needs_reassignment', NEW\.schedule_change_needs_reassignment/);
+  assert.match(repairMigration, /NOTIFY pgrst, 'reload schema'/);
+  assert.doesNotMatch(repairMigration, /USING\s*\(\s*true\s*\)/);
+  assert.doesNotMatch(repairMigration, /WITH CHECK\s*\(\s*true\s*\)/);
+});
+
+test("schedule-change checkbox state is forwarded without coercing true to false", () => {
+  const tasksSource = readFileSync(new URL("../src/lib/tasks.ts", import.meta.url), "utf8");
+  const dialogSource = readFileSync(new URL("../src/components/tasks/CancelTaskDialog.tsx", import.meta.url), "utf8");
+  assert.match(tasksSource, /_needs_reassignment:\s*request\.needsReassignment/);
+  assert.match(dialogSource, /checked=\{needsReassignment\}/);
+  assert.match(dialogSource, /setNeedsReassignment\(event\.target\.checked\)/);
+  assert.match(dialogSource, /Reatribuição:\s*\{needsReassignment \? "sim" : "não"\}/);
+});
+
 test("completion notification includes the client while reusing the audit event", () => {
   const completionMigration = readFileSync(
     new URL(
