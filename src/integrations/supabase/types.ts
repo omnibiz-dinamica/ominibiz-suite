@@ -2398,6 +2398,8 @@ export type Database = {
           previous_status: Database["public"]["Enums"]["task_status"] | null
           reason: string | null
           recurrence_id: string | null
+          schedule_change_needs_reassignment: boolean | null
+          schedule_change_requested_date: string | null
           task_id: string
         }
         Insert: {
@@ -2415,6 +2417,8 @@ export type Database = {
           previous_status?: Database["public"]["Enums"]["task_status"] | null
           reason?: string | null
           recurrence_id?: string | null
+          schedule_change_needs_reassignment?: boolean | null
+          schedule_change_requested_date?: string | null
           task_id: string
         }
         Update: {
@@ -2432,6 +2436,8 @@ export type Database = {
           previous_status?: Database["public"]["Enums"]["task_status"] | null
           reason?: string | null
           recurrence_id?: string | null
+          schedule_change_needs_reassignment?: boolean | null
+          schedule_change_requested_date?: string | null
           task_id?: string
         }
         Relationships: [
@@ -2638,6 +2644,8 @@ export type Database = {
           new_status: Database["public"]["Enums"]["task_status"]
           previous_status: Database["public"]["Enums"]["task_status"]
           reason: string
+          schedule_change_needs_reassignment: boolean | null
+          schedule_change_requested_date: string | null
           task_id: string
         }
         Insert: {
@@ -2649,6 +2657,8 @@ export type Database = {
           new_status: Database["public"]["Enums"]["task_status"]
           previous_status: Database["public"]["Enums"]["task_status"]
           reason: string
+          schedule_change_needs_reassignment?: boolean | null
+          schedule_change_requested_date?: string | null
           task_id: string
         }
         Update: {
@@ -2660,6 +2670,8 @@ export type Database = {
           new_status?: Database["public"]["Enums"]["task_status"]
           previous_status?: Database["public"]["Enums"]["task_status"]
           reason?: string
+          schedule_change_needs_reassignment?: boolean | null
+          schedule_change_requested_date?: string | null
           task_id?: string
         }
         Relationships: [
@@ -2711,6 +2723,8 @@ export type Database = {
           refusal_reason: string | null
           refused_at: string | null
           refused_by: string | null
+          schedule_change_needs_reassignment: boolean | null
+          schedule_change_requested_date: string | null
           scheduled_end: string | null
           scheduled_for: string | null
           started_at: string | null
@@ -2757,6 +2771,8 @@ export type Database = {
           refusal_reason?: string | null
           refused_at?: string | null
           refused_by?: string | null
+          schedule_change_needs_reassignment?: boolean | null
+          schedule_change_requested_date?: string | null
           scheduled_end?: string | null
           scheduled_for?: string | null
           started_at?: string | null
@@ -2803,6 +2819,8 @@ export type Database = {
           refusal_reason?: string | null
           refused_at?: string | null
           refused_by?: string | null
+          schedule_change_needs_reassignment?: boolean | null
+          schedule_change_requested_date?: string | null
           scheduled_end?: string | null
           scheduled_for?: string | null
           started_at?: string | null
@@ -5178,6 +5196,8 @@ export type Database = {
           refusal_reason: string | null
           refused_at: string | null
           refused_by: string | null
+          schedule_change_needs_reassignment: boolean | null
+          schedule_change_requested_date: string | null
           scheduled_end: string | null
           scheduled_for: string | null
           started_at: string | null
@@ -5416,6 +5436,8 @@ export type Database = {
           previous_status: Database["public"]["Enums"]["task_status"] | null
           reason: string | null
           recurrence_id: string | null
+          schedule_change_needs_reassignment: boolean | null
+          schedule_change_requested_date: string | null
           task_id: string
         }
         SetofOptions: {
@@ -5465,6 +5487,8 @@ export type Database = {
           refusal_reason: string | null
           refused_at: string | null
           refused_by: string | null
+          schedule_change_needs_reassignment: boolean | null
+          schedule_change_requested_date: string | null
           scheduled_end: string | null
           scheduled_for: string | null
           started_at: string | null
@@ -5520,6 +5544,70 @@ export type Database = {
           refusal_reason: string | null
           refused_at: string | null
           refused_by: string | null
+          schedule_change_needs_reassignment: boolean | null
+          schedule_change_requested_date: string | null
+          scheduled_end: string | null
+          scheduled_for: string | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["task_status"]
+          task_group_id: string | null
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tasks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      task_cancel_with_schedule_request: {
+        Args: {
+          _needs_reassignment: boolean
+          _reason: string
+          _requested_date: string
+          _task_id: string
+        }
+        Returns: {
+          absence_grace_minutes: number
+          absence_justified: boolean | null
+          absence_reason: string | null
+          absence_source: string | null
+          archived_at: string | null
+          archived_by: string | null
+          assigned_to: string | null
+          authorized_at: string | null
+          authorized_by: string | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          client_id: string | null
+          company_id: string
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          deleted_at: string | null
+          deleted_by: string | null
+          description: string | null
+          due_at: string | null
+          id: string
+          late_notified_at: string | null
+          location: string | null
+          marked_absent_at: string | null
+          marked_absent_by: string | null
+          no_start_reason: string | null
+          no_start_reason_at: string | null
+          no_start_reason_by: string | null
+          notes: string | null
+          priority: Database["public"]["Enums"]["task_priority"]
+          punch_mode_override: Database["public"]["Enums"]["punch_mode"] | null
+          recurrence_date: string | null
+          recurrence_id: string | null
+          refusal_reason: string | null
+          refused_at: string | null
+          refused_by: string | null
+          schedule_change_needs_reassignment: boolean | null
+          schedule_change_requested_date: string | null
           scheduled_end: string | null
           scheduled_for: string | null
           started_at: string | null
@@ -5580,6 +5668,8 @@ export type Database = {
           refusal_reason: string | null
           refused_at: string | null
           refused_by: string | null
+          schedule_change_needs_reassignment: boolean | null
+          schedule_change_requested_date: string | null
           scheduled_end: string | null
           scheduled_for: string | null
           started_at: string | null
@@ -5635,6 +5725,8 @@ export type Database = {
           refusal_reason: string | null
           refused_at: string | null
           refused_by: string | null
+          schedule_change_needs_reassignment: boolean | null
+          schedule_change_requested_date: string | null
           scheduled_end: string | null
           scheduled_for: string | null
           started_at: string | null
@@ -5706,6 +5798,8 @@ export type Database = {
           refusal_reason: string | null
           refused_at: string | null
           refused_by: string | null
+          schedule_change_needs_reassignment: boolean | null
+          schedule_change_requested_date: string | null
           scheduled_end: string | null
           scheduled_for: string | null
           started_at: string | null
@@ -5785,6 +5879,8 @@ export type Database = {
           refusal_reason: string | null
           refused_at: string | null
           refused_by: string | null
+          schedule_change_needs_reassignment: boolean | null
+          schedule_change_requested_date: string | null
           scheduled_end: string | null
           scheduled_for: string | null
           started_at: string | null
@@ -5841,6 +5937,71 @@ export type Database = {
           refusal_reason: string | null
           refused_at: string | null
           refused_by: string | null
+          schedule_change_needs_reassignment: boolean | null
+          schedule_change_requested_date: string | null
+          scheduled_end: string | null
+          scheduled_for: string | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["task_status"]
+          task_group_id: string | null
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tasks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      task_transition_with_schedule_request: {
+        Args: {
+          _action: string
+          _needs_reassignment: boolean
+          _reason: string
+          _requested_date: string
+          _task_id: string
+        }
+        Returns: {
+          absence_grace_minutes: number
+          absence_justified: boolean | null
+          absence_reason: string | null
+          absence_source: string | null
+          archived_at: string | null
+          archived_by: string | null
+          assigned_to: string | null
+          authorized_at: string | null
+          authorized_by: string | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          client_id: string | null
+          company_id: string
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          deleted_at: string | null
+          deleted_by: string | null
+          description: string | null
+          due_at: string | null
+          id: string
+          late_notified_at: string | null
+          location: string | null
+          marked_absent_at: string | null
+          marked_absent_by: string | null
+          no_start_reason: string | null
+          no_start_reason_at: string | null
+          no_start_reason_by: string | null
+          notes: string | null
+          priority: Database["public"]["Enums"]["task_priority"]
+          punch_mode_override: Database["public"]["Enums"]["punch_mode"] | null
+          recurrence_date: string | null
+          recurrence_id: string | null
+          refusal_reason: string | null
+          refused_at: string | null
+          refused_by: string | null
+          schedule_change_needs_reassignment: boolean | null
+          schedule_change_requested_date: string | null
           scheduled_end: string | null
           scheduled_for: string | null
           started_at: string | null
