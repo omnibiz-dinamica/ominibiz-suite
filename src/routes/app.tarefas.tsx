@@ -679,10 +679,8 @@ function TasksPage() {
     if (action === "concluir") {
       const entry = openPunchByTask.get(task.id);
       if (entry) {
-        const startedDay = formatWallDate(entry.started_at);
-        const today = formatWallDate(new Date().toISOString());
         const isOtherUser = isManager && task.assigned_to !== user?.id;
-        if (startedDay !== today || isOtherUser) {
+        if (isOtherUser) {
           setRecovering(entry);
           return;
         }

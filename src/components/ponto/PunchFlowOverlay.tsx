@@ -10,8 +10,8 @@ const PHASE_LABEL: Record<PunchFlowState["phase"], string> = {
   idle: "",
   capturing_gps: "Obtendo localização…",
   sending: "Registrando ponto…",
-  awaiting_reason: "Aguardando justificativa…",
-  resending: "Reenviando com justificativa…",
+  awaiting_reason: "Aguardando observação…",
+  resending: "Reenviando com observação…",
   done: "Concluído.",
   failed: "Erro ao registrar.",
 };
@@ -63,7 +63,7 @@ export function PunchFlowOverlay({
         </div>
       )}
 
-      {/* Modal de justificativa */}
+      {/* Modal de observação exigida pela política de geolocalização */}
       <Dialog
         open={state.phase === "awaiting_reason"}
         onOpenChange={(o) => {
@@ -73,15 +73,15 @@ export function PunchFlowOverlay({
         <DialogContent size="sm">
           <ModalHeader
             icon={ShieldAlert}
-            title="Justificativa necessária"
+            title="Observação necessária"
             description={
               state.needsReasonMessage ??
-              "A política da empresa exige uma justificativa para prosseguir."
+              "A política da empresa exige uma observação para prosseguir."
             }
           />
           <ModalBody>
             <div className="space-y-1.5">
-              <Label>Motivo</Label>
+              <Label>Observação *</Label>
               <Textarea
                 autoFocus
                 maxLength={500}

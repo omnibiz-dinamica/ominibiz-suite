@@ -95,7 +95,7 @@ export function OpenPunchRecoveryDialog({
 
   if (!entry) return null;
 
-  const reasonRequiresText = reasonCode === "outro" || mode === "manager";
+  const reasonRequiresText = true;
   const canSubmit =
     !!endedAt &&
     !!reasonCode &&
@@ -249,13 +249,13 @@ export function OpenPunchRecoveryDialog({
         {reasonRequiresText ? (
           <div className="min-w-0 sm:col-span-2">
             <Label className="text-xs">
-              {mode === "manager" ? "Observação do gestor *" : "Descreva o motivo *"}
+              Observação *
             </Label>
             <Textarea
               rows={3}
               value={reasonText}
               onChange={(e) => setReasonText(e.target.value)}
-              placeholder={mode === "manager" ? "Contexto da regularização" : "O que aconteceu?"}
+              placeholder="Informe o motivo desta correção."
             />
           </div>
         ) : null}

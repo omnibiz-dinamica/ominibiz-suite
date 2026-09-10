@@ -63,7 +63,7 @@ import { OpenPunchRecoveryDialog } from "@/components/ponto/OpenPunchRecoveryDia
 import { CancelTaskDialog } from "@/components/tasks/CancelTaskDialog";
 import { ArchiveTaskDialog } from "@/components/tasks/ArchiveTaskDialog";
 import { MarkAbsentDialog } from "@/components/tasks/MarkAbsentDialog";
-import { fetchOpenEntrySelf, recoverOpenEntry } from "@/lib/punch/recovery";
+import { fetchOpenEntrySelf } from "@/lib/punch/recovery";
 import { defaultRecoveryEndInput } from "@/lib/punch/recovery-time";
 import { isEmployeeCancelledTask } from "@/lib/task-refusal-view";
 
@@ -105,7 +105,6 @@ function PontoPage() {
   const [manualEndAt, setManualEndAt] = useState("");
   const [manualEndReason, setManualEndReason] = useState("");
   const [manualCompletionNote, setManualCompletionNote] = useState("");
-  const [manualEndRequiresReason, setManualEndRequiresReason] = useState(false);
   const [completionDialogOpen, setCompletionDialogOpen] = useState(false);
   const [completionNote, setCompletionNote] = useState("");
   const [recoveryOpen, setRecoveryOpen] = useState(false);
@@ -190,8 +189,6 @@ function PontoPage() {
     queryFn: fetchOpenEntrySelf,
     enabled: !!user && !!openEntry?.id,
   });
-
-  const isLateOpenEntry = !!openEntry && new Date(openEntry.started_at).toDateString() !== new Date().toDateString();
 
   // Próximas tarefas do dia (quando não há ponto aberto)
   const { data: upcoming } = useQuery({
@@ -427,20 +424,7 @@ function PontoPage() {
       if (!openEntry) {
         throw new Error("Sem ponto aberto.");
       }
-      const endedAtIso = localInputToIso(endedAt);
-      const entry = isLateOpenEntry
-        ? await (async () => {
-            const res = await recoverOpenEntry({
-              timeEntryId: entryId,
-              endedAtIso,
-              reasonCode: "outro",
-              reasonText: reason ?? null,
-              completeTask: true,
-            });
-            if (!res.success) throw new Error(res.message ?? res.code ?? "Não foi possível regularizar o ponto.");
-            return res;
-          })()
-        : await punchEmployeeManualEnd(entryId, endedAtIso, true, reason);
+      const entry = await punchEmployeeManualEnd(entryId, localInputToIso(endedAt), true, reason);
       let noteSaved = true;
       if (note.trim() && openTask) {
         try {
@@ -456,7 +440,6 @@ function PontoPage() {
       setManualEndOpen(false);
       setManualEndReason("");
       setManualCompletionNote("");
-      setManualEndRequiresReason(false);
       qc.invalidateQueries({ queryKey: ["punch-open"] });
       qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
       qc.invalidateQueries({ queryKey: ["punch-history"] });
@@ -500,12 +483,11 @@ function PontoPage() {
   const isManualOpenTask = openTaskMode === "manual" || openEntry?.notes === "Apontamento manual pelo funcionario";
   const manualStartingId = manualStartMut.variables?.taskId ?? null;
 
-  function openManualEndDialog(requiresReason = false) {
+  function openManualEndDialog() {
     if (!openEntry || !openTask) return;
     setManualEndAt(defaultRecoveryEndInput(openEntry.started_at));
     setManualEndReason("");
     setManualCompletionNote("");
-    setManualEndRequiresReason(requiresReason);
     setManualEndOpen(true);
   }
 
@@ -538,11 +520,8 @@ function PontoPage() {
           mode={openTaskMode}
           onPause={() => pauseMut.mutate()}
           onResume={() => resumeMut.mutate()}
-          requiresManualEnd={isLateOpenEntry}
-          onComplete={() =>
-            isManualOpenTask || isLateOpenEntry ? openManualEndDialog(isLateOpenEntry) : setCompletionDialogOpen(true)
-          }
-          onManualEnd={() => openManualEndDialog(isLateOpenEntry)}
+          onComplete={() => (isManualOpenTask ? openManualEndDialog() : setCompletionDialogOpen(true))}
+          onManualEnd={() => openManualEndDialog()}
           pausing={pauseMut.isPending}
           resuming={resumeMut.isPending}
           ending={endMut.isPending}
@@ -781,10 +760,6 @@ function PontoPage() {
                 e.preventDefault();
                 if (!openEntry || !manualEndAt) return;
                 const reason = manualEndReason.trim();
-                if (manualEndRequiresReason && reason.length < 3) {
-                  toast.error("Informe a justificativa do fechamento tardio.");
-                  return;
-                }
                 manualEndMut.mutate({
                   entryId: openEntry.id,
                   endedAt: manualEndAt,
@@ -807,7 +782,7 @@ function PontoPage() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="manual-end-reason">
-                  Justificativa {manualEndRequiresReason ? "*" : "(opcional)"}
+                  Observação (opcional)
                 </label>
                 <Textarea
                   id="manual-end-reason"
@@ -911,7 +886,6 @@ function ActiveTaskCard({
   onResume,
   onComplete,
   onManualEnd,
-  requiresManualEnd,
   pausing,
   resuming,
   ending,
@@ -927,14 +901,13 @@ function ActiveTaskCard({
   onResume: () => void;
   onComplete: () => void;
   onManualEnd: () => void;
-  requiresManualEnd: boolean;
   pausing: boolean;
   resuming: boolean;
   ending: boolean;
   manualEnding: boolean;
 }) {
   const isManualEntry = mode === "manual" || entry.notes === "Apontamento manual pelo funcionario";
-  const useManualExit = isManualEntry || requiresManualEnd;
+  const useManualExit = isManualEntry;
 
   return (
     <section className="min-w-0 overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card shadow-lg">
@@ -1015,7 +988,7 @@ function ActiveTaskCard({
               disabled={manualEnding}
               onClick={onManualEnd}
             >
-              <LogOut className="mr-2 h-5 w-5" /> {requiresManualEnd ? "Finalizar com hora correta" : "Finalizar"}
+              <LogOut className="mr-2 h-5 w-5" /> Finalizar
             </Button>
           )}
           {!useManualExit && (
