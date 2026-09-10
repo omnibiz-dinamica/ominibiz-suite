@@ -32,6 +32,7 @@ import { invalidateClientsCache } from "@/lib/cache/clients";
 import { parseHabitualSchedule, type ClientHabitualSchedule } from "@/lib/tasks/client-schedule";
 import { calculateWallDurationMinutes, formatContractedMinutes, isOvernightTimeRange } from "@/lib/tasks/contracted-hours";
 import { describeClientSchedule } from "@/lib/tasks/client-card";
+import { clientTeamType, type ClientTeamType } from "@/lib/tasks/client-team";
 
 export const Route = createFileRoute("/app/clientes")({
   component: () => (
@@ -71,6 +72,7 @@ interface AssigneeRow {
   client_id: string;
   user_id: string;
   is_primary: boolean;
+  assignment_type?: ClientTeamType | null;
 }
 
 interface Member {
@@ -193,7 +195,7 @@ function ClientsPage() {
       header: "Contacto",
       accessor: (c) => {
         const team = assigneesByClient[c.id] ?? [];
-        const primary = team.find((a) => a.is_primary) ?? team[0];
+        const primary = team.find((a) => a.is_primary && clientTeamType(a) === "habitual") ?? team.find((a) => clientTeamType(a) === "habitual");
         return primary ? (membersById.get(primary.user_id) ?? "") : "";
       },
       width: 120,
@@ -409,11 +411,16 @@ function ClientsPage() {
                         <span
                           key={a.id}
                           className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] ${
-                            a.is_primary ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
+                            clientTeamType(a) === "recurso"
+                              ? "bg-warning/15 text-warning-foreground"
+                              : a.is_primary
+                                ? "bg-primary/15 text-primary"
+                                : "bg-muted text-muted-foreground"
                           }`}
                         >
-                          {a.is_primary && "★ "}
+                          {a.is_primary && clientTeamType(a) === "habitual" && "★ "}
                           {membersById.get(a.user_id) ?? a.user_id.slice(0, 8)}
+                          <span className="opacity-70">· {clientTeamType(a) === "recurso" ? "recurso" : "habitual"}</span>
                         </span>
                       ))}
                     </div>
@@ -491,6 +498,9 @@ function ClientForm({
   });
   const [selected, setSelected] = useState<Set<string>>(() => new Set(assignees.map((a) => a.user_id)));
   const [primary, setPrimary] = useState<string>(() => assignees.find((a) => a.is_primary)?.user_id ?? "");
+  const [assignmentTypes, setAssignmentTypes] = useState<Record<string, ClientTeamType>>(() =>
+    Object.fromEntries(assignees.map((a) => [a.user_id, clientTeamType(a)])),
+  );
   const [loading, setLoading] = useState(false);
 
   const updateGeo = (next: ClientGeoValue) => {
@@ -506,9 +516,15 @@ function ClientForm({
         if (primary === id) setPrimary("");
       } else {
         n.add(id);
+        setAssignmentTypes((current) => ({ ...current, [id]: current[id] ?? "habitual" }));
       }
       return n;
     });
+  };
+
+  const setAssignmentType = (userId: string, type: ClientTeamType) => {
+    setAssignmentTypes((current) => ({ ...current, [userId]: type }));
+    if (type === "recurso" && primary === userId) setPrimary("");
   };
 
   return (
@@ -666,6 +682,10 @@ function ClientForm({
 
           // Sincroniza vínculos
           if (clientId) {
+            const effectivePrimary =
+              primary && selected.has(primary) && (assignmentTypes[primary] ?? "habitual") === "habitual"
+                ? primary
+                : "";
             // Remove os desmarcados
             const toRemove = assignees.filter((a) => !selected.has(a.user_id));
             if (toRemove.length > 0) {
@@ -683,19 +703,25 @@ function ClientForm({
                   company_id: companyId,
                   client_id: clientId,
                   user_id: u,
-                  is_primary: u === primary,
+                  is_primary: u === effectivePrimary,
+                  assignment_type: assignmentTypes[u] ?? "habitual",
                 })),
               );
+            }
+            for (const assignee of assignees.filter((a) => selected.has(a.user_id))) {
+              await (supabase.from("client_assignees" as never) as any)
+                .update({ assignment_type: assignmentTypes[assignee.user_id] ?? clientTeamType(assignee) })
+                .eq("id", assignee.id);
             }
             // Atualiza primário
             await (supabase.from("client_assignees" as never) as any)
               .update({ is_primary: false })
               .eq("client_id", clientId);
-            if (primary && selected.has(primary)) {
+            if (effectivePrimary) {
               await (supabase.from("client_assignees" as never) as any)
                 .update({ is_primary: true })
                 .eq("client_id", clientId)
-                .eq("user_id", primary);
+                .eq("user_id", effectivePrimary);
             }
           }
 
@@ -995,24 +1021,62 @@ function ClientForm({
 
       {members.length > 0 && (
         <ModalSection title="Equipa responsável" icon={UserCog}>
-          <div className="space-y-1 rounded-lg border border-border p-2">
-            {members.map((m) => {
-              const checked = selected.has(m.id);
-              return (
-                <label key={m.id} className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-accent">
-                  <span className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" checked={checked} onChange={() => toggleMember(m.id)} />
-                    {m.full_name ?? m.id.slice(0, 8)}
-                  </span>
-                  {checked && (
-                    <label className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                      <input type="radio" name="primary" checked={primary === m.id} onChange={() => setPrimary(m.id)} />
-                      principal
-                    </label>
-                  )}
-                </label>
-              );
-            })}
+          <p className="mb-2 text-xs text-muted-foreground">
+            A equipa habitual é pré-selecionada nas novas tarefas. Recursos só entram na operação quando forem atribuídos explicitamente.
+          </p>
+          <div className="space-y-3">
+            {(["habitual", "recurso"] as const).map((type) => (
+              <div key={type} className="space-y-1 rounded-lg border border-border p-2">
+                <div className="px-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {type === "habitual" ? "Equipa habitual" : "Equipa de recurso / substituição"}
+                </div>
+                {members.map((m) => {
+                  const checked = selected.has(m.id);
+                  const memberType = checked ? (assignmentTypes[m.id] ?? "habitual") : type;
+                  if (!checked && type !== "habitual") return null;
+                  if (checked && memberType !== type) return null;
+                  return (
+                    <div key={m.id} className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-accent">
+                      <label className="flex min-w-0 items-center gap-2 text-sm">
+                        <input type="checkbox" checked={checked} onChange={() => toggleMember(m.id)} />
+                        <span className="truncate">{m.full_name ?? m.id.slice(0, 8)}</span>
+                      </label>
+                      {checked && (
+                        <div className="flex shrink-0 items-center gap-2 text-[11px] text-muted-foreground">
+                          <label className="flex items-center gap-1">
+                            <input
+                              type="radio"
+                              name={`team-type-${m.id}`}
+                              checked={memberType === "habitual"}
+                              onChange={() => setAssignmentType(m.id, "habitual")}
+                            />
+                            habitual
+                          </label>
+                          <label className="flex items-center gap-1">
+                            <input
+                              type="radio"
+                              name={`team-type-${m.id}`}
+                              checked={memberType === "recurso"}
+                              onChange={() => setAssignmentType(m.id, "recurso")}
+                            />
+                            recurso
+                          </label>
+                          {memberType === "habitual" && (
+                            <label className="flex items-center gap-1">
+                              <input type="radio" name="primary" checked={primary === m.id} onChange={() => setPrimary(m.id)} />
+                              principal
+                            </label>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                {!members.some((m) => selected.has(m.id) && (assignmentTypes[m.id] ?? "habitual") === type) && (
+                  <p className="px-2 py-1 text-xs text-muted-foreground">Nenhum funcionário nesta categoria.</p>
+                )}
+              </div>
+            ))}
           </div>
         </ModalSection>
       )}

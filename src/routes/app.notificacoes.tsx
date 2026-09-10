@@ -118,6 +118,28 @@ function relatedClientName(value: unknown): string | null {
   return typeof name === "string" && name.trim() ? name.trim() : null;
 }
 
+type CompletionNotificationDetails = {
+  actorName: string | null;
+  taskTitle: string | null;
+  clientName: string | null;
+  note: string | null;
+  completedAt: string | null;
+};
+
+function completionNotificationDetails(row: NotificationRow): CompletionNotificationDetails | null {
+  if (row.event !== "task_completed") return null;
+  const metadata = row.metadata ?? {};
+  const note = typeof metadata.completion_note === "string" ? metadata.completion_note.trim() : "";
+  if (!note) return null;
+  return {
+    actorName: typeof metadata.employee_name === "string" ? metadata.employee_name : null,
+    taskTitle: typeof metadata.task_title === "string" ? metadata.task_title : null,
+    clientName: typeof metadata.client_name === "string" ? metadata.client_name : null,
+    note,
+    completedAt: typeof metadata.completion_note_at === "string" ? metadata.completion_note_at : null,
+  };
+}
+
 /** Completa notificacoes antigas que foram criadas antes do payload de cancelamento.
  *  A busca e em lote e respeita os filtros de empresa da consulta principal. */
 async function enrichLegacyCancellationNotifications(
@@ -591,6 +613,7 @@ function NotificationsPage() {
             });
             const refusal = taskRejectionNotificationDetails(n.event, n.metadata);
             const cancellation = taskCancellationNotificationDetails(n.event, n.metadata);
+            const completion = completionNotificationDetails(n);
             const ticketDisplay =
               n.event === "ticket_created" || n.event === "ticket_message_added"
                 ? ticketNotificationDisplay(n.event, n.metadata, n.title, n.body)
@@ -699,6 +722,29 @@ function NotificationsPage() {
                           <p>
                             <span className="font-medium">Reatribuição necessária:</span>{" "}
                             {cancellation.needsReassignment ? "Sim" : "Não"}
+                          </p>
+                        )}
+                      </div>
+                    ) : completion ? (
+                      <div className="mt-2 space-y-1 border-l-2 border-success/40 pl-3 text-sm">
+                        <p className="font-semibold uppercase tracking-wide text-success-foreground">
+                          TAREFA CONCLUÍDA COM OBSERVAÇÃO
+                        </p>
+                        {completion.actorName && (
+                          <p><span className="font-medium">Quem concluiu:</span> {completion.actorName}</p>
+                        )}
+                        {completion.taskTitle && (
+                          <p><span className="font-medium">Tarefa:</span> {completion.taskTitle}</p>
+                        )}
+                        {completion.clientName && (
+                          <p><span className="font-medium">Cliente:</span> {completion.clientName}</p>
+                        )}
+                        <p className="whitespace-pre-wrap break-words">
+                          <span className="font-medium">Observação:</span> {completion.note}
+                        </p>
+                        {completion.completedAt && (
+                          <p className="text-xs text-muted-foreground">
+                            Concluída em: {new Date(completion.completedAt).toLocaleString("pt-PT")}
                           </p>
                         )}
                       </div>

@@ -51,6 +51,7 @@ export type Database = {
       }
       client_assignees: {
         Row: {
+          assignment_type: string
           client_id: string
           company_id: string
           created_at: string
@@ -59,6 +60,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          assignment_type?: string
           client_id: string
           company_id: string
           created_at?: string
@@ -67,6 +69,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          assignment_type?: string
           client_id?: string
           company_id?: string
           created_at?: string
@@ -4164,6 +4167,7 @@ export type Database = {
           full_name: string
           is_active: boolean
           is_primary: boolean
+          assignment_type: string
           user_id: string
         }[]
       }

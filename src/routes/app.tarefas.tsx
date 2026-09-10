@@ -35,6 +35,7 @@ import {
   describeSlot,
   type ClientScheduleSlot,
 } from "@/lib/tasks/client-schedule";
+import { clientTeamType } from "@/lib/tasks/client-team";
 import {
   addWallMinutes,
   isOvernightTimeRange,
@@ -2763,10 +2764,12 @@ function TaskForm({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase.rpc as any)("client_default_assignees", { _client_id: cid });
     if (error) throw error;
-    const rows = (data ?? []) as { user_id: string; is_active: boolean }[];
+    const rows = (data ?? []) as { user_id: string; is_active: boolean; assignment_type?: string | null }[];
     // Só colaboradores ativos e que ainda pertencem à empresa (lista `members`).
     const memberIds = new Set(members.map((m) => m.id));
-    return rows.filter((r) => r.is_active && memberIds.has(r.user_id)).map((r) => r.user_id);
+    return rows
+      .filter((r) => r.is_active && memberIds.has(r.user_id) && clientTeamType(r) === "habitual")
+      .map((r) => r.user_id);
   };
 
   const loadClientSchedule = async (cid: string) => {
