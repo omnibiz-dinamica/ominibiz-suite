@@ -54,6 +54,7 @@ import {
   type TimesheetStatus,
 } from "@/lib/timesheet";
 import { downloadBytes, generateTimesheetPdf, printBytes } from "@/lib/timesheet-pdf";
+import { isDayVisto, signatureNotice } from "@/lib/timesheet-signature";
 import { formatWallDate } from "@/lib/wall-clock";
 
 export const Route = createFileRoute("/app/ponto_/meus-relatorios")({ component: Page });
