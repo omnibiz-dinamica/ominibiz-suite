@@ -33,6 +33,21 @@ function payLabel(type: string | null | undefined) {
   return PAYMENT_TYPE_LABEL[type as PaymentType] ?? type;
 }
 
+/**
+ * Visto: marca vetorial (✓) desenhada — as fontes padrão do PDF não têm o
+ * glifo, e a assinatura manuscrita nunca é repetida por linha (ADR-059).
+ */
+function drawCheck(doc: jsPDF, x: number, y: number) {
+  const prevW = doc.getLineWidth();
+  doc.setLineWidth(1.1);
+  doc.setDrawColor(30, 90, 40);
+  doc.line(x, y, x + 3, y + 3.5);
+  doc.line(x + 3, y + 3.5, x + 9, y - 4.5);
+  doc.setDrawColor(232);
+  doc.setLineWidth(prevW);
+}
+
+
 export async function generateTimesheetPdf(
   snapshot: TimesheetSnapshot,
   opts: {
