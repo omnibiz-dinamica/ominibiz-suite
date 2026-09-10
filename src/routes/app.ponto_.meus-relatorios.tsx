@@ -330,6 +330,17 @@ function PeriodDetail({
             <div className="text-sm text-muted-foreground">Carregando registos...</div>
           ) : snap.data ? (
             <div className="space-y-4">
+              {(() => {
+                const notice = signatureNotice({
+                  signedAt: period!.signed_at,
+                  snapshotSignatureUrl: snap.data.employee.signature_url,
+                });
+                return notice ? (
+                  <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                    {notice}
+                  </div>
+                ) : null;
+              })()}
               <div className="overflow-x-auto rounded-xl border border-border">
                 <table className="w-full text-sm">
                   <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
