@@ -34,7 +34,7 @@ function payLabel(type: string | null | undefined) {
 
 export async function generateTimesheetPdf(
   snapshot: TimesheetSnapshot,
-  opts: { versionLabel?: string; embedSignatures?: boolean } = {},
+  opts: { versionLabel?: string; embedSignatures?: boolean; signedAt?: string | null } = {},
 ): Promise<Uint8Array> {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const contentW = A4.w - MARGIN * 2;
