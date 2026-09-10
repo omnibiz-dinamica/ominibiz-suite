@@ -237,7 +237,10 @@ function PeriodDetail({
         const v = await getVersion(period!.id, period!.current_version);
         if (v?.snapshot) {
           void logAccess(period!.id, "REPORT_VIEWED");
-          return v.snapshot;
+          const sig = resolveVersionSignature(v, v.snapshot, {
+            signedAt: v.signed_at ?? period!.signed_at,
+          });
+          return { snapshot: v.snapshot, signatureUrl: sig.signatureUrl };
         }
       }
       const built = await buildSnapshot({
@@ -247,9 +250,10 @@ function PeriodDetail({
         month: period!.period_month,
       });
       void logAccess(period!.id, "REPORT_VIEWED");
-      return built;
+      return { snapshot: built, signatureUrl: null as string | null };
     },
   });
+
 
   const locked =
     !!period &&
