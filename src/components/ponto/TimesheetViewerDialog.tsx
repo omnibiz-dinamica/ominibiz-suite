@@ -43,11 +43,23 @@ export function TimesheetViewerDialog({
       void logAccess(row!.period_id, "REPORT_VIEWED");
       if (row!.current_version > 0) {
         const v = await getVersion(row!.period_id, row!.current_version);
-        if (v?.snapshot) return v.snapshot;
+        if (v?.snapshot) {
+          const sig = resolveVersionSignature(v, v.snapshot, {
+            signedAt: v.signed_at ?? row!.signed_at,
+          });
+          return { snapshot: v.snapshot, signatureUrl: sig.signatureUrl };
+        }
       }
-      return buildSnapshot({ companyId, employeeId: row!.employee_id, year, month });
+      const snapshot = await buildSnapshot({
+        companyId,
+        employeeId: row!.employee_id,
+        year,
+        month,
+      });
+      return { snapshot, signatureUrl: null as string | null };
     },
   });
+
 
   const exportPdf = async (mode: "print" | "download") => {
     if (!row) return;

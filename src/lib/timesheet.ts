@@ -207,7 +207,13 @@ export type TimesheetVersion = {
   pdf_path: string | null;
   content_hash: string | null;
   signed_at: string | null;
+  /** Assinatura/rubrica associadas a ESTA versão (ADR-059, imutáveis). */
+  signature_url?: string | null;
+  initials_url?: string | null;
+  signature_source?: string | null;
+  signature_linked_at?: string | null;
 };
+
 
 export async function signPeriod(periodId: string): Promise<TimesheetVersion> {
   const data = await call<TimesheetVersion | TimesheetVersion[]>("timesheet_sign", {
