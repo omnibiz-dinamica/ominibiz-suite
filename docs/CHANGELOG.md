@@ -5,6 +5,31 @@
 
 ---
 
+### 🚧 100926001 — Assinatura e Visto da Folha de Ponto Individual
+
+#### Corrigido
+- Folhas de ponto já validadas pelo próprio funcionário passam a exibir a
+  assinatura cadastrada na área “Assinatura do Colaborador”, sem alterar horas,
+  pausas, totais, valores, estado ou datas de validação.
+- A coluna “Visto” passa a ser preenchida em todas as linhas da folha validada,
+  em todas as páginas, com marca simples — a assinatura manuscrita continua a
+  aparecer apenas uma vez, no fim do documento.
+- O relatório é renderizado a partir da versão guardada, pelo que documentos
+  arquivados antes desta correção passam a mostrar assinatura e visto.
+
+#### Adicionado
+- A versão da folha guarda a assinatura usada no momento da validação: trocar a
+  assinatura no perfil não altera relatórios anteriores.
+- Correção automática (idempotente e auditada) das folhas antigas elegíveis, com
+  registo no histórico da folha.
+
+#### Segurança
+- Assinatura associada a uma folha nunca pode ser substituída ou apagada.
+- Folha não validada nunca recebe assinatura nem visto.
+- RLS/RBAC, isolamento por empresa e restrição de Super Admin preservados.
+
+---
+
 ### 🚧 040926008 — Integridade da Folha de Ponto Gestão
 
 #### Corrigido
