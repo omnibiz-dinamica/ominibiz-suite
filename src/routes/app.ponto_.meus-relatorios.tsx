@@ -266,7 +266,12 @@ function PeriodDetail({
       const version = await signPeriod(period.id);
       const bytes = await generateTimesheetPdf(version.snapshot, {
         versionLabel: `Versão ${version.version}`,
+        signedAt: version.signed_at,
+        signatureUrl: resolveVersionSignature(version, version.snapshot, {
+          signedAt: version.signed_at,
+        }).signatureUrl,
       });
+
       const path = pdfPath({
         company_id: period.company_id,
         employee_id: period.employee_id,
@@ -309,10 +314,12 @@ function PeriodDetail({
 
   const exportPdf = async (mode: "download" | "print") => {
     if (!snap.data || !period) return;
-    const bytes = await generateTimesheetPdf(snap.data, {
+    const bytes = await generateTimesheetPdf(snap.data.snapshot, {
       versionLabel: period.current_version > 0 ? `Versão ${period.current_version}` : "Prévia",
       signedAt: period.signed_at,
+      signatureUrl: snap.data.signatureUrl,
     });
+
     void logAccess(period.id, "REPORT_DOWNLOADED");
     if (mode === "download") {
       downloadBytes(bytes, `folha-ponto-${period.period_year}-${String(period.period_month).padStart(2, "0")}.pdf`);
