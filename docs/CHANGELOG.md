@@ -1317,3 +1317,14 @@ queries, mutations ou fluxos funcionais.**
 - Encaminhamento e solicitação passaram a compor o histórico append-only em
   `vacation_audit`, sem alterar pedidos antigos.
 - Migration aditiva: `20260828173000_vacation_authorization_forwarding.sql`.
+
+## ADR-059 · Assinatura e Visto nas folhas validadas · 2026-09-10
+
+- Visto do relatório (ecrã e PDF) passa a considerar a versão validada pelo
+  funcionário, além da confirmação dia-a-dia.
+- Aviso explícito quando a versão está validada sem assinatura gráfica
+  registada (revisão manual) — sem aplicar assinatura retroativa.
+- Novas funções `timesheet_signature_audit` e `timesheet_signature_backfill`
+  (idempotente, dry-run por omissão) com evento `SIGNATURE_BACKFILLED`.
+- Nenhuma alteração em horas, pausas, totais, remuneração, tarefas, férias,
+  faltas, `time_entries` ou timestamps históricos.

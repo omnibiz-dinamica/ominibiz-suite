@@ -6163,6 +6163,30 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      timesheet_signature_audit: {
+        Args: { _company_id?: string }
+        Returns: {
+          classification: string
+          company_id: string
+          employee_id: string
+          employee_name: string
+          period_id: string
+          period_month: number
+          period_year: number
+          profile_signature_url: string
+          signature_created_at: string
+          snapshot_signature_url: string
+          status: Database["public"]["Enums"]["timesheet_status"]
+          validated_at: string
+          validated_by: string
+          version: number
+          version_id: string
+        }[]
+      }
+      timesheet_signature_backfill: {
+        Args: { _company_id?: string; _dry_run?: boolean }
+        Returns: Json
+      }
       update_client_billing: {
         Args: { _client_id: string; _patch: Json; _reason: string }
         Returns: {

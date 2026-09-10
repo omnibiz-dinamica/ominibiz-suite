@@ -54,6 +54,7 @@ import {
   type TimesheetStatus,
 } from "@/lib/timesheet";
 import { downloadBytes, generateTimesheetPdf, printBytes } from "@/lib/timesheet-pdf";
+import { isDayVisto, signatureNotice } from "@/lib/timesheet-signature";
 import { formatWallDate } from "@/lib/wall-clock";
 
 export const Route = createFileRoute("/app/ponto_/meus-relatorios")({ component: Page });
@@ -306,6 +307,7 @@ function PeriodDetail({
     if (!snap.data || !period) return;
     const bytes = await generateTimesheetPdf(snap.data, {
       versionLabel: period.current_version > 0 ? `Versão ${period.current_version}` : "Prévia",
+      signedAt: period.signed_at,
     });
     void logAccess(period.id, "REPORT_DOWNLOADED");
     if (mode === "download") {
@@ -328,6 +330,17 @@ function PeriodDetail({
             <div className="text-sm text-muted-foreground">Carregando registos...</div>
           ) : snap.data ? (
             <div className="space-y-4">
+              {(() => {
+                const notice = signatureNotice({
+                  signedAt: period!.signed_at,
+                  snapshotSignatureUrl: snap.data.employee.signature_url,
+                });
+                return notice ? (
+                  <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                    {notice}
+                  </div>
+                ) : null;
+              })()}
               <div className="overflow-x-auto rounded-xl border border-border">
                 <table className="w-full text-sm">
                   <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
@@ -377,7 +390,7 @@ function PeriodDetail({
                           )}
                         </td>
                         <td className="px-3 py-2">
-                          {d.confirmed_at ? (
+                          {isDayVisto(d, { signedAt: period!.signed_at }) ? (
                             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                               <CheckCircle2 className="h-3.5 w-3.5" /> confirmado
                             </span>

@@ -1281,3 +1281,29 @@ uma definição completa e auditável, sem substituição textual de SQL.
 **Consequências.** Tarefas futuras continuam disponíveis nos módulos de tarefas e
 calendário, mas não inflam a Folha de Ponto. O total passa a contar o mesmo feed
 das linhas paginadas, e falhas da RPC são mostradas explicitamente ao gestor.
+
+## ADR-059 · Assinatura e Visto das folhas de ponto validadas · 2026-09-10
+
+**Contexto.** Folhas validadas apareciam sem assinatura no relatório. A
+assinatura vive em `profiles.signature_url` (bucket privado
+`employee-signatures`) e é copiada para `timesheet_period_versions.snapshot`
+no momento da validação; versões validadas antes do cadastro da assinatura
+ficaram com o campo nulo. O "Visto" só era renderizado a partir de
+`timesheet_day_confirmations`, que praticamente não é usado.
+
+**Decisão.** (1) O Visto passa a ser derivado do documento: versão validada
+(`signed_at`) dá visto a todas as linhas daquele snapshot; a confirmação
+dia-a-dia continua válida. Nenhum visto físico por linha é criado.
+(2) O backfill de assinatura é documental e condicionado: só quando a versão
+está validada pelo próprio funcionário, a versão ainda não tem assinatura, e o
+ficheiro da assinatura já existia no storage antes de `signed_at`. Assinatura
+cadastrada depois da validação nunca é aplicada retroativamente — é classificada
+como revisão manual e sinalizada na interface. Assinatura histórica nunca é
+substituída, timestamps históricos nunca são alterados.
+(3) Fonte canónica em SQL: `timesheet_signature_audit` (classificação) e
+`timesheet_signature_backfill` (idempotente, dry-run por omissão, Super Admin),
+com evento `SIGNATURE_BACKFILLED` no histórico.
+
+**Consequências.** Horas, pausas, totais, remuneração, status, tarefas, férias e
+faltas permanecem intocados. Meus Relatórios e Fechamento Mensal leem a mesma
+versão e mostram a mesma assinatura e o mesmo visto.
