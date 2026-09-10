@@ -1307,3 +1307,40 @@ com evento `SIGNATURE_BACKFILLED` no histórico.
 **Consequências.** Horas, pausas, totais, remuneração, status, tarefas, férias e
 faltas permanecem intocados. Meus Relatórios e Fechamento Mensal leem a mesma
 versão e mostram a mesma assinatura e o mesmo visto.
+
+## ADR-059 rev. 2 · Assinatura snapshotada na versão da folha de ponto · 2026-09-10
+
+**Contexto.** A rev. 1 gravava a assinatura dentro de `snapshot`, mas
+`timesheet_period_versions` é append-only (`timesheet_versions_append_only`
+levanta `TIMESHEET_VERSION_IMMUTABLE`), pelo que nenhum backfill era possível.
+Além disso: (a) folhas validadas antes do cadastro da assinatura ficavam
+permanentemente sem assinatura; (b) o PDF arquivado no bucket era servido tal
+como foi gerado, sem assinatura nem visto; (c) o `sign()` gerava o PDF sem
+`signedAt`, logo sem visto; (d) o visto imprimia a rubrica em cada linha.
+
+**Decisão.**
+1. Fonte canónica única da assinatura da versão: colunas aditivas
+   `timesheet_period_versions.signature_url / initials_url /
+   signature_source / signature_linked_at`. O trigger append-only passa a
+   proteger também `signature_url` (uma vez associada, nunca muda), mantendo
+   `snapshot`, `signed_at`, `version`, `period_id`, `employee_id` e
+   `company_id` imutáveis.
+2. `timesheet_sign` grava a assinatura cadastrada no momento da validação —
+   folhas futuras ficam assinadas automaticamente e relatórios históricos não
+   mudam quando o funcionário troca a assinatura.
+3. Elegibilidade do backfill: versão validada pelo PRÓPRIO funcionário
+   (`signed_by = employee_id`) com assinatura cadastrada. Assinatura registada
+   depois da validação continua elegível (é do mesmo funcionário) e fica
+   marcada com `late_signature` no evento `SIGNATURE_BACKFILLED`.
+   Sem assinatura cadastrada → revisão manual, nada é inventado.
+4. O documento é sempre renderizado a partir do snapshot imutável + assinatura
+   da versão; o PDF arquivado passa a ser apenas fallback. Assim relatórios
+   antigos passam a mostrar assinatura e visto sem reescrever histórico.
+5. Visto: marca vetorial simples na linha. A assinatura manuscrita aparece uma
+   única vez, na área "Assinatura do Colaborador". Folha não validada não tem
+   assinatura nem visto, mesmo que exista assinatura cadastrada.
+
+**Consequências.** Horas, entradas, saídas, pausas, totais, remuneração,
+status, tarefas, férias, faltas, recorrências e `time_entries` permanecem
+intocados. Layout do relatório preservado. RLS/RBAC e isolamento multiempresa
+inalterados; `timesheet_signature_backfill` continua restrito a Super Admin.

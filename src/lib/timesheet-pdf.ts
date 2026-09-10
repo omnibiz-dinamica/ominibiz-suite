@@ -33,18 +33,43 @@ function payLabel(type: string | null | undefined) {
   return PAYMENT_TYPE_LABEL[type as PaymentType] ?? type;
 }
 
+/**
+ * Visto: marca vetorial (✓) desenhada — as fontes padrão do PDF não têm o
+ * glifo, e a assinatura manuscrita nunca é repetida por linha (ADR-059).
+ */
+function drawCheck(doc: jsPDF, x: number, y: number) {
+  const prevW = doc.getLineWidth();
+  doc.setLineWidth(1.1);
+  doc.setDrawColor(30, 90, 40);
+  doc.line(x, y, x + 3, y + 3.5);
+  doc.line(x + 3, y + 3.5, x + 9, y - 4.5);
+  doc.setDrawColor(232);
+  doc.setLineWidth(prevW);
+}
+
+
 export async function generateTimesheetPdf(
   snapshot: TimesheetSnapshot,
-  opts: { versionLabel?: string; embedSignatures?: boolean; signedAt?: string | null } = {},
+  opts: {
+    versionLabel?: string;
+    embedSignatures?: boolean;
+    signedAt?: string | null;
+    /** Assinatura canónica da versão (ADR-059). Sem ela, nada é assinado. */
+    signatureUrl?: string | null;
+  } = {},
 ): Promise<Uint8Array> {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const contentW = A4.w - MARGIN * 2;
   let y = MARGIN;
   let page = 1;
 
-  const sigData = opts.embedSignatures === false ? null : await signatureDataUrl(snapshot.employee.signature_url);
-  const initialsData =
-    opts.embedSignatures === false ? null : await signatureDataUrl(snapshot.employee.initials_url);
+  // Assinatura do colaborador só quando o documento está validado/assinado.
+  const signaturePath =
+    opts.embedSignatures === false || !opts.signedAt
+      ? null
+      : opts.signatureUrl ?? snapshot.employee.signature_url;
+  const sigData = await signatureDataUrl(signaturePath);
+
 
   const header = () => {
     doc.setFont("helvetica", "bold");
@@ -156,21 +181,14 @@ export async function generateTimesheetPdf(
       if (i === 6) {
         // Coluna Visto (ADR-059): confirmação do dia OU versão validada pelo
         // funcionário — a validação do documento cobre todas as suas linhas.
-        const visto = isDayVisto(d, { signedAt: opts.signedAt });
-        if (visto && initialsData) {
-          try {
-            doc.addImage(initialsData, "PNG", x, y - 9, 46, 14);
-          } catch {
-            doc.text("✓", x, y + 1);
-          }
-        } else if (visto) {
-          doc.text("✓", x, y + 1);
-        }
+        // Marca simples: a assinatura manuscrita aparece só no fim do documento.
+        if (isDayVisto(d, { signedAt: opts.signedAt })) drawCheck(doc, x + 2, y - 1);
       } else {
         doc.text(String(value), x, y + 1);
       }
       x += cols[i].w;
     });
+
     doc.setDrawColor(232);
     doc.line(MARGIN, y + 6, A4.w - MARGIN, y + 6);
     y += 18;

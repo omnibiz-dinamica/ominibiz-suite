@@ -19,7 +19,7 @@ import {
 } from "@/lib/timesheet";
 import { timesheetRowToPdf } from "@/lib/timesheet-batch";
 import { downloadBytes, printBytes } from "@/lib/timesheet-pdf";
-import { isDayVisto, signatureNotice } from "@/lib/timesheet-signature";
+import { isDayVisto, resolveVersionSignature, signatureNotice } from "@/lib/timesheet-signature";
 import { formatWallDate } from "@/lib/wall-clock";
 import { toast } from "sonner";
 
@@ -43,11 +43,23 @@ export function TimesheetViewerDialog({
       void logAccess(row!.period_id, "REPORT_VIEWED");
       if (row!.current_version > 0) {
         const v = await getVersion(row!.period_id, row!.current_version);
-        if (v?.snapshot) return v.snapshot;
+        if (v?.snapshot) {
+          const sig = resolveVersionSignature(v, v.snapshot, {
+            signedAt: v.signed_at ?? row!.signed_at,
+          });
+          return { snapshot: v.snapshot, signatureUrl: sig.signatureUrl };
+        }
       }
-      return buildSnapshot({ companyId, employeeId: row!.employee_id, year, month });
+      const snapshot = await buildSnapshot({
+        companyId,
+        employeeId: row!.employee_id,
+        year,
+        month,
+      });
+      return { snapshot, signatureUrl: null as string | null };
     },
   });
+
 
   const exportPdf = async (mode: "print" | "download") => {
     if (!row) return;
@@ -81,7 +93,7 @@ export function TimesheetViewerDialog({
               {(() => {
                 const notice = signatureNotice({
                   signedAt: row?.signed_at,
-                  snapshotSignatureUrl: snap.data.employee.signature_url,
+                  snapshotSignatureUrl: snap.data.signatureUrl,
                 });
                 return notice ? (
                   <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
@@ -103,7 +115,7 @@ export function TimesheetViewerDialog({
                     </tr>
                   </thead>
                   <tbody>
-                    {snap.data.days.map((d) => (
+                    {snap.data.snapshot.days.map((d) => (
                       <tr key={d.work_date} className="border-t border-border">
                         <td className="px-3 py-2">{formatWallDate(d.work_date) || d.work_date}</td>
                         <td className="px-3 py-2">{formatDayTime(d.first_in)}</td>
@@ -142,7 +154,7 @@ export function TimesheetViewerDialog({
                         </td>
                       </tr>
                     ))}
-                    {snap.data.days.length === 0 && (
+                    {snap.data.snapshot.days.length === 0 && (
                       <tr>
                         <td className="px-3 py-4 text-sm text-muted-foreground" colSpan={7}>
                           Sem registos neste mês.
@@ -155,23 +167,23 @@ export function TimesheetViewerDialog({
               <div className="grid gap-2 rounded-xl border border-border bg-card/60 p-4 text-sm sm:grid-cols-4">
                 <div>
                   <div className="text-xs uppercase text-muted-foreground">Horas</div>
-                  <div className="font-medium">{formatMinutes(snap.data.summary.worked_minutes)}</div>
+                  <div className="font-medium">{formatMinutes(snap.data.snapshot.summary.worked_minutes)}</div>
                 </div>
                 <div>
                   <div className="text-xs uppercase text-muted-foreground">Dias</div>
-                  <div className="font-medium">{snap.data.summary.paid_days}</div>
+                  <div className="font-medium">{snap.data.snapshot.summary.paid_days}</div>
                 </div>
                 <div>
                   <div className="text-xs uppercase text-muted-foreground">Tipo</div>
-                  <div className="font-medium">{snap.data.summary.payment_type_used ?? "—"}</div>
+                  <div className="font-medium">{snap.data.snapshot.summary.payment_type_used ?? "—"}</div>
                 </div>
                 <div>
                   <div className="text-xs uppercase text-muted-foreground">Total</div>
                   <div className="font-medium">
-                    {snap.data.summary.payment_type_used === "monthly"
-                      ? snap.data.summary.monthly_amount ?? "—"
-                      : snap.data.summary.calculated_amount ?? "—"}{" "}
-                    {snap.data.summary.currency}
+                    {snap.data.snapshot.summary.payment_type_used === "monthly"
+                      ? snap.data.snapshot.summary.monthly_amount ?? "—"
+                      : snap.data.snapshot.summary.calculated_amount ?? "—"}{" "}
+                    {snap.data.snapshot.summary.currency}
                   </div>
                 </div>
               </div>

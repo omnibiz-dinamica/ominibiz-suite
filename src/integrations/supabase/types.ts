@@ -3388,8 +3388,12 @@ export type Database = {
           created_by: string | null
           employee_id: string
           id: string
+          initials_url: string | null
           pdf_path: string | null
           period_id: string
+          signature_linked_at: string | null
+          signature_source: string | null
+          signature_url: string | null
           signed_at: string | null
           snapshot: Json
           version: number
@@ -3401,8 +3405,12 @@ export type Database = {
           created_by?: string | null
           employee_id: string
           id?: string
+          initials_url?: string | null
           pdf_path?: string | null
           period_id: string
+          signature_linked_at?: string | null
+          signature_source?: string | null
+          signature_url?: string | null
           signed_at?: string | null
           snapshot: Json
           version: number
@@ -3414,8 +3422,12 @@ export type Database = {
           created_by?: string | null
           employee_id?: string
           id?: string
+          initials_url?: string | null
           pdf_path?: string | null
           period_id?: string
+          signature_linked_at?: string | null
+          signature_source?: string | null
+          signature_url?: string | null
           signed_at?: string | null
           snapshot?: Json
           version?: number
@@ -6150,8 +6162,12 @@ export type Database = {
           created_by: string | null
           employee_id: string
           id: string
+          initials_url: string | null
           pdf_path: string | null
           period_id: string
+          signature_linked_at: string | null
+          signature_source: string | null
+          signature_url: string | null
           signed_at: string | null
           snapshot: Json
           version: number
