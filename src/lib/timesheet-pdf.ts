@@ -167,7 +167,7 @@ export async function generateTimesheetPdf(
         // Coluna Visto (ADR-059): confirmação do dia OU versão validada pelo
         // funcionário — a validação do documento cobre todas as suas linhas.
         // Marca simples: a assinatura manuscrita aparece só no fim do documento.
-        if (isDayVisto(d, { signedAt: opts.signedAt })) doc.text("OK", x, y + 1);
+        if (isDayVisto(d, { signedAt: opts.signedAt })) drawCheck(doc, x + 2, y - 1);
       } else {
         doc.text(String(value), x, y + 1);
       }
