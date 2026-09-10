@@ -126,7 +126,7 @@ export function TimesheetViewerDialog({
                           )}
                         </td>
                         <td className="px-3 py-2 text-xs text-muted-foreground">
-                          {d.confirmed_at ? "confirmado" : "—"}
+                          {isDayVisto(d, { signedAt: row?.signed_at }) ? "confirmado" : "—"}
                         </td>
                       </tr>
                     ))}

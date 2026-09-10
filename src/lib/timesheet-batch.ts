@@ -39,6 +39,7 @@ export async function timesheetRowToPdf(
         });
   return generateTimesheetPdf(snapshot, {
     versionLabel: row.current_version > 0 ? `Versão ${row.current_version}` : "Prévia",
+    signedAt: row.signed_at,
   });
 }
 
