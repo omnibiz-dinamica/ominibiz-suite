@@ -306,6 +306,7 @@ function PeriodDetail({
     if (!snap.data || !period) return;
     const bytes = await generateTimesheetPdf(snap.data, {
       versionLabel: period.current_version > 0 ? `Versão ${period.current_version}` : "Prévia",
+      signedAt: period.signed_at,
     });
     void logAccess(period.id, "REPORT_DOWNLOADED");
     if (mode === "download") {
@@ -377,7 +378,7 @@ function PeriodDetail({
                           )}
                         </td>
                         <td className="px-3 py-2">
-                          {d.confirmed_at ? (
+                          {isDayVisto(d, { signedAt: period!.signed_at }) ? (
                             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                               <CheckCircle2 className="h-3.5 w-3.5" /> confirmado
                             </span>
