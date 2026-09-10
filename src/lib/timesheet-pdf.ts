@@ -166,21 +166,14 @@ export async function generateTimesheetPdf(
       if (i === 6) {
         // Coluna Visto (ADR-059): confirmação do dia OU versão validada pelo
         // funcionário — a validação do documento cobre todas as suas linhas.
-        const visto = isDayVisto(d, { signedAt: opts.signedAt });
-        if (visto && initialsData) {
-          try {
-            doc.addImage(initialsData, "PNG", x, y - 9, 46, 14);
-          } catch {
-            doc.text("✓", x, y + 1);
-          }
-        } else if (visto) {
-          doc.text("✓", x, y + 1);
-        }
+        // Marca simples: a assinatura manuscrita aparece só no fim do documento.
+        if (isDayVisto(d, { signedAt: opts.signedAt })) doc.text("OK", x, y + 1);
       } else {
         doc.text(String(value), x, y + 1);
       }
       x += cols[i].w;
     });
+
     doc.setDrawColor(232);
     doc.line(MARGIN, y + 6, A4.w - MARGIN, y + 6);
     y += 18;
