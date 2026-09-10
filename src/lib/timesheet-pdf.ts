@@ -35,16 +35,26 @@ function payLabel(type: string | null | undefined) {
 
 export async function generateTimesheetPdf(
   snapshot: TimesheetSnapshot,
-  opts: { versionLabel?: string; embedSignatures?: boolean; signedAt?: string | null } = {},
+  opts: {
+    versionLabel?: string;
+    embedSignatures?: boolean;
+    signedAt?: string | null;
+    /** Assinatura canónica da versão (ADR-059). Sem ela, nada é assinado. */
+    signatureUrl?: string | null;
+  } = {},
 ): Promise<Uint8Array> {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const contentW = A4.w - MARGIN * 2;
   let y = MARGIN;
   let page = 1;
 
-  const sigData = opts.embedSignatures === false ? null : await signatureDataUrl(snapshot.employee.signature_url);
-  const initialsData =
-    opts.embedSignatures === false ? null : await signatureDataUrl(snapshot.employee.initials_url);
+  // Assinatura do colaborador só quando o documento está validado/assinado.
+  const signaturePath =
+    opts.embedSignatures === false || !opts.signedAt
+      ? null
+      : opts.signatureUrl ?? snapshot.employee.signature_url;
+  const sigData = await signatureDataUrl(signaturePath);
+
 
   const header = () => {
     doc.setFont("helvetica", "bold");
