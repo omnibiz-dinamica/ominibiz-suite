@@ -8,6 +8,7 @@ import {
   signatureDataUrl,
   type TimesheetSnapshot,
 } from "@/lib/timesheet";
+import { isDayVisto } from "@/lib/timesheet-signature";
 import { formatWallDate } from "@/lib/wall-clock";
 import { PAYMENT_TYPE_LABEL, type PaymentType } from "@/lib/compensation";
 
@@ -153,14 +154,16 @@ export async function generateTimesheetPdf(
     ];
     cells.forEach((value, i) => {
       if (i === 6) {
-        // Coluna Visto: só usa a rubrica quando o dia foi realmente confirmado.
-        if (d.confirmed_at && initialsData) {
+        // Coluna Visto (ADR-059): confirmação do dia OU versão validada pelo
+        // funcionário — a validação do documento cobre todas as suas linhas.
+        const visto = isDayVisto(d, { signedAt: opts.signedAt });
+        if (visto && initialsData) {
           try {
             doc.addImage(initialsData, "PNG", x, y - 9, 46, 14);
           } catch {
             doc.text("✓", x, y + 1);
           }
-        } else if (d.confirmed_at) {
+        } else if (visto) {
           doc.text("✓", x, y + 1);
         }
       } else {
