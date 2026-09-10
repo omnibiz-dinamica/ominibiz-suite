@@ -54,7 +54,7 @@ import {
   type TimesheetStatus,
 } from "@/lib/timesheet";
 import { downloadBytes, generateTimesheetPdf, printBytes } from "@/lib/timesheet-pdf";
-import { isDayVisto, signatureNotice } from "@/lib/timesheet-signature";
+import { isDayVisto, resolveVersionSignature, signatureNotice } from "@/lib/timesheet-signature";
 import { formatWallDate } from "@/lib/wall-clock";
 
 export const Route = createFileRoute("/app/ponto_/meus-relatorios")({ component: Page });
@@ -337,7 +337,7 @@ function PeriodDetail({
               {(() => {
                 const notice = signatureNotice({
                   signedAt: period!.signed_at,
-                  snapshotSignatureUrl: snap.data.employee.signature_url,
+                  snapshotSignatureUrl: snap.data.signatureUrl,
                 });
                 return notice ? (
                   <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
@@ -359,7 +359,7 @@ function PeriodDetail({
                     </tr>
                   </thead>
                   <tbody>
-                    {snap.data.days.map((d) => (
+                    {snap.data.snapshot.days.map((d) => (
                       <tr key={d.work_date} className="border-t border-border">
                         <td className="px-3 py-2">{formatWallDate(d.work_date) || d.work_date}</td>
                         <td className="px-3 py-2">{formatDayTime(d.first_in)}</td>
@@ -419,7 +419,7 @@ function PeriodDetail({
                         </td>
                       </tr>
                     ))}
-                    {snap.data.days.length === 0 && (
+                    {snap.data.snapshot.days.length === 0 && (
                       <tr>
                         <td className="px-3 py-4 text-sm text-muted-foreground" colSpan={7}>
                           Sem registos de ponto neste mês.
@@ -433,15 +433,15 @@ function PeriodDetail({
               <div className="grid gap-2 rounded-xl border border-border bg-card/60 p-4 text-sm sm:grid-cols-3">
                 <div>
                   <div className="text-xs uppercase text-muted-foreground">Total de horas</div>
-                  <div className="font-medium">{formatMinutes(snap.data.summary.worked_minutes)}</div>
+                  <div className="font-medium">{formatMinutes(snap.data.snapshot.summary.worked_minutes)}</div>
                 </div>
                 <div>
                   <div className="text-xs uppercase text-muted-foreground">Dias com registo</div>
-                  <div className="font-medium">{snap.data.summary.paid_days}</div>
+                  <div className="font-medium">{snap.data.snapshot.summary.paid_days}</div>
                 </div>
                 <div>
                   <div className="text-xs uppercase text-muted-foreground">Tipo de pagamento</div>
-                  <div className="font-medium">{snap.data.summary.payment_type_used ?? "—"}</div>
+                  <div className="font-medium">{snap.data.snapshot.summary.payment_type_used ?? "—"}</div>
                 </div>
               </div>
 
