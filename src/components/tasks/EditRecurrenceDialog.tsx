@@ -189,6 +189,9 @@ export function EditRecurrenceDialog({
             assigned_to: assignedTo,
             scheduled_time: scheduledTime ? `${scheduledTime}:00` : null,
             duration_minutes: Math.max(0, duration || 0),
+            ...(recurrence.frequency !== "custom"
+              ? { start_date: seriesStart, end_date: seriesEnd || null }
+              : {}),
           },
           scope === "future" ? "future" : "all",
           scope === "future" ? (fromTask?.id ?? null) : null,
