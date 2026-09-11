@@ -152,8 +152,8 @@ function RecurrencesPage() {
                     <> · dia {r.monthly_rule.day_of_month}</>
                   )}
                   {" · "}
-                  {r.scheduled_time?.slice(0, 5)} · início {new Date(r.start_date).toLocaleDateString()}
-                  {r.end_date && <> · fim {new Date(r.end_date).toLocaleDateString()}</>}
+                  {r.scheduled_time?.slice(0, 5)} · início {formatDateKey(r.start_date)}
+                  {r.end_date && <> · fim {formatDateKey(r.end_date)}</>}
                 </div>
               </div>
               <div className="flex gap-2">
