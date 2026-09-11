@@ -22,6 +22,10 @@ test("task visibility stays company-scoped and employee-scoped by canonical IDs"
   assert.match(tasksPage, /const \{ error: materializeError \} = await \(supabase\.rpc as any\)\("recurrence_materialize"/);
   assert.match(tasksPage, /if \(materializeError\) throw materializeError/);
 });
+test("task creation always releases saving state after async failures", () => {
+  assert.match(tasksPage, /if \(submittingRef\.current\) return;\s*submittingRef\.current = true;\s*setLoading\(true\);\s*try \{/);
+  assert.match(tasksPage, /catch \(submitError\)[\s\S]*toast\.error\(taskSaveErrorMessage\(submitError\)\)[\s\S]*finally \{[\s\S]*submittingRef\.current = false;[\s\S]*setLoading\(false\);/);
+});
 
 test("single-occurrence recurrence edits preserve wall-clock overnight dates", () => {
   assert.match(recurrenceDialog, /const end = sfIso && safeDuration > 0 \? addWallMinutes\(startDate, startTime, safeDuration\) : null/);

@@ -1396,7 +1396,6 @@ function TasksPage() {
     </div>
   );
 }
-
 function FilterChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
     <button
@@ -2586,6 +2585,24 @@ function ActionButton({ action, onClick, disabled }: { action: TaskAction; onCli
   );
 }
 
+function taskSaveErrorMessage(error: unknown): string {
+  const technicalError = (error && typeof error === "object" ? error : {}) as {
+    code?: string;
+    message?: string;
+    details?: string;
+    hint?: string;
+  };
+  const fallbackMessage = typeof error === "string" ? error : "Não foi possível salvar a tarefa.";
+  return [
+    technicalError.code ? `Código: ${technicalError.code}` : null,
+    technicalError.message ?? fallbackMessage,
+    technicalError.details ? `Detalhes: ${technicalError.details}` : null,
+    technicalError.hint ? `Orientação: ${technicalError.hint}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 function TaskForm({
   formId,
   members,
@@ -2832,6 +2849,12 @@ function TaskForm({
       className="space-y-4"
       onSubmit={async (e) => {
         e.preventDefault();
+        // A trava precisa ser síncrona e o ciclo completo precisa liberar o estado,
+        // inclusive quando uma chamada ao Supabase rejeita.
+        if (submittingRef.current) return;
+        submittingRef.current = true;
+        setLoading(true);
+        try {
         if (!initial && recurrence.enabled && recurrence.frequency === "custom") {
           const selectedDates = normalizeCustomRecurrenceDates(recurrence.selectedDates);
           if (selectedDates.length === 0) {
@@ -2905,10 +2928,6 @@ function TaskForm({
             if (!ok) return;
           }
         }
-        // ADR-041 — segunda submissão (duplo clique/retry) é descartada aqui.
-        if (submittingRef.current) return;
-        submittingRef.current = true;
-        setLoading(true);
         // Título derivado do cliente quando não preenchido manualmente.
         const clientName = clients.find((c) => c.id === clientId)?.name ?? "";
         const finalTitle = title.trim() || clientName.trim() || description.trim().slice(0, 80) || "Tarefa";
@@ -3190,6 +3209,13 @@ function TaskForm({
           initial ? "Tarefa atualizada" : assignees.length > 1 ? `${assignees.length} tarefas criadas` : "Tarefa criada",
         );
         onDone();
+        } catch (submitError) {
+          console.error("[task-create] failed", submitError);
+          toast.error(taskSaveErrorMessage(submitError));
+        } finally {
+          submittingRef.current = false;
+          setLoading(false);
+        }
       }}
     >
       <div className="space-y-1.5">
