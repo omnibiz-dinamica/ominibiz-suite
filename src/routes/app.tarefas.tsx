@@ -2671,6 +2671,22 @@ function TaskForm({
     });
   }, [members, assigneeQuery]);
   const [clientId, setClientId] = useState<string>(initial?.client_id ?? "");
+  /**
+   * 12092026-002a — pesquisa OPCIONAL dentro do dropdown de Cliente.
+   * Vazio mostra a lista completa; a pesquisa nunca esconde o cliente já
+   * selecionado e nunca altera os IDs canônicos nem os nomes exibidos.
+   */
+  const [clientQuery, setClientQuery] = useState("");
+  const filteredClients = useMemo(() => {
+    const norm = (value: string) =>
+      value.toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const q = norm(clientQuery.trim());
+    if (!q) return clients;
+    const tokens = q.split(/\s+/).filter(Boolean);
+    return clients.filter(
+      (c) => c.id === clientId || tokens.every((token) => norm(c.name ?? "").includes(token)),
+    );
+  }, [clients, clientQuery, clientId]);
   const [priority, setPriority] = useState<"baixa" | "media" | "alta" | "urgente">(initial?.priority ?? "media");
   const [startDate, setStartDate] = useState<string>(
     wallISOToDateInput(initial?.scheduled_for ?? initial?.recurrence_date ?? initial?.due_at),
