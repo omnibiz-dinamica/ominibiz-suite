@@ -3120,10 +3120,11 @@ function TaskForm({
                   )
                 : 60;
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              await (supabase.rpc as any)("recurrence_materialize", {
+              const { error: materializeError } = await (supabase.rpc as any)("recurrence_materialize", {
                 _days_ahead: horizon,
                 _company_id: companyId,
               });
+              if (materializeError) throw materializeError;
             }
             if (duplicates > 0) {
               toast.info(

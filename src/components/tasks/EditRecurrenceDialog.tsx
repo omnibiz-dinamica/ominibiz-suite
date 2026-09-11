@@ -151,10 +151,11 @@ export function EditRecurrenceDialog({
       if (scope === "this") {
         if (!fromTask) throw new Error("Tarefa não informada para escopo 'esta'");
         const sfIso = wallInputToISO(scheduledFor);
-        const sfStart = sfIso ? new Date(sfIso) : null;
         const safeDuration = Math.max(0, duration || 0);
-        const seIso =
-          sfStart && safeDuration > 0 ? new Date(sfStart.getTime() + safeDuration * 60_000).toISOString() : null;
+        const startDate = scheduledFor.slice(0, 10);
+        const startTime = scheduledFor.slice(11, 16);
+        const end = sfIso && safeDuration > 0 ? addWallMinutes(startDate, startTime, safeDuration) : null;
+        const seIso = end ? wallDateTimeToISO(end.date, end.time) : null;
         await recurrenceUpdateOccurrence(fromTask.id, {
           title: title.trim(),
           priority,
