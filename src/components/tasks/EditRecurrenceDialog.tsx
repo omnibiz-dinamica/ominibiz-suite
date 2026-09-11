@@ -97,6 +97,17 @@ export function EditRecurrenceDialog({
       toast.error("Atribua a tarefa a um funcionario antes de salvar.");
       return;
     }
+    const editableDates = scope !== "this" && recurrence.frequency !== "custom";
+    if (editableDates) {
+      if (!seriesStart) {
+        toast.error("Informe a data inicial da recorrência.");
+        return;
+      }
+      if (seriesEnd && seriesEnd < seriesStart) {
+        toast.error("A data final da recorrência não pode ser anterior à data inicial.");
+        return;
+      }
+    }
     setSaving(true);
     try {
       if (!confirmed) {
