@@ -17,6 +17,12 @@ import {
 } from "@/lib/tasks";
 import { EditRecurrenceDialog } from "@/components/tasks/EditRecurrenceDialog";
 
+/** Datas de negócio são date-only: nunca passam por Date/UTC. */
+function formatDateKey(value: string): string {
+  const [year, month, day] = value.split("-");
+  return day && month && year ? `${day}/${month}/${year}` : value;
+}
+
 export const Route = createFileRoute("/app/tarefas/recorrentes")({ component: RecurrencesPage });
 
 function RecurrencesPage() {

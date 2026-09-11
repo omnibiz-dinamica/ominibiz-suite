@@ -103,6 +103,8 @@ export function AppLayout({ children }: { children?: ReactNode }) {
   const qc = useQueryClient();
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const visibleCommit = getAppVersion().buildId;
+  // 11092026-005a — etiqueta funcional da última alteração (não substitui build/commit).
+  const changeId = latestChangeId();
 
   const superAdminOperating = isSuperAdmin && !!currentCompanyId;
 
