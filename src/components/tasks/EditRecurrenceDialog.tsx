@@ -282,7 +282,24 @@ export function EditRecurrenceDialog({
                 onChange={(e) => setDuration(Number(e.target.value) || 0)}
               />
             </div>
+
+            {scope !== "this" && recurrence?.frequency !== "custom" && (
+              <>
+                <div className="space-y-1.5">
+                  <Label>Data inicial da recorrência</Label>
+                  <Input type="date" value={seriesStart} onChange={(e) => setSeriesStart(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Data final (opcional)</Label>
+                  <Input type="date" value={seriesEnd} onChange={(e) => setSeriesEnd(e.target.value)} />
+                  <p className="text-[11px] text-muted-foreground">
+                    A data final é inclusiva. Ocorrências futuras ainda pendentes fora do período são removidas.
+                  </p>
+                </div>
+              </>
+            )}
           </div>
+
 
         </ModalBody>
         <ModalFooter>

@@ -424,6 +424,9 @@ export type EditableSeriesPayload = Partial<{
   punch_mode_override: PunchMode | null;
   scheduled_time: string | null; // HH:MM[:SS] ou null para tarefa por dia
   duration_minutes: number;
+  /** Datas da série (date-only, YYYY-MM-DD). O fim é inclusivo. */
+  start_date: string;
+  end_date: string | null;
 }>;
 
 export type EditableOccurrencePayload = Partial<{
