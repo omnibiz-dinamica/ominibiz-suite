@@ -3126,24 +3126,25 @@ function TaskForm({
           }
           if (!error) {
             if (created > 0) {
-              // Horizonte cobre a série até a data final (cap 400d); sem data final, 60d.
-              const horizon = recurrence.endDate
-                ? Math.min(
-                    400,
-                    Math.max(
-                      1,
-                      Math.ceil(
-                        (new Date(`${recurrence.endDate}T12:00:00`).getTime() - Date.now()) / 86_400_000,
-                      ) + 1,
-                    ),
-                  )
-                : 60;
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const { error: materializeError } = await (supabase.rpc as any)("recurrence_materialize", {
-                _days_ahead: horizon,
-                _company_id: companyId,
-              });
-              if (materializeError) throw materializeError;
+              // A recorrência já está salva. Materializar toda a série até a data
+              // final (p.ex. 400 dias) numa única chamada causa statement timeout.
+              // A janela de 60 dias é a mesma do job automático e será ampliada
+              // progressivamente pelo processamento diário.
+              const horizon = 60;
+              try {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const { error: materializeError } = await (supabase.rpc as any)("recurrence_materialize", {
+                  _days_ahead: horizon,
+                  _company_id: companyId,
+                });
+                if (materializeError) {
+                  console.warn("[task-recurrence] materialization deferred", materializeError);
+                  toast.warning("Recorrência salva. As próximas ocorrências serão geradas automaticamente.");
+                }
+              } catch (materializeFailure) {
+                console.warn("[task-recurrence] materialization deferred", materializeFailure);
+                toast.warning("Recorrência salva. As próximas ocorrências serão geradas automaticamente.");
+              }
             }
             if (duplicates > 0) {
               toast.info(

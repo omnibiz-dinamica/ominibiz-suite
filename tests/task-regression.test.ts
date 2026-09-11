@@ -20,7 +20,8 @@ test("task visibility stays company-scoped and employee-scoped by canonical IDs"
   assert.match(tasksPage, /if \(!isManager\) q = q\.eq\("assigned_to", user!\.id\)/);
   assert.match(tasksPage, /const inserted = await supabase[\s\S]*\.from\("tasks"\)[\s\S]*assigned_to: memberId/);
   assert.match(tasksPage, /const \{ error: materializeError \} = await \(supabase\.rpc as any\)\("recurrence_materialize"/);
-  assert.match(tasksPage, /if \(materializeError\) throw materializeError/);
+  assert.match(tasksPage, /const horizon = 60/);
+  assert.match(tasksPage, /toast\.warning\("Recorrência salva\. As próximas ocorrências serão geradas automaticamente\."\)/);
 });
 test("task creation always releases saving state after async failures", () => {
   assert.match(tasksPage, /if \(submittingRef\.current\) return;\s*submittingRef\.current = true;\s*setLoading\(true\);\s*try \{/);
