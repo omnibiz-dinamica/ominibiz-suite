@@ -1059,13 +1059,22 @@ function ClientForm({
           <p className="mb-2 text-xs text-muted-foreground">
             A equipa habitual é pré-selecionada nas novas tarefas. Recursos só entram na operação quando forem atribuídos explicitamente.
           </p>
+          <div className="mb-2 space-y-1.5">
+            <Label htmlFor="client-team-search">Pesquisar funcionário (opcional)</Label>
+            <Input
+              id="client-team-search"
+              placeholder="Escreva parte do nome"
+              value={teamSearch}
+              onChange={(e) => setTeamSearch(e.target.value)}
+            />
+          </div>
           <div className="space-y-3">
             {(["habitual", "recurso"] as const).map((type) => (
               <div key={type} className="space-y-1 rounded-lg border border-border p-2">
                 <div className="px-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                   {type === "habitual" ? "Equipa habitual" : "Equipa de recurso / substituição"}
                 </div>
-                {members.map((m) => {
+                {members.filter(matchesTeamSearch).map((m) => {
                   const checked = selected.has(m.id);
                   const memberType = checked ? (assignmentTypes[m.id] ?? "habitual") : type;
                   if (!checked && type !== "habitual") return null;
