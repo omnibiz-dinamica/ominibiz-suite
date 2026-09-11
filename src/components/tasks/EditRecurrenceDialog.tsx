@@ -57,12 +57,17 @@ export function EditRecurrenceDialog({
   const [scheduledTime, setScheduledTime] = useState(""); // HH:MM (series)
   const [scheduledFor, setScheduledFor] = useState(""); // datetime-local (occurrence)
   const [duration, setDuration] = useState<number>(0);
+  // 11092026-003c — datas da série (date-only, nunca convertidas por Date/UTC).
+  const [seriesStart, setSeriesStart] = useState("");
+  const [seriesEnd, setSeriesEnd] = useState("");
   const [saving, setSaving] = useState(false);
   const [scheduleConflicts, setScheduleConflicts] = useState<TaskScheduleConflict[]>([]);
 
   useEffect(() => {
     if (!open) return;
     setScope(allowThis ? "this" : "future");
+    setSeriesStart(recurrence?.start_date ?? "");
+    setSeriesEnd(recurrence?.end_date ?? "");
     if (fromTask) {
       setTitle(fromTask.title);
       setPriority(fromTask.priority);
