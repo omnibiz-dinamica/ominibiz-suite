@@ -75,6 +75,16 @@ export const CHANGE_LOG: readonly ChangeEntry[] = [
     kind: "a",
     summary: "Empresa de testes Grupo V-clean TESTE criada a partir da empresa real.",
   },
+  {
+    id: "12092026-001c",
+    kind: "c",
+    summary: "Sair e voltar à aba/janela mantém o modal aberto e o formulário como estava.",
+  },
+  {
+    id: "12092026-002a",
+    kind: "a",
+    summary: "Pesquisa opcional de cliente dentro do seletor da Nova tarefa.",
+  },
 ];
 
 export function latestChange(): ChangeEntry | null {
