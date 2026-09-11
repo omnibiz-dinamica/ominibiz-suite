@@ -1344,3 +1344,31 @@ como foi gerado, sem assinatura nem visto; (c) o `sign()` gerava o PDF sem
 status, tarefas, férias, faltas, recorrências e `time_entries` permanecem
 intocados. Layout do relatório preservado. RLS/RBAC e isolamento multiempresa
 inalterados; `timesheet_signature_backfill` continua restrito a Super Admin.
+
+
+## ADR-060 — Identificação funcional das alterações e foco de janela sem refetch
+- Data: 2026-09-11
+- Status: Aceita
+
+**Contexto.** As alterações do OmniBiz não tinham etiqueta funcional rastreável
+e a lista de tarefas ainda podia refazer a consulta ao voltar à aba, com risco
+de descartar o estado do Gestor. A equipa responsável do cliente também estava
+a ser perdida silenciosamente.
+
+**Decisão.**
+1. Identificador funcional `DDMMAAAA-XXXc` (correção) e `DDMMAAAA-XXXa`
+   (atualização) mantido em `src/lib/change-log.ts`, sequência diária, sem
+   reutilização. Complementa — não substitui — commit SHA, build e versão.
+2. Voltar à aba/janela nunca é ação suficiente para atualizar dados. Só ação
+   explícita do utilizador (guardar, filtrar, navegar, atualizar) refaz consultas.
+3. Gravações da equipa responsável do cliente nunca ignoram erro: falha é
+   apresentada ao Gestor. `client_assignees.assignment_type` é a fonte canónica
+   do tipo de vínculo (habitual/recurso).
+4. `recurrence_update` é a fonte canónica também das datas da série; a data
+   final é inclusiva e ocorrências futuras pendentes sem ponto fora do período
+   são removidas — histórico, pontos e ocorrências concluídas nunca são tocados.
+5. Testes funcionais usam a empresa clonada **Grupo V-clean TESTE**, com
+   recorrências em pausa para não gerar tarefas nem notificações reais.
+
+**Consequências.** RLS/RBAC, isolamento multiempresa, ponto, férias, faltas,
+folha de ponto e fechamento mensal permanecem inalterados.
