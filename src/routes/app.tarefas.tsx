@@ -181,6 +181,14 @@ type ApprovedVacation = {
   status: "aprovado";
 };
 type CalendarMode = "day" | "week" | "month" | "year";
+
+type TaskMember = { id: string; full_name: string | null; job_title?: string | null };
+
+function taskMemberName(members: readonly TaskMember[], id: string | null, unassigned = "Sem responsável") {
+  if (!id) return unassigned;
+  return members.find((member) => member.id === id)?.full_name?.trim() || "Funcionário";
+}
+
 export const Route = createFileRoute("/app/tarefas")({
   component: TasksPage,
   validateSearch: (raw): TasksSearch => {
@@ -305,10 +313,20 @@ function TasksPage() {
     queryKey: ["members", currentCompanyId],
     queryFn: async () => {
       if (!currentCompanyId) return [];
-      const { data: roles } = await supabase.from("user_roles").select("user_id").eq("company_id", currentCompanyId);
+      const { data: roles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("company_id", currentCompanyId);
+      if (rolesError) throw rolesError;
       const ids = (roles ?? []).map((r) => r.user_id);
       if (ids.length === 0) return [];
-      const { data: profs } = await supabase.from("profiles").select("id, full_name, email, job_title").in("id", ids);
+      // Keep this projection aligned with the canonical team screen. The
+      // profile name is the display source; email is resolved separately.
+      const { data: profs, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name, job_title")
+        .in("id", ids);
+      if (profilesError) throw profilesError;
       return profs ?? [];
     },
     enabled: isManager && !!currentCompanyId,
@@ -1202,7 +1220,7 @@ function TasksPage() {
             <EmployeeMultiPicker
               employees={(members ?? []).map((m) => ({
                 id: m.id,
-                full_name: m.full_name,
+                full_name: taskMemberName(members ?? [], m.id, "Funcionário"),
                 job_title: (m as { job_title?: string | null }).job_title ?? null,
               }))}
               values={selectedEmployeeIds}
@@ -1456,8 +1474,7 @@ function TaskPlanningCalendar({
 }) {
   const [mode, setMode] = useState<CalendarMode>("week");
   const [cursor, setCursor] = useState(() => new Date());
-  const memberName = (id: string | null) =>
-    members.find((m) => m.id === id)?.full_name ?? (id ? id.slice(0, 8) : "Sem responsavel");
+  const memberName = (id: string | null) => taskMemberName(members, id, "Sem responsável");
   const clientName = (id: string | null) =>
     clients.find((c) => c.id === id)?.name ?? (id ? id.slice(0, 8) : "Sem cliente");
   const dateKey = (date: Date) =>
@@ -1868,8 +1885,7 @@ function TaskCalendar({
   clients: ClientOption[];
   groupBy: "assignee" | "client";
 }) {
-  const memberName = (id: string | null) =>
-    members.find((m) => m.id === id)?.full_name ?? (id ? id.slice(0, 8) : "Sem responsável");
+  const memberName = (id: string | null) => taskMemberName(members, id);
   const clientName = (id: string | null) =>
     clients.find((c) => c.id === id)?.name ?? (id ? id.slice(0, 8) : "Sem cliente");
 
@@ -2014,7 +2030,7 @@ function CalendarTaskCard({
     !task.scheduled_for && (task.recurrence_date || task.due_at)
       ? formatWallDate(task.recurrence_date ?? task.due_at)
       : "";
-  const memberName = members.find((m) => m.id === task.assigned_to)?.full_name ?? "Sem responsável";
+  const memberName = taskMemberName(members, task.assigned_to);
   const clientName = clients.find((c) => c.id === task.client_id)?.name ?? "Sem cliente";
   const taskPunch = taskPunches.get(task.id);
   const lateStartMinutes = startedLateMinutes(task, taskPunch?.started_at);
@@ -2240,7 +2256,7 @@ function GroupedTaskList({
     if (groupBy === "client") {
       return clients.find((client) => client.id === id)?.name ?? (id ? id.slice(0, 8) : "Sem cliente");
     }
-    return members.find((member) => member.id === id)?.full_name ?? (id ? id.slice(0, 8) : "Sem responsável");
+    return taskMemberName(members, id);
   };
 
   const groups = new Map<string, TaskRow[]>();
@@ -3410,7 +3426,7 @@ function TaskForm({
               <SelectContent>
                 {members.map((m) => (
                   <SelectItem key={m.id} value={m.id}>
-                    {m.full_name ?? m.id.slice(0, 8)}
+                    {taskMemberName(members, m.id, "Funcionário")}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -3452,7 +3468,7 @@ function TaskForm({
                         checked={checked}
                         onChange={() => toggleAssignee(m.id)}
                       />
-                      <span className="truncate">{m.full_name ?? m.id.slice(0, 8)}</span>
+                      <span className="truncate">{taskMemberName(members, m.id, "Funcionário")}</span>
                     </label>
                   );
                 })}

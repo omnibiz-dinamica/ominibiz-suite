@@ -45,3 +45,12 @@ test("employee name search keeps canonical assignment IDs", () => {
   assert.match(taskForm, /assigned_to: memberId/);
   assert.match(taskForm, /queryKey: \["members", currentCompanyId\]/);
 });
+
+test("task employee lookup uses the canonical profile name projection", () => {
+  assert.match(taskForm, /select\("id, full_name, job_title"\)/);
+  assert.doesNotMatch(taskForm, /select\("id, full_name, email, job_title"\)/);
+  assert.match(taskForm, /taskMemberName\(members, id/);
+  assert.doesNotMatch(taskForm, /m\.full_name \?\? m\.id\.slice\(0, 8\)/);
+  assert.doesNotMatch(taskForm, /members\.find\(\(m\) => m\.id === id\)\?\.full_name \?\? \(id \? id\.slice\(0, 8\)/);
+  assert.match(taskForm, /full_name: taskMemberName\(members \?\? \[\], m\.id, "Funcionário"\)/);
+});
