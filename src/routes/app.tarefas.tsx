@@ -3281,16 +3281,44 @@ function TaskForm({
     >
       <div className="space-y-1.5">
         <Label>Cliente</Label>
-        <Select value={clientId} onValueChange={(v) => void applyClient(v)}>
+        <Select
+          value={clientId}
+          onValueChange={(v) => void applyClient(v)}
+          onOpenChange={(open) => {
+            if (!open) setClientQuery("");
+          }}
+        >
           <SelectTrigger>
             <SelectValue placeholder="Selecione o cliente" />
           </SelectTrigger>
           <SelectContent>
-            {clients.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.name}
-              </SelectItem>
-            ))}
+            <div className="sticky top-0 z-10 border-b border-border bg-popover p-2">
+              <div className="relative">
+                <Search
+                  className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden
+                />
+                <Input
+                  value={clientQuery}
+                  onChange={(e) => setClientQuery(e.target.value)}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  placeholder="Buscar cliente..."
+                  className="h-9 pl-8"
+                  aria-label="Buscar cliente"
+                />
+              </div>
+            </div>
+            {filteredClients.length === 0 ? (
+              <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+                Nenhum cliente encontrado
+              </div>
+            ) : (
+              filteredClients.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))
+            )}
           </SelectContent>
         </Select>
         {!initial && (clientSchedule.length > 0 || contractedMinutes != null) && (
