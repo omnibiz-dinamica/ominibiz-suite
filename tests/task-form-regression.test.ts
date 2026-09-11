@@ -20,8 +20,9 @@ test("flexible client schedules preserve optional time pairs", () => {
   assert.match(clientSchedule, /const endTime = typeof row\.end_time === "string"/);
 });
 
-test("task modal protects local form state on window focus", () => {
-  assert.match(taskForm, /refetchOnWindowFocus: !open && !editing/);
+test("task views never refetch when the tab or window regains focus", () => {
+  assert.match(taskForm, /refetchOnWindowFocus: false/);
+  assert.doesNotMatch(taskForm, /refetchOnWindowFocus: !open/);
 });
 
 test("recurrence start date is inherited from the task date", () => {
