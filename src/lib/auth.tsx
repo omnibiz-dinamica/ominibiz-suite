@@ -162,17 +162,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // 3) Revalidate session when the tab becomes visible again (mobile/PWA).
     // getSession() triggers an automatic refresh if the access token is near
     // expiry, keeping daily operational use (Folha de Ponto) seamless.
+    // 12092026-001c — voltar à aba/janela não pode causar re-render em cascata
+    // (que fecharia modais e descartaria formulários abertos). Só publicamos
+    // uma nova sessão quando o token realmente mudou, ou quando ela desapareceu.
     const onVisibility = () => {
       if (typeof document === "undefined") return;
       if (document.visibilityState !== "visible") return;
       supabase.auth.getSession().then(({ data }) => {
         if (!active) return;
-        // If we somehow lost the session, reflect it; otherwise just keep ref fresh.
         if (!data.session) {
           void applySession(null, "visibility:no-session");
-        } else {
-          setSession(data.session);
+          return;
         }
+        setSession((prev) =>
+          prev?.access_token === data.session!.access_token ? prev : data.session,
+        );
       });
     };
     if (typeof document !== "undefined") {

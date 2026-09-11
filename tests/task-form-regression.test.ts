@@ -55,3 +55,17 @@ test("task employee lookup uses the canonical profile name projection", () => {
   assert.doesNotMatch(taskForm, /members\.find\(\(m\) => m\.id === id\)\?\.full_name \?\? \(id \? id\.slice\(0, 8\)/);
   assert.match(taskForm, /full_name: taskMemberName\(members \?\? \[\], m\.id, "Funcionário"\)/);
 });
+
+test("client select keeps the full list and adds an optional search [12092026-002a]", () => {
+  const source = readFileSync(new URL("../src/routes/app.tarefas.tsx", import.meta.url), "utf8");
+  assert.match(source, /placeholder="Buscar cliente\.\.\."/);
+  assert.match(source, /const filteredClients = useMemo\(/);
+  assert.match(source, /if \(!q\) return clients;/);
+  assert.match(source, /c\.id === clientId \|\| tokens\.every/);
+  assert.match(source, /filteredClients\.map\(\(c\) => \(/);
+});
+
+test("returning to the tab never publishes a new session object [12092026-001c]", () => {
+  const auth = readFileSync(new URL("../src/lib/auth.tsx", import.meta.url), "utf8");
+  assert.match(auth, /prev\?\.access_token === data\.session!\.access_token \? prev : data\.session/);
+});

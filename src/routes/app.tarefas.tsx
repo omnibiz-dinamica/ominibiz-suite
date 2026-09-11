@@ -2671,6 +2671,22 @@ function TaskForm({
     });
   }, [members, assigneeQuery]);
   const [clientId, setClientId] = useState<string>(initial?.client_id ?? "");
+  /**
+   * 12092026-002a — pesquisa OPCIONAL dentro do dropdown de Cliente.
+   * Vazio mostra a lista completa; a pesquisa nunca esconde o cliente já
+   * selecionado e nunca altera os IDs canônicos nem os nomes exibidos.
+   */
+  const [clientQuery, setClientQuery] = useState("");
+  const filteredClients = useMemo(() => {
+    const norm = (value: string) =>
+      value.toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const q = norm(clientQuery.trim());
+    if (!q) return clients;
+    const tokens = q.split(/\s+/).filter(Boolean);
+    return clients.filter(
+      (c) => c.id === clientId || tokens.every((token) => norm(c.name ?? "").includes(token)),
+    );
+  }, [clients, clientQuery, clientId]);
   const [priority, setPriority] = useState<"baixa" | "media" | "alta" | "urgente">(initial?.priority ?? "media");
   const [startDate, setStartDate] = useState<string>(
     wallISOToDateInput(initial?.scheduled_for ?? initial?.recurrence_date ?? initial?.due_at),
@@ -3265,16 +3281,44 @@ function TaskForm({
     >
       <div className="space-y-1.5">
         <Label>Cliente</Label>
-        <Select value={clientId} onValueChange={(v) => void applyClient(v)}>
+        <Select
+          value={clientId}
+          onValueChange={(v) => void applyClient(v)}
+          onOpenChange={(open) => {
+            if (!open) setClientQuery("");
+          }}
+        >
           <SelectTrigger>
             <SelectValue placeholder="Selecione o cliente" />
           </SelectTrigger>
           <SelectContent>
-            {clients.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.name}
-              </SelectItem>
-            ))}
+            <div className="sticky top-0 z-10 border-b border-border bg-popover p-2">
+              <div className="relative">
+                <Search
+                  className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden
+                />
+                <Input
+                  value={clientQuery}
+                  onChange={(e) => setClientQuery(e.target.value)}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  placeholder="Buscar cliente..."
+                  className="h-9 pl-8"
+                  aria-label="Buscar cliente"
+                />
+              </div>
+            </div>
+            {filteredClients.length === 0 ? (
+              <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+                Nenhum cliente encontrado
+              </div>
+            ) : (
+              filteredClients.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))
+            )}
           </SelectContent>
         </Select>
         {!initial && (clientSchedule.length > 0 || contractedMinutes != null) && (
