@@ -522,6 +522,20 @@ function ClientForm({
     });
   };
 
+  // 11092026-004a — pesquisa opcional por nome. Vazio mostra a lista completa
+  // e a pesquisa nunca esconde quem já está selecionado.
+  const [teamSearch, setTeamSearch] = useState("");
+  const normalizeName = (value: string) =>
+    value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  const matchesTeamSearch = (member: { id: string; full_name: string | null }) => {
+    const query = normalizeName(teamSearch);
+    if (!query) return true;
+    if (selected.has(member.id)) return true;
+    return query
+      .split(/\s+/)
+      .every((token) => normalizeName(member.full_name ?? "").includes(token));
+  };
+
   const setAssignmentType = (userId: string, type: ClientTeamType) => {
     setAssignmentTypes((current) => ({ ...current, [userId]: type }));
     if (type === "recurso" && primary === userId) setPrimary("");
@@ -691,42 +705,57 @@ function ClientForm({
               primary && selected.has(primary) && (assignmentTypes[primary] ?? "habitual") === "habitual"
                 ? primary
                 : "";
+            // 11092026-001c — a equipa responsável é dado operacional: qualquer
+            // falha de gravação tem de chegar ao Gestor, nunca ser ignorada.
+            const guard = (result: { error: { message: string } | null }) => {
+              if (result?.error) throw new Error(`Equipa responsável: ${result.error.message}`);
+            };
             // Remove os desmarcados
             const toRemove = assignees.filter((a) => !selected.has(a.user_id));
             if (toRemove.length > 0) {
-              await (supabase.from("client_assignees" as never) as any).delete().in(
-                "id",
-                toRemove.map((a) => a.id),
+              guard(
+                await (supabase.from("client_assignees" as never) as any).delete().in(
+                  "id",
+                  toRemove.map((a) => a.id),
+                ),
               );
             }
             // Adiciona novos
             const existing = new Set(assignees.map((a) => a.user_id));
             const toAdd = [...selected].filter((u) => !existing.has(u));
             if (toAdd.length > 0) {
-              await (supabase.from("client_assignees" as never) as any).insert(
-                toAdd.map((u) => ({
-                  company_id: companyId,
-                  client_id: clientId,
-                  user_id: u,
-                  is_primary: u === effectivePrimary,
-                  assignment_type: assignmentTypes[u] ?? "habitual",
-                })),
+              guard(
+                await (supabase.from("client_assignees" as never) as any).insert(
+                  toAdd.map((u) => ({
+                    company_id: companyId,
+                    client_id: clientId,
+                    user_id: u,
+                    is_primary: u === effectivePrimary,
+                    assignment_type: assignmentTypes[u] ?? "habitual",
+                  })),
+                ),
               );
             }
             for (const assignee of assignees.filter((a) => selected.has(a.user_id))) {
-              await (supabase.from("client_assignees" as never) as any)
-                .update({ assignment_type: assignmentTypes[assignee.user_id] ?? clientTeamType(assignee) })
-                .eq("id", assignee.id);
+              guard(
+                await (supabase.from("client_assignees" as never) as any)
+                  .update({ assignment_type: assignmentTypes[assignee.user_id] ?? clientTeamType(assignee) })
+                  .eq("id", assignee.id),
+              );
             }
             // Atualiza primário
-            await (supabase.from("client_assignees" as never) as any)
-              .update({ is_primary: false })
-              .eq("client_id", clientId);
-            if (effectivePrimary) {
+            guard(
               await (supabase.from("client_assignees" as never) as any)
-                .update({ is_primary: true })
-                .eq("client_id", clientId)
-                .eq("user_id", effectivePrimary);
+                .update({ is_primary: false })
+                .eq("client_id", clientId),
+            );
+            if (effectivePrimary) {
+              guard(
+                await (supabase.from("client_assignees" as never) as any)
+                  .update({ is_primary: true })
+                  .eq("client_id", clientId)
+                  .eq("user_id", effectivePrimary),
+              );
             }
           }
 
@@ -1030,13 +1059,22 @@ function ClientForm({
           <p className="mb-2 text-xs text-muted-foreground">
             A equipa habitual é pré-selecionada nas novas tarefas. Recursos só entram na operação quando forem atribuídos explicitamente.
           </p>
+          <div className="mb-2 space-y-1.5">
+            <Label htmlFor="client-team-search">Pesquisar funcionário (opcional)</Label>
+            <Input
+              id="client-team-search"
+              placeholder="Escreva parte do nome"
+              value={teamSearch}
+              onChange={(e) => setTeamSearch(e.target.value)}
+            />
+          </div>
           <div className="space-y-3">
             {(["habitual", "recurso"] as const).map((type) => (
               <div key={type} className="space-y-1 rounded-lg border border-border p-2">
                 <div className="px-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                   {type === "habitual" ? "Equipa habitual" : "Equipa de recurso / substituição"}
                 </div>
-                {members.map((m) => {
+                {members.filter(matchesTeamSearch).map((m) => {
                   const checked = selected.has(m.id);
                   const memberType = checked ? (assignmentTypes[m.id] ?? "habitual") : type;
                   if (!checked && type !== "habitual") return null;

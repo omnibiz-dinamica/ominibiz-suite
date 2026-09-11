@@ -284,10 +284,10 @@ function TasksPage() {
       return (data ?? []) as unknown as TaskRow[];
     },
     enabled: !!user && !!currentCompanyId,
-    // A lista pode continuar atualizando enquanto o utilizador navega. Com
-    // um modal de cadastro aberto, o formulário local é a fonte de verdade e
-    // não deve ser interrompido por um refetch ao voltar à aba.
-    refetchOnWindowFocus: !open && !editing,
+    // 11092026-002c — voltar à aba/janela nunca atualiza a lista. O estado
+    // atual (filtros, seleção, modal, formulário) é a fonte de verdade; a
+    // atualização acontece só por ação explícita do utilizador.
+    refetchOnWindowFocus: false,
   });
 
   // Uma consulta única vincula o ponto mais recente a cada tarefa exibida.

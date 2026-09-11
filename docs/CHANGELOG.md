@@ -5,6 +5,36 @@
 
 ---
 
+### 🚧 11092026 — Equipa de clientes, foco de janela e datas da recorrência
+
+#### Corrigido
+- `11092026-001c` — A equipa responsável do cliente volta a ser gravada. A base
+  de dados não tinha o campo do tipo de vínculo (`client_assignees.assignment_type`),
+  pelo que cada gravação era recusada e o erro era ignorado em silêncio. O campo
+  foi criado (vínculos antigos = habituais) e todas as gravações passam a
+  reportar erro ao Gestor.
+- `11092026-002c` — Sair e voltar à aba/janela nunca atualiza a tela. A exceção
+  que permitia refetch sem modal aberto foi removida (`app.tarefas`), alinhando
+  com o padrão global `refetchOnWindowFocus: false`.
+- `11092026-003c` — Data inicial e data final da série recorrente passam a ser
+  editáveis e respeitadas. `recurrence_update` ignorava as datas; agora persiste
+  as duas, valida fim ≥ início e remove apenas ocorrências futuras pendentes sem
+  ponto que fiquem fora do novo período. Datas passaram a ser mostradas
+  date-only, sem conversão por UTC.
+
+#### Adicionado
+- `11092026-004a` — Pesquisa opcional por nome do funcionário na equipa
+  responsável do cliente; vazio mostra a lista completa e nunca esconde quem já
+  está selecionado.
+- `11092026-005a` — Empresa **Grupo V-clean TESTE** criada a partir da empresa
+  real (novo identificador, clientes, equipa, memberships e recorrências em
+  pausa). A empresa original não foi alterada.
+- Identificação funcional das alterações (`DDMMAAAA-XXXc/a`) em
+  `src/lib/change-log.ts`, visível junto ao build/commit no rodapé de empresa
+  ativa. Não substitui commit, build, versão ou branch.
+
+---
+
 ### 🚧 100926001 — Assinatura e Visto da Folha de Ponto Individual
 
 #### Corrigido

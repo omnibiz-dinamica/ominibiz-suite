@@ -4167,7 +4167,6 @@ export type Database = {
           full_name: string
           is_active: boolean
           is_primary: boolean
-          assignment_type: string
           user_id: string
         }[]
       }

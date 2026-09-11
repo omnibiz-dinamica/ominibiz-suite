@@ -57,12 +57,17 @@ export function EditRecurrenceDialog({
   const [scheduledTime, setScheduledTime] = useState(""); // HH:MM (series)
   const [scheduledFor, setScheduledFor] = useState(""); // datetime-local (occurrence)
   const [duration, setDuration] = useState<number>(0);
+  // 11092026-003c — datas da série (date-only, nunca convertidas por Date/UTC).
+  const [seriesStart, setSeriesStart] = useState("");
+  const [seriesEnd, setSeriesEnd] = useState("");
   const [saving, setSaving] = useState(false);
   const [scheduleConflicts, setScheduleConflicts] = useState<TaskScheduleConflict[]>([]);
 
   useEffect(() => {
     if (!open) return;
     setScope(allowThis ? "this" : "future");
+    setSeriesStart(recurrence?.start_date ?? "");
+    setSeriesEnd(recurrence?.end_date ?? "");
     if (fromTask) {
       setTitle(fromTask.title);
       setPriority(fromTask.priority);
@@ -91,6 +96,17 @@ export function EditRecurrenceDialog({
     if (!assignedTo) {
       toast.error("Atribua a tarefa a um funcionario antes de salvar.");
       return;
+    }
+    const editableDates = scope !== "this" && recurrence.frequency !== "custom";
+    if (editableDates) {
+      if (!seriesStart) {
+        toast.error("Informe a data inicial da recorrência.");
+        return;
+      }
+      if (seriesEnd && seriesEnd < seriesStart) {
+        toast.error("A data final da recorrência não pode ser anterior à data inicial.");
+        return;
+      }
     }
     setSaving(true);
     try {
@@ -173,6 +189,9 @@ export function EditRecurrenceDialog({
             assigned_to: assignedTo,
             scheduled_time: scheduledTime ? `${scheduledTime}:00` : null,
             duration_minutes: Math.max(0, duration || 0),
+            ...(recurrence.frequency !== "custom"
+              ? { start_date: seriesStart, end_date: seriesEnd || null }
+              : {}),
           },
           scope === "future" ? "future" : "all",
           scope === "future" ? (fromTask?.id ?? null) : null,
@@ -263,7 +282,24 @@ export function EditRecurrenceDialog({
                 onChange={(e) => setDuration(Number(e.target.value) || 0)}
               />
             </div>
+
+            {scope !== "this" && recurrence?.frequency !== "custom" && (
+              <>
+                <div className="space-y-1.5">
+                  <Label>Data inicial da recorrência</Label>
+                  <Input type="date" value={seriesStart} onChange={(e) => setSeriesStart(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Data final (opcional)</Label>
+                  <Input type="date" value={seriesEnd} onChange={(e) => setSeriesEnd(e.target.value)} />
+                  <p className="text-[11px] text-muted-foreground">
+                    A data final é inclusiva. Ocorrências futuras ainda pendentes fora do período são removidas.
+                  </p>
+                </div>
+              </>
+            )}
           </div>
+
 
         </ModalBody>
         <ModalFooter>
