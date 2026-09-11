@@ -29,6 +29,7 @@ import {
 } from "@/lib/locale";
 import { resolveAvailableNavigation, type NavGroup } from "@/lib/navigation";
 import { getAppVersion } from "@/lib/app-version";
+import { latestChangeId } from "@/lib/change-log";
 
 function detectBrowser(): { name: string; version: string } {
   if (typeof navigator === "undefined") return { name: "ssr", version: "" };
@@ -379,7 +380,10 @@ export function AppLayout({ children }: { children?: ReactNode }) {
                 <div className="text-[9px] uppercase tracking-wide opacity-80">Empresa ativa</div>
                 <div className="flex min-w-0 items-center gap-1.5">
                   <span className="truncate">{activeCompany.name}</span>
-                  <span className="shrink-0 font-mono text-[9px] opacity-80">commit {visibleCommit}</span>
+                  <span className="shrink-0 font-mono text-[9px] opacity-80">
+                    commit {visibleCommit}
+                    {changeId ? ` · ${changeId}` : ""}
+                  </span>
                 </div>
               </div>
             )}
