@@ -14,6 +14,10 @@ const materialization = readFileSync(
   ),
   "utf8",
 );
+const clientSchedule = readFileSync(
+  new URL("../src/lib/tasks/client-schedule.ts", import.meta.url),
+  "utf8",
+);
 
 test("task visibility stays company-scoped and employee-scoped by canonical IDs", () => {
   assert.match(tasksPage, /if \(currentCompanyId\) q = q\.eq\("company_id", currentCompanyId\)/);
@@ -28,6 +32,11 @@ test("task creation always releases saving state after async failures", () => {
   assert.match(tasksPage, /catch \(submitError\)[\s\S]*toast\.error\(taskSaveErrorMessage\(submitError\)\)[\s\S]*finally \{[\s\S]*submittingRef\.current = false;[\s\S]*setLoading\(false\);/);
 });
 
+test("client habitual schedules are not duplicated by active task series", () => {
+  assert.match(clientSchedule, /return configured\.length > 0 \? configured : recurrences;/);
+  assert.match(tasksPage, /const selectedAssignees = \[\.\.\.new Set\(assignees\)\]/);
+});
+
 test("single-occurrence recurrence edits preserve wall-clock overnight dates", () => {
   assert.match(recurrenceDialog, /const end = sfIso && safeDuration > 0 \? addWallMinutes\(startDate, startTime, safeDuration\) : null/);
   assert.match(recurrenceDialog, /const seIso = end \? wallDateTimeToISO\(end\.date, end\.time\) : null/);
@@ -37,4 +46,6 @@ test("single-occurrence recurrence edits preserve wall-clock overnight dates", (
 test("recurrence materialization preserves the multi-employee task group", () => {
   assert.match(materialization, /recurrence_id, recurrence_date, task_group_id/);
   assert.match(materialization, /v_rec\.id, v_day, v_rec\.task_group_id/);
+  assert.match(materialization, /existing_task\.title = v_rec\.title/);
+  assert.match(materialization, /existing_task\.recurrence_id IS DISTINCT FROM v_rec\.id/);
 });

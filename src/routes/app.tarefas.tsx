@@ -2784,9 +2784,9 @@ function TaskForm({
     const rows = (data ?? []) as { user_id: string; is_active: boolean; assignment_type?: string | null }[];
     // Só colaboradores ativos e que ainda pertencem à empresa (lista `members`).
     const memberIds = new Set(members.map((m) => m.id));
-    return rows
+    return [...new Set(rows
       .filter((r) => r.is_active && memberIds.has(r.user_id) && clientTeamType(r) === "habitual")
-      .map((r) => r.user_id);
+      .map((r) => r.user_id))];
   };
 
   const loadClientSchedule = async (cid: string) => {
@@ -2879,7 +2879,9 @@ function TaskForm({
             : endDate;
         const endISO = endTime ? wallDateTimeToISO(resolvedEndDate, endTime) : null;
         const dueISO = endISO ?? wallDateToEndOfDayISO(endDate);
-        if (assignees.length === 0) {
+        const selectedAssignees = [...new Set(assignees)];
+        const selectedDistributedMinutes = distributeContractedMinutes(contractedMinutes, selectedAssignees.length);
+        if (selectedAssignees.length === 0) {
           toast.error("Atribua a tarefa a um funcionario antes de salvar.");
           return;
         }
@@ -2911,7 +2913,7 @@ function TaskForm({
             .from("vacation_requests")
             .select("start_date, end_date, user_id")
             .eq("company_id", companyId)
-            .in("user_id", assignees)
+            .in("user_id", selectedAssignees)
             .eq("status", "aprovado")
             .lte("start_date", rangeEnd)
             .gte("end_date", rangeStart);
@@ -2948,7 +2950,7 @@ function TaskForm({
         const useContractedSchedule =
           contractedMinutes != null && !manualEndOverride && startDate !== "" && startTime !== "";
         const scheduleRulesByEmployee = selectedSchedule?.cycleLengthWeeks && selectedSchedule.cycleLengthWeeks > 1
-          ? assignees.map((_, employeeIndex) => clientSchedule
+          ? selectedAssignees.map((_, employeeIndex) => clientSchedule
               .filter((slot) =>
                 slot.id.startsWith(`client-habitual:${clientId}:`) &&
                 slot.cycleLengthWeeks === selectedSchedule.cycleLengthWeeks &&
@@ -2959,7 +2961,7 @@ function TaskForm({
                 start_time: slot.startTime,
                 duration_minutes: distributeContractedMinutes(
                   slot.contractedMinutes ?? slot.durationMinutes,
-                  assignees.length,
+                  selectedAssignees.length,
                 )[employeeIndex] ?? slot.contractedMinutes ?? slot.durationMinutes,
                 cycle_length_weeks: slot.cycleLengthWeeks,
                 cycle_position: slot.cyclePosition,
@@ -2972,7 +2974,7 @@ function TaskForm({
           if (!useContractedSchedule) {
             return { scheduled_for: startISO, scheduled_end: endISO, due_at: dueISO };
           }
-          const minutes = distributedMinutes[index] ?? distributedMinutes[0] ?? 0;
+          const minutes = selectedDistributedMinutes[index] ?? selectedDistributedMinutes[0] ?? 0;
           const end = addWallMinutes(startDate, startTime, minutes);
           if (!end) return { scheduled_for: startISO, scheduled_end: endISO, due_at: dueISO };
           const scheduledEnd = wallDateTimeToISO(end.date, end.time);
@@ -3003,10 +3005,10 @@ function TaskForm({
             : [startDate];
           const proposals = recurrence.enabled
             ? recurrenceDates.flatMap((dateKey) =>
-                assignees.flatMap((memberId, index) => {
+                selectedAssignees.flatMap((memberId, index) => {
                   if (!startTime) return [];
                   const minutes = useContractedSchedule
-                    ? distributedMinutes[index] ?? distributedMinutes[0] ?? 0
+                    ? selectedDistributedMinutes[index] ?? selectedDistributedMinutes[0] ?? 0
                     : manualDurationMinutes;
                   const end = addWallMinutes(dateKey, startTime, minutes);
                   if (!end) return [];
@@ -3017,7 +3019,7 @@ function TaskForm({
                     : [];
                 }),
               )
-            : assignees.flatMap((memberId, index) => {
+            : selectedAssignees.flatMap((memberId, index) => {
                 const times = taskTimesFor(index);
                 return times.scheduled_for && times.scheduled_end
                   ? [{ assignee_id: memberId, start_at: times.scheduled_for, end_at: times.scheduled_end }]
@@ -3064,7 +3066,7 @@ function TaskForm({
         const createdTaskIds: string[] = [...createdTaskIdsRef.current];
         // Fase B: lote multi-responsável. Cada responsável mantém a SUA tarefa
         // (estado, ponto, recusa e conclusão próprios); o grupo só correlaciona.
-        const groupId = assignees.length > 1 ? crypto.randomUUID() : null;
+        const groupId = selectedAssignees.length > 1 ? crypto.randomUUID() : null;
         if (initial) {
           ({ error } = await supabase.from("tasks").update(payload).eq("id", initial.id));
         } else if (recurrence.enabled) {
@@ -3078,7 +3080,7 @@ function TaskForm({
           // "já existe" — nunca criamos um clone e nunca abortamos os restantes.
           let duplicates = 0;
           let created = 0;
-          for (const [index, memberId] of assignees.entries()) {
+          for (const [index, memberId] of selectedAssignees.entries()) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const ins = await (supabase.from("task_recurrences" as any) as any).insert({
               company_id: companyId,
@@ -3109,7 +3111,7 @@ function TaskForm({
                   : [],
               scheduled_time: derivedTime,
               duration_minutes: useContractedSchedule
-                ? distributedMinutes[index] ?? distributedMinutes[0] ?? derivedDuration
+                ? selectedDistributedMinutes[index] ?? selectedDistributedMinutes[0] ?? derivedDuration
                 : derivedDuration,
               schedule_rules: scheduleRulesByEmployee[index] ?? [],
               task_group_id: groupId,
@@ -3159,7 +3161,7 @@ function TaskForm({
           const inserted = await supabase
             .from("tasks")
             .insert(
-              assignees.map((memberId, index) => ({
+              selectedAssignees.map((memberId, index) => ({
                 ...payload,
                 assigned_to: memberId,
                 company_id: companyId,
@@ -3207,7 +3209,7 @@ function TaskForm({
         submittingRef.current = false;
         setLoading(false);
         toast.success(
-          initial ? "Tarefa atualizada" : assignees.length > 1 ? `${assignees.length} tarefas criadas` : "Tarefa criada",
+          initial ? "Tarefa atualizada" : selectedAssignees.length > 1 ? `${selectedAssignees.length} tarefas criadas` : "Tarefa criada",
         );
         onDone();
         } catch (submitError) {

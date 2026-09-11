@@ -138,18 +138,35 @@ BEGIN
         v_due := COALESCE(v_end, v_target);
       END IF;
 
-      INSERT INTO public.tasks (
-        company_id, title, description, status, priority, assigned_to, created_by, client_id,
-        scheduled_for, scheduled_end, due_at, absence_grace_minutes, location, punch_mode_override,
-        recurrence_id, recurrence_date, task_group_id
-      ) VALUES (
-        v_rec.company_id, v_rec.title, v_rec.description, 'pendente', v_rec.priority::public.task_priority,
-        v_rec.assigned_to, COALESCE(v_rec.created_by, v_rec.assigned_to), v_rec.client_id,
-        v_target, v_end, v_due, v_rec.absence_grace_minutes, v_rec.location, v_rec.punch_mode_override,
-        v_rec.id, v_day, v_rec.task_group_id
-      )
-      ON CONFLICT (recurrence_id, recurrence_date) WHERE recurrence_id IS NOT NULL AND recurrence_date IS NOT NULL DO NOTHING;
-      IF FOUND THEN v_count := v_count + 1; END IF;
+      -- Series antigas podem ter sido criadas com IDs diferentes antes da
+      -- proteção canônica. Não materializar novamente a mesma tarefa viva,
+      -- mas preservar tarefas legítimas com títulos diferentes.
+      IF NOT EXISTS (
+        SELECT 1
+        FROM public.tasks existing_task
+        WHERE existing_task.deleted_at IS NULL
+          AND existing_task.recurrence_id IS DISTINCT FROM v_rec.id
+          AND existing_task.company_id = v_rec.company_id
+          AND existing_task.client_id IS NOT DISTINCT FROM v_rec.client_id
+          AND existing_task.assigned_to = v_rec.assigned_to
+          AND existing_task.title = v_rec.title
+          AND existing_task.recurrence_date = v_day
+          AND existing_task.scheduled_for IS NOT DISTINCT FROM v_target
+          AND existing_task.scheduled_end IS NOT DISTINCT FROM v_end
+      ) THEN
+        INSERT INTO public.tasks (
+          company_id, title, description, status, priority, assigned_to, created_by, client_id,
+          scheduled_for, scheduled_end, due_at, absence_grace_minutes, location, punch_mode_override,
+          recurrence_id, recurrence_date, task_group_id
+        ) VALUES (
+          v_rec.company_id, v_rec.title, v_rec.description, 'pendente', v_rec.priority::public.task_priority,
+          v_rec.assigned_to, COALESCE(v_rec.created_by, v_rec.assigned_to), v_rec.client_id,
+          v_target, v_end, v_due, v_rec.absence_grace_minutes, v_rec.location, v_rec.punch_mode_override,
+          v_rec.id, v_day, v_rec.task_group_id
+        )
+        ON CONFLICT (recurrence_id, recurrence_date) WHERE recurrence_id IS NOT NULL AND recurrence_date IS NOT NULL DO NOTHING;
+        IF FOUND THEN v_count := v_count + 1; END IF;
+      END IF;
     END LOOP;
   END LOOP;
   RETURN v_count;

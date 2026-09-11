@@ -5,9 +5,9 @@ import { scheduleRuleAppliesToDate } from "@/lib/tasks/client-schedule-rules";
 /**
  * SUP-2026-000110 — "Programação habitual do cliente".
  *
- * A programação habitual fica no cadastro do cliente. As séries de tarefas
- * existentes continuam sendo lidas como compatibilidade com os cadastros
- * antigos. O resultado é usado somente para sugestão no formulário de tarefa.
+ * A programação habitual fica no cadastro do cliente. Séries de tarefas são
+ * entidades operacionais e não devem aparecer como um segundo horário do
+ * cliente quando já existe uma configuração habitual.
  */
 
 export type ClientScheduleSlot = {
@@ -180,7 +180,10 @@ export async function fetchClientSchedule(clientId: string): Promise<ClientSched
       scheduleType: startTime ? "fixed" : "flexible",
     } satisfies ClientScheduleSlot;
   });
-  return [...configured, ...recurrences];
+  // Quando o cliente possui configuração habitual, ela é a fonte canônica.
+  // Misturá-la com séries ativas transforma uma tarefa recorrente em um novo
+  // "horário do cliente" e faz o formulário sugerir a mesma faixa duas vezes.
+  return configured.length > 0 ? configured : recurrences;
 }
 
 /** Slots que se aplicam a uma data (YYYY-MM-DD) informada pelo Gestor. */
