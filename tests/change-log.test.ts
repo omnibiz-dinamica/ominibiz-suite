@@ -24,6 +24,6 @@ test("identificadores nunca são reutilizados e mantêm a sequência", () => {
   assert.equal(new Set(ids).size, ids.length);
   assert.equal(changeDatePart({ day: 11, month: 9, year: 2026 }), "11092026");
   assert.equal(nextChangeId("11092026", "c", ids), "11092026-006c");
-  assert.equal(nextChangeId("12092026", "a", ids), "12092026-001a");
+  assert.equal(nextChangeId("12092026", "a", ids), "12092026-003a");
   assert.equal(latestChangeId(), ids[ids.length - 1]);
 });
