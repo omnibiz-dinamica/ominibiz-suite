@@ -7,6 +7,8 @@ import {
   wallClockEpoch,
 } from "@/lib/tasks/operational-rules";
 import type { ScheduleProposal, TaskScheduleConflict } from "@/lib/tasks/schedule-conflicts";
+import { isDateKeyWithinInclusiveRange } from "@/lib/tasks/recurrence-date";
+export { isDateKeyWithinInclusiveRange } from "@/lib/tasks/recurrence-date";
 export { intervalsOverlap, overlapInterval } from "@/lib/tasks/schedule-conflicts";
 export type { ScheduleProposal, TaskScheduleConflict } from "@/lib/tasks/schedule-conflicts";
 export { pauseMinutesNow } from "@/lib/punch/pause";
@@ -293,13 +295,16 @@ const weekStart = (d: Date) => {
 export function previewRecurrenceDates(input: RecurrencePreviewInput, count = 5): Date[] {
   if (!input.startDate) return [];
   const start = toDate(input.startDate);
-  const end = input.endDate ? toDate(input.endDate) : null;
   const anchor = weekStart(start);
   const interval = Math.max(1, input.intervalWeeks || 1);
   const out: Date[] = [];
   const cursor = new Date(start);
   for (let i = 0; i < 800 && out.length < count; i++) {
-    if (end && cursor > end) break;
+    if (!isDateKeyWithinInclusiveRange(
+      `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}-${String(cursor.getDate()).padStart(2, "0")}`,
+      input.startDate,
+      input.endDate,
+    )) break;
     const dow = cursor.getDay();
     let match = false;
     if (input.frequency === "daily") {

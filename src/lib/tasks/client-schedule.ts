@@ -85,8 +85,10 @@ export function parseHabitualSchedule(value: unknown): ClientHabitualSchedule[] 
       : [];
     if (weekdays.length === 0) return [];
     const mode = normaliseMode(row.mode);
-    const startTime = mode === "fixed" && typeof row.start_time === "string" ? toHHMM(row.start_time) : null;
-    const endTime = mode === "fixed" && typeof row.end_time === "string" ? toHHMM(row.end_time) : null;
+    // Flexible means the times are optional, not that persisted times must be
+    // discarded. A configured pair remains useful as a suggestion for tasks.
+    const startTime = typeof row.start_time === "string" ? toHHMM(row.start_time) : null;
+    const endTime = typeof row.end_time === "string" ? toHHMM(row.end_time) : null;
     const cycleLengthWeeks = positiveInteger(row.cycle_length_weeks);
     const cyclePosition = cycleLengthWeeks
       ? Number.isInteger(row.cycle_position) && (row.cycle_position as number) >= 0 && (row.cycle_position as number) < cycleLengthWeeks
@@ -144,9 +146,10 @@ export async function fetchClientSchedule(clientId: string): Promise<ClientSched
     weekdays: slot.weekdays,
     startTime: slot.startTime,
     endTime:
-      slot.startTime && (slot.contractedMinutes ?? contractedMinutes) != null
+      slot.endTime ??
+      (slot.startTime && (slot.contractedMinutes ?? contractedMinutes) != null
         ? addMinutes(slot.startTime, slot.contractedMinutes ?? contractedMinutes!)
-        : slot.endTime,
+        : null),
     durationMinutes:
       slot.contractedMinutes ?? contractedMinutes ??
       (slot.startTime && slot.endTime

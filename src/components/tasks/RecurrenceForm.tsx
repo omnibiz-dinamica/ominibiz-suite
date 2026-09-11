@@ -50,7 +50,7 @@ export const emptyRecurrence = (): RecurrenceFormValue => ({
   dayOfMonth: 1,
   monthPosition: null,
   monthWeekday: 5,
-  startDate: new Date().toISOString().slice(0, 10),
+  startDate: localDateToDateKey(new Date()),
   endDate: "",
   selectedDates: [],
   // Sem defaults implícitos: horário/duração são derivados do topo do formulário
@@ -64,6 +64,7 @@ export function RecurrenceForm({
   value,
   onChange,
   timingMode,
+  startDateLocked = false,
 }: {
   value: RecurrenceFormValue;
   onChange: (v: RecurrenceFormValue) => void;
@@ -75,6 +76,8 @@ export function RecurrenceForm({
    *  • `undefined`   → comportamento legado (start_stop).
    */
   timingMode?: "start_stop" | "manual";
+  /** The task's main start date is the canonical source for normal series. */
+  startDateLocked?: boolean;
 }) {
   const set = <K extends keyof RecurrenceFormValue>(k: K, v: RecurrenceFormValue[K]) =>
     onChange({ ...value, [k]: v });
@@ -282,13 +285,16 @@ export function RecurrenceForm({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>{uiFrequency === "custom" ? "Primeira data" : "Data inicial"}</Label>
+              <Label>{uiFrequency === "custom" ? "Primeira data" : "Data inicial da recorrência"}</Label>
               <Input
                 type="date"
                 value={value.startDate}
-                disabled={uiFrequency === "custom"}
+                disabled={uiFrequency === "custom" || startDateLocked}
                 onChange={(e) => set("startDate", e.target.value)}
               />
+              {uiFrequency !== "custom" && startDateLocked && (
+                <p className="text-[11px] text-muted-foreground">Herdada da data de início principal da tarefa.</p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>{uiFrequency === "custom" ? "Última data" : "Data final (opcional)"}</Label>

@@ -576,10 +576,15 @@ function ClientForm({
           const habitualSchedule = scheduleEnabled
             ? schedules.map((schedule, index) => {
                 if (schedule.weekdays.length === 0) throw new Error(`Selecione pelo menos um dia na programação ${index + 1}.`);
-                if (schedule.mode === "fixed" && (!schedule.startTime || !schedule.endTime)) {
+                const hasStart = Boolean(schedule.startTime);
+                const hasEnd = Boolean(schedule.endTime);
+                if (schedule.mode === "fixed" && (!hasStart || !hasEnd)) {
                   throw new Error(`Informe início e fim na programação ${index + 1}, ou escolha horário flexível.`);
                 }
-                if (schedule.mode === "fixed" && calculateWallDurationMinutes(schedule.startTime!, schedule.endTime!) == null) {
+                if (hasStart !== hasEnd) {
+                  throw new Error(`Informe início e fim juntos na programação ${index + 1}.`);
+                }
+                if (hasStart && hasEnd && calculateWallDurationMinutes(schedule.startTime!, schedule.endTime!) == null) {
                   throw new Error(`Informe horários diferentes e válidos na programação ${index + 1}.`);
                 }
                 if (schedule.frequency === "cycle" && !schedule.cycleAnchorDate) {
@@ -599,8 +604,8 @@ function ClientForm({
                   label: schedule.label?.trim() || null,
                   weekdays: [...schedule.weekdays].sort((a, b) => a - b),
                   mode: schedule.mode,
-                  start_time: schedule.mode === "fixed" ? schedule.startTime : null,
-                  end_time: schedule.mode === "fixed" ? schedule.endTime : null,
+                  start_time: schedule.startTime || null,
+                  end_time: schedule.endTime || null,
                   ...(total != null ? { contracted_minutes: total } : {}),
                   frequency: schedule.frequency === "cycle" ? "cycle" : "weekly",
                   ...(schedule.frequency === "cycle"
@@ -847,18 +852,19 @@ function ClientForm({
                     </SelectContent>
                   </Select>
                 </div>
-                {schedule.mode === "fixed" && (
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <Label className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Hora de início</Label>
-                      <Input type="time" value={schedule.startTime ?? ""} onChange={(e) => setSchedules((current) => current.map((s, i) => i === index ? { ...s, startTime: e.target.value } : s))} />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Hora de fim</Label>
-                      <Input type="time" value={schedule.endTime ?? ""} onChange={(e) => setSchedules((current) => current.map((s, i) => i === index ? { ...s, endTime: e.target.value } : s))} />
-                      {isOvernightTimeRange(schedule.startTime ?? "", schedule.endTime ?? "") && <p className="text-xs text-muted-foreground">O fim será considerado no dia seguinte (+1 dia).</p>}
-                    </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Hora de início <span className="text-xs text-muted-foreground">(opcional no flexível)</span></Label>
+                    <Input type="time" value={schedule.startTime ?? ""} onChange={(e) => setSchedules((current) => current.map((s, i) => i === index ? { ...s, startTime: e.target.value } : s))} />
                   </div>
+                  <div className="space-y-1.5">
+                    <Label className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Hora de fim <span className="text-xs text-muted-foreground">(opcional no flexível)</span></Label>
+                    <Input type="time" value={schedule.endTime ?? ""} onChange={(e) => setSchedules((current) => current.map((s, i) => i === index ? { ...s, endTime: e.target.value } : s))} />
+                    {isOvernightTimeRange(schedule.startTime ?? "", schedule.endTime ?? "") && <p className="text-xs text-muted-foreground">O fim será considerado no dia seguinte (+1 dia).</p>}
+                  </div>
+                </div>
+                {schedule.mode === "fixed" && (
+                  <p className="text-xs text-muted-foreground">No horário fixo, início e fim são obrigatórios. No flexível, são opcionais e servem como sugestão.</p>
                 )}
                 {schedule.mode === "flexible" && <p className="rounded-md border border-border bg-background p-2 text-xs text-muted-foreground">A data segue os dias selecionados; o horário será definido manualmente na tarefa.</p>}
                 <div className="grid gap-3 sm:grid-cols-2">

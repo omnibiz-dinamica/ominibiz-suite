@@ -276,7 +276,10 @@ function TasksPage() {
       return (data ?? []) as unknown as TaskRow[];
     },
     enabled: !!user && !!currentCompanyId,
-    refetchOnWindowFocus: true,
+    // A lista pode continuar atualizando enquanto o utilizador navega. Com
+    // um modal de cadastro aberto, o formulário local é a fonte de verdade e
+    // não deve ser interrompido por um refetch ao voltar à aba.
+    refetchOnWindowFocus: !open && !editing,
   });
 
   // Uma consulta única vincula o ponto mais recente a cada tarefa exibida.
@@ -305,7 +308,7 @@ function TasksPage() {
       const { data: roles } = await supabase.from("user_roles").select("user_id").eq("company_id", currentCompanyId);
       const ids = (roles ?? []).map((r) => r.user_id);
       if (ids.length === 0) return [];
-      const { data: profs } = await supabase.from("profiles").select("id, full_name, job_title").in("id", ids);
+      const { data: profs } = await supabase.from("profiles").select("id, full_name, email, job_title").in("id", ids);
       return profs ?? [];
     },
     enabled: isManager && !!currentCompanyId,
@@ -2680,6 +2683,7 @@ function TaskForm({
   const confirmedConflictsRef = useRef(false);
 
   const handleRecurrenceChange = (next: RecurrenceFormValue) => {
+    if (startDate && next.frequency !== "custom") next = { ...next, startDate };
     setRecurrence(next);
     if (next.enabled && next.frequency === "custom") {
       // The explicit date selection is also the task's visible date range.
@@ -2723,6 +2727,18 @@ function TaskForm({
   );
 
   useEffect(() => {
+    if (initial || !startDate) return;
+    // Datas de negócio não passam por Date/UTC. A data principal é a única
+    // fonte para séries normais; recorrências customizadas continuam sendo
+    // definidas pelo calendário de datas específicas.
+    setRecurrence((current) =>
+      current.frequency === "custom" || current.startDate === startDate
+        ? current
+        : { ...current, startDate },
+    );
+  }, [initial, startDate]);
+
+  useEffect(() => {
     if (initial || manualEndOverride || contractedMinutes == null || !startDate || !startTime || assignees.length === 0) {
       return;
     }
@@ -2743,13 +2759,9 @@ function TaskForm({
   const applySlot = (slot: ClientScheduleSlot, silent = false) => {
     setSelectedScheduleId(slot.id);
     setManualEndOverride(false);
-    if (slot.scheduleType === "fixed") {
-      setStartTime(slot.startTime ?? "");
-      setEndTime(slot.endTime ?? "");
-    } else {
-      setStartTime("");
-      setEndTime("");
-    }
+    // Flexible schedules may still contain an optional suggested time pair.
+    setStartTime(slot.startTime ?? "");
+    setEndTime(slot.endTime ?? "");
     if (slot.punchMode) setPunchMode(slot.punchMode as PunchMode);
     setSchedulePrompt([]);
     if (!silent) setScheduleHint(`Horário sugerido pela programação do cliente: ${describeSlot(slot)}.`);
@@ -2872,6 +2884,20 @@ function TaskForm({
           toast.error("Data de fim obrigatória.");
           return;
         }
+        const recurrenceStartDate = recurrence.enabled
+          ? recurrence.frequency === "custom"
+            ? recurrence.startDate
+            : startDate
+          : startDate;
+        const recurrenceEndDate = recurrence.enabled ? recurrence.endDate || null : null;
+        if (recurrence.enabled && (!recurrenceStartDate || !datePattern.test(recurrenceStartDate))) {
+          toast.error("Data de início da recorrência inválida.");
+          return;
+        }
+        if (recurrence.enabled && recurrenceEndDate && (!datePattern.test(recurrenceEndDate) || recurrenceEndDate < recurrenceStartDate)) {
+          toast.error("A data final da recorrência deve ser igual ou posterior à data inicial.");
+          return;
+        }
         const startISO = startTime ? wallDateTimeToISO(startDate, startTime) : null;
         const resolvedEndDate =
           startDate && endDate === startDate && isOvernightTimeRange(startTime, endTime)
@@ -2907,8 +2933,8 @@ function TaskForm({
         }
         // Conflito com férias aprovadas dos funcionários no período.
         {
-          const rangeStart = recurrence.enabled ? recurrence.startDate || startDate : startDate;
-          const rangeEnd = recurrence.enabled ? recurrence.endDate || endDate : endDate;
+          const rangeStart = recurrence.enabled ? recurrenceStartDate : startDate;
+          const rangeEnd = recurrence.enabled ? recurrenceEndDate || endDate : endDate;
           const { data: vacations } = await supabase
             .from("vacation_requests")
             .select("start_date, end_date, user_id")
@@ -2997,8 +3023,8 @@ function TaskForm({
                       recurrence.monthPosition != null
                         ? { position: recurrence.monthPosition, weekday: recurrence.monthWeekday }
                         : { day_of_month: recurrence.dayOfMonth },
-                    startDate: recurrence.startDate,
-                    endDate: recurrence.endDate || null,
+                    startDate: recurrenceStartDate,
+                    endDate: recurrenceEndDate,
                   },
                   400,
                 ).map(localDateToDateKey)
@@ -3103,8 +3129,8 @@ function TaskForm({
                     ? { position: recurrence.monthPosition, weekday: recurrence.monthWeekday }
                     : { day_of_month: recurrence.dayOfMonth }
                   : {},
-              start_date: recurrence.startDate,
-              end_date: recurrence.endDate || null,
+              start_date: recurrenceStartDate,
+              end_date: recurrenceEndDate,
               selected_dates:
                 recurrence.frequency === "custom"
                   ? normalizeCustomRecurrenceDates(recurrence.selectedDates)
@@ -3391,12 +3417,14 @@ function TaskForm({
             </Select>
           ) : (
             <>
+              <Label htmlFor="task-assignee-search">Nome do funcionário</Label>
               <div className="relative">
                 <Search
                   className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                   aria-hidden
                 />
                 <Input
+                  id="task-assignee-search"
                   value={assigneeQuery}
                   onChange={(e) => setAssigneeQuery(e.target.value)}
                   placeholder="Pesquisar funcionário"
@@ -3520,7 +3548,14 @@ function TaskForm({
           </Select>
         </div>
       </div>
-      {!initial && <RecurrenceForm value={recurrence} onChange={handleRecurrenceChange} timingMode={timingMode} />}
+      {!initial && (
+        <RecurrenceForm
+          value={recurrence}
+          onChange={handleRecurrenceChange}
+          timingMode={timingMode}
+          startDateLocked
+        />
+      )}
     </form>
     {documentsSlot && <div className="border-t border-border pt-4">{documentsSlot}</div>}
     </ModalBody>
