@@ -69,7 +69,9 @@ export interface TaskRow {
   cancelled_by?: string | null;
   cancellation_reason?: string | null;
   schedule_change_requested_date?: string | null;
+  schedule_change_requested_time?: string | null;
   schedule_change_needs_reassignment?: boolean | null;
+  schedule_change_suggested_employee_id?: string | null;
   refusal_reason?: string | null;
   refused_at?: string | null;
   refused_by?: string | null;
@@ -670,7 +672,14 @@ export async function transitionTask(taskId: string, action: TaskAction, reason?
 
 export type ScheduleChangeRequest = {
   requestedDate: string;
+  /** Hora desejada (HH:MM). Opcional — o pedido continua válido só com a data. */
+  requestedTime?: string | null;
   needsReassignment: boolean;
+  /**
+   * ADR-062 — sugestão INFORMATIVA de responsável. Nunca reatribui a tarefa;
+   * serve apenas para o gestor decidir.
+   */
+  suggestedEmployeeId?: string | null;
 };
 
 /** Recusa com pedido estruturado de alteracao para a ocorrencia atual. */
@@ -686,7 +695,9 @@ export async function transitionTaskWithScheduleRequest(
     _action: action,
     _reason: reason,
     _requested_date: request.requestedDate,
+    _requested_time: request.requestedTime || null,
     _needs_reassignment: request.needsReassignment,
+    _suggested_employee_id: request.suggestedEmployeeId || null,
   });
   if (error) throw error;
   return data as TaskRow;
