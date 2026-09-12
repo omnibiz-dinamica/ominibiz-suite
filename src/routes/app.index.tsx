@@ -37,12 +37,26 @@ function ManagerDashboard() {
     enabled: initialized && !!user && (!isManager || !!currentCompanyId || isSuperAdmin),
   });
 
+  // Atrasada: vencimento/horário agendado já passou e a tarefa segue pendente/em andamento.
+  const isOverdue = (t: (typeof tasks extends (infer U)[] | undefined ? U : never)) => {
+    if (!t || !["pendente", "autorizado", "em_andamento"].includes(t.status)) return false;
+    if (t.archived_at || t.deleted_at || isDashboardCancelled(t)) return false;
+    if (t.status === "em_andamento" && t.started_at) {
+      return isDashboardLateStart(t);
+    }
+    const due = t.scheduled_for ?? t.due_at ?? null;
+    if (!due) return false;
+    const dueMs = new Date(due).getTime();
+    return Number.isFinite(dueMs) && dueMs < Date.now();
+  };
+
   const counts = {
-    pendente: tasks?.filter((t) => t.status === "pendente" && !isDashboardLateStart(t)).length ?? 0,
+    pendente: tasks?.filter((t) => t.status === "pendente" && !isOverdue(t)).length ?? 0,
     em_andamento: tasks?.filter((t) => t.status === "em_andamento").length ?? 0,
     concluido: tasks?.filter((t) => t.status === "concluido").length ?? 0,
-    atrasadas: tasks?.filter((t) => isDashboardLateStart(t)).length ?? 0,
+    atrasadas: tasks?.filter((t) => isOverdue(t)).length ?? 0,
     canceladas: tasks?.filter((t) => isDashboardCancelled(t)).length ?? 0,
+    recusadas: tasks?.filter((t) => t.status === "cancelado" && !!t.refused_by && !t.archived_at && !t.deleted_at).length ?? 0,
   };
 
   const cards = [
@@ -50,7 +64,7 @@ function ManagerDashboard() {
     { label: "Em andamento", value: counts.em_andamento, icon: Clock, tone: "text-primary", status: "em_andamento" as const },
     { label: "Concluídas", value: counts.concluido, icon: CheckCircle2, tone: "text-success", status: "concluido" as const },
     { label: "Atrasadas", value: counts.atrasadas, icon: AlertTriangle, tone: "text-destructive", status: "atrasadas" as const },
-    { label: "Canceladas", value: counts.canceladas, icon: Ban, tone: "text-muted-foreground", status: "canceladas" as const },
+    { label: "Canceladas/Recusadas", value: counts.canceladas + counts.recusadas, icon: Ban, tone: "text-muted-foreground", status: "canceladas" as const },
   ];
 
   return (
