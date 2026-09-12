@@ -27,6 +27,7 @@ import {
   LogIn as LogInIcon,
   UserX,
   Ban,
+  XCircle,
   Archive,
 } from "lucide-react";
 import { TaskDocuments } from "@/components/tasks/TaskDocuments";
