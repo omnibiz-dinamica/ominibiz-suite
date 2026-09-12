@@ -9,7 +9,9 @@ export interface TaskRefusalRecord {
   new_status: string;
   created_at: string;
   schedule_change_requested_date?: string | null;
+  schedule_change_requested_time?: string | null;
   schedule_change_needs_reassignment?: boolean | null;
+  schedule_change_suggested_employee_id?: string | null;
 }
 
 type RefusedTaskSnapshot = {
@@ -22,7 +24,9 @@ type RefusedTaskSnapshot = {
   refused_at?: string | null;
   refused_by?: string | null;
   schedule_change_requested_date?: string | null;
+  schedule_change_requested_time?: string | null;
   schedule_change_needs_reassignment?: boolean | null;
+  schedule_change_suggested_employee_id?: string | null;
 };
 
 export interface TaskRefusalDetails {
@@ -30,11 +34,14 @@ export interface TaskRefusalDetails {
   reason: string | null;
   refusedAt: string | null;
   requestedDate: string | null;
+  requestedTime: string | null;
   needsReassignment: boolean | null;
+  suggestedEmployeeId: string | null;
 }
 
 export interface TaskRejectionNotificationDetails extends TaskRefusalDetails {
   employeeName: string | null;
+  suggestedEmployeeName: string | null;
 }
 
 export interface TaskCancellationDetails {
@@ -43,11 +50,21 @@ export interface TaskCancellationDetails {
   cancelledAt: string | null;
   byEmployee: boolean;
   requestedDate: string | null;
+  requestedTime: string | null;
   needsReassignment: boolean | null;
+  suggestedEmployeeId: string | null;
 }
 
 function nonBlank(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+/** "14:30:00" → "14:30". Mantém o valor cru quando não é uma hora reconhecível. */
+export function formatRequestedTime(value: string | null): string | null {
+  const raw = nonBlank(value);
+  if (!raw) return null;
+  const match = /^(\d{2}):(\d{2})/.exec(raw);
+  return match ? `${match[1]}:${match[2]}` : raw;
 }
 
 export function groupTaskRefusals(
@@ -84,12 +101,19 @@ export function currentTaskRefusal(
     requestedDate:
       nonBlank(task.schedule_change_requested_date) ??
       nonBlank(matchingHistory?.schedule_change_requested_date),
+    requestedTime: formatRequestedTime(
+      nonBlank(task.schedule_change_requested_time) ??
+        nonBlank(matchingHistory?.schedule_change_requested_time),
+    ),
     needsReassignment:
       typeof task.schedule_change_needs_reassignment === "boolean"
         ? task.schedule_change_needs_reassignment
         : typeof matchingHistory?.schedule_change_needs_reassignment === "boolean"
           ? matchingHistory.schedule_change_needs_reassignment
           : null,
+    suggestedEmployeeId:
+      nonBlank(task.schedule_change_suggested_employee_id) ??
+      nonBlank(matchingHistory?.schedule_change_suggested_employee_id),
   };
 }
 
@@ -102,10 +126,12 @@ export function currentTaskCancellation(task: RefusedTaskSnapshot): TaskCancella
     cancelledAt: nonBlank(task.cancelled_at),
     byEmployee: !!cancelledBy && cancelledBy === nonBlank(task.assigned_to),
     requestedDate: nonBlank(task.schedule_change_requested_date),
+    requestedTime: formatRequestedTime(nonBlank(task.schedule_change_requested_time)),
     needsReassignment:
       typeof task.schedule_change_needs_reassignment === "boolean"
         ? task.schedule_change_needs_reassignment
         : null,
+    suggestedEmployeeId: nonBlank(task.schedule_change_suggested_employee_id),
   };
 }
 
@@ -123,10 +149,13 @@ export function taskRejectionNotificationDetails(
     reason: nonBlank(metadata.refusal_reason),
     refusedAt: nonBlank(metadata.refused_at),
     requestedDate: nonBlank(metadata.schedule_change_requested_date),
+    requestedTime: formatRequestedTime(nonBlank(metadata.schedule_change_requested_time)),
     needsReassignment:
       typeof metadata.schedule_change_needs_reassignment === "boolean"
         ? metadata.schedule_change_needs_reassignment
         : null,
+    suggestedEmployeeId: nonBlank(metadata.schedule_change_suggested_employee_id),
+    suggestedEmployeeName: nonBlank(metadata.schedule_change_suggested_employee_name),
   };
 }
 

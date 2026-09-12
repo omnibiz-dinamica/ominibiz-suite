@@ -743,7 +743,8 @@ export function canArchive(t: Pick<TaskRow, "status" | "archived_at">): boolean 
 
 /**
  * ADR-036 — "Arquivado" é dimensão de visibilidade, NUNCA status operacional.
- * Cancelamento auditado com motivo obrigatório (gestor ou responsável).
+ * ADR-062 — Cancelamento é exclusivo do gestor/owner/super admin. O responsável
+ * recusa a tarefa (`recusar`), nunca cancela.
  */
 export const CANCEL_REASONS = [
   "Cliente cancelou",
@@ -754,6 +755,19 @@ export const CANCEL_REASONS = [
   "Problema pessoal",
   "Outro",
 ] as const;
+
+/**
+ * ADR-062 — Motivos canónicos da recusa do funcionário. O valor gravado é o
+ * mesmo já usado pelo histórico ("Alteração de programação"), apenas com
+ * rótulo operacional mais claro na interface.
+ */
+export const REFUSAL_REASONS = [
+  { value: "Cliente cancelou", label: "Cliente cancelou" },
+  { value: "Alteração de programação", label: "Alterar data / hora" },
+  { value: "Outro", label: "Outro" },
+] as const;
+
+export const SCHEDULE_CHANGE_REASON = "Alteração de programação";
 
 export async function cancelTask(taskId: string, reason: string): Promise<TaskRow> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -776,21 +790,33 @@ export async function cancelTaskWithScheduleRequest(
     _task_id: taskId,
     _reason: reason,
     _requested_date: request.requestedDate,
+    _requested_time: request.requestedTime || null,
     _needs_reassignment: request.needsReassignment,
+    _suggested_employee_id: request.suggestedEmployeeId || null,
   });
   if (error) throw error;
   return data as TaskRow;
 }
 
-/** Gestor cancela qualquer tarefa não finalizada; responsável cancela a sua. */
+/**
+ * ADR-062 — Apenas gestor/owner/super admin cancela. A regra final está em
+ * `public.task_cancel`; a UI só espelha para não oferecer a ação ao funcionário.
+ */
 export function canCancelTask(
   t: Pick<TaskRow, "status" | "assigned_to">,
   ctx: { userId: string; isManager: boolean },
 ): boolean {
   if (t.status === "cancelado" || t.status === "concluido") return false;
-  if (ctx.isManager) return true;
+  return ctx.isManager;
+}
+
+/** O responsável recusa a própria tarefa enquanto ela não foi iniciada. */
+export function canRefuseTask(
+  t: Pick<TaskRow, "status" | "assigned_to">,
+  ctx: { userId: string },
+): boolean {
   if (t.assigned_to !== ctx.userId) return false;
-  return t.status !== "ausente";
+  return t.status === "pendente" || t.status === "autorizado";
 }
 
 /** Erro canónico do backend quando existe ponto aberto na tarefa. */
