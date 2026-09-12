@@ -27,7 +27,7 @@ function ManagerDashboard() {
     queryFn: async () => {
       let q = supabase
         .from("tasks")
-        .select("id, status, scheduled_for, started_at, archived_at, deleted_at, refused_by, title");
+        .select("id, status, scheduled_for, started_at, archived_at, deleted_at, refused_by, title, due_at");
       if (!isManager) q = q.eq("assigned_to", user!.id);
       else if (currentCompanyId) q = q.eq("company_id", currentCompanyId);
       const { data, error } = await q;
@@ -37,12 +37,26 @@ function ManagerDashboard() {
     enabled: initialized && !!user && (!isManager || !!currentCompanyId || isSuperAdmin),
   });
 
+  // Atrasada: vencimento/horário agendado já passou e a tarefa segue pendente/em andamento.
+  const isOverdue = (t: { status: string; scheduled_for?: string | null; started_at?: string | null; due_at?: string | null; archived_at?: string | null; deleted_at?: string | null; refused_by?: string | null }) => {
+    if (!t || !["pendente", "autorizado", "em_andamento"].includes(t.status)) return false;
+    if (t.archived_at || t.deleted_at || isDashboardCancelled(t)) return false;
+    if (t.status === "em_andamento" && t.started_at) {
+      return isDashboardLateStart(t);
+    }
+    const due = t.scheduled_for ?? t.due_at ?? null;
+    if (!due) return false;
+    const dueMs = new Date(due).getTime();
+    return Number.isFinite(dueMs) && dueMs < Date.now();
+  };
+
   const counts = {
-    pendente: tasks?.filter((t) => t.status === "pendente" && !isDashboardLateStart(t)).length ?? 0,
+    pendente: tasks?.filter((t) => t.status === "pendente" && !isOverdue(t)).length ?? 0,
     em_andamento: tasks?.filter((t) => t.status === "em_andamento").length ?? 0,
     concluido: tasks?.filter((t) => t.status === "concluido").length ?? 0,
-    atrasadas: tasks?.filter((t) => isDashboardLateStart(t)).length ?? 0,
+    atrasadas: tasks?.filter((t) => isOverdue(t)).length ?? 0,
     canceladas: tasks?.filter((t) => isDashboardCancelled(t)).length ?? 0,
+    recusadas: tasks?.filter((t) => t.status === "cancelado" && !!t.refused_by && !t.archived_at && !t.deleted_at).length ?? 0,
   };
 
   const cards = [
@@ -50,7 +64,7 @@ function ManagerDashboard() {
     { label: "Em andamento", value: counts.em_andamento, icon: Clock, tone: "text-primary", status: "em_andamento" as const },
     { label: "Concluídas", value: counts.concluido, icon: CheckCircle2, tone: "text-success", status: "concluido" as const },
     { label: "Atrasadas", value: counts.atrasadas, icon: AlertTriangle, tone: "text-destructive", status: "atrasadas" as const },
-    { label: "Canceladas", value: counts.canceladas, icon: Ban, tone: "text-muted-foreground", status: "canceladas" as const },
+    { label: "Canceladas/Recusadas", value: counts.canceladas + counts.recusadas, icon: Ban, tone: "text-muted-foreground", status: "canceladas" as const },
   ];
 
   return (
@@ -95,7 +109,15 @@ function ManagerDashboard() {
               <span className="text-sm text-muted-foreground">{c.label}</span>
               <c.icon className={`h-4 w-4 ${c.tone}`} />
             </div>
-            <div className="mt-3 font-display text-3xl font-semibold group-hover:text-primary">{c.value}</div>
+            {c.status === "canceladas" ? (
+              <div className="mt-3 flex items-baseline gap-2 font-display text-2xl font-semibold group-hover:text-primary">
+                <span>{counts.canceladas} <span className="text-sm font-normal text-muted-foreground">Canceladas</span></span>
+                <span className="text-muted-foreground">|</span>
+                <span>{counts.recusadas} <span className="text-sm font-normal text-muted-foreground">Recusadas</span></span>
+              </div>
+            ) : (
+              <div className="mt-3 font-display text-3xl font-semibold group-hover:text-primary">{c.value}</div>
+            )}
           </Link>
         ))}
       </div>
