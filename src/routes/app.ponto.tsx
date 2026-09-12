@@ -255,19 +255,14 @@ function PontoPage() {
     queryKey: ["punch-company-members", currentCompanyId],
     queryFn: async () => {
       if (!currentCompanyId) return [] as { id: string; full_name: string | null }[];
-      const { data: roles, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("company_id", currentCompanyId);
-      if (rolesError) throw rolesError;
-      const ids = [...new Set((roles ?? []).map((r) => r.user_id))];
-      if (ids.length === 0) return [];
-      const { data: profs, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, full_name")
-        .in("id", ids);
-      if (profilesError) throw profilesError;
-      return (profs ?? []) as { id: string; full_name: string | null }[];
+      // ADR-062 — funcionários não leem user_roles/profiles de terceiros por RLS;
+      // a RPC company_member_options devolve apenas (id, nome) dos colegas da empresa.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.rpc as any)("company_member_options");
+      if (error) throw error;
+      return ((data ?? []) as { id: string; full_name: string | null; company_id: string }[])
+        .filter((m) => m.company_id === currentCompanyId)
+        .map(({ id, full_name }) => ({ id, full_name }));
     },
     enabled: !!currentCompanyId,
   });
