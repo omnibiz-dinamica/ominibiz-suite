@@ -1372,3 +1372,27 @@ a ser perdida silenciosamente.
 
 **Consequências.** RLS/RBAC, isolamento multiempresa, ponto, férias, faltas,
 folha de ponto e fechamento mensal permanecem inalterados.
+
+
+## ADR-061 — Regra temporal canónica das tarefas e data do fim em wall clock
+
+**Contexto.** A regra de atraso disparava por igualdade temporal (no próprio
+segundo do horário programado) e a data de fim do formulário avançava para o dia
+seguinte por leitura de valores intermédios da hora como turno noturno.
+
+**Decisão.**
+1. `resolveOperationalStatus` continua a fonte única do estado temporal:
+   Pendente até ao horário (inclusive), Atrasada a partir de 1 segundo depois,
+   Ausente às 24 horas completas. Nenhum arredondamento a minutos.
+2. Estados iniciados/terminais (em andamento, concluído, cancelado, recusado,
+   arquivado) são autoritativos e nunca recalculados como Atrasada/Ausente.
+3. Tarefas sem horário mantêm a regra existente (Pendente no dia, Ausente no dia
+   seguinte); nunca recebem Atrasada.
+4. `resolveWallEndDate` é a fonte única da data de fim em wall clock, usada pelo
+   formulário e pela gravação. Turno noturno permanece definido por
+   `isOvernightTimeRange`; nunca é criado automaticamente.
+5. A guarda de base de dados `enforce_task_absence_threshold` permanece
+   inalterada — é um piso para marcação manual, não a regra de exibição.
+
+**Consequências.** Ponto, férias, faltas, fechamento mensal, recorrências e
+permissões permanecem inalterados.
