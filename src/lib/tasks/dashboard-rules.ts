@@ -7,6 +7,8 @@ export type DashboardTaskSnapshot = {
   refused_by?: string | null;
 };
 
+import { wallClockEpoch } from "./operational-rules";
+
 const ACTIVE_STATUSES = new Set(["pendente", "autorizado", "em_andamento"]);
 
 /** A refusal is stored as cancelled but remains a separate dashboard category. */
@@ -34,11 +36,30 @@ export function isDashboardLateStart(task: DashboardTaskSnapshot, now = new Date
 
   if (task.started_at) {
     const actualStart = new Date(task.started_at);
-    return Number.isFinite(actualStart.getTime()) && actualStart.getTime() > scheduledStart.getTime();
+    return Number.isFinite(actualStart.getTime()) && wallClockEpoch(actualStart) > scheduledStart.getTime();
   }
 
-  const nowMs = now.getTime();
+  const nowMs = wallClockEpoch(now);
   const scheduledMs = scheduledStart.getTime();
   // 12092026-001c — atraso apenas a partir do primeiro instante posterior.
   return nowMs > scheduledMs && nowMs < scheduledMs + 24 * 60 * 60 * 1000;
+}
+
+/** Dashboard card semantics: all active work whose local operational time has passed. */
+export function isDashboardOverdue(task: DashboardTaskSnapshot & { due_at?: string | null }, now = new Date()): boolean {
+  if (
+    !ACTIVE_STATUSES.has(task.status) ||
+    task.archived_at ||
+    task.deleted_at ||
+    isDashboardCancelled(task)
+  ) {
+    return false;
+  }
+
+  if (task.status === "em_andamento" && task.started_at) return isDashboardLateStart(task, now);
+
+  const due = task.scheduled_for ?? task.due_at;
+  if (!due) return false;
+  const dueMs = new Date(due).getTime();
+  return Number.isFinite(dueMs) && wallClockEpoch(now) > dueMs;
 }
