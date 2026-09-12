@@ -246,6 +246,55 @@ function PontoPage() {
     enabled: !!currentCompanyId,
   });
 
+  /**
+   * ADR-062 — colegas da mesma empresa para a sugestão INFORMATIVA de
+   * reatribuição. RLS/RBAC decidem o que a sessão pode ler; se nada for
+   * legível, a sugestão fica simplesmente indisponível.
+   */
+  const { data: companyMembers } = useQuery({
+    queryKey: ["punch-company-members", currentCompanyId],
+    queryFn: async () => {
+      if (!currentCompanyId) return [] as { id: string; full_name: string | null }[];
+      const { data: roles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("company_id", currentCompanyId);
+      if (rolesError) throw rolesError;
+      const ids = [...new Set((roles ?? []).map((r) => r.user_id))];
+      if (ids.length === 0) return [];
+      const { data: profs, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", ids);
+      if (profilesError) throw profilesError;
+      return (profs ?? []) as { id: string; full_name: string | null }[];
+    },
+    enabled: !!currentCompanyId,
+  });
+
+  const refuseTask = useMutation({
+    mutationFn: async (payload: RefusalSubmitPayload) => {
+      if (!refuseTarget) throw new Error("Tarefa não encontrada.");
+      if (payload.requestedDate) {
+        return transitionTaskWithScheduleRequest(refuseTarget.id, "recusar", payload.reason, {
+          requestedDate: payload.requestedDate,
+          requestedTime: payload.requestedTime,
+          needsReassignment: !!payload.needsReassignment,
+          suggestedEmployeeId: payload.suggestedEmployeeId,
+        });
+      }
+      return transitionTask(refuseTarget.id, "recusar", payload.reason);
+    },
+    onSuccess: () => {
+      setRefuseTarget(null);
+      qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+      toast.success("Tarefa recusada. O gestor foi notificado.");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   // O mapa acima pode ainda não conter o cliente quando um ponto já estava
   // aberto antes da troca/atualização da empresa ativa. Busca apenas o cliente
   // da tarefa em andamento como fallback, sem alterar o registro da tarefa.
