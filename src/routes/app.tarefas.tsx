@@ -2048,9 +2048,19 @@ function CalendarTaskCard({
           {refusal.refusedAt && (
             <div className="text-muted-foreground">Recusada em: {formatLocalTime(refusal.refusedAt)}</div>
           )}
-          {refusal.requestedDate && <div>Nova data: {formatWallDate(refusal.requestedDate)}</div>}
+          {refusal.requestedDate && (
+            <div>
+              Nova data: {formatWallDate(refusal.requestedDate)}
+              {refusal.requestedTime ? ` · ${refusal.requestedTime}` : ""}
+            </div>
+          )}
           {refusal.needsReassignment != null && (
             <div>Reatribuição: {refusal.needsReassignment ? "Sim" : "Não"}</div>
+          )}
+          {refusal.suggestedEmployeeId && (
+            <div>
+              Sugestão (informativa): {memberNames.get(refusal.suggestedEmployeeId) ?? "Sem responsável"}
+            </div>
           )}
         </div>
       )}
@@ -2065,9 +2075,19 @@ function CalendarTaskCard({
           {cancellation.cancelledAt && (
             <div className="text-muted-foreground">Cancelada em: {formatLocalTime(cancellation.cancelledAt)}</div>
           )}
-          {cancellation.requestedDate && <div>Nova data: {formatWallDate(cancellation.requestedDate)}</div>}
+          {cancellation.requestedDate && (
+            <div>
+              Nova data: {formatWallDate(cancellation.requestedDate)}
+              {cancellation.requestedTime ? ` · ${cancellation.requestedTime}` : ""}
+            </div>
+          )}
           {cancellation.needsReassignment != null && (
             <div>Reatribuição: {cancellation.needsReassignment ? "Sim" : "Não"}</div>
+          )}
+          {cancellation.suggestedEmployeeId && (
+            <div>
+              Sugestão (informativa): {memberNames.get(cancellation.suggestedEmployeeId) ?? "Sem responsável"}
+            </div>
           )}
         </div>
       )}
@@ -2355,9 +2375,20 @@ function TaskRowItem({
             {refusal.refusedAt && (
               <div className="text-muted-foreground">Recusada em: {formatLocalTime(refusal.refusedAt)}</div>
             )}
-            {refusal.requestedDate && <div>Nova data desejada: {formatWallDate(refusal.requestedDate)}</div>}
+            {refusal.requestedDate && (
+              <div>
+                Nova data desejada: {formatWallDate(refusal.requestedDate)}
+                {refusal.requestedTime ? ` · ${refusal.requestedTime}` : ""}
+              </div>
+            )}
             {refusal.needsReassignment != null && (
               <div>Reatribuição necessária: {refusal.needsReassignment ? "Sim" : "Não"}</div>
+            )}
+            {refusal.suggestedEmployeeId && (
+              <div>
+                Funcionário sugerido (informativo):{" "}
+                {memberNames.get(refusal.suggestedEmployeeId) ?? "Sem responsável"}
+              </div>
             )}
             {isManager && (
               <button
@@ -2381,9 +2412,20 @@ function TaskRowItem({
             {cancellation.cancelledAt && (
               <div className="text-muted-foreground">Cancelada em: {formatLocalTime(cancellation.cancelledAt)}</div>
             )}
-            {cancellation.requestedDate && <div>Nova data desejada: {formatWallDate(cancellation.requestedDate)}</div>}
+            {cancellation.requestedDate && (
+              <div>
+                Nova data desejada: {formatWallDate(cancellation.requestedDate)}
+                {cancellation.requestedTime ? ` · ${cancellation.requestedTime}` : ""}
+              </div>
+            )}
             {cancellation.needsReassignment != null && (
               <div>Reatribuição necessária: {cancellation.needsReassignment ? "Sim" : "Não"}</div>
+            )}
+            {cancellation.suggestedEmployeeId && (
+              <div>
+                Funcionário sugerido (informativo):{" "}
+                {memberNames.get(cancellation.suggestedEmployeeId) ?? "Sem responsável"}
+              </div>
             )}
           </div>
         )}
