@@ -1396,3 +1396,31 @@ seguinte por leitura de valores intermédios da hora como turno noturno.
 
 **Consequências.** Ponto, férias, faltas, fechamento mensal, recorrências e
 permissões permanecem inalterados.
+
+## ADR-062 — Autoridade de recusa/cancelamento e isolamento do ambiente de teste
+
+**Contexto.** O funcionário conseguia cancelar tarefas (autonomia indevida), o
+pedido de alteração de programação não capturava hora nem sugestão de colega, o
+Grupo V-clean TESTE partilhava memberships com utilizadores reais da produção e
+tarefas removidas (soft delete) continuavam a ser lidas, aparentando duplicação.
+
+**Decisão.**
+1. Cancelar é exclusivo de gestor/owner/super admin, validado em
+   `public.task_cancel` e espelhado por `canCancelTask`. O funcionário recusa
+   (`recusar`) através de `canRefuseTask` e do diálogo único
+   `src/components/tasks/RefuseTaskDialog.tsx`.
+2. O pedido de nova data/hora e o funcionário sugerido são **informativos**:
+   gravados em `tasks`/`task_refusals`/`task_audit_events` e nas notificações,
+   sem mover a ocorrência, sem alterar `recurrence_id` e sem reatribuir.
+   A sugestão é validada no mesmo `company_id` (RLS/RBAC preservados).
+3. Tarefas com `deleted_at` preenchido nunca são fonte de verdade operacional.
+   Lista, Calendário e Ponto filtram `deleted_at IS NULL`; tarefas em equipe
+   continuam a render uma linha por responsável (mesmo `task_group_id`), sem
+   `DISTINCT`.
+4. O ambiente de teste tem identidades próprias e exclusivas. Nenhuma identidade
+   de produção mantém membership, contexto de empresa ou vínculo de cliente na
+   empresa de teste; a produção nunca é alterada para servir o teste.
+
+**Consequências.** Uma única entidade canónica de tarefa serve Lista, Calendário,
+Detalhe, Ponto e Dashboards. O gestor recebe o pedido com dados reais e decide
+explicitamente; nada é reagendado ou reatribuído por automatismo.
