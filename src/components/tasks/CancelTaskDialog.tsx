@@ -35,6 +35,8 @@ export function CancelTaskDialog({
 }: {
   task: TaskRow | null;
   clientName?: string;
+  /** Membros da mesma empresa para sugestão informativa de reatribuição. */
+  members?: Array<{ id: string; full_name: string | null }>;
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onDone: () => void;
@@ -44,7 +46,9 @@ export function CancelTaskDialog({
   const [reason, setReason] = useState<string>("");
   const [other, setOther] = useState("");
   const [requestedDate, setRequestedDate] = useState("");
+  const [requestedTime, setRequestedTime] = useState("");
   const [needsReassignment, setNeedsReassignment] = useState(false);
+  const [suggested, setSuggested] = useState("none");
   const [confirming, setConfirming] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -53,10 +57,14 @@ export function CancelTaskDialog({
       setReason("");
       setOther("");
       setRequestedDate("");
+      setRequestedTime("");
       setNeedsReassignment(false);
+      setSuggested("none");
       setConfirming(false);
     }
   }, [open, task?.id]);
+
+  const others = (members ?? []).filter((m) => m.id !== task?.assigned_to);
 
   const finalReason = reason === "Outro" ? other.trim() : reason;
   const isScheduleChange = reason === "Alteração de programação";
