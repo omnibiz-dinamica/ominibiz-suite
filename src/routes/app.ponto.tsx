@@ -1332,10 +1332,10 @@ function UpcomingTasks({
               return (
                 <li
                   key={t.id}
-                  className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"
+                  className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:justify-between sm:p-5"
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span
                         className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${PRIORITY_TONE[t.priority] ?? PRIORITY_TONE.media}`}
                       >
@@ -1374,11 +1374,11 @@ function UpcomingTasks({
                           : "Sem horário definido"}
                     </div>
                   </div>
-                  <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                  <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
                     {t.status !== "cancelado" && (
                       <Button
                         size="lg"
-                        className="h-12 w-full sm:w-auto"
+                        className="h-12 shrink-0"
                         variant={t.status === "ausente" ? "outline" : "default"}
                         disabled={
                           isStarting ||
@@ -1409,7 +1409,7 @@ function UpcomingTasks({
                       <Button
                         size="lg"
                         variant="outline"
-                        className="h-12 w-full sm:w-auto"
+                        className="h-12 shrink-0"
                         disabled={markingAbsent && markingAbsentId === t.id}
                         onClick={() => onMarkAbsent(t.id)}
                       >
@@ -1420,7 +1420,7 @@ function UpcomingTasks({
                       <Button
                         size="lg"
                         variant="outline"
-                        className="h-12 w-full sm:w-auto"
+                        className="h-12 shrink-0"
                         onClick={() => onRefuseTask(t)}
                       >
                         <XCircle className="mr-2 h-5 w-5" /> Recusar tarefa
@@ -1430,7 +1430,7 @@ function UpcomingTasks({
                       <Button
                         size="lg"
                         variant="outline"
-                        className="h-12 w-full sm:w-auto"
+                        className="h-12 shrink-0"
                         onClick={() => onCancelTask(t)}
                       >
                         <Ban className="mr-2 h-5 w-5" /> Cancelar tarefa
@@ -1440,7 +1440,7 @@ function UpcomingTasks({
                       <Button
                         size="lg"
                         variant="ghost"
-                        className="h-12 w-full sm:w-auto"
+                        className="h-12 shrink-0"
                         onClick={() => onArchiveTask(t)}
                       >
                         <Archive className="mr-2 h-5 w-5" /> Arquivar
