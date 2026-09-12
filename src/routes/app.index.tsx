@@ -27,7 +27,7 @@ function ManagerDashboard() {
     queryFn: async () => {
       let q = supabase
         .from("tasks")
-        .select("id, status, scheduled_for, started_at, archived_at, deleted_at, refused_by, title");
+        .select("id, status, scheduled_for, started_at, archived_at, deleted_at, refused_by, title, due_at");
       if (!isManager) q = q.eq("assigned_to", user!.id);
       else if (currentCompanyId) q = q.eq("company_id", currentCompanyId);
       const { data, error } = await q;
@@ -109,7 +109,15 @@ function ManagerDashboard() {
               <span className="text-sm text-muted-foreground">{c.label}</span>
               <c.icon className={`h-4 w-4 ${c.tone}`} />
             </div>
-            <div className="mt-3 font-display text-3xl font-semibold group-hover:text-primary">{c.value}</div>
+            {c.status === "canceladas" ? (
+              <div className="mt-3 flex items-baseline gap-2 font-display text-2xl font-semibold group-hover:text-primary">
+                <span>{counts.canceladas} <span className="text-sm font-normal text-muted-foreground">Canceladas</span></span>
+                <span className="text-muted-foreground">|</span>
+                <span>{counts.recusadas} <span className="text-sm font-normal text-muted-foreground">Recusadas</span></span>
+              </div>
+            ) : (
+              <div className="mt-3 font-display text-3xl font-semibold group-hover:text-primary">{c.value}</div>
+            )}
           </Link>
         ))}
       </div>
