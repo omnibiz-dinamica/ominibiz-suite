@@ -743,23 +743,20 @@ export function canArchive(t: Pick<TaskRow, "status" | "archived_at">): boolean 
 
 /**
  * ADR-036 — "Arquivado" é dimensão de visibilidade, NUNCA status operacional.
- * ADR-062 — Cancelamento é exclusivo do gestor/owner/super admin. O responsável
- * recusa a tarefa (`recusar`), nunca cancela.
+ * ADR-062 — Cancelamento (gestor) e recusa (funcionário) partilham o MESMO
+ * conjunto canónico de motivos; o que muda é apenas quem executa a ação.
+ * "Alteração de programação" aparece como "Alterar data / hora" na interface.
  */
 export const CANCEL_REASONS = [
   "Cliente cancelou",
-  "Não será realizado",
   "Alteração de programação",
-  "Problema de acesso ao local",
-  "Falta de material",
-  "Problema pessoal",
   "Outro",
 ] as const;
 
 /**
  * ADR-062 — Motivos canónicos da recusa do funcionário. O valor gravado é o
- * mesmo já usado pelo histórico ("Alteração de programação"), apenas com
- * rótulo operacional mais claro na interface.
+ * mesmo usado pelo histórico ("Alteração de programação"), apenas com rótulo
+ * operacional mais claro na interface. Mantido em par com CANCEL_REASONS.
  */
 export const REFUSAL_REASONS = [
   { value: "Cliente cancelou", label: "Cliente cancelou" },
