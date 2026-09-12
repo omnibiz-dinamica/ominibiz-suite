@@ -84,7 +84,8 @@ export function resolveOperationalStatus(
   if (task.status === "ausente" && isAutomaticAbsence) {
     const threshold = automaticAbsenceAllowedAt(task);
     if (threshold && wallClockEpoch(now) < threshold.getTime()) {
-      return wallClockEpoch(now) >= start.getTime() ? "atrasada" : "pendente";
+      // 12092026-001c — atraso começa 1 segundo APÓS o horário programado.
+      return wallClockEpoch(now) > start.getTime() ? "atrasada" : "pendente";
     }
     return task.status;
   }
@@ -92,7 +93,7 @@ export function resolveOperationalStatus(
   if (task.status !== "pendente" && task.status !== "autorizado") return task.status;
   const threshold = automaticAbsenceAllowedAt(task);
   if (threshold && wallClockEpoch(now) >= threshold.getTime()) return "ausente";
-  if (wallClockEpoch(now) >= start.getTime()) return "atrasada";
+  if (wallClockEpoch(now) > start.getTime()) return "atrasada";
   return task.status;
 }
 

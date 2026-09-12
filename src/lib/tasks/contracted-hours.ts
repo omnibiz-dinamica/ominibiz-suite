@@ -79,3 +79,30 @@ export function formatContractedMinutes(minutes: number | null | undefined): str
   const remaining = minutes % 60;
   return remaining ? `${hours}h${String(remaining).padStart(2, "0")}` : `${hours}h`;
 }
+
+/**
+ * 12092026-001c — data de fim canônica de uma tarefa em wall clock.
+ *
+ * Overnight continua a ser detectado pela fonte de verdade existente
+ * (`isOvernightTimeRange`). A função apenas mantém a data coerente com o
+ * intervalo: avança para o dia seguinte quando o fim é overnight e desfaz
+ * esse avanço automático quando o intervalo deixa de ser overnight.
+ * Datas de fim escolhidas explicitamente pelo utilizador (mais de um dia
+ * à frente) nunca são alteradas.
+ */
+export function resolveWallEndDate(
+  startDate: string | null | undefined,
+  startTime: string | null | undefined,
+  endTime: string | null | undefined,
+  endDate: string | null | undefined,
+): string {
+  const current = endDate ?? "";
+  if (!startDate || !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) return current;
+  if (!startTime || !endTime) return current;
+  const nextDay = addWallMinutes(startDate, "00:00", 24 * 60)?.date;
+  if (!nextDay) return current;
+  if (isOvernightTimeRange(startTime, endTime)) {
+    return current === startDate ? nextDay : current;
+  }
+  return current === nextDay ? startDate : current;
+}

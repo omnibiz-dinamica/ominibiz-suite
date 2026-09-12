@@ -5,6 +5,27 @@
 
 ---
 
+### 🚧 12092026 — Regra temporal das tarefas e data ao editar a hora de fim
+
+#### Corrigido
+- `12092026-003c` — Uma tarefa com horário fica **Atrasada** a partir do primeiro
+  segundo posterior ao horário programado (às 09:00:00 continua Pendente; às
+  09:00:01 é Atrasada) e passa a **Ausente** exatamente às 24 horas completas.
+  A fonte de verdade única continua a ser `resolveOperationalStatus`
+  (`src/lib/tasks/operational-rules.ts`), reutilizada por Lista, Calendário,
+  Dashboard, Ponto e Gestão; `isDashboardLateStart` foi alinhado ao mesmo limiar.
+  Tarefas iniciadas, concluídas, canceladas, recusadas ou arquivadas nunca
+  entram no cálculo; tarefas sem horário mantêm a regra do dia seguinte.
+- `12092026-003c` — Alterar **apenas a hora de fim** deixa de mudar a data da
+  tarefa. Ao escrever a hora, valores intermédios (ex.: `01:00` antes de `13:00`)
+  eram lidos como turno noturno e a data de fim avançava para o dia seguinte sem
+  nunca voltar atrás. A regra passou a ser canónica em `resolveWallEndDate`
+  (`src/lib/tasks/contracted-hours.ts`): avança para o dia seguinte só quando o
+  intervalo é realmente noturno, desfaz o avanço automático quando deixa de ser
+  e nunca altera uma data escolhida explicitamente pelo Gestor.
+
+---
+
 ### 🚧 11092026 — Equipa de clientes, foco de janela e datas da recorrência
 
 #### Corrigido

@@ -39,5 +39,6 @@ export function isDashboardLateStart(task: DashboardTaskSnapshot, now = new Date
 
   const nowMs = now.getTime();
   const scheduledMs = scheduledStart.getTime();
-  return nowMs >= scheduledMs && nowMs < scheduledMs + 24 * 60 * 60 * 1000;
+  // 12092026-001c — atraso apenas a partir do primeiro instante posterior.
+  return nowMs > scheduledMs && nowMs < scheduledMs + 24 * 60 * 60 * 1000;
 }
