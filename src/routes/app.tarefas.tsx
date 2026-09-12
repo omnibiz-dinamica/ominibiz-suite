@@ -130,6 +130,7 @@ import {
   groupTaskRefusals,
   type TaskRefusalRecord,
 } from "@/lib/task-refusal-view";
+import { RefuseTaskDialog, type RefusalSubmitPayload } from "@/components/tasks/RefuseTaskDialog";
 
 
 import { EmployeeMultiPicker } from "@/components/common/EmployeePicker";
@@ -387,7 +388,9 @@ function TasksPage() {
       if (!currentCompanyId || !user?.id) return [] as TaskRefusalRecord[];
       let q = supabase
         .from("task_refusals")
-        .select("id,company_id,task_id,employee_id,actor_id,reason,previous_status,new_status,created_at")
+        .select(
+          "id,company_id,task_id,employee_id,actor_id,reason,previous_status,new_status,created_at,schedule_change_requested_date,schedule_change_requested_time,schedule_change_needs_reassignment,schedule_change_suggested_employee_id",
+        )
         .eq("company_id", currentCompanyId)
         .order("created_at", { ascending: false });
       if (!isManager) q = q.eq("employee_id", user.id);
@@ -1093,7 +1096,7 @@ function TasksPage() {
 
       <RefuseTaskDialog
         task={refusing}
-        clientName={refusing?.client_id ? clientNames.get(refusing.client_id) : undefined}
+        clientName={refusing?.client_id ? clientsList?.find((c) => c.id === refusing.client_id)?.name : undefined}
         members={members ?? []}
         open={!!refusing}
         onOpenChange={(v) => !v && setRefusing(null)}
