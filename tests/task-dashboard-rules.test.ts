@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { isDashboardCancelled, isDashboardLateStart } from "../src/lib/tasks/dashboard-rules.ts";
+import { isDashboardCancelled, isDashboardLateStart, isDashboardOverdue } from "../src/lib/tasks/dashboard-rules.ts";
 
 const scheduled = "2026-09-02T09:00:00.000Z";
 const now = new Date("2026-09-02T10:00:00.000Z");
@@ -25,6 +25,28 @@ test("dashboard does not classify a future task or an early start as late", () =
   assert.equal(
     isDashboardLateStart({ status: "em_andamento", scheduled_for: scheduled, started_at: "2026-09-02T08:59:00.000Z" }, now),
     false,
+  );
+});
+
+test("dashboard compares scheduled wall-clock time with the device local clock", () => {
+  const localNow = new Date(2026, 8, 12, 4, 3, 0);
+  assert.equal(
+    isDashboardOverdue({ status: "pendente", scheduled_for: "2026-09-12T03:37:00.000Z" }, localNow),
+    true,
+  );
+  assert.equal(
+    isDashboardOverdue({ status: "pendente", scheduled_for: "2026-09-12T04:30:00.000Z" }, localNow),
+    false,
+  );
+});
+
+test("dashboard card keeps old active tasks overdue beyond the absence window", () => {
+  assert.equal(
+    isDashboardOverdue(
+      { status: "pendente", scheduled_for: "2026-09-10T03:37:00.000Z" },
+      new Date(2026, 8, 12, 4, 3, 0),
+    ),
+    true,
   );
 });
 

@@ -6,7 +6,7 @@ import { ClipboardList, CheckCircle2, Clock, AlertTriangle, Building2, Ban } fro
 import { Button } from "@/components/ui/button";
 import { EmployeeDashboard } from "@/components/dashboards/EmployeeDashboard";
 import { SuperAdminDashboard } from "@/components/dashboards/SuperAdminDashboard";
-import { isDashboardCancelled, isDashboardLateStart } from "@/lib/tasks/dashboard-rules";
+import { isDashboardCancelled, isDashboardOverdue } from "@/lib/tasks/dashboard-rules";
 
 export const Route = createFileRoute("/app/")({
   component: Dashboard,
@@ -39,15 +39,7 @@ function ManagerDashboard() {
 
   // Atrasada: vencimento/horário agendado já passou e a tarefa segue pendente/em andamento.
   const isOverdue = (t: { status: string; scheduled_for?: string | null; started_at?: string | null; due_at?: string | null; archived_at?: string | null; deleted_at?: string | null; refused_by?: string | null }) => {
-    if (!t || !["pendente", "autorizado", "em_andamento"].includes(t.status)) return false;
-    if (t.archived_at || t.deleted_at || isDashboardCancelled(t)) return false;
-    if (t.status === "em_andamento" && t.started_at) {
-      return isDashboardLateStart(t);
-    }
-    const due = t.scheduled_for ?? t.due_at ?? null;
-    if (!due) return false;
-    const dueMs = new Date(due).getTime();
-    return Number.isFinite(dueMs) && dueMs < Date.now();
+    return isDashboardOverdue(t);
   };
 
   const counts = {
