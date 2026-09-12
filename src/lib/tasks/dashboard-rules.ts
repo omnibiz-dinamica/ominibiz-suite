@@ -1,3 +1,5 @@
+import { wallClockEpoch } from "./operational-rules";
+
 export type DashboardTaskSnapshot = {
   status: "pendente" | "autorizado" | "em_andamento" | "concluido" | "cancelado" | "ausente" | string;
   scheduled_for?: string | null;
@@ -6,8 +8,6 @@ export type DashboardTaskSnapshot = {
   deleted_at?: string | null;
   refused_by?: string | null;
 };
-
-import { wallClockEpoch } from "./operational-rules";
 
 const ACTIVE_STATUSES = new Set(["pendente", "autorizado", "em_andamento"]);
 
