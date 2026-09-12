@@ -2782,10 +2782,16 @@ function TaskForm({
     setEndTime((current) => (current === derivedEnd.time ? current : derivedEnd.time));
   }, [assignees.length, contractedMinutes, distributedMinutes, initial, manualEndOverride, startDate, startTime]);
 
+  /**
+   * 12092026-001c — a data de fim acompanha o intervalo em wall clock:
+   * avança para o dia seguinte quando é overnight e desfaz esse avanço
+   * automático quando deixa de ser. Datas escolhidas explicitamente pelo
+   * gestor (vários dias) nunca são alteradas.
+   */
   useEffect(() => {
-    if (!startDate || !endDate || !isOvernightTimeRange(startTime, endTime) || endDate !== startDate) return;
-    const nextDate = addWallMinutes(startDate, "00:00", 24 * 60)?.date;
-    if (nextDate) setEndDate(nextDate);
+    if (!startDate || !endDate) return;
+    const resolved = resolveWallEndDate(startDate, startTime, endTime, endDate);
+    if (resolved && resolved !== endDate) setEndDate(resolved);
   }, [endDate, endTime, startDate, startTime]);
 
   const applySlot = (slot: ClientScheduleSlot, silent = false) => {
@@ -2931,10 +2937,7 @@ function TaskForm({
           return;
         }
         const startISO = startTime ? wallDateTimeToISO(startDate, startTime) : null;
-        const resolvedEndDate =
-          startDate && endDate === startDate && isOvernightTimeRange(startTime, endTime)
-            ? addWallMinutes(startDate, "00:00", 24 * 60)?.date ?? endDate
-            : endDate;
+        const resolvedEndDate = resolveWallEndDate(startDate, startTime, endTime, endDate);
         const endISO = endTime ? wallDateTimeToISO(resolvedEndDate, endTime) : null;
         const dueISO = endISO ?? wallDateToEndOfDayISO(endDate);
         const selectedAssignees = [...new Set(assignees)];
