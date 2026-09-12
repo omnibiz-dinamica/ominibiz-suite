@@ -53,6 +53,9 @@ import {
   canBecomeAbsent,
   canArchiveBy,
   canCancelTask,
+  canRefuseTask,
+  transitionTask,
+  transitionTaskWithScheduleRequest,
   addTaskCompletionNote,
 } from "@/lib/tasks";
 import { usePunchFlow } from "@/hooks/use-punch-flow";
@@ -66,6 +69,7 @@ import { MarkAbsentDialog } from "@/components/tasks/MarkAbsentDialog";
 import { fetchOpenEntrySelf } from "@/lib/punch/recovery";
 import { defaultRecoveryEndInput } from "@/lib/punch/recovery-time";
 import { isEmployeeCancelledTask } from "@/lib/task-refusal-view";
+import { RefuseTaskDialog, type RefusalSubmitPayload } from "@/components/tasks/RefuseTaskDialog";
 
 export const Route = createFileRoute("/app/ponto")({ component: PontoPage });
 
@@ -112,6 +116,8 @@ function PontoPage() {
   const [cancelTarget, setCancelTarget] = useState<TaskRow | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<TaskRow | null>(null);
   const [absenceTarget, setAbsenceTarget] = useState<TaskRow | null>(null);
+  // ADR-062 — o funcionário recusa (nunca cancela) a tarefa atribuída.
+  const [refuseTarget, setRefuseTarget] = useState<TaskRow | null>(null);
   const punch = usePunchFlow();
 
   // Detalhe do ponto aberto (tarefa, cliente, tempo em aberto) para o modal
