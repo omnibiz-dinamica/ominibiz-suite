@@ -509,17 +509,21 @@ function TasksPage() {
   }, [user?.id, qc]);
 
   const transition = useMutation({
-    mutationFn: ({ id, action, reason, requestedDate, needsReassignment }: {
+    mutationFn: ({ id, action, reason, requestedDate, requestedTime, needsReassignment, suggestedEmployeeId }: {
       id: string;
       action: TaskAction;
       reason?: string;
       requestedDate?: string;
+      requestedTime?: string | null;
       needsReassignment?: boolean;
+      suggestedEmployeeId?: string | null;
     }) =>
       requestedDate && needsReassignment !== undefined
         ? transitionTaskWithScheduleRequest(id, action, reason ?? "", {
             requestedDate,
+            requestedTime,
             needsReassignment,
+            suggestedEmployeeId,
           })
         : transitionTask(id, action, reason),
     onSuccess: () => {
