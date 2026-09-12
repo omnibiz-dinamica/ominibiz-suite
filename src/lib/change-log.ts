@@ -85,6 +85,12 @@ export const CHANGE_LOG: readonly ChangeEntry[] = [
     kind: "a",
     summary: "Pesquisa opcional de cliente dentro do seletor da Nova tarefa.",
   },
+  {
+    id: "12092026-003c",
+    kind: "c",
+    summary:
+      "Atrasada a partir de 1 segundo após o horário; ausente às 24 horas; alterar só a hora de fim deixa de mudar a data.",
+  },
 ];
 
 export function latestChange(): ChangeEntry | null {
