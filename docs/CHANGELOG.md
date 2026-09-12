@@ -5,6 +5,36 @@
 
 ---
 
+### 🚧 12092026 — Isolamento do ambiente de teste e autoridade de recusa/cancelamento
+
+#### Corrigido
+- `12092026-004a` — Nenhuma identidade real da produção (Grupo V-clean) tem
+  acesso ao Grupo V-clean TESTE. As duas contas exclusivas de teste
+  (`eduardo.rs.junior.teste@omnibiz.test`, `keila.oliveira.teste@omnibiz.test`)
+  têm UUID próprio e membership apenas na empresa de teste. Tarefas, séries e
+  vínculos de cliente que só existiam na empresa de teste foram remapeados para
+  essas contas; séries que ficariam duplicadas foram pausadas, não eliminadas.
+  A produção — utilizadores, UUIDs, emails, acessos, RLS/RBAC e histórico —
+  permanece intacta.
+- `12092026-004b` — A "tarefa duplicada" do cliente TESTE Z não era duplicação:
+  é uma tarefa **em equipe** (uma linha por responsável, mesmo `task_group_id`).
+  A duplicação visível na produção vinha de tarefas removidas (soft delete) que
+  continuavam a ser lidas: Lista, Calendário e Ponto passam a filtrar
+  `deleted_at IS NULL`, sem `DISTINCT` arbitrário.
+
+#### Alterado
+- `12092026-004c` — Cancelar tarefa passa a ser exclusivo de gestor/owner/super
+  admin, tanto na RPC `task_cancel` como na interface. O funcionário **recusa**
+  a tarefa através do diálogo canónico `RefuseTaskDialog`, com motivos
+  "Cliente cancelou", "Alterar data / hora" e "Outro".
+- `12092026-004d` — O pedido de alteração aceita **data e hora** desejadas e um
+  **funcionário sugerido** opcional. É apenas um pedido: a ocorrência não é
+  movida, a série (`recurrence_id`) não muda e o responsável não é reatribuído
+  automaticamente. Lista, Calendário e Notificações leem a mesma fonte e mostram
+  nome real (nunca UUID), com "Sem responsável" quando aplicável.
+
+---
+
 ### 🚧 12092026 — Regra temporal das tarefas e data ao editar a hora de fim
 
 #### Corrigido

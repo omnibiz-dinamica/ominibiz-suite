@@ -32,7 +32,9 @@ test("uses persisted history as fallback for an active refusal", () => {
     reason: "Consulta médica",
     refusedAt: "2026-08-29T19:41:00.000Z",
     requestedDate: null,
+    requestedTime: null,
     needsReassignment: null,
+    suggestedEmployeeId: null,
   });
 });
 
@@ -66,7 +68,9 @@ test("does not classify a manager cancellation as an employee refusal", () => {
       cancelledAt: "2026-08-29T20:40:00.000Z",
       byEmployee: false,
       requestedDate: null,
+      requestedTime: null,
       needsReassignment: null,
+      suggestedEmployeeId: null,
     },
   );
 });
@@ -98,7 +102,10 @@ test("reads structured employee refusal metadata from the notification", () => {
       reason: "Consulta médica",
       refusedAt: "2026-08-29T19:41:00.000Z",
       requestedDate: null,
+      requestedTime: null,
       needsReassignment: null,
+      suggestedEmployeeId: null,
+      suggestedEmployeeName: null,
     },
   );
 });
@@ -137,7 +144,9 @@ test("reads an alteration request without changing the employee refusal identity
       reason: null,
       refusedAt: null,
       requestedDate: "2026-09-12",
+      requestedTime: null,
       needsReassignment: true,
+      suggestedEmployeeId: null,
     },
   );
 });

@@ -27,6 +27,7 @@ import {
   LogIn as LogInIcon,
   UserX,
   Ban,
+  XCircle,
   Archive,
 } from "lucide-react";
 import { TaskDocuments } from "@/components/tasks/TaskDocuments";
@@ -53,6 +54,8 @@ import {
   canBecomeAbsent,
   canArchiveBy,
   canCancelTask,
+  canRefuseTask,
+  transitionTaskWithScheduleRequest,
   addTaskCompletionNote,
 } from "@/lib/tasks";
 import { usePunchFlow } from "@/hooks/use-punch-flow";
@@ -66,6 +69,7 @@ import { MarkAbsentDialog } from "@/components/tasks/MarkAbsentDialog";
 import { fetchOpenEntrySelf } from "@/lib/punch/recovery";
 import { defaultRecoveryEndInput } from "@/lib/punch/recovery-time";
 import { isEmployeeCancelledTask } from "@/lib/task-refusal-view";
+import { RefuseTaskDialog, type RefusalSubmitPayload } from "@/components/tasks/RefuseTaskDialog";
 
 export const Route = createFileRoute("/app/ponto")({ component: PontoPage });
 
@@ -112,6 +116,8 @@ function PontoPage() {
   const [cancelTarget, setCancelTarget] = useState<TaskRow | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<TaskRow | null>(null);
   const [absenceTarget, setAbsenceTarget] = useState<TaskRow | null>(null);
+  // ADR-062 — o funcionário recusa (nunca cancela) a tarefa atribuída.
+  const [refuseTarget, setRefuseTarget] = useState<TaskRow | null>(null);
   const punch = usePunchFlow();
 
   // Detalhe do ponto aberto (tarefa, cliente, tempo em aberto) para o modal
@@ -201,6 +207,8 @@ function PontoPage() {
         // ADR-036: "arquivado" é visibilidade, não status. Tarefas arquivadas
         // saem da fila operacional; o status original permanece intacto.
         .is("archived_at", null)
+        // Tarefas removidas (soft delete) saem da fila operacional.
+        .is("deleted_at", null)
         .in("status", ["pendente", "autorizado", "ausente", "em_andamento", "cancelado"])
         .order("due_at", { ascending: true, nullsFirst: false })
         .order("scheduled_for", { ascending: true, nullsFirst: false })
@@ -236,6 +244,55 @@ function PontoPage() {
       return map;
     },
     enabled: !!currentCompanyId,
+  });
+
+  /**
+   * ADR-062 — colegas da mesma empresa para a sugestão INFORMATIVA de
+   * reatribuição. RLS/RBAC decidem o que a sessão pode ler; se nada for
+   * legível, a sugestão fica simplesmente indisponível.
+   */
+  const { data: companyMembers } = useQuery({
+    queryKey: ["punch-company-members", currentCompanyId],
+    queryFn: async () => {
+      if (!currentCompanyId) return [] as { id: string; full_name: string | null }[];
+      const { data: roles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("company_id", currentCompanyId);
+      if (rolesError) throw rolesError;
+      const ids = [...new Set((roles ?? []).map((r) => r.user_id))];
+      if (ids.length === 0) return [];
+      const { data: profs, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", ids);
+      if (profilesError) throw profilesError;
+      return (profs ?? []) as { id: string; full_name: string | null }[];
+    },
+    enabled: !!currentCompanyId,
+  });
+
+  const refuseTask = useMutation({
+    mutationFn: async (payload: RefusalSubmitPayload) => {
+      if (!refuseTarget) throw new Error("Tarefa não encontrada.");
+      if (payload.requestedDate) {
+        return transitionTaskWithScheduleRequest(refuseTarget.id, "recusar", payload.reason, {
+          requestedDate: payload.requestedDate,
+          requestedTime: payload.requestedTime,
+          needsReassignment: !!payload.needsReassignment,
+          suggestedEmployeeId: payload.suggestedEmployeeId,
+        });
+      }
+      return transitionTask(refuseTarget.id, "recusar", payload.reason);
+    },
+    onSuccess: () => {
+      setRefuseTarget(null);
+      qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+      toast.success("Tarefa recusada. O gestor foi notificado.");
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   // O mapa acima pode ainda não conter o cliente quando um ponto já estava
@@ -548,6 +605,7 @@ function PontoPage() {
           markingAbsent={false}
           markingAbsentId={null}
           onCancelTask={(t) => setCancelTarget(t)}
+          onRefuseTask={(t) => setRefuseTarget(t)}
           onArchiveTask={(t) => setArchiveTarget(t)}
         />
       )}
@@ -620,6 +678,15 @@ function PontoPage() {
       />
 
       {/* ADR-036 — cancelamento com motivo e arquivamento manual */}
+      <RefuseTaskDialog
+        task={refuseTarget}
+        clientName={refuseTarget?.client_id ? clientsMap?.[refuseTarget.client_id] : undefined}
+        members={companyMembers ?? []}
+        open={!!refuseTarget}
+        onOpenChange={(o) => !o && setRefuseTarget(null)}
+        pending={refuseTask.isPending}
+        onConfirm={(payload) => refuseTask.mutate(payload)}
+      />
       <CancelTaskDialog
         task={cancelTarget}
         clientName={cancelTarget?.client_id ? clientsMap?.[cancelTarget.client_id] : undefined}
@@ -1023,6 +1090,7 @@ function UpcomingTasks({
   markingAbsent,
   markingAbsentId,
   onCancelTask,
+  onRefuseTask,
   onArchiveTask,
 }: {
   tasks: TaskRow[];
@@ -1041,6 +1109,7 @@ function UpcomingTasks({
   markingAbsent: boolean;
   markingAbsentId: string | null;
   onCancelTask: (t: TaskRow) => void;
+  onRefuseTask: (t: TaskRow) => void;
   onArchiveTask: (t: TaskRow) => void;
 }) {
   if (tasks.length === 0) {
@@ -1210,6 +1279,16 @@ function UpcomingTasks({
             </Button>
           )}
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {currentUserId && canRefuseTask(nextStartable, { userId: currentUserId }) && (
+              <Button
+                size="lg"
+                variant="outline"
+                className="h-12 w-full text-base"
+                onClick={() => onRefuseTask(nextStartable)}
+              >
+                <XCircle className="mr-2 h-5 w-5" /> Recusar tarefa
+              </Button>
+            )}
             {currentUserId && canCancelTask(nextStartable, { userId: currentUserId, isManager }) && (
               <Button
                 size="lg"
@@ -1339,6 +1418,16 @@ function UpcomingTasks({
                         onClick={() => onMarkAbsent(t.id)}
                       >
                         <UserX className="mr-2 h-5 w-5" /> Marcar falta
+                      </Button>
+                    )}
+                    {currentUserId && canRefuseTask(t, { userId: currentUserId }) && (
+                      <Button
+                        size="lg"
+                        variant="outline"
+                        className="h-12 w-full sm:w-auto"
+                        onClick={() => onRefuseTask(t)}
+                      >
+                        <XCircle className="mr-2 h-5 w-5" /> Recusar tarefa
                       </Button>
                     )}
                     {currentUserId && canCancelTask(t, { userId: currentUserId, isManager }) && (

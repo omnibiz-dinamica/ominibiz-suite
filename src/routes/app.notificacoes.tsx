@@ -677,12 +677,19 @@ function NotificationsPage() {
                         {refusal.requestedDate && (
                           <p>
                             <span className="font-medium">Nova data desejada:</span> {refusal.requestedDate}
+                            {refusal.requestedTime ? ` · ${refusal.requestedTime}` : ""}
                           </p>
                         )}
                         {refusal.needsReassignment != null && (
                           <p>
                             <span className="font-medium">Reatribuição necessária:</span>{" "}
                             {refusal.needsReassignment ? "Sim" : "Não"}
+                          </p>
+                        )}
+                        {(refusal.suggestedEmployeeName || refusal.suggestedEmployeeId) && (
+                          <p>
+                            <span className="font-medium">Funcionário sugerido (informativo):</span>{" "}
+                            {refusal.suggestedEmployeeName ?? "Sem responsável"}
                           </p>
                         )}
                       </div>
