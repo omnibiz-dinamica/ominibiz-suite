@@ -685,6 +685,7 @@ function PontoPage() {
       <CancelTaskDialog
         task={cancelTarget}
         clientName={cancelTarget?.client_id ? clientsMap?.[cancelTarget.client_id] : undefined}
+        members={companyMembers ?? []}
         open={!!cancelTarget}
         onOpenChange={(o) => !o && setCancelTarget(null)}
         onOpenPunch={() => setRecoveryOpen(true)}

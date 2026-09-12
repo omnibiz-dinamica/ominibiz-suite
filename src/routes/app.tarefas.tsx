@@ -1002,6 +1002,7 @@ function TasksPage() {
       <CancelTaskDialog
         task={cancelling}
         clientName={cancelling?.client_id ? clientsList?.find((c) => c.id === cancelling.client_id)?.name : undefined}
+        members={members ?? []}
         open={!!cancelling}
         onOpenChange={(o) => !o && setCancelling(null)}
         onDone={() => {
