@@ -28,6 +28,7 @@ import { formatWallDate, formatWallTime } from "@/lib/wall-clock";
 export function CancelTaskDialog({
   task,
   clientName,
+  members,
   open,
   onOpenChange,
   onDone,
@@ -35,6 +36,8 @@ export function CancelTaskDialog({
 }: {
   task: TaskRow | null;
   clientName?: string;
+  /** Membros da mesma empresa para sugestão informativa de reatribuição. */
+  members?: Array<{ id: string; full_name: string | null }>;
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onDone: () => void;
@@ -44,7 +47,9 @@ export function CancelTaskDialog({
   const [reason, setReason] = useState<string>("");
   const [other, setOther] = useState("");
   const [requestedDate, setRequestedDate] = useState("");
+  const [requestedTime, setRequestedTime] = useState("");
   const [needsReassignment, setNeedsReassignment] = useState(false);
+  const [suggested, setSuggested] = useState("none");
   const [confirming, setConfirming] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -53,10 +58,14 @@ export function CancelTaskDialog({
       setReason("");
       setOther("");
       setRequestedDate("");
+      setRequestedTime("");
       setNeedsReassignment(false);
+      setSuggested("none");
       setConfirming(false);
     }
   }, [open, task?.id]);
+
+  const others = (members ?? []).filter((m) => m.id !== task?.assigned_to);
 
   const finalReason = reason === "Outro" ? other.trim() : reason;
   const isScheduleChange = reason === "Alteração de programação";
@@ -69,7 +78,9 @@ export function CancelTaskDialog({
       if (isScheduleChange) {
         await cancelTaskWithScheduleRequest(task.id, finalReason, {
           requestedDate,
+          requestedTime: requestedTime || null,
           needsReassignment,
+          suggestedEmployeeId: needsReassignment && suggested !== "none" ? suggested : null,
         });
       } else {
         await cancelTask(task.id, finalReason);
@@ -124,7 +135,7 @@ export function CancelTaskDialog({
                   <SelectContent>
                     {CANCEL_REASONS.map((r) => (
                       <SelectItem key={r} value={r}>
-                        {r}
+                        {r === "Alteração de programação" ? "Alterar data / hora" : r}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -143,15 +154,29 @@ export function CancelTaskDialog({
               )}
               {isScheduleChange && (
                 <div className="space-y-3 rounded-md border border-primary/30 bg-primary/5 p-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="schedule-change-date">Nova data desejada *</Label>
-                    <Input
-                      id="schedule-change-date"
-                      type="date"
-                      value={requestedDate}
-                      onChange={(event) => setRequestedDate(event.target.value)}
-                      required
-                    />
+                  <p className="text-xs text-muted-foreground">
+                    Isto é apenas um pedido: a tarefa não é movida nem reagendada automaticamente.
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="schedule-change-date">Nova data desejada *</Label>
+                      <Input
+                        id="schedule-change-date"
+                        type="date"
+                        value={requestedDate}
+                        onChange={(event) => setRequestedDate(event.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="schedule-change-time">Nova hora desejada</Label>
+                      <Input
+                        id="schedule-change-time"
+                        type="time"
+                        value={requestedTime}
+                        onChange={(event) => setRequestedTime(event.target.value)}
+                      />
+                    </div>
                   </div>
                   <label className="flex items-center gap-2 text-sm">
                     <input
@@ -162,6 +187,27 @@ export function CancelTaskDialog({
                     />
                     Necessita reatribuição para outro funcionário
                   </label>
+                  {needsReassignment && (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="schedule-change-suggested">Funcionário sugerido (opcional)</Label>
+                      <Select value={suggested} onValueChange={setSuggested}>
+                        <SelectTrigger id="schedule-change-suggested">
+                          <SelectValue placeholder="Sem sugestão" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Sem sugestão</SelectItem>
+                          {others.map((member) => (
+                            <SelectItem key={member.id} value={member.id}>
+                              {member.full_name?.trim() || "Sem responsável"}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        A sugestão é informativa. Só o gestor pode reatribuir a tarefa.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </>
@@ -174,7 +220,11 @@ export function CancelTaskDialog({
                 <div className="text-xs">Motivo: {finalReason}</div>
                 {isScheduleChange && (
                   <div className="text-xs">
-                    Nova data: {requestedDate} · Reatribuição: {needsReassignment ? "sim" : "não"}
+                    Nova data: {requestedDate}
+                    {requestedTime ? ` · Nova hora: ${requestedTime}` : ""} · Reatribuição: {needsReassignment ? "sim" : "não"}
+                    {needsReassignment && suggested !== "none"
+                      ? ` · Sugerido: ${others.find((m) => m.id === suggested)?.full_name?.trim() || "Sem responsável"}`
+                      : ""}
                   </div>
                 )}
               </div>
