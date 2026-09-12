@@ -78,7 +78,9 @@ export function CancelTaskDialog({
       if (isScheduleChange) {
         await cancelTaskWithScheduleRequest(task.id, finalReason, {
           requestedDate,
+          requestedTime: requestedTime || null,
           needsReassignment,
+          suggestedEmployeeId: needsReassignment && suggested !== "none" ? suggested : null,
         });
       } else {
         await cancelTask(task.id, finalReason);
