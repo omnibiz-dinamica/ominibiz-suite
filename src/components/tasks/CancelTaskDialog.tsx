@@ -154,15 +154,29 @@ export function CancelTaskDialog({
               )}
               {isScheduleChange && (
                 <div className="space-y-3 rounded-md border border-primary/30 bg-primary/5 p-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="schedule-change-date">Nova data desejada *</Label>
-                    <Input
-                      id="schedule-change-date"
-                      type="date"
-                      value={requestedDate}
-                      onChange={(event) => setRequestedDate(event.target.value)}
-                      required
-                    />
+                  <p className="text-xs text-muted-foreground">
+                    Isto é apenas um pedido: a tarefa não é movida nem reagendada automaticamente.
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="schedule-change-date">Nova data desejada *</Label>
+                      <Input
+                        id="schedule-change-date"
+                        type="date"
+                        value={requestedDate}
+                        onChange={(event) => setRequestedDate(event.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="schedule-change-time">Nova hora desejada</Label>
+                      <Input
+                        id="schedule-change-time"
+                        type="time"
+                        value={requestedTime}
+                        onChange={(event) => setRequestedTime(event.target.value)}
+                      />
+                    </div>
                   </div>
                   <label className="flex items-center gap-2 text-sm">
                     <input
@@ -173,6 +187,27 @@ export function CancelTaskDialog({
                     />
                     Necessita reatribuição para outro funcionário
                   </label>
+                  {needsReassignment && (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="schedule-change-suggested">Funcionário sugerido (opcional)</Label>
+                      <Select value={suggested} onValueChange={setSuggested}>
+                        <SelectTrigger id="schedule-change-suggested">
+                          <SelectValue placeholder="Sem sugestão" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Sem sugestão</SelectItem>
+                          {others.map((member) => (
+                            <SelectItem key={member.id} value={member.id}>
+                              {member.full_name?.trim() || "Sem responsável"}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        A sugestão é informativa. Só o gestor pode reatribuir a tarefa.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </>
