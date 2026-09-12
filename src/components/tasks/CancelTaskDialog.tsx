@@ -28,6 +28,7 @@ import { formatWallDate, formatWallTime } from "@/lib/wall-clock";
 export function CancelTaskDialog({
   task,
   clientName,
+  members,
   open,
   onOpenChange,
   onDone,
