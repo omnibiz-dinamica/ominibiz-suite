@@ -135,7 +135,7 @@ export function CancelTaskDialog({
                   <SelectContent>
                     {CANCEL_REASONS.map((r) => (
                       <SelectItem key={r} value={r}>
-                        {r}
+                        {r === "Alteração de programação" ? "Alterar data / hora" : r}
                       </SelectItem>
                     ))}
                   </SelectContent>
