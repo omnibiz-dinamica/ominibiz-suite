@@ -4266,6 +4266,14 @@ export type Database = {
           user_id: string
         }[]
       }
+      company_member_options: {
+        Args: never
+        Returns: {
+          company_id: string
+          full_name: string
+          id: string
+        }[]
+      }
       contract_sign_get: {
         Args: { _token: string }
         Returns: {
