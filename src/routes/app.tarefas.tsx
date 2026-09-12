@@ -226,10 +226,7 @@ function TasksPage() {
   const [cancelling, setCancelling] = useState<TaskRow | null>(null);
   // SUP-2026-000074 — ponto esquecido bloqueia a conclusão: regularizar + concluir.
   const [recovering, setRecovering] = useState<RecoveryEntry | null>(null);
-  const [refusalReason, setRefusalReason] = useState("");
-  const [refusalReasonType, setRefusalReasonType] = useState("Outro");
-  const [refusalRequestedDate, setRefusalRequestedDate] = useState("");
-  const [refusalNeedsReassignment, setRefusalNeedsReassignment] = useState(false);
+  // ADR-062 — o estado do formulário de recusa vive no diálogo canónico.
   const [view, setView] = useState<"active" | "archived">("active");
   const [taskView, setTaskView] = useState<"list" | "calendar">("calendar");
   const [calendarGroup, setCalendarGroup] = useState<"assignee" | "client">("assignee");
@@ -277,6 +274,9 @@ function TasksPage() {
       // outro contexto enquanto o AuthContext ainda era inicializado.
       if (currentCompanyId) q = q.eq("company_id", currentCompanyId);
       if (!isManager) q = q.eq("assigned_to", user!.id);
+      // Tarefas removidas (soft delete) nunca são fonte de verdade operacional:
+      // sem este filtro a mesma ocorrência aparecia repetida para o gestor.
+      q = q.is("deleted_at", null);
       if (search.task) q = q.eq("id", search.task);
       else if (view === "archived") q = q.not("archived_at", "is", null);
       else q = q.is("archived_at", null);
@@ -532,10 +532,6 @@ function TasksPage() {
       qc.invalidateQueries({ queryKey: ["task-refusals"] });
       toast.success("Tarefa atualizada");
       setRefusing(null);
-      setRefusalReason("");
-      setRefusalReasonType("Outro");
-      setRefusalRequestedDate("");
-      setRefusalNeedsReassignment(false);
     },
     onError: (e: Error, vars) => {
       // SUP-2026-000074 — ponto esquecido: oferecer regularização em vez de erro seco.
@@ -690,10 +686,6 @@ function TasksPage() {
     }
     if (action === "recusar") {
       setRefusing(task);
-      setRefusalReason("");
-      setRefusalReasonType("Outro");
-      setRefusalRequestedDate("");
-      setRefusalNeedsReassignment(false);
       return;
     }
     if (action === "marcar_ausente") {
@@ -719,23 +711,21 @@ function TasksPage() {
 
     transition.mutate({ id: task.id, action });
   };
-  const submitRefusal = () => {
-    const reason = refusalReason.trim();
+  /**
+   * ADR-062 — a recusa passa sempre pela RPC canónica. O pedido de alteração de
+   * data/hora e a sugestão de responsável são informativos: nada é reagendado
+   * nem reatribuído automaticamente.
+   */
+  const submitRefusal = (payload: RefusalSubmitPayload) => {
     if (!refusing) return;
-    if (reason.length < 3) {
-      toast.error("Informe o motivo da recusa.");
-      return;
-    }
-    if (refusalReasonType === "Alteração de programação" && !refusalRequestedDate) {
-      toast.error("Informe a nova data desejada para a alteração de programação.");
-      return;
-    }
     transition.mutate({
       id: refusing.id,
       action: "recusar",
-      reason,
-      requestedDate: refusalReasonType === "Alteração de programação" ? refusalRequestedDate : undefined,
-      needsReassignment: refusalReasonType === "Alteração de programação" ? refusalNeedsReassignment : undefined,
+      reason: payload.reason,
+      requestedDate: payload.requestedDate,
+      requestedTime: payload.requestedTime,
+      needsReassignment: payload.requestedDate ? !!payload.needsReassignment : undefined,
+      suggestedEmployeeId: payload.suggestedEmployeeId,
     });
   };
 
@@ -1101,73 +1091,15 @@ function TasksPage() {
 
 
 
-      <Dialog open={!!refusing} onOpenChange={(v) => !v && !transition.isPending && setRefusing(null)}>
-        <DialogContent size="sm">
-          <ModalHeader icon={XCircle} title="Recusar tarefa?" description="Confirme a recusa e informe o motivo." />
-          <ModalBody className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              A tarefa ficará cancelada e o gestor poderá reatribuir se necessário.
-            </p>
-            {refusing?.title && (
-              <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm font-medium">
-                {refusing.title}
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="task-refusal-type">Tipo de recusa</Label>
-              <Select value={refusalReasonType} onValueChange={setRefusalReasonType}>
-                <SelectTrigger id="task-refusal-type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Outro">Outro motivo</SelectItem>
-                  <SelectItem value="Alteração de programação">Alteração de programação</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="task-refusal-reason">Motivo *</Label>
-              <Textarea
-                id="task-refusal-reason"
-                value={refusalReason}
-                onChange={(event) => setRefusalReason(event.target.value)}
-                rows={3}
-                placeholder="Ex.: vou faltar, cliente desistiu, não posso fazer, transferir para outra pessoa..."
-              />
-            </div>
-            {refusalReasonType === "Alteração de programação" && (
-              <div className="space-y-3 rounded-md border border-primary/30 bg-primary/5 p-3">
-                <div className="space-y-2">
-                  <Label htmlFor="task-refusal-date">Nova data desejada *</Label>
-                  <Input
-                    id="task-refusal-date"
-                    type="date"
-                    value={refusalRequestedDate}
-                    onChange={(event) => setRefusalRequestedDate(event.target.value)}
-                  />
-                </div>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={refusalNeedsReassignment}
-                    onChange={(event) => setRefusalNeedsReassignment(event.target.checked)}
-                    className="h-4 w-4 rounded border-border"
-                  />
-                  Necessita reatribuição para outro funcionário
-                </label>
-              </div>
-            )}
-          </ModalBody>
-          <ModalFooter>
-            <Button type="button" variant="outline" disabled={transition.isPending} onClick={() => setRefusing(null)}>
-              Cancelar
-            </Button>
-            <Button type="button" variant="destructive" disabled={transition.isPending} onClick={submitRefusal}>
-              {transition.isPending ? "Recusando..." : "Confirmar recusa"}
-            </Button>
-          </ModalFooter>
-        </DialogContent>
-      </Dialog>
+      <RefuseTaskDialog
+        task={refusing}
+        clientName={refusing?.client_id ? clientNames.get(refusing.client_id) : undefined}
+        members={members ?? []}
+        open={!!refusing}
+        onOpenChange={(v) => !v && setRefusing(null)}
+        pending={transition.isPending}
+        onConfirm={submitRefusal}
+      />
 
       {!currentCompanyId && isManager && (
         <div className="rounded-2xl border border-warning/40 bg-warning/10 p-4 text-sm text-warning-foreground">
