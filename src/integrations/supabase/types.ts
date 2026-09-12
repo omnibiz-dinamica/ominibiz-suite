@@ -2403,6 +2403,7 @@ export type Database = {
           recurrence_id: string | null
           schedule_change_needs_reassignment: boolean | null
           schedule_change_requested_date: string | null
+          schedule_change_requested_time: string | null
           schedule_change_suggested_employee_id: string | null
           task_id: string
         }
@@ -2423,6 +2424,7 @@ export type Database = {
           recurrence_id?: string | null
           schedule_change_needs_reassignment?: boolean | null
           schedule_change_requested_date?: string | null
+          schedule_change_requested_time?: string | null
           schedule_change_suggested_employee_id?: string | null
           task_id: string
         }
@@ -2443,6 +2445,7 @@ export type Database = {
           recurrence_id?: string | null
           schedule_change_needs_reassignment?: boolean | null
           schedule_change_requested_date?: string | null
+          schedule_change_requested_time?: string | null
           schedule_change_suggested_employee_id?: string | null
           task_id?: string
         }
@@ -2659,6 +2662,7 @@ export type Database = {
           reason: string
           schedule_change_needs_reassignment: boolean | null
           schedule_change_requested_date: string | null
+          schedule_change_requested_time: string | null
           schedule_change_suggested_employee_id: string | null
           task_id: string
         }
@@ -2673,6 +2677,7 @@ export type Database = {
           reason: string
           schedule_change_needs_reassignment?: boolean | null
           schedule_change_requested_date?: string | null
+          schedule_change_requested_time?: string | null
           schedule_change_suggested_employee_id?: string | null
           task_id: string
         }
@@ -2687,6 +2692,7 @@ export type Database = {
           reason?: string
           schedule_change_needs_reassignment?: boolean | null
           schedule_change_requested_date?: string | null
+          schedule_change_requested_time?: string | null
           schedule_change_suggested_employee_id?: string | null
           task_id?: string
         }
@@ -2748,6 +2754,7 @@ export type Database = {
           refused_by: string | null
           schedule_change_needs_reassignment: boolean | null
           schedule_change_requested_date: string | null
+          schedule_change_requested_time: string | null
           schedule_change_suggested_employee_id: string | null
           scheduled_end: string | null
           scheduled_for: string | null
@@ -2797,6 +2804,7 @@ export type Database = {
           refused_by?: string | null
           schedule_change_needs_reassignment?: boolean | null
           schedule_change_requested_date?: string | null
+          schedule_change_requested_time?: string | null
           schedule_change_suggested_employee_id?: string | null
           scheduled_end?: string | null
           scheduled_for?: string | null
@@ -2846,6 +2854,7 @@ export type Database = {
           refused_by?: string | null
           schedule_change_needs_reassignment?: boolean | null
           schedule_change_requested_date?: string | null
+          schedule_change_requested_time?: string | null
           schedule_change_suggested_employee_id?: string | null
           scheduled_end?: string | null
           scheduled_for?: string | null
@@ -5243,6 +5252,7 @@ export type Database = {
           refused_by: string | null
           schedule_change_needs_reassignment: boolean | null
           schedule_change_requested_date: string | null
+          schedule_change_requested_time: string | null
           schedule_change_suggested_employee_id: string | null
           scheduled_end: string | null
           scheduled_for: string | null
@@ -5484,6 +5494,7 @@ export type Database = {
           recurrence_id: string | null
           schedule_change_needs_reassignment: boolean | null
           schedule_change_requested_date: string | null
+          schedule_change_requested_time: string | null
           schedule_change_suggested_employee_id: string | null
           task_id: string
         }
@@ -5536,6 +5547,7 @@ export type Database = {
           refused_by: string | null
           schedule_change_needs_reassignment: boolean | null
           schedule_change_requested_date: string | null
+          schedule_change_requested_time: string | null
           schedule_change_suggested_employee_id: string | null
           scheduled_end: string | null
           scheduled_for: string | null
@@ -5594,6 +5606,7 @@ export type Database = {
           refused_by: string | null
           schedule_change_needs_reassignment: boolean | null
           schedule_change_requested_date: string | null
+          schedule_change_requested_time: string | null
           schedule_change_suggested_employee_id: string | null
           scheduled_end: string | null
           scheduled_for: string | null
@@ -5615,6 +5628,7 @@ export type Database = {
           _needs_reassignment: boolean
           _reason: string
           _requested_date: string
+          _requested_time?: string
           _suggested_employee_id?: string
           _task_id: string
         }
@@ -5658,6 +5672,7 @@ export type Database = {
           refused_by: string | null
           schedule_change_needs_reassignment: boolean | null
           schedule_change_requested_date: string | null
+          schedule_change_requested_time: string | null
           schedule_change_suggested_employee_id: string | null
           scheduled_end: string | null
           scheduled_for: string | null
@@ -5721,6 +5736,7 @@ export type Database = {
           refused_by: string | null
           schedule_change_needs_reassignment: boolean | null
           schedule_change_requested_date: string | null
+          schedule_change_requested_time: string | null
           schedule_change_suggested_employee_id: string | null
           scheduled_end: string | null
           scheduled_for: string | null
@@ -5779,6 +5795,7 @@ export type Database = {
           refused_by: string | null
           schedule_change_needs_reassignment: boolean | null
           schedule_change_requested_date: string | null
+          schedule_change_requested_time: string | null
           schedule_change_suggested_employee_id: string | null
           scheduled_end: string | null
           scheduled_for: string | null
@@ -5853,6 +5870,7 @@ export type Database = {
           refused_by: string | null
           schedule_change_needs_reassignment: boolean | null
           schedule_change_requested_date: string | null
+          schedule_change_requested_time: string | null
           schedule_change_suggested_employee_id: string | null
           scheduled_end: string | null
           scheduled_for: string | null
@@ -5935,6 +5953,7 @@ export type Database = {
           refused_by: string | null
           schedule_change_needs_reassignment: boolean | null
           schedule_change_requested_date: string | null
+          schedule_change_requested_time: string | null
           schedule_change_suggested_employee_id: string | null
           scheduled_end: string | null
           scheduled_for: string | null
@@ -5994,6 +6013,7 @@ export type Database = {
           refused_by: string | null
           schedule_change_needs_reassignment: boolean | null
           schedule_change_requested_date: string | null
+          schedule_change_requested_time: string | null
           schedule_change_suggested_employee_id: string | null
           scheduled_end: string | null
           scheduled_for: string | null
@@ -6016,6 +6036,7 @@ export type Database = {
           _needs_reassignment: boolean
           _reason: string
           _requested_date: string
+          _requested_time?: string
           _suggested_employee_id?: string
           _task_id: string
         }
@@ -6059,6 +6080,7 @@ export type Database = {
           refused_by: string | null
           schedule_change_needs_reassignment: boolean | null
           schedule_change_requested_date: string | null
+          schedule_change_requested_time: string | null
           schedule_change_suggested_employee_id: string | null
           scheduled_end: string | null
           scheduled_for: string | null
