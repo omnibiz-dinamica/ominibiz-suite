@@ -39,6 +39,7 @@ import { clientTeamType } from "@/lib/tasks/client-team";
 import {
   addWallMinutes,
   isOvernightTimeRange,
+  resolveWallEndDate,
   distributeContractedMinutes,
   formatContractedMinutes,
 } from "@/lib/tasks/contracted-hours";
