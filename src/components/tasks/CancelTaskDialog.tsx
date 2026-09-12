@@ -220,7 +220,11 @@ export function CancelTaskDialog({
                 <div className="text-xs">Motivo: {finalReason}</div>
                 {isScheduleChange && (
                   <div className="text-xs">
-                    Nova data: {requestedDate} · Reatribuição: {needsReassignment ? "sim" : "não"}
+                    Nova data: {requestedDate}
+                    {requestedTime ? ` · Nova hora: ${requestedTime}` : ""} · Reatribuição: {needsReassignment ? "sim" : "não"}
+                    {needsReassignment && suggested !== "none"
+                      ? ` · Sugerido: ${others.find((m) => m.id === suggested)?.full_name?.trim() || "Sem responsável"}`
+                      : ""}
                   </div>
                 )}
               </div>
