@@ -207,6 +207,8 @@ function PontoPage() {
         // ADR-036: "arquivado" é visibilidade, não status. Tarefas arquivadas
         // saem da fila operacional; o status original permanece intacto.
         .is("archived_at", null)
+        // Tarefas removidas (soft delete) saem da fila operacional.
+        .is("deleted_at", null)
         .in("status", ["pendente", "autorizado", "ausente", "em_andamento", "cancelado"])
         .order("due_at", { ascending: true, nullsFirst: false })
         .order("scheduled_for", { ascending: true, nullsFirst: false })
