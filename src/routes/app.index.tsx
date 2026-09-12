@@ -38,7 +38,7 @@ function ManagerDashboard() {
   });
 
   // Atrasada: vencimento/horário agendado já passou e a tarefa segue pendente/em andamento.
-  const isOverdue = (t: (typeof tasks extends (infer U)[] | undefined ? U : never)) => {
+  const isOverdue = (t: { status: string; scheduled_for?: string | null; started_at?: string | null; due_at?: string | null; archived_at?: string | null; deleted_at?: string | null; refused_by?: string | null }) => {
     if (!t || !["pendente", "autorizado", "em_andamento"].includes(t.status)) return false;
     if (t.archived_at || t.deleted_at || isDashboardCancelled(t)) return false;
     if (t.status === "em_andamento" && t.started_at) {
