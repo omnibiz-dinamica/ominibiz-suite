@@ -605,6 +605,7 @@ function PontoPage() {
           markingAbsent={false}
           markingAbsentId={null}
           onCancelTask={(t) => setCancelTarget(t)}
+          onRefuseTask={(t) => setRefuseTarget(t)}
           onArchiveTask={(t) => setArchiveTarget(t)}
         />
       )}
@@ -677,6 +678,15 @@ function PontoPage() {
       />
 
       {/* ADR-036 — cancelamento com motivo e arquivamento manual */}
+      <RefuseTaskDialog
+        task={refuseTarget}
+        clientName={refuseTarget?.client_id ? clientsMap?.[refuseTarget.client_id] : undefined}
+        members={companyMembers ?? []}
+        open={!!refuseTarget}
+        onOpenChange={(o) => !o && setRefuseTarget(null)}
+        pending={refuseTask.isPending}
+        onConfirm={(payload) => refuseTask.mutate(payload)}
+      />
       <CancelTaskDialog
         task={cancelTarget}
         clientName={cancelTarget?.client_id ? clientsMap?.[cancelTarget.client_id] : undefined}
@@ -1080,6 +1090,7 @@ function UpcomingTasks({
   markingAbsent,
   markingAbsentId,
   onCancelTask,
+  onRefuseTask,
   onArchiveTask,
 }: {
   tasks: TaskRow[];
@@ -1098,6 +1109,7 @@ function UpcomingTasks({
   markingAbsent: boolean;
   markingAbsentId: string | null;
   onCancelTask: (t: TaskRow) => void;
+  onRefuseTask: (t: TaskRow) => void;
   onArchiveTask: (t: TaskRow) => void;
 }) {
   if (tasks.length === 0) {
@@ -1267,6 +1279,16 @@ function UpcomingTasks({
             </Button>
           )}
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {currentUserId && canRefuseTask(nextStartable, { userId: currentUserId }) && (
+              <Button
+                size="lg"
+                variant="outline"
+                className="h-12 w-full text-base"
+                onClick={() => onRefuseTask(nextStartable)}
+              >
+                <XCircle className="mr-2 h-5 w-5" /> Recusar tarefa
+              </Button>
+            )}
             {currentUserId && canCancelTask(nextStartable, { userId: currentUserId, isManager }) && (
               <Button
                 size="lg"
@@ -1396,6 +1418,16 @@ function UpcomingTasks({
                         onClick={() => onMarkAbsent(t.id)}
                       >
                         <UserX className="mr-2 h-5 w-5" /> Marcar falta
+                      </Button>
+                    )}
+                    {currentUserId && canRefuseTask(t, { userId: currentUserId }) && (
+                      <Button
+                        size="lg"
+                        variant="outline"
+                        className="h-12 w-full sm:w-auto"
+                        onClick={() => onRefuseTask(t)}
+                      >
+                        <XCircle className="mr-2 h-5 w-5" /> Recusar tarefa
                       </Button>
                     )}
                     {currentUserId && canCancelTask(t, { userId: currentUserId, isManager }) && (
