@@ -7,6 +7,7 @@ export type TaskCancellationNotificationDetails = {
   cancelledAt: string | null;
   requestedDate: string | null;
   needsReassignment: boolean | null;
+  suggestedEmployeeName: string | null;
 };
 
 function textValue(value: unknown): string | null {
@@ -32,5 +33,6 @@ export function taskCancellationNotificationDetails(
       typeof metadata.schedule_change_needs_reassignment === "boolean"
         ? metadata.schedule_change_needs_reassignment
         : null,
+    suggestedEmployeeName: textValue(metadata.schedule_change_suggested_employee_name),
   };
 }
