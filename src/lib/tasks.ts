@@ -677,9 +677,9 @@ export type ScheduleChangeRequest = {
   needsReassignment: boolean;
   /**
    * ADR-062 — sugestão INFORMATIVA de responsável. Nunca reatribui a tarefa;
-   * serve apenas para o gestor decidir.
+   * serve apenas para o gestor decidir. O nome é digitado livremente.
    */
-  suggestedEmployeeId?: string | null;
+  suggestedEmployeeName?: string | null;
 };
 
 /** Recusa com pedido estruturado de alteracao para a ocorrencia atual. */
@@ -697,7 +697,8 @@ export async function transitionTaskWithScheduleRequest(
     _requested_date: request.requestedDate,
     _requested_time: request.requestedTime || null,
     _needs_reassignment: request.needsReassignment,
-    _suggested_employee_id: request.suggestedEmployeeId || null,
+    _suggested_employee_id: null,
+    _suggested_employee_name: request.suggestedEmployeeName?.trim() || null,
   });
   if (error) throw error;
   return data as TaskRow;
@@ -789,7 +790,8 @@ export async function cancelTaskWithScheduleRequest(
     _requested_date: request.requestedDate,
     _requested_time: request.requestedTime || null,
     _needs_reassignment: request.needsReassignment,
-    _suggested_employee_id: request.suggestedEmployeeId || null,
+    _suggested_employee_id: null,
+    _suggested_employee_name: request.suggestedEmployeeName?.trim() || null,
   });
   if (error) throw error;
   return data as TaskRow;
