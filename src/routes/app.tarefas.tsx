@@ -136,7 +136,7 @@ import { RefuseTaskDialog, type RefusalSubmitPayload } from "@/components/tasks/
 import { EmployeeMultiPicker } from "@/components/common/EmployeePicker";
 import { filterCalendarData, tasksForCalendarDay } from "@/lib/tasks/calendar-filter";
 import { compareTasksForList, sortTasksForList } from "@/lib/tasks/list-order";
-import { isDashboardCancelled, isDashboardLateStart } from "@/lib/tasks/dashboard-rules";
+import { isDashboardCancelled, isDashboardOverdue } from "@/lib/tasks/dashboard-rules";
 import {
   wallISOToDateInput,
   wallDateToEndOfDayISO,
