@@ -761,7 +761,7 @@ function TasksPage() {
         return isRefused(t);
       }
       if (search.status === "pendente") {
-        return t.status === "pendente" && !isDashboardLateStart(t);
+        return t.status === "pendente" && !isDashboardOverdue(t);
       }
       return t.status === search.status;
     });
