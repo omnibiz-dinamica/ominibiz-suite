@@ -12,6 +12,7 @@ export interface TaskRefusalRecord {
   schedule_change_requested_time?: string | null;
   schedule_change_needs_reassignment?: boolean | null;
   schedule_change_suggested_employee_id?: string | null;
+  schedule_change_suggested_employee_name?: string | null;
 }
 
 type RefusedTaskSnapshot = {
@@ -27,6 +28,7 @@ type RefusedTaskSnapshot = {
   schedule_change_requested_time?: string | null;
   schedule_change_needs_reassignment?: boolean | null;
   schedule_change_suggested_employee_id?: string | null;
+  schedule_change_suggested_employee_name?: string | null;
 };
 
 export interface TaskRefusalDetails {
@@ -37,11 +39,11 @@ export interface TaskRefusalDetails {
   requestedTime: string | null;
   needsReassignment: boolean | null;
   suggestedEmployeeId: string | null;
+  suggestedEmployeeName: string | null;
 }
 
 export interface TaskRejectionNotificationDetails extends TaskRefusalDetails {
   employeeName: string | null;
-  suggestedEmployeeName: string | null;
 }
 
 export interface TaskCancellationDetails {
@@ -53,6 +55,7 @@ export interface TaskCancellationDetails {
   requestedTime: string | null;
   needsReassignment: boolean | null;
   suggestedEmployeeId: string | null;
+  suggestedEmployeeName: string | null;
 }
 
 function nonBlank(value: unknown): string | null {
