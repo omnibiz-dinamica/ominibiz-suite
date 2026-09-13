@@ -35,6 +35,7 @@ test("uses persisted history as fallback for an active refusal", () => {
     requestedTime: null,
     needsReassignment: null,
     suggestedEmployeeId: null,
+    suggestedEmployeeName: null,
   });
 });
 
@@ -71,6 +72,7 @@ test("does not classify a manager cancellation as an employee refusal", () => {
       requestedTime: null,
       needsReassignment: null,
       suggestedEmployeeId: null,
+      suggestedEmployeeName: null,
     },
   );
 });
@@ -147,6 +149,7 @@ test("reads an alteration request without changing the employee refusal identity
       requestedTime: null,
       needsReassignment: true,
       suggestedEmployeeId: null,
+      suggestedEmployeeName: null,
     },
   );
 });
