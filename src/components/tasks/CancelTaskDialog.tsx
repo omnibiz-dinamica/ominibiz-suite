@@ -24,12 +24,10 @@ import {
   type TaskRow,
 } from "@/lib/tasks";
 import { formatWallDate, formatWallTime } from "@/lib/wall-clock";
-import { EmployeePicker } from "@/components/common/EmployeePicker";
 
 export function CancelTaskDialog({
   task,
   clientName,
-  members,
   open,
   onOpenChange,
   onDone,
@@ -37,8 +35,6 @@ export function CancelTaskDialog({
 }: {
   task: TaskRow | null;
   clientName?: string;
-  /** Membros da mesma empresa para sugestão informativa de reatribuição. */
-  members?: Array<{ id: string; full_name: string | null }>;
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onDone: () => void;
@@ -50,7 +46,7 @@ export function CancelTaskDialog({
   const [requestedDate, setRequestedDate] = useState("");
   const [requestedTime, setRequestedTime] = useState("");
   const [needsReassignment, setNeedsReassignment] = useState(false);
-  const [suggested, setSuggested] = useState<string | null>(null);
+  const [suggested, setSuggested] = useState("");
   const [confirming, setConfirming] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -61,12 +57,10 @@ export function CancelTaskDialog({
       setRequestedDate("");
       setRequestedTime("");
       setNeedsReassignment(false);
-      setSuggested(null);
+      setSuggested("");
       setConfirming(false);
     }
   }, [open, task?.id]);
-
-  const others = (members ?? []).filter((m) => m.id !== task?.assigned_to);
 
   const finalReason = reason === "Outro" ? other.trim() : reason;
   const isScheduleChange = reason === "Alteração de programação";
@@ -81,7 +75,7 @@ export function CancelTaskDialog({
           requestedDate,
           requestedTime: requestedTime || null,
           needsReassignment,
-          suggestedEmployeeId: needsReassignment ? suggested : null,
+          suggestedEmployeeName: needsReassignment ? suggested.trim() || null : null,
         });
       } else {
         await cancelTask(task.id, finalReason);
@@ -191,13 +185,12 @@ export function CancelTaskDialog({
                   {needsReassignment && (
                     <div className="space-y-1.5">
                       <Label htmlFor="schedule-change-suggested">Funcionário sugerido (opcional)</Label>
-                      <EmployeePicker
-                        employees={others}
+                      <Input
+                        id="schedule-change-suggested"
+                        type="text"
                         value={suggested}
-                        onChange={setSuggested}
-                        placeholder="Digite para buscar um funcionário"
-                        emptyText="Nenhum funcionário encontrado"
-                        ariaLabel="Funcionário sugerido"
+                        onChange={(event) => setSuggested(event.target.value)}
+                        placeholder="Digite o nome do funcionário"
                       />
                       <p className="text-xs text-muted-foreground">
                         A sugestão é informativa. Só o gestor pode reatribuir a tarefa.
@@ -218,8 +211,8 @@ export function CancelTaskDialog({
                   <div className="text-xs">
                     Nova data: {requestedDate}
                     {requestedTime ? ` · Nova hora: ${requestedTime}` : ""} · Reatribuição: {needsReassignment ? "sim" : "não"}
-                    {needsReassignment && suggested
-                      ? ` · Sugerido: ${others.find((m) => m.id === suggested)?.full_name?.trim() || "Sem responsável"}`
+                    {needsReassignment && suggested.trim()
+                      ? ` · Sugerido: ${suggested.trim()}`
                       : ""}
                   </div>
                 )}
