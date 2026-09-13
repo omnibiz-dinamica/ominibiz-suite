@@ -23,6 +23,7 @@ test("cancellation notification exposes actor, task, client and reason", () => {
       cancelledAt: "2026-09-02T14:15:00.000Z",
       requestedDate: null,
       needsReassignment: null,
+      suggestedEmployeeName: null,
     },
   );
 });
