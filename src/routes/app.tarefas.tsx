@@ -136,7 +136,7 @@ import { RefuseTaskDialog, type RefusalSubmitPayload } from "@/components/tasks/
 import { EmployeeMultiPicker } from "@/components/common/EmployeePicker";
 import { filterCalendarData, tasksForCalendarDay } from "@/lib/tasks/calendar-filter";
 import { compareTasksForList, sortTasksForList } from "@/lib/tasks/list-order";
-import { isDashboardCancelled, isDashboardLateStart } from "@/lib/tasks/dashboard-rules";
+import { isDashboardCancelled, isDashboardOverdue } from "@/lib/tasks/dashboard-rules";
 import {
   wallISOToDateInput,
   wallDateToEndOfDayISO,
@@ -312,9 +312,19 @@ function TasksPage() {
   });
 
   const { data: members } = useQuery({
-    queryKey: ["members", currentCompanyId],
-    queryFn: async () => {
+    queryKey: ["members", currentCompanyId, isManager],
+    queryFn: async (): Promise<TaskMember[]> => {
       if (!currentCompanyId) return [];
+      if (!isManager) {
+        // ADR-062 — funcionários não leem user_roles/profiles de terceiros por RLS;
+        // a RPC company_member_options devolve apenas (id, nome) dos colegas da empresa.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data, error } = await (supabase.rpc as any)("company_member_options");
+        if (error) throw error;
+        return ((data ?? []) as { id: string; full_name: string | null; company_id: string }[])
+          .filter((m) => m.company_id === currentCompanyId)
+          .map(({ id, full_name }) => ({ id, full_name }));
+      }
       const { data: roles, error: rolesError } = await supabase
         .from("user_roles")
         .select("user_id")
@@ -331,7 +341,7 @@ function TasksPage() {
       if (profilesError) throw profilesError;
       return profs ?? [];
     },
-    enabled: isManager && !!currentCompanyId,
+    enabled: !!currentCompanyId,
   });
 
   const { data: clientsList } = useQuery({
@@ -742,7 +752,7 @@ function TasksPage() {
       if (search.client && t.client_id !== search.client) return false;
       if (!search.status) return true;
       if (search.status === "atrasadas") {
-        return isDashboardLateStart(t);
+        return isDashboardOverdue(t);
       }
       if (search.status === "canceladas") {
         return isDashboardCancelled(t);
@@ -751,7 +761,7 @@ function TasksPage() {
         return isRefused(t);
       }
       if (search.status === "pendente") {
-        return t.status === "pendente" && !isDashboardLateStart(t);
+        return t.status === "pendente" && !isDashboardOverdue(t);
       }
       return t.status === search.status;
     });
