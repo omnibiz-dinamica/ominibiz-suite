@@ -752,7 +752,7 @@ function TasksPage() {
       if (search.client && t.client_id !== search.client) return false;
       if (!search.status) return true;
       if (search.status === "atrasadas") {
-        return isDashboardLateStart(t);
+        return isDashboardOverdue(t);
       }
       if (search.status === "canceladas") {
         return isDashboardCancelled(t);
