@@ -312,7 +312,7 @@ function TasksPage() {
   });
 
   const { data: members } = useQuery({
-    queryKey: ["members", currentCompanyId, isManager],
+    queryKey: ["members", currentCompanyId],
     queryFn: async (): Promise<TaskMember[]> => {
       if (!currentCompanyId) return [];
       if (!isManager) {
