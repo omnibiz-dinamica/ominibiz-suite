@@ -117,6 +117,9 @@ export function currentTaskRefusal(
     suggestedEmployeeId:
       nonBlank(task.schedule_change_suggested_employee_id) ??
       nonBlank(matchingHistory?.schedule_change_suggested_employee_id),
+    suggestedEmployeeName:
+      nonBlank(task.schedule_change_suggested_employee_name) ??
+      nonBlank(matchingHistory?.schedule_change_suggested_employee_name),
   };
 }
 
@@ -135,6 +138,7 @@ export function currentTaskCancellation(task: RefusedTaskSnapshot): TaskCancella
         ? task.schedule_change_needs_reassignment
         : null,
     suggestedEmployeeId: nonBlank(task.schedule_change_suggested_employee_id),
+    suggestedEmployeeName: nonBlank(task.schedule_change_suggested_employee_name),
   };
 }
 
