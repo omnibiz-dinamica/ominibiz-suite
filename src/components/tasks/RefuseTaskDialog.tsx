@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { REFUSAL_REASONS, SCHEDULE_CHANGE_REASON, type TaskRow } from "@/lib/tasks";
+import { EmployeePicker } from "@/components/common/EmployeePicker";
 
 export type RefusalSubmitPayload = {
   reason: string;
@@ -50,7 +51,7 @@ export function RefuseTaskDialog({
   const [requestedDate, setRequestedDate] = useState("");
   const [requestedTime, setRequestedTime] = useState("");
   const [needsReassignment, setNeedsReassignment] = useState(false);
-  const [suggested, setSuggested] = useState("none");
+  const [suggested, setSuggested] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -59,7 +60,7 @@ export function RefuseTaskDialog({
     setRequestedDate("");
     setRequestedTime("");
     setNeedsReassignment(false);
-    setSuggested("none");
+    setSuggested(null);
   }, [open, task?.id]);
 
   const isScheduleChange = reasonType === SCHEDULE_CHANGE_REASON;
@@ -81,7 +82,7 @@ export function RefuseTaskDialog({
       requestedDate: isScheduleChange ? requestedDate : undefined,
       requestedTime: isScheduleChange ? requestedTime || null : null,
       needsReassignment: isScheduleChange ? needsReassignment : undefined,
-      suggestedEmployeeId: isScheduleChange && needsReassignment && suggested !== "none" ? suggested : null,
+      suggestedEmployeeId: isScheduleChange && needsReassignment ? suggested : null,
     });
   };
 
@@ -165,19 +166,14 @@ export function RefuseTaskDialog({
               {needsReassignment && (
                 <div className="space-y-1.5">
                   <Label htmlFor="task-refusal-suggested">Funcionário sugerido (opcional)</Label>
-                  <Select value={suggested} onValueChange={setSuggested}>
-                    <SelectTrigger id="task-refusal-suggested">
-                      <SelectValue placeholder="Sem sugestão" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Sem sugestão</SelectItem>
-                      {others.map((member) => (
-                        <SelectItem key={member.id} value={member.id}>
-                          {member.full_name?.trim() || "Sem responsável"}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <EmployeePicker
+                    employees={others}
+                    value={suggested}
+                    onChange={setSuggested}
+                    placeholder="Digite para buscar um funcionário"
+                    emptyText="Nenhum funcionário encontrado"
+                    ariaLabel="Funcionário sugerido"
+                  />
                   <p className="text-xs text-muted-foreground">
                     A sugestão é informativa. Só o gestor pode reatribuir a tarefa.
                   </p>
