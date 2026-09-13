@@ -28,10 +28,12 @@
   a tarefa através do diálogo canónico `RefuseTaskDialog`, com motivos
   "Cliente cancelou", "Alterar data / hora" e "Outro".
 - `12092026-004d` — O pedido de alteração aceita **data e hora** desejadas e um
-  **funcionário sugerido** opcional. É apenas um pedido: a ocorrência não é
-  movida, a série (`recurrence_id`) não muda e o responsável não é reatribuído
-  automaticamente. Lista, Calendário e Notificações leem a mesma fonte e mostram
-  nome real (nunca UUID), com "Sem responsável" quando aplicável.
+  **funcionário sugerido** opcional, agora como campo de texto livre em ambos os
+  diálogos (cancelamento pelo gestor e recusa pelo funcionário). É apenas um
+  pedido: a ocorrência não é movida, a série (`recurrence_id`) não muda e o
+  responsável não é reatribuído automaticamente. Lista, Calendário e Notificações
+  leem a mesma fonte e mostram nome real (nunca UUID), com "Sem responsável"
+  quando aplicável.
 
 ---
 
