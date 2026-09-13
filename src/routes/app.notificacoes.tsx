@@ -731,6 +731,12 @@ function NotificationsPage() {
                             {cancellation.needsReassignment ? "Sim" : "Não"}
                           </p>
                         )}
+                        {cancellation.suggestedEmployeeName && (
+                          <p>
+                            <span className="font-medium">Funcionário sugerido (informativo):</span>{" "}
+                            {cancellation.suggestedEmployeeName}
+                          </p>
+                        )}
                       </div>
                     ) : completion ? (
                       <div className="mt-2 space-y-1 border-l-2 border-success/40 pl-3 text-sm">

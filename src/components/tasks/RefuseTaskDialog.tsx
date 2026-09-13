@@ -16,22 +16,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { REFUSAL_REASONS, SCHEDULE_CHANGE_REASON, type TaskRow } from "@/lib/tasks";
-import { EmployeePicker } from "@/components/common/EmployeePicker";
 
 export type RefusalSubmitPayload = {
   reason: string;
   requestedDate?: string;
   requestedTime?: string | null;
   needsReassignment?: boolean;
-  suggestedEmployeeId?: string | null;
+  suggestedEmployeeName?: string | null;
 };
-
-export type RefusalMemberOption = { id: string; full_name: string | null };
 
 export function RefuseTaskDialog({
   task,
   clientName,
-  members,
   open,
   onOpenChange,
   pending,
@@ -39,8 +35,6 @@ export function RefuseTaskDialog({
 }: {
   task: TaskRow | null;
   clientName?: string;
-  /** Colegas da mesma empresa (RLS/RBAC já aplicados na consulta de origem). */
-  members: RefusalMemberOption[];
   open: boolean;
   onOpenChange: (v: boolean) => void;
   pending?: boolean;
@@ -51,7 +45,7 @@ export function RefuseTaskDialog({
   const [requestedDate, setRequestedDate] = useState("");
   const [requestedTime, setRequestedTime] = useState("");
   const [needsReassignment, setNeedsReassignment] = useState(false);
-  const [suggested, setSuggested] = useState<string | null>(null);
+  const [suggested, setSuggested] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -60,7 +54,7 @@ export function RefuseTaskDialog({
     setRequestedDate("");
     setRequestedTime("");
     setNeedsReassignment(false);
-    setSuggested(null);
+    setSuggested("");
   }, [open, task?.id]);
 
   const isScheduleChange = reasonType === SCHEDULE_CHANGE_REASON;
@@ -82,11 +76,9 @@ export function RefuseTaskDialog({
       requestedDate: isScheduleChange ? requestedDate : undefined,
       requestedTime: isScheduleChange ? requestedTime || null : null,
       needsReassignment: isScheduleChange ? needsReassignment : undefined,
-      suggestedEmployeeId: isScheduleChange && needsReassignment ? suggested : null,
+      suggestedEmployeeName: isScheduleChange && needsReassignment ? suggested.trim() || null : null,
     });
   };
-
-  const others = members.filter((m) => m.id !== task?.assigned_to);
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && !pending && onOpenChange(false)}>
@@ -166,13 +158,12 @@ export function RefuseTaskDialog({
               {needsReassignment && (
                 <div className="space-y-1.5">
                   <Label htmlFor="task-refusal-suggested">Funcionário sugerido (opcional)</Label>
-                  <EmployeePicker
-                    employees={others}
+                  <Input
+                    id="task-refusal-suggested"
+                    type="text"
                     value={suggested}
-                    onChange={setSuggested}
-                    placeholder="Digite para buscar um funcionário"
-                    emptyText="Nenhum funcionário encontrado"
-                    ariaLabel="Funcionário sugerido"
+                    onChange={(event) => setSuggested(event.target.value)}
+                    placeholder="Digite o nome do funcionário"
                   />
                   <p className="text-xs text-muted-foreground">
                     A sugestão é informativa. Só o gestor pode reatribuir a tarefa.

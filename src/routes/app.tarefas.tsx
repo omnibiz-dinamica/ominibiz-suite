@@ -312,7 +312,7 @@ function TasksPage() {
   });
 
   const { data: members } = useQuery({
-    queryKey: ["members", currentCompanyId, isManager],
+    queryKey: ["members", currentCompanyId],
     queryFn: async (): Promise<TaskMember[]> => {
       if (!currentCompanyId) return [];
       if (!isManager) {
@@ -522,23 +522,24 @@ function TasksPage() {
   }, [user?.id, qc]);
 
   const transition = useMutation({
-    mutationFn: ({ id, action, reason, requestedDate, requestedTime, needsReassignment, suggestedEmployeeId }: {
+    mutationFn: ({ id, action, reason, requestedDate, requestedTime, needsReassignment, suggestedEmployeeName }: {
       id: string;
       action: TaskAction;
       reason?: string;
       requestedDate?: string;
       requestedTime?: string | null;
       needsReassignment?: boolean;
-      suggestedEmployeeId?: string | null;
+      suggestedEmployeeName?: string | null;
     }) =>
       requestedDate && needsReassignment !== undefined
         ? transitionTaskWithScheduleRequest(id, action, reason ?? "", {
             requestedDate,
             requestedTime,
             needsReassignment,
-            suggestedEmployeeId,
+            suggestedEmployeeName,
           })
         : transitionTask(id, action, reason),
+
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
       qc.invalidateQueries({ queryKey: ["tasks-open-punches"] });
@@ -738,7 +739,7 @@ function TasksPage() {
       requestedDate: payload.requestedDate,
       requestedTime: payload.requestedTime,
       needsReassignment: payload.requestedDate ? !!payload.needsReassignment : undefined,
-      suggestedEmployeeId: payload.suggestedEmployeeId,
+      suggestedEmployeeName: payload.suggestedEmployeeName,
     });
   };
 
@@ -1012,7 +1013,6 @@ function TasksPage() {
       <CancelTaskDialog
         task={cancelling}
         clientName={cancelling?.client_id ? clientsList?.find((c) => c.id === cancelling.client_id)?.name : undefined}
-        members={members ?? []}
         open={!!cancelling}
         onOpenChange={(o) => !o && setCancelling(null)}
         onDone={() => {
@@ -1108,7 +1108,6 @@ function TasksPage() {
       <RefuseTaskDialog
         task={refusing}
         clientName={refusing?.client_id ? clientsList?.find((c) => c.id === refusing.client_id)?.name : undefined}
-        members={members ?? []}
         open={!!refusing}
         onOpenChange={(v) => !v && setRefusing(null)}
         pending={transition.isPending}
@@ -2068,9 +2067,11 @@ function CalendarTaskCard({
           {refusal.needsReassignment != null && (
             <div>Reatribuição: {refusal.needsReassignment ? "Sim" : "Não"}</div>
           )}
-          {refusal.suggestedEmployeeId && (
+          {(refusal.suggestedEmployeeName || refusal.suggestedEmployeeId) && (
             <div>
-              Sugestão (informativa): {memberNames.get(refusal.suggestedEmployeeId) ?? "Sem responsável"}
+              Sugestão (informativa):{" "}
+              {refusal.suggestedEmployeeName ??
+                (refusal.suggestedEmployeeId ? memberNames.get(refusal.suggestedEmployeeId) ?? "Sem responsável" : "Sem responsável")}
             </div>
           )}
         </div>
@@ -2095,9 +2096,11 @@ function CalendarTaskCard({
           {cancellation.needsReassignment != null && (
             <div>Reatribuição: {cancellation.needsReassignment ? "Sim" : "Não"}</div>
           )}
-          {cancellation.suggestedEmployeeId && (
+          {(cancellation.suggestedEmployeeName || cancellation.suggestedEmployeeId) && (
             <div>
-              Sugestão (informativa): {memberNames.get(cancellation.suggestedEmployeeId) ?? "Sem responsável"}
+              Sugestão (informativa):{" "}
+              {cancellation.suggestedEmployeeName ??
+                (cancellation.suggestedEmployeeId ? memberNames.get(cancellation.suggestedEmployeeId) ?? "Sem responsável" : "Sem responsável")}
             </div>
           )}
         </div>
@@ -2395,10 +2398,11 @@ function TaskRowItem({
             {refusal.needsReassignment != null && (
               <div>Reatribuição necessária: {refusal.needsReassignment ? "Sim" : "Não"}</div>
             )}
-            {refusal.suggestedEmployeeId && (
+            {(refusal.suggestedEmployeeName || refusal.suggestedEmployeeId) && (
               <div>
                 Funcionário sugerido (informativo):{" "}
-                {memberNames.get(refusal.suggestedEmployeeId) ?? "Sem responsável"}
+                {refusal.suggestedEmployeeName ??
+                  (refusal.suggestedEmployeeId ? memberNames.get(refusal.suggestedEmployeeId) ?? "Sem responsável" : "Sem responsável")}
               </div>
             )}
             {isManager && (
@@ -2432,10 +2436,11 @@ function TaskRowItem({
             {cancellation.needsReassignment != null && (
               <div>Reatribuição necessária: {cancellation.needsReassignment ? "Sim" : "Não"}</div>
             )}
-            {cancellation.suggestedEmployeeId && (
+            {(cancellation.suggestedEmployeeName || cancellation.suggestedEmployeeId) && (
               <div>
                 Funcionário sugerido (informativo):{" "}
-                {memberNames.get(cancellation.suggestedEmployeeId) ?? "Sem responsável"}
+                {cancellation.suggestedEmployeeName ??
+                  (cancellation.suggestedEmployeeId ? memberNames.get(cancellation.suggestedEmployeeId) ?? "Sem responsável" : "Sem responsável")}
               </div>
             )}
           </div>

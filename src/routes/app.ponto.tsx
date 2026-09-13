@@ -275,7 +275,7 @@ function PontoPage() {
           requestedDate: payload.requestedDate,
           requestedTime: payload.requestedTime,
           needsReassignment: !!payload.needsReassignment,
-          suggestedEmployeeId: payload.suggestedEmployeeId,
+          suggestedEmployeeName: payload.suggestedEmployeeName,
         });
       }
       return transitionTask(refuseTarget.id, "recusar", payload.reason);
@@ -676,7 +676,6 @@ function PontoPage() {
       <RefuseTaskDialog
         task={refuseTarget}
         clientName={refuseTarget?.client_id ? clientsMap?.[refuseTarget.client_id] : undefined}
-        members={companyMembers ?? []}
         open={!!refuseTarget}
         onOpenChange={(o) => !o && setRefuseTarget(null)}
         pending={refuseTask.isPending}
@@ -685,7 +684,6 @@ function PontoPage() {
       <CancelTaskDialog
         task={cancelTarget}
         clientName={cancelTarget?.client_id ? clientsMap?.[cancelTarget.client_id] : undefined}
-        members={companyMembers ?? []}
         open={!!cancelTarget}
         onOpenChange={(o) => !o && setCancelTarget(null)}
         onOpenPunch={() => setRecoveryOpen(true)}
