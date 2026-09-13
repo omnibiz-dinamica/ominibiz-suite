@@ -35,8 +35,7 @@ test("soft-deleted tasks never reach the operational lists", () => {
 test("the refusal dialog treats date/time and suggestion as a request only", () => {
   assert.match(refuseDialog, /a tarefa não é movida nem reagendada automaticamente/);
   assert.match(refuseDialog, /Só o gestor pode reatribuir a tarefa/);
-  assert.match(refuseDialog, /suggestedEmployeeId:\s*isScheduleChange && needsReassignment/);
-  assert.match(refuseDialog, /others = members\.filter\(\(m\) => m\.id !== task\?\.assigned_to\)/);
+  assert.match(refuseDialog, /suggestedEmployeeName:\s*isScheduleChange && needsReassignment/);
 });
 
 test("requested time and suggested employee are surfaced from the task snapshot", () => {
@@ -49,7 +48,7 @@ test("requested time and suggested employee are surfaced from the task snapshot"
         schedule_change_requested_date: "2026-09-20",
         schedule_change_requested_time: "14:30:00",
         schedule_change_needs_reassignment: true,
-        schedule_change_suggested_employee_id: "employee-b",
+        schedule_change_suggested_employee_name: "Funcionário B",
       },
       [],
     ),
@@ -60,7 +59,8 @@ test("requested time and suggested employee are surfaced from the task snapshot"
       requestedDate: "2026-09-20",
       requestedTime: "14:30",
       needsReassignment: true,
-      suggestedEmployeeId: "employee-b",
+      suggestedEmployeeId: null,
+      suggestedEmployeeName: "Funcionário B",
     },
   );
 
