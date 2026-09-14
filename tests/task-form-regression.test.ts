@@ -25,11 +25,17 @@ test("task views never refetch when the tab or window regains focus", () => {
   assert.doesNotMatch(taskForm, /refetchOnWindowFocus: !open/);
 });
 
-test("recurrence start date is inherited from the task date", () => {
-  assert.match(taskForm, /current\.frequency === "custom" \|\| current\.startDate === startDate/);
-  assert.match(taskForm, /startDateLocked/);
-  assert.match(taskForm, /const recurrenceStartDate = recurrence\.enabled/);
-  assert.match(recurrenceForm, /disabled=\{uiFrequency === "custom" \|\| startDateLocked\}/);
+test("recurrence start date is suggested by the task date but editable by the manager", () => {
+  assert.match(taskForm, /recurrenceStartTouchedRef/);
+  assert.match(taskForm, /if \(initial \|\| !startDate \|\| recurrenceStartTouchedRef\.current\) return;/);
+  assert.match(taskForm, /const recurrenceStartDate = recurrence\.enabled\s*\?\s*recurrence\.startDate \|\| startDate/);
+  assert.doesNotMatch(taskForm, /startDateLocked/);
+  assert.match(recurrenceForm, /disabled=\{uiFrequency === "custom"\}/);
+  assert.doesNotMatch(recurrenceForm, /startDateLocked/);
+});
+
+test("recurrence window is validated before saving the series", () => {
+  assert.match(taskForm, /recurrenceEndDate < recurrenceStartDate/);
 });
 
 test("business date boundaries are inclusive without timezone conversion", () => {

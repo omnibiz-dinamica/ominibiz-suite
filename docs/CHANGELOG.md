@@ -5,6 +5,27 @@
 
 ---
 
+### 🚧 14092026-B — Geração de ocorrências por série (fim do timeout)
+
+#### Corrigido
+- `14092026-003a` — `public.recurrence_materialize` aceita `_recurrence_id`
+  (terceiro parâmetro opcional, mesma função — sem `_v2`). Ao criar/editar uma
+  recorrência, a tela gera **apenas a série nova**: 11 ms medidos, contra
+  19.482 ms da varredura da empresa inteira (Grupo V-clean, 59 séries), que
+  estourava o `statement_timeout` do usuário autenticado (8 s) e abortava sem
+  gerar nada. Chamadas por empresa continuam válidas (valores padrão).
+- `14092026-003b` — A falha de geração passa a ser **erro real** na tela, com o
+  motivo do banco. Removida a mensagem otimista "as próximas ocorrências serão
+  geradas automaticamente", que nunca se cumpria (não existe job).
+- `14092026-003c` — A data inicial da série deixa de ser travada à data da
+  tarefa-modelo: a data principal apenas sugere o valor até o gestor editar o
+  campo. Corrige o caso em que 07/09 era salvo como 07/10.
+- `14092026-003d` — Janela coerente: `task_recurrences` recebe verificação
+  (`end_date >= start_date`, `NOT VALID` — 47 linhas legadas preservadas), e
+  `recurrence_end` / `task_series_delete` deixam de gravar fim anterior ao início.
+
+---
+
 ### 🚧 14092026 — Geração de tarefas recorrentes resiliente
 
 #### Corrigido
