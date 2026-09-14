@@ -3555,8 +3555,10 @@ function TaskForm({
                 })}
               </div>
               <p className="text-xs text-muted-foreground">
-                Selecione um ou mais funcionários. Cada responsável recebe a sua própria tarefa, com
-                estado, ponto, recusa e conclusão independentes — a ação de um não altera a do outro.
+                Os funcionários do cadastro do cliente vêm apenas como sugestão: pode remover, trocar ou
+                acrescentar livremente sem alterar o cadastro do cliente. Cada responsável recebe a sua própria
+                tarefa, com estado, ponto, recusa e conclusão independentes — a ação de um não altera a do outro.
+
 
               </p>
             </>
