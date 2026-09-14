@@ -3377,6 +3377,7 @@ function TaskForm({
                 {assignees.length} {assignees.length === 1 ? "funcionário" : "funcionários"} selecionado(s)
                 {" → "}
                 <span className="font-medium text-foreground">{formatContractedMinutes(distributedMinutes[0])} por funcionário</span>
+                {" (o total do serviço não muda ao remover ou acrescentar funcionários)"}
               </p>
             )}
             {contractedMinutes != null && assignees.length === 0 && (
