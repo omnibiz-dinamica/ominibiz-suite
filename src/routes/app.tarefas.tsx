@@ -3145,6 +3145,7 @@ function TaskForm({
           // "já existe" — nunca criamos um clone e nunca abortamos os restantes.
           let duplicates = 0;
           let created = 0;
+          const createdRecurrenceIds: string[] = [];
           for (const [index, memberId] of selectedAssignees.entries()) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const ins = await (supabase.from("task_recurrences" as any) as any).insert({
