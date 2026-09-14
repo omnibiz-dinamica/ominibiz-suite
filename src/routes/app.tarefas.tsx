@@ -2968,7 +2968,7 @@ function TaskForm({
         const selectedAssignees = [...new Set(assignees)];
         const selectedDistributedMinutes = distributeContractedMinutes(contractedMinutes, selectedAssignees.length);
         if (selectedAssignees.length === 0) {
-          toast.error("Atribua a tarefa a um funcionario antes de salvar.");
+          toast.error("Selecione pelo menos um funcionário para esta tarefa.");
           return;
         }
         if (!dueISO) {
