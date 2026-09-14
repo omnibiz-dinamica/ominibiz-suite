@@ -23,6 +23,13 @@ function formatDateKey(value: string): string {
   return day && month && year ? `${day}/${month}/${year}` : value;
 }
 
+type RecurrenceFailure = {
+  id: string;
+  entity_id: string;
+  created_at: string;
+  details: { company_id?: string; title?: string; message?: string; sqlstate?: string } | null;
+};
+
 export const Route = createFileRoute("/app/tarefas/recorrentes")({ component: RecurrencesPage });
 
 function RecurrencesPage() {
@@ -62,6 +69,29 @@ function RecurrencesPage() {
     enabled: isManager && !!currentCompanyId,
   });
 
+  /**
+   * Falhas por série na geração de ocorrências. A geração isola erros por
+   * série (nada aborta a empresa inteira) e registra o motivo em auditoria.
+   */
+  const { data: failures } = useQuery({
+    queryKey: ["recurrence-failures", currentCompanyId],
+    queryFn: async () => {
+      if (!currentCompanyId) return [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.from("task_dedupe_audit" as any) as any)
+        .select("id, entity_id, details, created_at")
+        .eq("entity", "task_recurrences")
+        .eq("kind", "materialize_error")
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return ((data ?? []) as RecurrenceFailure[]).filter(
+        (row) => row.details?.company_id === currentCompanyId,
+      );
+    },
+    enabled: isManager && !!currentCompanyId,
+  });
+
   const end = useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) => recurrenceEnd(id, reason, true),
     onSuccess: () => {
@@ -90,6 +120,7 @@ function RecurrencesPage() {
       const n = await recurrenceMaterialize(60, currentCompanyId);
       toast.success(`${n} ocorrência(s) geradas`);
       qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["recurrence-failures"] });
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -117,6 +148,24 @@ function RecurrencesPage() {
           <RefreshCcw className="mr-2 h-4 w-4" /> {busy ? "Gerando..." : "Gerar próximas 60d"}
         </Button>
       </div>
+
+      {(failures ?? []).length > 0 && (
+        <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-5">
+          <h2 className="text-sm font-semibold">Séries que falharam na última geração</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            As demais séries continuaram gerando normalmente. Corrija os dados destas séries e gere novamente.
+          </p>
+          <ul className="mt-3 space-y-2">
+            {(failures ?? []).map((f) => (
+              <li key={f.id} className="text-xs">
+                <span className="font-medium">{f.details?.title ?? f.entity_id}</span>
+                {" — "}
+                {f.details?.message ?? "erro não identificado"}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="rounded-2xl border border-border bg-card">
         {isLoading && <div className="p-6 text-center text-sm text-muted-foreground">Carregando...</div>}

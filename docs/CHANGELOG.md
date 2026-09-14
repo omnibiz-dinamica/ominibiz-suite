@@ -5,6 +5,29 @@
 
 ---
 
+### 🚧 14092026 — Geração de tarefas recorrentes resiliente
+
+#### Corrigido
+- `14092026-001a` — A geração de ocorrências deixa de ser tudo-ou-nada: uma série
+  com dados inválidos é isolada, registrada em auditoria
+  (`task_dedupe_audit`, `kind = 'materialize_error'`) e ignorada; todas as outras
+  séries da empresa continuam gerando. `public.recurrence_materialize` mantém o
+  mesmo nome e assinatura (sem `_v2`) e continua idempotente por
+  `uq_tasks_recurrence_date`.
+- `14092026-001b` — `task_recurrences.client_id` passa a ter chave estrangeira
+  para `clients` com `ON DELETE SET NULL`; referências órfãs foram normalizadas.
+  Impede novamente o cenário do cliente "fantasma" que travava a empresa inteira.
+- `14092026-001c` — A série "Espera" (Paula Renata, Grupo V-clean) teve o início
+  corrigido para 07/09/2026 e gerou as ocorrências pendentes (18 no total,
+  16/09 a 13/11), sem duplicatas.
+
+#### Adicionado
+- `14092026-002` — A tela **Recorrências** mostra ao gestor quais séries falharam
+  na última geração e o motivo. Leitura restrita à própria empresa
+  (`is_company_manager` sobre `details->>'company_id'`).
+
+---
+
 ### 🚧 12092026 — Isolamento do ambiente de teste e autoridade de recusa/cancelamento
 
 #### Corrigido
