@@ -2923,6 +2923,13 @@ function TaskForm({
         submittingRef.current = true;
         setLoading(true);
         try {
+        // Regra operacional: pelo menos um responsável. A equipe do cliente é
+        // sugestão, então a validação olha só o que está selecionado agora.
+        if (assignees.length === 0) {
+          toast.error("Selecione pelo menos um funcionário para esta tarefa.");
+          document.getElementById("task-assignee-search")?.focus();
+          return;
+        }
         if (!initial && recurrence.enabled && recurrence.frequency === "custom") {
           const selectedDates = normalizeCustomRecurrenceDates(recurrence.selectedDates);
           if (selectedDates.length === 0) {
