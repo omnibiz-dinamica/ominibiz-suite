@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { ClipboardList, CheckCircle2, Clock, AlertTriangle, Building2, Ban } from "lucide-react";
+import { ClipboardList, CheckCircle2, Clock, AlertTriangle, Building2, Ban, UserX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmployeeDashboard } from "@/components/dashboards/EmployeeDashboard";
 import { SuperAdminDashboard } from "@/components/dashboards/SuperAdminDashboard";
