@@ -161,7 +161,7 @@ const STATUS_FILTERS = [
 ] as const;
 
 type StatusFilter = (typeof STATUS_FILTERS)[number];
-type TasksSearch = { status?: StatusFilter; employee?: string; client?: string; task?: string };
+type TasksSearch = { status?: StatusFilter; employee?: string; client?: string; task?: string; date?: string };
 type ClientOption = {
   id: string;
   name: string;
@@ -202,7 +202,10 @@ export const Route = createFileRoute("/app/tarefas")({
     const employee = typeof s.employee === "string" && s.employee ? s.employee : undefined;
     const client = typeof s.client === "string" && s.client ? s.client : undefined;
     const task = typeof s.task === "string" && s.task ? s.task : undefined;
-    return { status, employee, client, task };
+    // Filtro de dia operacional (vindo do Dashboard). O histórico continua
+    // acessível: basta limpar o filtro de data.
+    const date = typeof s.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s.date) ? s.date : undefined;
+    return { status, employee, client, task, date };
   },
 });
 
