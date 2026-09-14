@@ -10,6 +10,7 @@ import { SuperAdminDashboard } from "@/components/dashboards/SuperAdminDashboard
 import {
   classifyDashboardTask,
   countDashboardTasks,
+  dashboardOperationalAssigneeIds,
   localDayKey,
   taskOperationalDay,
 } from "@/lib/tasks/dashboard-counters";
@@ -57,6 +58,17 @@ function ManagerDashboard() {
     // (criar, concluir, cancelar, recusar, reatribuir) já invalide o Dashboard.
     queryKey: ["tasks", "dashboard", currentCompanyId, user?.id, isManager, today],
     queryFn: async () => {
+      let operationalAssigneeIds: string[] | null = null;
+      if (isManager && currentCompanyId) {
+        const { data: companyRoles, error: rolesError } = await supabase
+          .from("user_roles")
+          .select("user_id, role")
+          .eq("company_id", currentCompanyId);
+        if (rolesError) throw rolesError;
+        operationalAssigneeIds = dashboardOperationalAssigneeIds(companyRoles ?? []);
+        if (operationalAssigneeIds.length === 0) return [];
+      }
+
       // O filtro do dia operacional é feito no banco: buscar tudo faria o
       // PostgREST truncar em 1000 linhas e esconder as tarefas de hoje.
       const start = `${today}T00:00:00.000`;
@@ -77,7 +89,9 @@ function ManagerDashboard() {
         )
         .limit(2000);
       if (!isManager) q = q.eq("assigned_to", user!.id);
-      else if (currentCompanyId) q = q.eq("company_id", currentCompanyId);
+      else if (currentCompanyId && operationalAssigneeIds) {
+        q = q.eq("company_id", currentCompanyId).in("assigned_to", operationalAssigneeIds);
+      }
       const { data, error: queryError } = await q;
       if (queryError) throw queryError;
       return data ?? [];

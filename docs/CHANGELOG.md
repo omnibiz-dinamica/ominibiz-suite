@@ -1,3 +1,9 @@
+# 14092026-D/007 — Dashboard operacional exclui tarefas de gestores
+
+- Os contadores do Dashboard passam a considerar somente tarefas atribuídas à equipa operacional da empresa.
+- Utilizadores com função de gestor, owner ou super admin não entram nos números, mesmo quando também conservam outro papel.
+- Na conferência da Grupo V-clean, o cartão Atrasadas passa de 4 para 3: Sara Coelho (2) e Marco Ribeiro (1).
+
 # 14092026-D/006 — Dashboard alinhado com a lista de tarefas
 
 - O Dashboard e a lista de Tarefas agora usam a mesma regra operacional para ausências automáticas antecipadas.
