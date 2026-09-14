@@ -1,3 +1,9 @@
+# 14092026-D/006 — Dashboard alinhado com a lista de tarefas
+
+- O Dashboard e a lista de Tarefas agora usam a mesma regra operacional para ausências automáticas antecipadas.
+- Uma tarefa gravada prematuramente como `ausente`, ainda dentro da janela operacional de 24 horas, conta somente como `atrasada`.
+- Ausências manuais e informadas pelo funcionário continuam no contador de Ausentes imediatamente.
+
 # OmniBiz — CHANGELOG
 
 > Registro oficial de alterações. Formato inspirado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).

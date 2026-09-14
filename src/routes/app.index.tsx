@@ -64,7 +64,7 @@ function ManagerDashboard() {
       let q = supabase
         .from("tasks")
         .select(
-          "id, status, scheduled_for, recurrence_date, due_at, started_at, archived_at, deleted_at, refused_by, title, client_id",
+          "id, status, scheduled_for, recurrence_date, due_at, started_at, archived_at, deleted_at, refused_by, absence_source, absence_reason, title, client_id",
         )
         .is("deleted_at", null)
         .is("archived_at", null)
