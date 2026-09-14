@@ -754,22 +754,19 @@ function TasksPage() {
       if (search.task && t.id !== search.task) return false;
       if (selectedEmployees.size > 0 && (!t.assigned_to || !selectedEmployees.has(t.assigned_to))) return false;
       if (search.client && t.client_id !== search.client) return false;
+      // Dia operacional (agendamento / ocorrência / prazo), nunca created_at.
+      if (search.date && taskOperationalDay(t) !== search.date) return false;
       if (!search.status) return true;
-      if (search.status === "atrasadas") {
-        return isDashboardOverdue(t);
-      }
-      if (search.status === "canceladas") {
-        return isDashboardCancelled(t);
-      }
-      if (search.status === "recusadas") {
-        return isRefused(t);
-      }
-      if (search.status === "pendente") {
-        return t.status === "pendente" && !isDashboardOverdue(t);
-      }
+      // Mesma classificação exclusiva usada pelos cartões do Dashboard.
+      if (search.status === "atrasadas") return matchesDashboardBucket(t, "atrasada");
+      if (search.status === "canceladas") return matchesDashboardBucket(t, "cancelada") || matchesDashboardBucket(t, "recusada");
+      if (search.status === "recusadas") return matchesDashboardBucket(t, "recusada");
+      if (search.status === "pendente") return matchesDashboardBucket(t, "pendente");
+      if (search.status === "em_andamento") return matchesDashboardBucket(t, "em_andamento");
+      if (search.status === "concluido") return matchesDashboardBucket(t, "concluido");
       return t.status === search.status;
     });
-  }, [tasks, search.status, search.employee, search.client, search.task, selectedEmployeeIds]);
+  }, [tasks, search.status, search.employee, search.client, search.task, search.date, selectedEmployeeIds]);
 
   const filteredCalendarData = useMemo(
     () => filterCalendarData(filteredTasks, approvedVacations ?? [], selectedEmployeeIds),
