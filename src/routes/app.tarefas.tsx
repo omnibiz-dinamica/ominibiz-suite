@@ -3181,7 +3181,7 @@ function TaskForm({
                 : derivedDuration,
               schedule_rules: scheduleRulesByEmployee[index] ?? [],
               task_group_id: groupId,
-            });
+            }).select("id");
             if (ins.error) {
               if (String(ins.error.message ?? "").includes("RECURRENCE_DUPLICATE_ACTIVE")) {
                 duplicates += 1;
