@@ -57,13 +57,25 @@ function ManagerDashboard() {
     // (criar, concluir, cancelar, recusar, reatribuir) já invalide o Dashboard.
     queryKey: ["tasks", "dashboard", currentCompanyId, user?.id, isManager, today],
     queryFn: async () => {
+      // O filtro do dia operacional é feito no banco: buscar tudo faria o
+      // PostgREST truncar em 1000 linhas e esconder as tarefas de hoje.
+      const start = `${today}T00:00:00.000`;
+      const end = `${today}T23:59:59.999`;
       let q = supabase
         .from("tasks")
         .select(
           "id, status, scheduled_for, recurrence_date, due_at, started_at, archived_at, deleted_at, refused_by, title, client_id",
         )
         .is("deleted_at", null)
-        .is("archived_at", null);
+        .is("archived_at", null)
+        .or(
+          [
+            `and(scheduled_for.gte.${start},scheduled_for.lte.${end})`,
+            `and(scheduled_for.is.null,recurrence_date.eq.${today})`,
+            `and(scheduled_for.is.null,recurrence_date.is.null,due_at.gte.${start},due_at.lte.${end})`,
+          ].join(","),
+        )
+        .limit(2000);
       if (!isManager) q = q.eq("assigned_to", user!.id);
       else if (currentCompanyId) q = q.eq("company_id", currentCompanyId);
       const { data, error: queryError } = await q;
