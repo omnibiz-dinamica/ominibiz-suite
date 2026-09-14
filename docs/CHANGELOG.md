@@ -20,6 +20,13 @@
 - `14092026-003c` — A data inicial da série deixa de ser travada à data da
   tarefa-modelo: a data principal apenas sugere o valor até o gestor editar o
   campo. Corrige o caso em que 07/09 era salvo como 07/10.
+- `14092026-003e` — A geração por série voltou a herdar o **grupo da tarefa** e a
+  proteção contra a mesma tarefa viva no mesmo dia sob outro identificador de
+  série (mesmo cliente, funcionário, título e horário), que se perderam ao
+  reescrever `recurrence_materialize`.
+- `14092026-003f` — O aviso de séries que falharam mostra apenas falhas das
+  últimas 24 h e filtra a empresa no banco (antes o filtro era aplicado depois
+  do limite de 20 linhas, podendo esconder falhas recentes e alertar para sempre).
 - `14092026-003d` — Janela coerente: `task_recurrences` recebe verificação
   (`end_date >= start_date`, `NOT VALID` — 47 linhas legadas preservadas), e
   `recurrence_end` / `task_series_delete` deixam de gravar fim anterior ao início.
