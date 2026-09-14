@@ -72,16 +72,22 @@ export function classifyDashboardTask(task: DashboardTaskInput, now = new Date()
   // A lista de Tarefas já corrige ausências automáticas gravadas antes da
   // janela de 24h. O Dashboard precisa usar exactamente a mesma fonte de
   // verdade para nunca mostrar Ausente num lugar e Atrasada no outro.
-  const operationalStatus = resolveOperationalStatus(
-    task as DashboardTaskInput & {
-      status: "pendente" | "autorizado" | "em_andamento" | "concluido" | "cancelado" | "ausente";
-    },
-    now,
-  );
-  if (operationalStatus === "ausente") return "ausente";
-  if (operationalStatus === "em_andamento") return "em_andamento";
-  if (operationalStatus === "atrasada") return "atrasada";
-  if (operationalStatus !== "pendente" && operationalStatus !== "autorizado") return null;
+  if (task.status === "ausente") {
+    const operationalStatus = resolveOperationalStatus(
+      {
+        status: "ausente",
+        scheduled_for: task.scheduled_for,
+        recurrence_date: task.recurrence_date,
+        due_at: task.due_at,
+        absence_source: task.absence_source,
+        absence_reason: task.absence_reason,
+      },
+      now,
+    );
+    return operationalStatus === "atrasada" ? "atrasada" : "ausente";
+  }
+  if (task.status === "em_andamento") return "em_andamento";
+  if (task.status !== "pendente" && task.status !== "autorizado") return null;
 
   const deadline = operationalDeadlineMs(task);
   if (deadline !== null && wallClockEpoch(now) > deadline) return "atrasada";
