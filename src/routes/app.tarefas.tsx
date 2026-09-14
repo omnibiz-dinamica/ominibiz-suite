@@ -3191,27 +3191,34 @@ function TaskForm({
               break;
             }
             created += 1;
+            for (const row of (ins.data ?? []) as { id: string }[]) createdRecurrenceIds.push(row.id);
           }
           if (!error) {
-            if (created > 0) {
-              // A recorrência já está salva. Materializar toda a série até a data
-              // final (p.ex. 400 dias) numa única chamada causa statement timeout.
-              // A janela de 60 dias é a mesma do job automático e será ampliada
-              // progressivamente pelo processamento diário.
+            if (createdRecurrenceIds.length > 0) {
+              // A geração roda POR SÉRIE recém-criada. Varrer todas as séries da
+              // empresa estourava o statement_timeout em bases grandes e a série
+              // nova nunca gerava ocorrência. A janela é de 60 dias e o índice
+              // único (série + data) mantém a idempotência.
               const horizon = 60;
-              try {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const { error: materializeError } = await (supabase.rpc as any)("recurrence_materialize", {
-                  _days_ahead: horizon,
-                  _company_id: companyId,
-                });
-                if (materializeError) {
-                  console.warn("[task-recurrence] materialization deferred", materializeError);
-                  toast.warning("Recorrência salva. As próximas ocorrências serão geradas automaticamente.");
+              const failed: string[] = [];
+              for (const recurrenceId of createdRecurrenceIds) {
+                try {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const { error: materializeError } = await (supabase.rpc as any)("recurrence_materialize", {
+                    _days_ahead: horizon,
+                    _company_id: companyId,
+                    _recurrence_id: recurrenceId,
+                  });
+                  if (materializeError) failed.push(materializeError.message ?? "erro desconhecido");
+                } catch (materializeFailure) {
+                  failed.push((materializeFailure as Error).message ?? "erro desconhecido");
                 }
-              } catch (materializeFailure) {
-                console.warn("[task-recurrence] materialization deferred", materializeFailure);
-                toast.warning("Recorrência salva. As próximas ocorrências serão geradas automaticamente.");
+              }
+              if (failed.length > 0) {
+                // Falha de geração é erro real: nunca prometemos geração futura.
+                toast.error(
+                  `Recorrência salva, mas as ocorrências não foram geradas (${failed.length} de ${createdRecurrenceIds.length}): ${failed[0]}. Use "Gerar próximas 60d" em Recorrências.`,
+                );
               }
             }
             if (duplicates > 0) {
