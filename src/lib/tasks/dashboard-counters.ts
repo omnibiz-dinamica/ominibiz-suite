@@ -33,6 +33,24 @@ export type DashboardBucket =
   | "recusada"
   | "ausente";
 
+export type DashboardCompanyRole = {
+  user_id: string;
+  role: string;
+};
+
+/**
+ * Responsáveis operacionais do Dashboard. Um utilizador que também possua
+ * função de gestor/owner deixa de contar, mesmo que conserve outro papel.
+ */
+export function dashboardOperationalAssigneeIds(roles: readonly DashboardCompanyRole[]): string[] {
+  const managers = new Set(
+    roles
+      .filter(({ role }) => role === "manager" || role === "owner" || role === "super_admin")
+      .map(({ user_id }) => user_id),
+  );
+  return [...new Set(roles.map(({ user_id }) => user_id).filter((userId) => !managers.has(userId)))];
+}
+
 const pad = (n: number) => String(n).padStart(2, "0");
 
 /** Dia local (fuso operacional do dispositivo/empresa) no formato YYYY-MM-DD. */

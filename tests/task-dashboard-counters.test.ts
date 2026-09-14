@@ -4,11 +4,25 @@ import test from "node:test";
 import {
   classifyDashboardTask,
   countDashboardTasks,
+  dashboardOperationalAssigneeIds,
   localDayKey,
   taskOperationalDay,
 } from "../src/lib/tasks/dashboard-counters.ts";
 
 const now = new Date(2026, 8, 14, 12, 0, 0); // 14/09/2026 12:00 local
+
+test("dashboard conta funcionarios e exclui responsaveis que tambem sao gestores", () => {
+  assert.deepEqual(
+    dashboardOperationalAssigneeIds([
+      { user_id: "sara", role: "employee" },
+      { user_id: "marco", role: "employee" },
+      { user_id: "gestor", role: "manager" },
+      { user_id: "hibrido", role: "employee" },
+      { user_id: "hibrido", role: "manager" },
+    ]),
+    ["sara", "marco"],
+  );
+});
 
 test("dia operacional vem do agendamento, da ocorrencia ou do prazo, nunca de created_at", () => {
   assert.equal(taskOperationalDay({ status: "pendente", scheduled_for: "2026-09-14T09:00:00.000Z" }), "2026-09-14");

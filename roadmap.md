@@ -12,3 +12,7 @@
 - [x] Item 4 — pesquisa de funcionário na equipa responsável do cliente.
 - [x] Item 5 — equipa responsável do cliente volta a ser gravada (campo em falta na base de dados).
 - [x] Item 6 — datas da recorrência editáveis, data final inclusiva respeitada.
+
+## 14/09/2026 — Dashboard operacional (concluído)
+- [x] Excluir tarefas atribuídas a gestores, owners e super admins dos contadores operacionais.
+- [x] Confirmar o total de 3 atrasadas na Grupo V-clean: Sara Coelho (2) e Marco Ribeiro (1).
