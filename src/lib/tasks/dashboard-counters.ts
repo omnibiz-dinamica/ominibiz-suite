@@ -1,4 +1,4 @@
-import { wallClockEpoch } from "./operational-rules";
+import { wallClockEpoch } from "./operational-rules.ts";
 
 /**
  * Contadores canónicos do Dashboard.
