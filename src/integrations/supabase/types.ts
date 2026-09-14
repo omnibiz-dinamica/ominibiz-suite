@@ -5219,7 +5219,11 @@ export type Database = {
         }
       }
       recurrence_materialize: {
-        Args: { _company_id?: string; _days_ahead?: number }
+        Args: {
+          _company_id?: string
+          _days_ahead?: number
+          _recurrence_id?: string
+        }
         Returns: number
       }
       recurrence_reassign: {
