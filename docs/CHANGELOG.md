@@ -1536,3 +1536,12 @@ queries, mutations ou fluxos funcionais.**
   (idempotente, dry-run por omissão) com evento `SIGNATURE_BACKFILLED`.
 - Nenhuma alteração em horas, pausas, totais, remuneração, tarefas, férias,
   faltas, `time_entries` ou timestamps históricos.
+
+## 14092026-D/005 — Dashboard: contadores reais do dia
+
+- O Dashboard filtrava o dia em memória depois de pedir todas as tarefas da empresa;
+  com 3.6k tarefas o servidor devolvia apenas as primeiras 1.000 (as mais antigas),
+  pelo que Atrasadas/Canceladas/Concluídas do dia apareciam a zero ou incompletas.
+  A consulta passou a filtrar o dia operacional no banco (scheduled_for → recurrence_date → due_at).
+- Novo cartão "Ausentes" no Dashboard e novo filtro "Ausentes" na lista de Tarefas:
+  faltas marcadas já não ficavam fora de qualquer contador.

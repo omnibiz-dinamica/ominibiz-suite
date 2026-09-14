@@ -1153,6 +1153,7 @@ function TasksPage() {
                 ["em_andamento", "Em andamento"],
                 ["concluido", "Concluídas"],
                 ["atrasadas", "Atrasadas"],
+                ["ausente", "Ausentes"],
                 ["canceladas", "Canceladas"],
                 ["recusadas", refusedCount > 0 ? `Recusadas (${refusedCount})` : "Recusadas"],
               ] as const
