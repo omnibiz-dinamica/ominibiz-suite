@@ -2774,8 +2774,21 @@ function TaskForm({
     );
   }, [initial, startDate]);
 
+  /**
+   * A carga contratada do cliente é o TOTAL do serviço. Trocar a quantidade de
+   * responsáveis apenas redistribui esse total (3h/2 = 1h30 cada; 3h/1 = 3h),
+   * nunca reduz o serviço. Como o total muda de dono, uma hora de fim digitada
+   * antes deixa de valer e o recálculo volta a ser automático.
+   */
+  const assigneeCountRef = useRef(assignees.length);
   useEffect(() => {
-    if (initial || manualEndOverride || contractedMinutes == null || !startDate || !startTime || assignees.length === 0) {
+    if (assigneeCountRef.current === assignees.length) return;
+    assigneeCountRef.current = assignees.length;
+    if (contractedMinutes != null && assignees.length > 0) setManualEndOverride(false);
+  }, [assignees.length, contractedMinutes]);
+
+  useEffect(() => {
+    if ((initial && !touchedAssignees) || manualEndOverride || contractedMinutes == null || !startDate || !startTime || assignees.length === 0) {
       return;
     }
     const [minutesForFirstEmployee] = distributedMinutes;
@@ -2784,7 +2797,7 @@ function TaskForm({
     if (!derivedEnd) return;
     setEndDate((current) => (current === derivedEnd.date ? current : derivedEnd.date));
     setEndTime((current) => (current === derivedEnd.time ? current : derivedEnd.time));
-  }, [assignees.length, contractedMinutes, distributedMinutes, initial, manualEndOverride, startDate, startTime]);
+  }, [assignees.length, contractedMinutes, distributedMinutes, initial, manualEndOverride, startDate, startTime, touchedAssignees]);
 
   /**
    * 12092026-001c — a data de fim acompanha o intervalo em wall clock:
