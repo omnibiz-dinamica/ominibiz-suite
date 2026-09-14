@@ -1164,7 +1164,15 @@ function TasksPage() {
                 onClick={() => setStatusFilter(search.status === key ? undefined : (key as StatusFilter))}
               />
             ))}
-
+            {search.date && (
+              <FilterChip
+                label={`Dia ${formatWallDate(`${search.date}T00:00:00.000Z`)} ✕`}
+                active
+                onClick={() =>
+                  void navigate({ search: (prev: TasksSearch) => ({ ...prev, date: undefined }), replace: true })
+                }
+              />
+            )}
           </div>
           <div className="ml-auto grid w-full gap-2 sm:w-auto sm:grid-cols-2">
             <EmployeeMultiPicker
