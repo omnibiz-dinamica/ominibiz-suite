@@ -359,11 +359,21 @@ export function describeRecurrence(input: RecurrencePreviewInput): string {
   return "Regra personalizada.";
 }
 
-export async function recurrenceMaterialize(daysAhead = 60, companyId?: string | null): Promise<number> {
+/**
+ * Geração de ocorrências. Passando `recurrenceId`, o banco processa apenas
+ * aquela série — chamada curta, sem risco de statement timeout em empresas
+ * com muitas séries. Sem ele, mantém o comportamento por empresa.
+ */
+export async function recurrenceMaterialize(
+  daysAhead = 60,
+  companyId?: string | null,
+  recurrenceId?: string | null,
+): Promise<number> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase.rpc as any)("recurrence_materialize", {
     _days_ahead: daysAhead,
     _company_id: companyId ?? null,
+    _recurrence_id: recurrenceId ?? null,
   });
   if (error) throw error;
   return (data as number) ?? 0;
