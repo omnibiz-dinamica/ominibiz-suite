@@ -30,6 +30,9 @@ type RecurrenceFailure = {
   details: { company_id?: string; title?: string; message?: string; sqlstate?: string } | null;
 };
 
+/** Só falhas desta janela são avisadas; depois o aviso deixa de aparecer. */
+const FAILURE_WINDOW_HOURS = 24;
+
 export const Route = createFileRoute("/app/tarefas/recorrentes")({ component: RecurrencesPage });
 
 function RecurrencesPage() {
@@ -77,17 +80,21 @@ function RecurrencesPage() {
     queryKey: ["recurrence-failures", currentCompanyId],
     queryFn: async () => {
       if (!currentCompanyId) return [];
+      // A empresa é filtrada no banco (não depois do limite) e só falhas
+      // recentes são exibidas: assim o aviso desaparece quando a série é
+      // corrigida e regerada, em vez de alertar para sempre.
+      const since = new Date(Date.now() - FAILURE_WINDOW_HOURS * 3600 * 1000).toISOString();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase.from("task_dedupe_audit" as any) as any)
         .select("id, entity_id, details, created_at")
         .eq("entity", "task_recurrences")
         .eq("kind", "materialize_error")
+        .eq("details->>company_id", currentCompanyId)
+        .gte("created_at", since)
         .order("created_at", { ascending: false })
         .limit(20);
       if (error) throw error;
-      return ((data ?? []) as RecurrenceFailure[]).filter(
-        (row) => row.details?.company_id === currentCompanyId,
-      );
+      return (data ?? []) as RecurrenceFailure[];
     },
     enabled: isManager && !!currentCompanyId,
   });
@@ -151,7 +158,7 @@ function RecurrencesPage() {
 
       {(failures ?? []).length > 0 && (
         <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-5">
-          <h2 className="text-sm font-semibold">Séries que falharam na última geração</h2>
+          <h2 className="text-sm font-semibold">Séries que falharam nas últimas 24 horas</h2>
           <p className="mt-1 text-xs text-muted-foreground">
             As demais séries continuaram gerando normalmente. Corrija os dados destas séries e gere novamente.
           </p>
