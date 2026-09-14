@@ -5,6 +5,25 @@
 
 ---
 
+### 🚧 14092026-C — Equipe do cliente é sugestão, não obrigação
+
+#### Corrigido
+- `14092026-004a` — A equipe cadastrada no cliente passa a ser **apenas
+  sugestão** na criação da tarefa. Depois de o gestor mexer na seleção, trocar
+  de cliente nunca sobrescreve a escolha manual (antes, remover todos os
+  sugeridos fazia a equipe voltar). A seleção da tarefa não altera o cadastro
+  do cliente.
+- `14092026-004b` — Redistribuição correta da carga contratada: trocar a
+  quantidade de responsáveis reabre o recálculo automático da hora de fim
+  (3h/2 = 1h30 cada; 3h/1 = 3h). O total contratado do serviço nunca é
+  reduzido por remoção de funcionário. Vale para tarefa única, recorrência e
+  edição (quando o responsável é alterado).
+- `14092026-004c` — Validação de responsável passou para o início do envio,
+  com mensagem clara ("Selecione pelo menos um funcionário para esta tarefa.")
+  e foco no campo de busca; `finally` mantém o botão fora de "Salvando...".
+- Testes: `tests/task-assignee-selection.test.ts` (1, 2, 3, 4 e 5
+  funcionários, hora de fim derivada, sugestão não obrigatória).
+
 ### 🚧 14092026-B — Geração de ocorrências por série (fim do timeout)
 
 #### Corrigido

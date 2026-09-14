@@ -2774,8 +2774,21 @@ function TaskForm({
     );
   }, [initial, startDate]);
 
+  /**
+   * A carga contratada do cliente é o TOTAL do serviço. Trocar a quantidade de
+   * responsáveis apenas redistribui esse total (3h/2 = 1h30 cada; 3h/1 = 3h),
+   * nunca reduz o serviço. Como o total muda de dono, uma hora de fim digitada
+   * antes deixa de valer e o recálculo volta a ser automático.
+   */
+  const assigneeCountRef = useRef(assignees.length);
   useEffect(() => {
-    if (initial || manualEndOverride || contractedMinutes == null || !startDate || !startTime || assignees.length === 0) {
+    if (assigneeCountRef.current === assignees.length) return;
+    assigneeCountRef.current = assignees.length;
+    if (contractedMinutes != null && assignees.length > 0) setManualEndOverride(false);
+  }, [assignees.length, contractedMinutes]);
+
+  useEffect(() => {
+    if ((initial && !touchedAssignees) || manualEndOverride || contractedMinutes == null || !startDate || !startTime || assignees.length === 0) {
       return;
     }
     const [minutesForFirstEmployee] = distributedMinutes;
@@ -2784,7 +2797,7 @@ function TaskForm({
     if (!derivedEnd) return;
     setEndDate((current) => (current === derivedEnd.date ? current : derivedEnd.date));
     setEndTime((current) => (current === derivedEnd.time ? current : derivedEnd.time));
-  }, [assignees.length, contractedMinutes, distributedMinutes, initial, manualEndOverride, startDate, startTime]);
+  }, [assignees.length, contractedMinutes, distributedMinutes, initial, manualEndOverride, startDate, startTime, touchedAssignees]);
 
   /**
    * 12092026-001c — a data de fim acompanha o intervalo em wall clock:
@@ -2881,13 +2894,14 @@ function TaskForm({
       setTeamHint(`${clientName} não tem responsáveis cadastrados. Selecione manualmente.`);
       return;
     }
-    if (!touchedAssignees || assignees.length === 0) {
+    // A equipe do cliente é apenas SUGESTÃO: nunca sobrescreve uma escolha
+    // manual (inclusive quando o gestor removeu todos os sugeridos).
+    if (!touchedAssignees) {
       setAssignees(team);
-      setTouchedAssignees(false);
       setTeamHint(
         team.length === 1
-          ? `Responsável do cliente carregado automaticamente.`
-          : `${team.length} responsáveis do cliente carregados automaticamente.`,
+          ? `Responsável sugerido pelo cadastro do cliente. Pode remover ou trocar.`
+          : `${team.length} responsáveis sugeridos pelo cadastro do cliente. Pode remover, trocar ou acrescentar.`,
       );
       return;
     }
@@ -2909,6 +2923,13 @@ function TaskForm({
         submittingRef.current = true;
         setLoading(true);
         try {
+        // Regra operacional: pelo menos um responsável. A equipe do cliente é
+        // sugestão, então a validação olha só o que está selecionado agora.
+        if (assignees.length === 0) {
+          toast.error("Selecione pelo menos um funcionário para esta tarefa.");
+          document.getElementById("task-assignee-search")?.focus();
+          return;
+        }
         if (!initial && recurrence.enabled && recurrence.frequency === "custom") {
           const selectedDates = normalizeCustomRecurrenceDates(recurrence.selectedDates);
           if (selectedDates.length === 0) {
@@ -2947,7 +2968,7 @@ function TaskForm({
         const selectedAssignees = [...new Set(assignees)];
         const selectedDistributedMinutes = distributeContractedMinutes(contractedMinutes, selectedAssignees.length);
         if (selectedAssignees.length === 0) {
-          toast.error("Atribua a tarefa a um funcionario antes de salvar.");
+          toast.error("Selecione pelo menos um funcionário para esta tarefa.");
           return;
         }
         if (!dueISO) {
@@ -3356,6 +3377,7 @@ function TaskForm({
                 {assignees.length} {assignees.length === 1 ? "funcionário" : "funcionários"} selecionado(s)
                 {" → "}
                 <span className="font-medium text-foreground">{formatContractedMinutes(distributedMinutes[0])} por funcionário</span>
+                {" (o total do serviço não muda ao remover ou acrescentar funcionários)"}
               </p>
             )}
             {contractedMinutes != null && assignees.length === 0 && (
@@ -3533,8 +3555,10 @@ function TaskForm({
                 })}
               </div>
               <p className="text-xs text-muted-foreground">
-                Selecione um ou mais funcionários. Cada responsável recebe a sua própria tarefa, com
-                estado, ponto, recusa e conclusão independentes — a ação de um não altera a do outro.
+                Os funcionários do cadastro do cliente vêm apenas como sugestão: pode remover, trocar ou
+                acrescentar livremente sem alterar o cadastro do cliente. Cada responsável recebe a sua própria
+                tarefa, com estado, ponto, recusa e conclusão independentes — a ação de um não altera a do outro.
+
 
               </p>
             </>
