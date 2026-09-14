@@ -30,6 +30,9 @@ type RecurrenceFailure = {
   details: { company_id?: string; title?: string; message?: string; sqlstate?: string } | null;
 };
 
+/** Só falhas desta janela são avisadas; depois o aviso deixa de aparecer. */
+const FAILURE_WINDOW_HOURS = 24;
+
 export const Route = createFileRoute("/app/tarefas/recorrentes")({ component: RecurrencesPage });
 
 function RecurrencesPage() {
