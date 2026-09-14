@@ -2894,13 +2894,14 @@ function TaskForm({
       setTeamHint(`${clientName} não tem responsáveis cadastrados. Selecione manualmente.`);
       return;
     }
-    if (!touchedAssignees || assignees.length === 0) {
+    // A equipe do cliente é apenas SUGESTÃO: nunca sobrescreve uma escolha
+    // manual (inclusive quando o gestor removeu todos os sugeridos).
+    if (!touchedAssignees) {
       setAssignees(team);
-      setTouchedAssignees(false);
       setTeamHint(
         team.length === 1
-          ? `Responsável do cliente carregado automaticamente.`
-          : `${team.length} responsáveis do cliente carregados automaticamente.`,
+          ? `Responsável sugerido pelo cadastro do cliente. Pode remover ou trocar.`
+          : `${team.length} responsáveis sugeridos pelo cadastro do cliente. Pode remover, trocar ou acrescentar.`,
       );
       return;
     }
