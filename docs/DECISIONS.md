@@ -1426,7 +1426,7 @@ Detalhe, Ponto e Dashboards. O gestor recebe o pedido com dados reais e decide
 explicitamente; nada é reagendado ou reatribuído por automatismo.
 
 
-## ADR-061 — Geração de recorrências isola falhas por série
+## ADR-063 — Geração de recorrências isola falhas por série
 
 **Contexto.** `recurrence_materialize` percorria todas as séries ativas num único
 bloco. Uma série apontando para um cliente removido fazia o INSERT falhar e
