@@ -136,7 +136,7 @@ import { RefuseTaskDialog, type RefusalSubmitPayload } from "@/components/tasks/
 import { EmployeeMultiPicker } from "@/components/common/EmployeePicker";
 import { filterCalendarData, tasksForCalendarDay } from "@/lib/tasks/calendar-filter";
 import { compareTasksForList, sortTasksForList } from "@/lib/tasks/list-order";
-import { isDashboardCancelled, isDashboardOverdue } from "@/lib/tasks/dashboard-rules";
+import { matchesDashboardBucket, taskOperationalDay } from "@/lib/tasks/dashboard-counters";
 import {
   wallISOToDateInput,
   wallDateToEndOfDayISO,
@@ -161,7 +161,7 @@ const STATUS_FILTERS = [
 ] as const;
 
 type StatusFilter = (typeof STATUS_FILTERS)[number];
-type TasksSearch = { status?: StatusFilter; employee?: string; client?: string; task?: string };
+type TasksSearch = { status?: StatusFilter; employee?: string; client?: string; task?: string; date?: string };
 type ClientOption = {
   id: string;
   name: string;
@@ -202,7 +202,10 @@ export const Route = createFileRoute("/app/tarefas")({
     const employee = typeof s.employee === "string" && s.employee ? s.employee : undefined;
     const client = typeof s.client === "string" && s.client ? s.client : undefined;
     const task = typeof s.task === "string" && s.task ? s.task : undefined;
-    return { status, employee, client, task };
+    // Filtro de dia operacional (vindo do Dashboard). O histórico continua
+    // acessível: basta limpar o filtro de data.
+    const date = typeof s.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s.date) ? s.date : undefined;
+    return { status, employee, client, task, date };
   },
 });
 
@@ -751,22 +754,19 @@ function TasksPage() {
       if (search.task && t.id !== search.task) return false;
       if (selectedEmployees.size > 0 && (!t.assigned_to || !selectedEmployees.has(t.assigned_to))) return false;
       if (search.client && t.client_id !== search.client) return false;
+      // Dia operacional (agendamento / ocorrência / prazo), nunca created_at.
+      if (search.date && taskOperationalDay(t) !== search.date) return false;
       if (!search.status) return true;
-      if (search.status === "atrasadas") {
-        return isDashboardOverdue(t);
-      }
-      if (search.status === "canceladas") {
-        return isDashboardCancelled(t);
-      }
-      if (search.status === "recusadas") {
-        return isRefused(t);
-      }
-      if (search.status === "pendente") {
-        return t.status === "pendente" && !isDashboardOverdue(t);
-      }
+      // Mesma classificação exclusiva usada pelos cartões do Dashboard.
+      if (search.status === "atrasadas") return matchesDashboardBucket(t, "atrasada");
+      if (search.status === "canceladas") return matchesDashboardBucket(t, "cancelada") || matchesDashboardBucket(t, "recusada");
+      if (search.status === "recusadas") return matchesDashboardBucket(t, "recusada");
+      if (search.status === "pendente") return matchesDashboardBucket(t, "pendente");
+      if (search.status === "em_andamento") return matchesDashboardBucket(t, "em_andamento");
+      if (search.status === "concluido") return matchesDashboardBucket(t, "concluido");
       return t.status === search.status;
     });
-  }, [tasks, search.status, search.employee, search.client, search.task, selectedEmployeeIds]);
+  }, [tasks, search.status, search.employee, search.client, search.task, search.date, selectedEmployeeIds]);
 
   const filteredCalendarData = useMemo(
     () => filterCalendarData(filteredTasks, approvedVacations ?? [], selectedEmployeeIds),
@@ -1164,7 +1164,15 @@ function TasksPage() {
                 onClick={() => setStatusFilter(search.status === key ? undefined : (key as StatusFilter))}
               />
             ))}
-
+            {search.date && (
+              <FilterChip
+                label={`Dia ${formatWallDate(`${search.date}T00:00:00.000Z`)} ✕`}
+                active
+                onClick={() =>
+                  void navigate({ search: (prev: TasksSearch) => ({ ...prev, date: undefined }), replace: true })
+                }
+              />
+            )}
           </div>
           <div className="ml-auto grid w-full gap-2 sm:w-auto sm:grid-cols-2">
             <EmployeeMultiPicker
