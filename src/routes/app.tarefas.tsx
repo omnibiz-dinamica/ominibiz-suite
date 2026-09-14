@@ -2713,7 +2713,11 @@ function TaskForm({
   const confirmedConflictsRef = useRef(false);
 
   const handleRecurrenceChange = (next: RecurrenceFormValue) => {
-    if (startDate && next.frequency !== "custom") next = { ...next, startDate };
+    // A data inicial da recorrência é do usuário: a data principal apenas
+    // sugere o valor até ele editar o campo (nunca sobrescreve depois disso).
+    if (next.frequency !== "custom" && next.startDate !== recurrence.startDate) {
+      recurrenceStartTouchedRef.current = true;
+    }
     setRecurrence(next);
     if (next.enabled && next.frequency === "custom") {
       // The explicit date selection is also the task's visible date range.
@@ -2757,10 +2761,10 @@ function TaskForm({
   );
 
   useEffect(() => {
-    if (initial || !startDate) return;
-    // Datas de negócio não passam por Date/UTC. A data principal é a única
-    // fonte para séries normais; recorrências customizadas continuam sendo
-    // definidas pelo calendário de datas específicas.
+    if (initial || !startDate || recurrenceStartTouchedRef.current) return;
+    // Datas de negócio não passam por Date/UTC. A data principal só sugere o
+    // início da série enquanto o gestor não editar o campo; recorrências
+    // customizadas continuam sendo definidas pelo calendário de datas.
     setRecurrence((current) =>
       current.frequency === "custom" || current.startDate === startDate
         ? current
@@ -2920,10 +2924,10 @@ function TaskForm({
           toast.error("Data de fim obrigatória.");
           return;
         }
+        // A série usa a data digitada no formulário de recorrência; a data
+        // principal da tarefa é apenas o valor sugerido inicialmente.
         const recurrenceStartDate = recurrence.enabled
-          ? recurrence.frequency === "custom"
-            ? recurrence.startDate
-            : startDate
+          ? recurrence.startDate || startDate
           : startDate;
         const recurrenceEndDate = recurrence.enabled ? recurrence.endDate || null : null;
         if (recurrence.enabled && (!recurrenceStartDate || !datePattern.test(recurrenceStartDate))) {
@@ -3614,7 +3618,6 @@ function TaskForm({
           value={recurrence}
           onChange={handleRecurrenceChange}
           timingMode={timingMode}
-          startDateLocked
         />
       )}
     </form>
