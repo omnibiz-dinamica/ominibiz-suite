@@ -1,4 +1,4 @@
-import { wallClockEpoch } from "./operational-rules";
+import { wallClockEpoch } from "./operational-rules.ts";
 
 export type DashboardTaskSnapshot = {
   status: "pendente" | "autorizado" | "em_andamento" | "concluido" | "cancelado" | "ausente" | string;
