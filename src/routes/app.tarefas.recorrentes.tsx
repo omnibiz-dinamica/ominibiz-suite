@@ -158,7 +158,7 @@ function RecurrencesPage() {
 
       {(failures ?? []).length > 0 && (
         <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-5">
-          <h2 className="text-sm font-semibold">Séries que falharam na última geração</h2>
+          <h2 className="text-sm font-semibold">Séries que falharam nas últimas 24 horas</h2>
           <p className="mt-1 text-xs text-muted-foreground">
             As demais séries continuaram gerando normalmente. Corrija os dados destas séries e gere novamente.
           </p>
