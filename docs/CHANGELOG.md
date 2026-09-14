@@ -5,6 +5,36 @@
 
 ---
 
+### 🚧 14092026-D — Dashboard do dia operacional e notificações de criação
+
+#### Corrigido
+- `14092026-005a` — Novo módulo canónico `src/lib/tasks/dashboard-counters.ts`:
+  o dia operacional vem de `scheduled_for` → `recurrence_date` → `due_at`
+  (nunca de `created_at`) e as categorias passam a ser mutuamente exclusivas
+  (pendente, em andamento, concluída, atrasada, cancelada, recusada, ausente).
+  Uma tarefa conta uma única vez; arquivadas e removidas nunca contam.
+- `14092026-005b` — O Dashboard do gestor conta **somente as tarefas do dia
+  atual** (fuso local da operação) e recalcula sozinho na viragem do dia. O
+  "zero diário" é apenas filtro de consulta: nenhum registro é apagado ou
+  alterado e o histórico continua em lista, calendário e relatórios.
+- `14092026-005c` — Estados de carregamento, erro (com "Tentar novamente") e
+  ausência de tarefas no Dashboard; a chave de cache começa por `tasks`, logo
+  criar/concluir/cancelar/recusar/reatribuir já invalida os contadores.
+- `14092026-005d` — Cartões e chips da lista de Tarefas usam a mesma
+  classificação do Dashboard, com novo filtro de dia (`?date=`) e chip para
+  voltar ao histórico completo.
+- `14092026-005e` — `tasks_notify_insert`: cada responsável recebe a sua
+  notificação (cliente, data, horário, empresa e link direto). O gestor criador
+  deixa de ser notificado por criar, e os outros gestores já não recebem
+  "Nova tarefa criada". Pedido de autorização mantido para tarefas criadas por
+  funcionários.
+
+#### Testes
+- `tests/task-dashboard-counters.test.ts` — dia operacional, exclusividade das
+  categorias, atraso de tarefas de ontem, zero diário e não duplicação.
+
+---
+
 ### 🚧 14092026-C — Equipe do cliente é sugestão, não obrigação
 
 #### Corrigido
