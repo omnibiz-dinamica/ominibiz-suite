@@ -1424,3 +1424,23 @@ tarefas removidas (soft delete) continuavam a ser lidas, aparentando duplicaçã
 **Consequências.** Uma única entidade canónica de tarefa serve Lista, Calendário,
 Detalhe, Ponto e Dashboards. O gestor recebe o pedido com dados reais e decide
 explicitamente; nada é reagendado ou reatribuído por automatismo.
+
+
+## ADR-063 — Geração de recorrências isola falhas por série
+
+**Contexto.** `recurrence_materialize` percorria todas as séries ativas num único
+bloco. Uma série apontando para um cliente removido fazia o INSERT falhar e
+abortava a geração da empresa inteira, sem erro visível na tela.
+
+**Decisão.**
+1. Cada série é processada num sub-bloco com `EXCEPTION WHEN OTHERS`: o erro é
+   registrado em `task_dedupe_audit` (`batch = 'recurrence_materialize'`,
+   `kind = 'materialize_error'`) com `sqlstate`, mensagem e identificação da série,
+   e a geração continua nas demais séries.
+2. `task_recurrences.client_id` referencia `clients(id) ON DELETE SET NULL`,
+   eliminando a possibilidade de cliente "fantasma" na série.
+3. A tela Recorrências expõe as falhas ao gestor da própria empresa; nenhuma
+   função nova, nenhum `_v2`, RLS/RBAC preservados.
+
+**Consequências.** Um dado inválido afeta apenas a própria série, é visível e
+corrigível. A geração continua idempotente: reexecutar não cria duplicatas.
