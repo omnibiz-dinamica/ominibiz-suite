@@ -286,11 +286,13 @@ export function RecurrenceForm({
               <Input
                 type="date"
                 value={value.startDate}
-                disabled={uiFrequency === "custom" || startDateLocked}
+                disabled={uiFrequency === "custom"}
                 onChange={(e) => set("startDate", e.target.value)}
               />
-              {uiFrequency !== "custom" && startDateLocked && (
-                <p className="text-[11px] text-muted-foreground">Herdada da data de início principal da tarefa.</p>
+              {uiFrequency !== "custom" && (
+                <p className="text-[11px] text-muted-foreground">
+                  Sugerida pela data de início da tarefa; pode ser alterada.
+                </p>
               )}
             </div>
             <div className="space-y-1.5">
