@@ -1,4 +1,4 @@
-import { wallClockEpoch } from "./operational-rules.ts";
+import { resolveOperationalStatus, wallClockEpoch } from "./operational-rules.ts";
 
 /**
  * Contadores canónicos do Dashboard.
@@ -18,6 +18,8 @@ export type DashboardTaskInput = {
   due_at?: string | null;
   started_at?: string | null;
   refused_by?: string | null;
+  absence_source?: string | null;
+  absence_reason?: string | null;
   archived_at?: string | null;
   deleted_at?: string | null;
 };
@@ -66,7 +68,24 @@ export function classifyDashboardTask(task: DashboardTaskInput, now = new Date()
 
   if (task.status === "cancelado") return task.refused_by ? "recusada" : "cancelada";
   if (task.status === "concluido") return "concluido";
-  if (task.status === "ausente") return "ausente";
+
+  // A lista de Tarefas já corrige ausências automáticas gravadas antes da
+  // janela de 24h. O Dashboard precisa usar exactamente a mesma fonte de
+  // verdade para nunca mostrar Ausente num lugar e Atrasada no outro.
+  if (task.status === "ausente") {
+    const operationalStatus = resolveOperationalStatus(
+      {
+        status: "ausente",
+        scheduled_for: task.scheduled_for,
+        recurrence_date: task.recurrence_date,
+        due_at: task.due_at,
+        absence_source: task.absence_source,
+        absence_reason: task.absence_reason,
+      },
+      now,
+    );
+    return operationalStatus === "atrasada" ? "atrasada" : "ausente";
+  }
   if (task.status === "em_andamento") return "em_andamento";
   if (task.status !== "pendente" && task.status !== "autorizado") return null;
 

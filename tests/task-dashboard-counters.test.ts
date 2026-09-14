@@ -93,6 +93,28 @@ test("tarefas arquivadas ou removidas nunca entram nos contadores", () => {
   assert.equal(classifyDashboardTask({ status: "pendente", deleted_at: "2026-09-14T10:00:00.000Z" }, now), null);
 });
 
+test("ausencia automatica antecipada aparece como atrasada igual a lista de tarefas", () => {
+  const prematureAbsence = {
+    status: "ausente",
+    scheduled_for: "2026-09-14T08:00:00.000Z",
+    absence_source: null,
+  };
+  assert.equal(classifyDashboardTask(prematureAbsence, now), "atrasada");
+
+  const afterWindow = new Date(2026, 8, 15, 8, 0, 0);
+  assert.equal(classifyDashboardTask(prematureAbsence, afterWindow), "ausente");
+});
+
+test("ausencia manual continua ausente imediatamente", () => {
+  assert.equal(
+    classifyDashboardTask(
+      { status: "ausente", scheduled_for: "2026-09-14T08:00:00.000Z", absence_source: "manual" },
+      now,
+    ),
+    "ausente",
+  );
+});
+
 test("localDayKey usa o dia local do dispositivo", () => {
   assert.equal(localDayKey(new Date(2026, 8, 14, 23, 30)), "2026-09-14");
   assert.equal(localDayKey(new Date(2026, 8, 15, 0, 5)), "2026-09-15");
