@@ -1444,3 +1444,31 @@ abortava a geração da empresa inteira, sem erro visível na tela.
 
 **Consequências.** Um dado inválido afeta apenas a própria série, é visível e
 corrigível. A geração continua idempotente: reexecutar não cria duplicatas.
+
+## ADR-064 — Geração de ocorrências recorrentes é por série, não por empresa
+
+**Contexto.** Ao salvar uma recorrência, a tela chamava `recurrence_materialize`
+para a empresa inteira. No Grupo V-clean (59 séries ativas, 8,5 mil tarefas) essa
+varredura levou 19.482 ms medidos, muito acima do `statement_timeout` do papel
+`authenticated` (8 s): a chamada era abortada e a série recém-criada nunca gerava
+ocorrência. O erro caía em `console.warn` e a tela exibia "as próximas ocorrências
+serão geradas automaticamente" — promessa impossível, pois não existe job/cron.
+
+**Decisão.**
+1. `public.recurrence_materialize(_days_ahead, _company_id, _recurrence_id)` —
+   mesma função, terceiro parâmetro opcional. Com a série informada, o laço filtra
+   `id = _recurrence_id` (11 ms medidos). Sem ele, comportamento por empresa
+   inalterado. Sem `_v2`, sem função duplicada.
+2. Falha de geração é erro visível com a mensagem do banco; nunca mais aviso
+   otimista.
+3. A data inicial da série é do usuário; a data da tarefa-modelo só a sugere até
+   o campo ser editado.
+4. `task_recurrences` ganha verificação `end_date >= start_date` (`NOT VALID`,
+   preservando 47 linhas legadas), e `recurrence_end` / `task_series_delete`
+   passam a usar `GREATEST(..., start_date)`.
+
+**Consequências.** Criar recorrência gera as ocorrências dela imediatamente,
+qualquer que seja o volume da empresa. Idempotência mantida por
+`uq_tasks_recurrence_date`. Séries antigas com horizonte a ampliar continuam
+dependendo do botão "Gerar próximas 60d" (ou de um processamento periódico
+futuro), que segue chamando a mesma função por empresa.
