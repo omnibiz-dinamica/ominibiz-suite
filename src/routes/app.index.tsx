@@ -109,6 +109,7 @@ function ManagerDashboard() {
     { label: "Em andamento", value: counts.em_andamento, icon: Clock, tone: "text-primary", status: "em_andamento" as const },
     { label: "Concluídas", value: counts.concluido, icon: CheckCircle2, tone: "text-success", status: "concluido" as const },
     { label: "Atrasadas", value: counts.atrasada, icon: AlertTriangle, tone: "text-destructive", status: "atrasadas" as const },
+    { label: "Ausentes", value: counts.ausente, icon: UserX, tone: "text-warning", status: "ausente" as const },
     { label: "Canceladas/Recusadas", value: counts.cancelada + counts.recusada, icon: Ban, tone: "text-muted-foreground", status: "canceladas" as const },
   ];
 
