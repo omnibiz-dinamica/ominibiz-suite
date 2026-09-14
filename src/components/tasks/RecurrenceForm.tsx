@@ -64,7 +64,6 @@ export function RecurrenceForm({
   value,
   onChange,
   timingMode,
-  startDateLocked = false,
 }: {
   value: RecurrenceFormValue;
   onChange: (v: RecurrenceFormValue) => void;
@@ -76,8 +75,6 @@ export function RecurrenceForm({
    *  • `undefined`   → comportamento legado (start_stop).
    */
   timingMode?: "start_stop" | "manual";
-  /** The task's main start date is the canonical source for normal series. */
-  startDateLocked?: boolean;
 }) {
   const set = <K extends keyof RecurrenceFormValue>(k: K, v: RecurrenceFormValue[K]) =>
     onChange({ ...value, [k]: v });
