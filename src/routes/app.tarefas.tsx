@@ -2708,6 +2708,8 @@ function TaskForm({
    */
   const submittingRef = useRef(false);
   const createdTaskIdsRef = useRef<string[]>([]);
+  /** True depois que o gestor edita a data inicial da recorrência à mão. */
+  const recurrenceStartTouchedRef = useRef(false);
   const [scheduleConflicts, setScheduleConflicts] = useState<TaskScheduleConflict[]>([]);
   const [scheduleCheckError, setScheduleCheckError] = useState<string | null>(null);
   const confirmedConflictsRef = useRef(false);
