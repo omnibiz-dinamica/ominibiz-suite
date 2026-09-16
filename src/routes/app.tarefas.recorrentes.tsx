@@ -179,7 +179,7 @@ function RecurrencesPage() {
           </p>
         </div>
         <Button onClick={materialize} disabled={busy} variant="outline">
-          <RefreshCcw className="mr-2 h-4 w-4" /> {busy ? "Gerando..." : "Gerar próximas 60d"}
+          <RefreshCcw className="mr-2 h-4 w-4" /> {busy ? "Gerando..." : "Gerar próximos 12 meses"}
         </Button>
       </div>
 
