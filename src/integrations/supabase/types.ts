@@ -5218,6 +5218,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      recurrence_extend_horizon: {
+        Args: { _days_ahead?: number; _limit?: number }
+        Returns: number
+      }
       recurrence_materialize: {
         Args: {
           _company_id?: string
