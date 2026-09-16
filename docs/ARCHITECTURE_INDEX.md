@@ -196,3 +196,10 @@
 - `public.task_series_delete(_task_id, _scope, _reason)` — âmbito `single` (soft-delete da ocorrência, série continua) ou `future` (ocorrências ≥ data de corte + encerramento da série). Ocorrências com histórico são canceladas, nunca apagadas.
 - `src/components/tasks/DeleteRecurrenceDialog.tsx` — modal de escolha do âmbito; usado em `/app/tarefas` apenas quando a tarefa tem `recurrence_id`.
 - `src/lib/tasks.ts` → `deleteTaskSeries()` é a porta única para a RPC. Tarefas únicas continuam em `task_soft_delete`.
+
+## Tarefas recorrentes — horizonte de materialização (ADR-065)
+
+- `public.recurrence_materialize(_days_ahead, _company_id, _recurrence_id)` — geração em lote, teto de 12 meses para séries sem `end_date`, catch-up sempre a partir de hoje.
+- `public.recurrence_extend_horizon(_limit, _days_ahead)` — rotina diária (`pg_cron`, job `recurrence-extend-horizon-daily`) que estende o horizonte série por série; `EXECUTE` só para `service_role`.
+- `src/routes/app.tarefas.tsx` → `const horizon = 365` na criação; `src/routes/app.tarefas.recorrentes.tsx` → `MATERIALIZE_HORIZON_DAYS` e botão "Gerar próximos 12 meses" (laço por série).
+- Testes: `tests/recurrence-horizon.test.ts`.
