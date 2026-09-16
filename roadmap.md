@@ -16,3 +16,11 @@
 ## 14/09/2026 — Dashboard operacional (concluído)
 - [x] Excluir tarefas atribuídas a gestores, owners e super admins dos contadores operacionais.
 - [x] Confirmar o total de 3 atrasadas na Grupo V-clean: Sara Coelho (2) e Marco Ribeiro (1).
+
+## 16/09/2026 — Recorrências sem fim (horizonte de 12 meses)
+- [x] Etapa 1 — horizonte rolante de 12 meses na geração, em lote e sem datas passadas.
+- [x] Etapa 2 — rotina diária `recurrence_extend_horizon` série por série (substitui job por empresa).
+- [ ] Etapa 3 — encerrar a série "Crelan" (aguarda confirmação explícita).
+- [x] Etapa 4 — painel reproduzido na Grupo V-clean sem erro; aguarda mensagem exata do erro relatado.
+- [x] Etapa 5 — testes (179/179), CHANGELOG, DECISIONS (ADR-065), ARCHITECTURE_INDEX.
+

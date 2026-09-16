@@ -1,3 +1,11 @@
+# 16092026-A/001 — Recorrências sem fim com horizonte rolante de 12 meses
+
+- Séries sem data final passam a pré-gerar ocorrências até 12 meses à frente (antes: 60 dias), sem nunca preencher a data final da série.
+- A geração é sempre por série e em lote: numa série atrasada desde 02/03/2026 foram criadas 157 ocorrências em 1,38 s, começando em 16/09/2026 e sem nenhuma data passada.
+- Nova rotina diária `recurrence_extend_horizon` estende o horizonte série por série (substitui o job que varria a empresa inteira numa só execução, padrão que estourava o tempo limite).
+- Botão da tela Recorrências passa a "Gerar próximos 12 meses" e percorre as séries ativas uma a uma, mostrando falhas reais.
+- Auditoria: 43 séries sem data final continuam sem data final; 47 séries com data final anterior ao início são todas encerradas/pausadas (resíduo do fluxo de encerramento), nenhuma ativa bloqueada.
+
 # 14092026-D/007 — Dashboard operacional exclui tarefas de gestores
 
 - Os contadores do Dashboard passam a considerar somente tarefas atribuídas à equipa operacional da empresa.

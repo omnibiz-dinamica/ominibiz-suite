@@ -3227,9 +3227,10 @@ function TaskForm({
             if (createdRecurrenceIds.length > 0) {
               // A geração roda POR SÉRIE recém-criada. Varrer todas as séries da
               // empresa estourava o statement_timeout em bases grandes e a série
-              // nova nunca gerava ocorrência. A janela é de 60 dias e o índice
-              // único (série + data) mantém a idempotência.
-              const horizon = 60;
+              // nova nunca gerava ocorrência. A janela de pré-geração é de
+              // 12 meses (séries sem data final continuam sem data final) e o
+              // índice único (série + data) mantém a idempotência.
+              const horizon = 365;
               const failed: string[] = [];
               for (const recurrenceId of createdRecurrenceIds) {
                 try {
@@ -3247,7 +3248,7 @@ function TaskForm({
               if (failed.length > 0) {
                 // Falha de geração é erro real: nunca prometemos geração futura.
                 toast.error(
-                  `Recorrência salva, mas as ocorrências não foram geradas (${failed.length} de ${createdRecurrenceIds.length}): ${failed[0]}. Use "Gerar próximas 60d" em Recorrências.`,
+                  `Recorrência salva, mas as ocorrências não foram geradas (${failed.length} de ${createdRecurrenceIds.length}): ${failed[0]}. Use "Gerar próximos 12 meses" em Recorrências.`,
                 );
               }
             }

@@ -1472,3 +1472,32 @@ qualquer que seja o volume da empresa. Idempotência mantida por
 `uq_tasks_recurrence_date`. Séries antigas com horizonte a ampliar continuam
 dependendo do botão "Gerar próximas 60d" (ou de um processamento periódico
 futuro), que segue chamando a mesma função por empresa.
+
+## ADR-065 — Horizonte rolante de 12 meses para séries sem data final
+
+**Contexto.** `recurrence_materialize` só olhava 60 dias à frente e nada estendia
+esse horizonte depois. Séries sem `end_date` ficavam com ocorrências apenas até
+essa janela; o job diário existente (`tasks-recurrence-materialize-daily`)
+chamava a função para a empresa inteira numa única execução — o mesmo padrão que
+já provocara abortos por `statement_timeout`.
+
+**Decisão.**
+1. `public.recurrence_materialize` gera em lote (`INSERT ... SELECT` único) com
+   teto `LEAST(_days_ahead, COALESCE(end_date, hoje + 12 meses))`. O catch-up
+   começa em `GREATEST(start_date, CURRENT_DATE)`: datas passadas nunca são
+   criadas retroativamente.
+2. `public.recurrence_extend_horizon(_limit, _days_ahead)` percorre as séries por
+   menor cobertura futura e chama a materialização série por série; `EXECUTE`
+   restrito a `service_role`. Substitui o job por empresa (`pg_cron`, 05:10 UTC).
+3. Frontend usa horizonte de 365 dias na criação e no botão manual, que também
+   itera série por série.
+4. O campo `end_date` da série nunca é usado como limite técnico: horizonte de
+   materialização e data final de negócio são coisas distintas.
+
+**Evidência.** Série de prova iniciada em 2026-03-02 (mais de 6 meses atrasada):
+157 ocorrências, 1.383 ms, mínima = 2026-09-16 (hoje), máxima = 2027-09-15,
+zero linhas passadas. `uq_tasks_recurrence_date`, `canonical_key` e RLS
+inalterados.
+
+**Consequências.** Séries contínuas mantêm sempre ~12 meses de agenda visível,
+com custo diário previsível e falhas isoladas por série.

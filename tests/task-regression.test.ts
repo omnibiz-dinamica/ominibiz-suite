@@ -24,7 +24,9 @@ test("task visibility stays company-scoped and employee-scoped by canonical IDs"
   assert.match(tasksPage, /if \(!isManager\) q = q\.eq\("assigned_to", user!\.id\)/);
   assert.match(tasksPage, /const inserted = await supabase[\s\S]*\.from\("tasks"\)[\s\S]*assigned_to: memberId/);
   assert.match(tasksPage, /const \{ error: materializeError \} = await \(supabase\.rpc as any\)\("recurrence_materialize"/);
-  assert.match(tasksPage, /const horizon = 60/);
+  // Janela rolante de pré-geração: 12 meses (o campo "data final" da série
+  // continua intacto — o limite existe só na materialização).
+  assert.match(tasksPage, /const horizon = 365/);
 });
 
 test("occurrence generation runs per created series and surfaces real failures", () => {

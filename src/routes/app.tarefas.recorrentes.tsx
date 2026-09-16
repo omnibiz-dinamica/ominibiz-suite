@@ -33,6 +33,13 @@ type RecurrenceFailure = {
 /** Só falhas desta janela são avisadas; depois o aviso deixa de aparecer. */
 const FAILURE_WINDOW_HOURS = 24;
 
+/**
+ * Horizonte de pré-geração de ocorrências (janela rolante de 12 meses).
+ * Não tem relação com o campo "data final" da série: séries sem fim continuam
+ * sem fim, apenas não pré-geram tudo de uma vez.
+ */
+const MATERIALIZE_HORIZON_DAYS = 365;
+
 export const Route = createFileRoute("/app/tarefas/recorrentes")({ component: RecurrencesPage });
 
 function RecurrencesPage() {
@@ -124,8 +131,28 @@ function RecurrencesPage() {
   const materialize = async () => {
     setBusy(true);
     try {
-      const n = await recurrenceMaterialize(60, currentCompanyId);
-      toast.success(`${n} ocorrência(s) geradas`);
+      // Série por série: varrer a empresa inteira numa só chamada estourava o
+      // tempo limite em bases grandes. O horizonte é de 12 meses e séries sem
+      // data final continuam sem data final (o limite é só da pré-geração).
+      const active = (list ?? []).filter((r) => r.status === "active");
+      if (active.length === 0) {
+        toast.info("Nenhuma série ativa para gerar.");
+        return;
+      }
+      let total = 0;
+      const failed: string[] = [];
+      for (const serie of active) {
+        try {
+          total += await recurrenceMaterialize(MATERIALIZE_HORIZON_DAYS, currentCompanyId, serie.id);
+        } catch (e) {
+          failed.push(`${serie.title}: ${(e as Error).message}`);
+        }
+      }
+      if (failed.length > 0) {
+        toast.error(`${total} ocorrência(s) geradas. ${failed.length} série(s) falharam: ${failed[0]}`);
+      } else {
+        toast.success(`${total} ocorrência(s) geradas (próximos 12 meses)`);
+      }
       qc.invalidateQueries({ queryKey: ["tasks"] });
       qc.invalidateQueries({ queryKey: ["recurrence-failures"] });
     } catch (e) {
@@ -152,7 +179,7 @@ function RecurrencesPage() {
           </p>
         </div>
         <Button onClick={materialize} disabled={busy} variant="outline">
-          <RefreshCcw className="mr-2 h-4 w-4" /> {busy ? "Gerando..." : "Gerar próximas 60d"}
+          <RefreshCcw className="mr-2 h-4 w-4" /> {busy ? "Gerando..." : "Gerar próximos 12 meses"}
         </Button>
       </div>
 
