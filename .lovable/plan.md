@@ -18,6 +18,14 @@ Dois fatos adicionais levantados no mesmo passo, sem varredura genérica:
 - Nenhum registro de falha de geração na auditoria (`materialize_error` = 0 linhas).
 - Volume atual: Grupo V-clean 8.863 tarefas, 79 séries ativas, **43 sem data final**; OMNIBIZ TESTES 495/7/0; V-clean TESTE 119/4/0.
 
+## Respostas às 4 confirmações pedidas (consultas já executadas, sem alterar nada)
+
+**1. Tamanho real do problema.** Das 43 séries sem data final (todas na Grupo V-clean): 40 têm ocorrências futuras, 3 não têm nenhuma ocorrência e **0 estão "paradas no passado"**. A ocorrência futura mais próxima do fim é 03/11/2026 e o horizonte máximo hoje alcança 13/10/2027. Das 3 sem ocorrência: "Crelan" (personalizada com lista de datas vazia, resíduo antigo), "Escadas - LUTSELUSPLEIN 16" (início 05/01/2027, ainda fora da janela) e "Espera" (início 07/10/2026, fora da janela). Ou seja: hoje ninguém perdeu ocorrências passadas; o risco é o horizonte encolher com o tempo, que é exatamente o que a Etapa 2 resolve.
+
+**4. Resíduo de data final anterior à inicial.** Existem 47 séries nessa condição: 30 com situação "encerrada" e 17 "pausada" — **nenhuma ativa**. Isso é o efeito normal do fluxo de encerrar série cancelando as futuras, que grava a data final no dia anterior ao início como marca de encerramento. Nenhuma série ativa está bloqueada por isso, e nada será alterado.
+
+**2 e 3** (catch-up nunca gerar datas passadas, e geração em lote com tempo medido no pior caso) serão confirmados por escrito com teste e medição durante a implementação, antes de qualquer declaração de conclusão.
+
 Portanto o sintoma 1 tem explicação concreta e mensurável: as séries sem fim só têm ocorrências até 60 dias e ninguém estende. Para o usuário, isso aparece como "montei a recorrência e nada foi criado" sempre que a próxima data cai fora dessa janela.
 
 ## Sobre o erro do Dashboard (sintoma 2)
