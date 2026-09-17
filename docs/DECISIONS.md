@@ -1501,3 +1501,33 @@ inalterados.
 
 **Consequências.** Séries contínuas mantêm sempre ~12 meses de agenda visível,
 com custo diário previsível e falhas isoladas por série.
+
+
+---
+
+## ADR-066 — Origem da criação de tarefas auditável e visível (2026-09-17)
+
+**Contexto.** Uma ocorrência gerada pela rotina de recorrência ("All nuts", 19/11/2026)
+apareceu como se tivesse sido criada manualmente pela gestora às 06:10, gerando
+dúvida operacional. O sistema não registrava a origem da criação.
+
+**Decisão.**
+1. Trigger `tasks_audit_created` (`AFTER INSERT` em `tasks`) grava em
+   `task_audit_events` um evento `created` com `reason` ∈
+   {`manual`, `recurrence_seed`, `recurrence`}. O constraint de `event` foi
+   ampliado para aceitar `created`. Como `actor_user_id` é NOT NULL, origens
+   automáticas registram o criador da série e a origem real fica em `reason`.
+2. `tasks_notify_insert` usa o título "Tarefa gerada automaticamente pela
+   recorrência" quando `NEW.recurrence_id` está preenchido, e inclui `origin`
+   e `recurrence_id` no metadata.
+3. A lista de Tarefas exibe o selo "Recorrente (automática)" (constantes
+   `AUTO_RECURRENCE_BADGE_LABEL/TITLE` em `src/lib/tasks.ts`).
+4. Sem backfill: tarefas antigas não ganham registro retroativo.
+
+**Evidência.** Prova na empresa OMNIBIZ TESTES: 31 ocorrências de uma série de
+teste com `reason = recurrence`; tarefa manual com `reason = manual` e papel do
+autor; notificações com os títulos corretos nos dois caminhos. Resíduos de
+teste: zero. Testes 184/184, typecheck limpo.
+
+**Consequências.** Disputas "quem criou esta tarefa?" passam a ser respondidas
+pelo histórico da própria tarefa, sem consulta manual ao banco.

@@ -24,3 +24,8 @@
 - [x] Etapa 4 — painel reproduzido na Grupo V-clean sem erro; aguarda mensagem exata do erro relatado.
 - [x] Etapa 5 — testes (179/179), CHANGELOG, DECISIONS (ADR-065), ARCHITECTURE_INDEX.
 
+
+## 17/09/2026 — Rastreabilidade de criação de tarefas
+- [x] Auditoria de criação (`created` em task_audit_events com origem manual/recurrence_seed/recurrence).
+- [x] Notificação e selo identificam ocorrências geradas automaticamente.
+- [x] Prova real nos dois caminhos (OMNIBIZ TESTES), dados de teste removidos; testes 184/184, typecheck OK.
