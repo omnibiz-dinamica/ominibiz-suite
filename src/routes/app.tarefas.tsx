@@ -99,6 +99,8 @@ import {
   checkTaskScheduleConflicts,
   type TaskScheduleConflict,
   previewRecurrenceDates,
+  AUTO_RECURRENCE_BADGE_LABEL,
+  AUTO_RECURRENCE_BADGE_TITLE,
 } from "@/lib/tasks";
 
 import { RecurrenceForm, emptyRecurrence, type RecurrenceFormValue } from "@/components/tasks/RecurrenceForm";
