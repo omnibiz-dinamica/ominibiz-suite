@@ -2057,6 +2057,14 @@ function CalendarTaskCard({
             <Users className="h-3 w-3" /> em equipe
           </span>
         )}
+        {task.recurrence_id && (
+          <span
+            className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+            title="Ocorrência gerada automaticamente por uma tarefa recorrente — não foi criada manualmente por uma pessoa."
+          >
+            <Repeat className="h-3 w-3" /> Recorrente (automática)
+          </span>
+        )}
       </div>
       {refusal && (
         <div className="space-y-0.5 rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1.5 text-[11px]">
@@ -2387,6 +2395,14 @@ function TaskRowItem({
               <Clock className="h-3 w-3" /> atrasado
             </span>
           ) : null}
+          {t.recurrence_id && (
+            <span
+              className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+              title="Ocorrência gerada automaticamente por uma tarefa recorrente — não foi criada manualmente por uma pessoa."
+            >
+              <Repeat className="h-3 w-3" /> Recorrente (automática)
+            </span>
+          )}
         </div>
         {refusal && (
           <div className="mt-2 space-y-0.5 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs">
