@@ -49,6 +49,22 @@ export const STATUS_TONE: Record<TaskStatus, string> = {
 
 export const TERMINAL_STATUSES: TaskStatus[] = ["concluido", "cancelado", "ausente"];
 
+/** Ocorrências geradas por recorrência não foram criadas manualmente por uma pessoa. */
+export const AUTO_RECURRENCE_BADGE_LABEL = "Recorrente (automática)";
+export const AUTO_RECURRENCE_BADGE_TITLE =
+  "Ocorrência gerada automaticamente por uma tarefa recorrente — não foi criada manualmente por uma pessoa.";
+
+export function isAutoRecurrenceOccurrence(task: { recurrence_id: string | null }): boolean {
+  return task.recurrence_id != null;
+}
+
+/** Título da notificação de nova tarefa — espelha a trigger tasks_notify_insert. */
+export function newTaskNotificationTitle(recurrenceId: string | null): string {
+  return recurrenceId == null
+    ? "Nova tarefa atribuída"
+    : "Tarefa gerada automaticamente pela recorrência";
+}
+
 export interface TaskRow {
   id: string;
   company_id: string;
