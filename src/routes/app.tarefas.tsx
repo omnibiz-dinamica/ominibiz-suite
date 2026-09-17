@@ -2060,9 +2060,9 @@ function CalendarTaskCard({
         {task.recurrence_id && (
           <span
             className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
-            title="Ocorrência gerada automaticamente por uma tarefa recorrente — não foi criada manualmente por uma pessoa."
+            title={AUTO_RECURRENCE_BADGE_TITLE}
           >
-            <Repeat className="h-3 w-3" /> Recorrente (automática)
+            <Repeat className="h-3 w-3" /> {AUTO_RECURRENCE_BADGE_LABEL}
           </span>
         )}
       </div>
@@ -2398,9 +2398,9 @@ function TaskRowItem({
           {t.recurrence_id && (
             <span
               className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
-              title="Ocorrência gerada automaticamente por uma tarefa recorrente — não foi criada manualmente por uma pessoa."
+              title={AUTO_RECURRENCE_BADGE_TITLE}
             >
-              <Repeat className="h-3 w-3" /> Recorrente (automática)
+              <Repeat className="h-3 w-3" /> {AUTO_RECURRENCE_BADGE_LABEL}
             </span>
           )}
         </div>
