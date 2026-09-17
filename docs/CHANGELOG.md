@@ -1,3 +1,11 @@
+# 17092026-A/001 — Rastreabilidade de criação de tarefas
+
+- Toda tarefa criada passa a gravar um registro `created` no histórico (`task_audit_events`), com a origem em `reason`: `manual` (criada por uma pessoa, com autor e papel), `recurrence_seed` (primeira geração ao salvar a série) ou `recurrence` (gerada pela rotina automática). Como o histórico exige autor preenchido, as origens automáticas registram o criador da série — a origem real fica no campo `reason`.
+- Notificação de ocorrência de recorrência passa a dizer "Tarefa gerada automaticamente pela recorrência" (antes parecia atribuição manual); o metadata da notificação ganha `origin` e `recurrence_id`.
+- Lista de Tarefas: ocorrências de recorrência exibem o selo "Recorrente (automática)" nos dois formatos de cartão.
+- Prova real (empresa OMNIBIZ TESTES): série de teste gerou 31 ocorrências, todas com `reason = recurrence` e notificação com o novo título; tarefa manual gerou `reason = manual` com autor e papel. Dados de teste removidos (0 resíduos).
+- Motivo do caso "All nuts": a ocorrência de 19/11/2026 foi gerada pela rotina diária a partir da série semanal criada pela Gestor Sara em 14/09 — ninguém clicou em criar às 06:10; o sistema não registra geolocalização de criação (geolocalização existe apenas no ponto).
+
 # 16092026-A/001 — Recorrências sem fim com horizonte rolante de 12 meses
 
 - Séries sem data final passam a pré-gerar ocorrências até 12 meses à frente (antes: 60 dias), sem nunca preencher a data final da série.

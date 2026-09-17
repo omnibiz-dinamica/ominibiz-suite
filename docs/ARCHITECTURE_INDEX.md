@@ -202,4 +202,10 @@
 - `public.recurrence_materialize(_days_ahead, _company_id, _recurrence_id)` — geração em lote, teto de 12 meses para séries sem `end_date`, catch-up sempre a partir de hoje.
 - `public.recurrence_extend_horizon(_limit, _days_ahead)` — rotina diária (`pg_cron`, job `recurrence-extend-horizon-daily`) que estende o horizonte série por série; `EXECUTE` só para `service_role`.
 - `src/routes/app.tarefas.tsx` → `const horizon = 365` na criação; `src/routes/app.tarefas.recorrentes.tsx` → `MATERIALIZE_HORIZON_DAYS` e botão "Gerar próximos 12 meses" (laço por série).
+
+## Tarefas — rastreabilidade de criação (ADR-066)
+
+- Trigger `tasks_audit_created` grava evento `created` em `task_audit_events` com `reason`: `manual` | `recurrence_seed` | `recurrence`.
+- `tasks_notify_insert` distingue o título para ocorrências de recorrência e inclui `origin` no metadata da notificação.
+- Selo "Recorrente (automática)" nos cartões de tarefa (`AUTO_RECURRENCE_BADGE_LABEL` em `src/lib/tasks.ts`).
 - Testes: `tests/recurrence-horizon.test.ts`.
