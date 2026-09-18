@@ -1,3 +1,13 @@
+# 18092026-A/001 — Encaminhamento de férias para autorização
+
+- Corrigido o erro "Could not find the function public.vacation_forward_for_authorization" ao enviar um pedido de férias para outro gestor autorizar: a operação existia apenas no ficheiro de migração e nunca tinha sido criada na base de dados. Migração aplicada e cache do PostgREST recarregado.
+- O pedido passa a guardar quem encaminhou e quando (`forwarded_by` / `forwarded_at`), com registo `encaminhar` no histórico de férias.
+- O gestor escolhido recebe o aviso "Pedido de férias aguardando sua autorização"; quem encaminhou é avisado quando a decisão sai.
+- Todo pedido novo passa a registar o evento `solicitar` no histórico de férias.
+- Regras: só gestor/owner/super admin da mesma empresa encaminha, apenas pedidos pendentes, e o autorizador tem de estar ativo na mesma empresa e ser diferente do solicitante e de quem encaminha.
+- Prova real end-to-end (OMNIBIZ TESTES, dados removidos depois): pedido de teste encaminhado pela tela — "Pedido enviado para autorização", `forwarded_by`/`forwarded_at` gravados, registo `encaminhar` e aviso ao gestor autorizador. Fluxo de aprovar/rejeitar não foi tocado.
+- Tarefas canceladas na Grupo V-clean TESTE: sem defeito — as 6 canceladas existem na base e têm aviso enviado; o Dashboard mostra 1 porque, por regra aprovada, os contadores operacionais excluem tarefas de gestores.
+
 # 17092026-A/001 — Rastreabilidade de criação de tarefas
 
 - Toda tarefa criada passa a gravar um registro `created` no histórico (`task_audit_events`), com a origem em `reason`: `manual` (criada por uma pessoa, com autor e papel), `recurrence_seed` (primeira geração ao salvar a série) ou `recurrence` (gerada pela rotina automática). Como o histórico exige autor preenchido, as origens automáticas registram o criador da série — a origem real fica no campo `reason`.

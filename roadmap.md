@@ -29,3 +29,9 @@
 - [x] Auditoria de criação (`created` em task_audit_events com origem manual/recurrence_seed/recurrence).
 - [x] Notificação e selo identificam ocorrências geradas automaticamente.
 - [x] Prova real nos dois caminhos (OMNIBIZ TESTES), dados de teste removidos; testes 184/184, typecheck OK.
+
+## 18/09/2026 — Férias: encaminhar para autorização (concluído)
+- [x] Criar na base de dados a operação de encaminhamento (`vacation_forward_for_authorization`) e recarregar o cache da API.
+- [x] Registo de quem encaminhou/quando, histórico `solicitar`/`encaminhar` e avisos ao autorizador e ao remetente.
+- [x] Teste end-to-end na tela, com dados de teste removidos.
+- [x] Tarefas canceladas (empresa teste): confirmado comportamento esperado, sem correção necessária.
