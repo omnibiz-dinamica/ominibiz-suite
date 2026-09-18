@@ -3798,6 +3798,8 @@ export type Database = {
           decided_by: string | null
           decision_reason: string | null
           end_date: string
+          forwarded_at: string | null
+          forwarded_by: string | null
           id: string
           note: string | null
           prior_validation: boolean
@@ -3820,6 +3822,8 @@ export type Database = {
           decided_by?: string | null
           decision_reason?: string | null
           end_date: string
+          forwarded_at?: string | null
+          forwarded_by?: string | null
           id?: string
           note?: string | null
           prior_validation?: boolean
@@ -3842,6 +3846,8 @@ export type Database = {
           decided_by?: string | null
           decision_reason?: string | null
           end_date?: string
+          forwarded_at?: string | null
+          forwarded_by?: string | null
           id?: string
           note?: string | null
           prior_validation?: boolean
@@ -6504,6 +6510,8 @@ export type Database = {
           decided_by: string | null
           decision_reason: string | null
           end_date: string
+          forwarded_at: string | null
+          forwarded_by: string | null
           id: string
           note: string | null
           prior_validation: boolean
@@ -6535,6 +6543,41 @@ export type Database = {
           decided_by: string | null
           decision_reason: string | null
           end_date: string
+          forwarded_at: string | null
+          forwarded_by: string | null
+          id: string
+          note: string | null
+          prior_validation: boolean
+          start_date: string
+          status: Database["public"]["Enums"]["vacation_status"]
+          updated_at: string
+          user_id: string
+          validated_by: string | null
+          work_location: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "vacation_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      vacation_forward_for_authorization: {
+        Args: { _approver_id: string; _id: string; _reason?: string }
+        Returns: {
+          assigned_approver_id: string | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          decided_at: string | null
+          decided_by: string | null
+          decision_reason: string | null
+          end_date: string
+          forwarded_at: string | null
+          forwarded_by: string | null
           id: string
           note: string | null
           prior_validation: boolean
