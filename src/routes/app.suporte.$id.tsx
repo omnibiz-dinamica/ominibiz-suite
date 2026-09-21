@@ -504,6 +504,8 @@ function SupportDetailPage() {
     ["Timezone", String(tech.timezone ?? "—")],
   ];
   const isClosed = isClosedTicketStatus(t.status);
+  /** Só `fechado` já está arquivado; resolvido/rejeitado ainda podem ser arquivados. */
+  const isArchived = t.status === "fechado";
   const awaitingValidation = !isSuperAdmin && AWAITING_VALIDATION_STATUSES.includes(t.status);
 
 
