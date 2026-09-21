@@ -1,3 +1,10 @@
+# 21092026-A/002 — Filas administrativas sem titular recaem no Gestor
+
+- Regra de negócio confirmada: hoje os papéis Secretária e Contabilista são exercidos pelo Gestor.
+- Quando uma solicitação vai para a fila Secretária ou Contabilista e nenhuma pessoa da empresa tem esse papel, o aviso passa a ir automaticamente para os Gestores e Proprietários da empresa (antes ninguém era avisado).
+- Nada muda quando existe titular do papel na empresa; a fila Suporte/Desenvolvimento continua a avisar o Super Admin.
+- Prova real (empresa TESTES, avisos de teste removidos): fila Secretária gerou 2 avisos — Gestor da empresa e Super Admin.
+
 # 21092026-A/001 — Encerramento de tickets por papel e avisos do Help Desk
 
 - Super Admin passa a encerrar qualquer ticket, em qualquer estado e qualquer fila (antes o estado do ticket bloqueava).
