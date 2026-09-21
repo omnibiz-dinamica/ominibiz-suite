@@ -66,7 +66,7 @@ import { canCloseTicketNow } from "@/lib/support/close-permission";
 
 export const Route = createFileRoute("/app/suporte/$id")({
   component: () => (
-    <RoleGuard allow={["super_admin", "owner", "manager", "accountant", "secretary"]}>
+    <RoleGuard allow={["super_admin", "owner", "manager", "accountant", "secretary", "employee"]}>
       <SupportDetailPage />
     </RoleGuard>
   ),
@@ -308,6 +308,25 @@ function SupportDetailPage() {
     [isSuperAdmin, roles, ticket, user],
   );
   const canCloseTicket = ticket ? canCloseTicketNow(closeCtx) : false;
+
+  /**
+   * Atendimento das filas administrativas (Secretaria/Contabilidade): hoje a
+   * responsabilidade é do Gestor/Proprietário da empresa do ticket. Espelha
+   * public.support_has_destination_access; o backend continua a ser a autoridade.
+   */
+  const ticketDestination = useMemo(
+    () => destinations.find((d) => d.code === (ticket?.destination_code ?? "")) ?? null,
+    [destinations, ticket?.destination_code],
+  );
+  const canServeTicket =
+    !!ticket && !ticketDestination?.is_technical && closeCtx.isCompanyManager;
+  /** Estados permitidos aos papéis de fila pela RPC update_support_ticket_status. */
+  const QUEUE_STATUS_LIST: SupportTicketStatus[] = [
+    "aberto",
+    "em_analise",
+    "aguardando_cliente",
+    "resolvido",
+  ];
 
   /** Papéis da empresa (para saber se o solicitante é Funcionário e listar funcionários ativos). */
   const rolesQ = useQuery<{ user_id: string; role: string }[]>({
