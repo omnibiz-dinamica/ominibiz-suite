@@ -3788,6 +3788,64 @@ export type Database = {
           },
         ]
       }
+      vacation_manager_queue: {
+        Row: {
+          claimed_at: string | null
+          claimed_by: string | null
+          company_id: string
+          created_at: string
+          id: string
+          resolved_at: string | null
+          state: Database["public"]["Enums"]["vacation_manager_queue_state"]
+          updated_at: string
+          vacation_request_id: string
+        }
+        Insert: {
+          claimed_at?: string | null
+          claimed_by?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          resolved_at?: string | null
+          state?: Database["public"]["Enums"]["vacation_manager_queue_state"]
+          updated_at?: string
+          vacation_request_id: string
+        }
+        Update: {
+          claimed_at?: string | null
+          claimed_by?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          resolved_at?: string | null
+          state?: Database["public"]["Enums"]["vacation_manager_queue_state"]
+          updated_at?: string
+          vacation_request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vacation_manager_queue_claimed_by_fkey"
+            columns: ["claimed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vacation_manager_queue_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vacation_manager_queue_vacation_request_id_fkey"
+            columns: ["vacation_request_id"]
+            isOneToOne: true
+            referencedRelation: "vacation_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vacation_requests: {
         Row: {
           assigned_approver_id: string | null
@@ -6603,6 +6661,26 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      vacation_manager_queue_claim: {
+        Args: { _queue_id: string }
+        Returns: {
+          claimed_at: string | null
+          claimed_by: string | null
+          company_id: string
+          created_at: string
+          id: string
+          resolved_at: string | null
+          state: Database["public"]["Enums"]["vacation_manager_queue_state"]
+          updated_at: string
+          vacation_request_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "vacation_manager_queue"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       vacation_notify_payload: { Args: { _vacation_id: string }; Returns: Json }
       whatsapp_claim_batch: {
         Args: { _limit?: number }
@@ -6816,6 +6894,7 @@ export type Database = {
         | "em_conferencia"
         | "fechado_gestor"
         | "disponivel_contabilidade"
+      vacation_manager_queue_state: "pending" | "in_progress" | "resolved"
       vacation_status:
         | "pendente"
         | "aprovado"
@@ -7148,6 +7227,7 @@ export const Constants = {
         "fechado_gestor",
         "disponivel_contabilidade",
       ],
+      vacation_manager_queue_state: ["pending", "in_progress", "resolved"],
       vacation_status: [
         "pendente",
         "aprovado",
