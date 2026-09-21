@@ -46,3 +46,11 @@
 ## 21/09/2026 — Help Desk: filas administrativas e papéis
 - [x] Filas Secretária/Contabilista sem titular avisam os Gestores/Proprietários da empresa.
 - [ ] Etapa B — rename "Owner" → "Proprietário Empresa" e matriz de atribuição de papéis (diagnóstico entregue, aguarda decisão).
+
+## 21/09/2026 — Férias compartilhadas e anexos de despesas
+- [ ] Parte 1 — central compartilhada de pedidos de férias entre gestores, com tomada atômica e resolução automática.
+- [ ] Parte 1 — validar com dois gestores reais e confirmar ausência de regressões nas demais notificações.
+- [ ] Parte 2 — impressão cronológica dos comprovantes de despesas.
+- [ ] Parte 2 — download mensal em pacote, com permissão e isolamento por empresa no servidor.
+- [ ] Parte 2 — validar conteúdo, isolamento, bloqueio de funcionário e desempenho com volume equivalente à V-Clean.
+- [x] Tarefas — remover repetição do nome do cliente no cartão por colaborador.
