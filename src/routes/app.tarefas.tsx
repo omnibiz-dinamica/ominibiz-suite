@@ -2033,7 +2033,6 @@ function CalendarTaskCard({
             ) : (
               <span className="italic">Sem horário definido</span>
             )}
-            {groupBy === "client" && <span className="break-words">{memberName}</span>}
             {taskPunch && <PauseSummary entry={taskPunch} />}
             <span
               className={`inline-flex items-center rounded-full px-1.5 py-px text-[9px] font-medium ${operationalStatus === "atrasada" ? "bg-destructive/15 text-destructive" : STATUS_TONE[operationalStatus]}`}
