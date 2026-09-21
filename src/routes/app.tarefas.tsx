@@ -2000,6 +2000,8 @@ function CalendarTaskCard({
   const refusal = currentTaskRefusal(task, refusalHistory);
   const cancellation = currentTaskCancellation(task);
 
+  const [actionsOpen, setActionsOpen] = useState(false);
+
   return (
     <li
       className="space-y-2 px-3 py-3"
@@ -2009,7 +2011,7 @@ function CalendarTaskCard({
         event.dataTransfer.setData("text/task-id", task.id);
       }}
     >
-      <div className="flex items-start justify-between gap-2">
+      <div className="flex items-start justify-between gap-1">
         <div className="flex min-w-0 items-start gap-2">
           {isManager && onToggleTaskSelection && (
             <input
@@ -2021,8 +2023,8 @@ function CalendarTaskCard({
             />
           )}
           <div className="min-w-0">
-          <div className="truncate text-sm font-medium">{task.title}</div>
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <div className="break-words text-sm font-medium leading-snug">{task.title}</div>
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
             {start || end ? (
               <span className="font-mono">
                 {start || "--:--"} → {end || "--:--"}
@@ -2032,14 +2034,28 @@ function CalendarTaskCard({
             ) : (
               <span className="italic">Sem horário definido</span>
             )}
-            <span>{groupBy === "client" ? memberName : clientName}</span>
+            <span className="break-words">{groupBy === "client" ? memberName : clientName}</span>
             {taskPunch && <PauseSummary entry={taskPunch} />}
+            <span
+              className={`inline-flex items-center rounded-full px-1.5 py-px text-[9px] font-medium ${operationalStatus === "atrasada" ? "bg-destructive/15 text-destructive" : STATUS_TONE[operationalStatus]}`}
+            >
+              {operationalStatus === "atrasada" ? "Atrasada" : STATUS_LABELS[operationalStatus]}
+            </span>
           </div>
         </div>
-        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${operationalStatus === "atrasada" ? "bg-destructive/15 text-destructive" : STATUS_TONE[operationalStatus]}`}>
-          {operationalStatus === "atrasada" ? "Atrasada" : STATUS_LABELS[operationalStatus]}
-        </span>
-      </div>
+        </div>
+        {isManager && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="shrink-0"
+            title={actionsOpen ? "Ocultar ações" : "Editar e mais ações"}
+            aria-expanded={actionsOpen}
+            onClick={() => setActionsOpen((open) => !open)}
+          >
+            <Pencil className="h-3 w-3" />
+          </Button>
+        )}
       </div>
       <div className="flex flex-wrap items-center gap-1">
         {lateStartMinutes != null ? (
