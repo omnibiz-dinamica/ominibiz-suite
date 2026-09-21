@@ -62,6 +62,7 @@ import {
 } from "@/lib/support/destinations";
 import { invalidateSupportTicket } from "@/lib/cache/support";
 import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
+import { canCloseTicketNow } from "@/lib/support/close-permission";
 
 export const Route = createFileRoute("/app/suporte/$id")({
   component: () => (
@@ -191,7 +192,7 @@ function AttachmentThumb({ att, onOpen }: { att: AttachmentRow; onOpen: (a: Atta
 
 function SupportDetailPage() {
   const { id } = useParams({ from: "/app/suporte/$id" });
-  const { user, isSuperAdmin, isManager } = useAuth();
+  const { user, isSuperAdmin, isManager, roles } = useAuth();
   const qc = useQueryClient();
   const [reply, setReply] = useState("");
   const [isInternal, setIsInternal] = useState(false);
@@ -286,6 +287,27 @@ function SupportDetailPage() {
   });
 
   const ticket = ticketQ.data ?? null;
+
+  /**
+   * Etapa A — permissão de encerramento espelhada de public.support_can_close_ticket.
+   * O backend continua a ser a autoridade; aqui apenas escondemos o botão.
+   */
+  const closeCtx = useMemo(
+    () => ({
+      isSuperAdmin,
+      isCompanyManager:
+        !!ticket &&
+        roles.some(
+          (r) =>
+            (r.role === "manager" || r.role === "owner") && r.company_id === ticket.company_id,
+        ),
+      isRequester: !!ticket && !!user && ticket.requester_user_id === user.id,
+      destinationCode: ticket?.destination_code ?? null,
+      status: ticket?.status ?? "",
+    }),
+    [isSuperAdmin, roles, ticket, user],
+  );
+  const canCloseTicket = ticket ? canCloseTicketNow(closeCtx) : false;
 
   /** Papéis da empresa (para saber se o solicitante é Funcionário e listar funcionários ativos). */
   const rolesQ = useQuery<{ user_id: string; role: string }[]>({
@@ -884,7 +906,7 @@ function SupportDetailPage() {
         )}
 
         {/* SUP-2026-000070 — ticket devolvido ao solicitante: validar ou contestar. */}
-        {!isClosed && awaitingValidation && (
+        {!isClosed && awaitingValidation && canCloseTicket && (
           <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
             <p className="text-xs text-muted-foreground">
               Este ticket aguarda a sua validação. Confirme a solução para arquivar ou informe que o problema continua.
@@ -898,7 +920,7 @@ function SupportDetailPage() {
           </div>
         )}
 
-        {ARCHIVABLE_STATUSES.includes(t.status) && (
+        {!isClosed && canCloseTicket && !awaitingValidation && (
           <Button className="w-full" onClick={() => setArchiveOpen(true)}>
             <Archive className="mr-1 h-4 w-4" /> Arquivar ticket
           </Button>

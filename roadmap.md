@@ -35,3 +35,10 @@
 - [x] Registo de quem encaminhou/quando, histórico `solicitar`/`encaminhar` e avisos ao autorizador e ao remetente.
 - [x] Teste end-to-end na tela, com dados de teste removidos.
 - [x] Tarefas canceladas (empresa teste): confirmado comportamento esperado, sem correção necessária.
+
+## 21/09/2026 — Help Desk: encerramento e avisos (Etapa A concluída)
+- [x] Regra canónica de encerramento por papel/fila (`support_can_close_ticket`) + botão oculto conforme a mesma regra.
+- [x] Super Admin encerra qualquer ticket em qualquer estado.
+- [x] Auditoria de encerramento (`closed_by` + evento).
+- [x] Avisos: encerramento, resposta do atendimento, resposta do solicitante; sem auto-aviso e idempotentes.
+- [ ] Etapa B (rename "Owner" -> "Proprietário Empresa" e matriz de atribuição de papéis) — apenas diagnóstico entregue, aguarda confirmação.

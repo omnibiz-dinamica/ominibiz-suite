@@ -1,3 +1,14 @@
+# 21092026-A/001 — Encerramento de tickets por papel e avisos do Help Desk
+
+- Super Admin passa a encerrar qualquer ticket, em qualquer estado e qualquer fila (antes o estado do ticket bloqueava).
+- Tickets das filas Secretaria e Contabilista podem ser encerrados por qualquer Gestor/Proprietário da empresa do ticket; tickets da fila Suporte/Desenvolvimento apenas pelo Super Admin (até existir o papel Desenvolvedor).
+- O solicitante continua a poder validar e arquivar o seu próprio ticket; funcionários deixam de conseguir encerrar tickets administrativos de outras pessoas (botão oculto e pedido recusado pelo servidor).
+- Auditoria: cada encerramento grava quem encerrou e quando (`support_tickets.closed_by` + evento `status_changed` com `closed_by`/`closed_at`).
+- Avisos: encerramento passa a avisar o solicitante (antes não avisava ninguém); respostas do atendimento avisam sempre o solicitante (antes, resposta de Gestor sem papel de fila avisava apenas o Super Admin); resposta do solicitante avisa a fila responsável.
+- Nenhum aviso é enviado ao próprio autor da ação (inclui o caso "Gestor abre o próprio ticket") e avisos repetidos em dupla submissão deixam de duplicar.
+- Prova real (OMNIBIZ TESTES, tudo desfeito no final): regra sa_tech=sim, gestor_secretaria=sim, gestor_tech=não, funcionário_alheio=não; pedido do gestor na fila técnica e do funcionário recusados pelo servidor; encerramento pelo Super Admin em ticket "aberto" com `closed_by` gravado; abertura pelo próprio gestor gerou 0 auto-avisos; dupla submissão do encerramento gerou 1 aviso; fila Secretaria recebeu abertura e resposta do solicitante.
+- Nota de dados: hoje não existe nenhum utilizador com papel Secretária ou Contabilista em nenhuma empresa — as filas existem, mas ficam sem destinatário até alguém receber esses papéis.
+
 # 18092026-A/001 — Encaminhamento de férias para autorização
 
 - Corrigido o erro "Could not find the function public.vacation_forward_for_authorization" ao enviar um pedido de férias para outro gestor autorizar: a operação existia apenas no ficheiro de migração e nunca tinha sido criada na base de dados. Migração aplicada e cache do PostgREST recarregado.

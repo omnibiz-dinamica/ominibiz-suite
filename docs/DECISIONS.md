@@ -1531,3 +1531,28 @@ teste: zero. Testes 184/184, typecheck limpo.
 
 **Consequências.** Disputas "quem criou esta tarefa?" passam a ser respondidas
 pelo histórico da própria tarefa, sem consulta manual ao banco.
+
+
+## ADR-067 — Encerramento de tickets é decidido por papel e fila (2026-09-21)
+
+**Contexto.** O encerramento usava `is_company_manager` (que já inclui o Super Admin) mas exigia
+sempre um estado "resolvido/aguardando validação", pelo que o Super Admin não conseguia encerrar
+tickets abertos; e qualquer gestor conseguia encerrar tickets da fila técnica. O encerramento
+também não gerava aviso nenhum e não registava o autor.
+
+**Decisão.**
+- `public.support_can_close_ticket(_user_id, _ticket_id)` é a regra canónica: Super Admin sempre;
+  solicitante sobre o próprio ticket; fila técnica (`support_destinations.is_technical`) apenas
+  Super Admin; filas administrativas (Secretaria/Contabilista) para `manager`/`owner` da empresa
+  **do ticket**.
+- O gate de estado continua a valer para todos exceto o Super Admin.
+- `support_tickets.closed_by` + metadata do evento `status_changed` registam o autor do encerramento.
+- Notificações de suporte nunca notificam `auth.uid()` e são idempotentes numa janela de 1 minuto
+  (`support_notify_user`, `support_notify_destination`, `support_notify_super_admins`,
+  `support_notify_managers`).
+- Resposta: se o autor não é o solicitante, avisa o solicitante; se é o solicitante, avisa a fila
+  responsável (a fila técnica resolve para os Super Admins).
+
+**Consequências.** O papel escolhido no frontend (`src/lib/support/close-permission.ts`) é apenas
+espelho para esconder o botão; a autoridade é sempre a RPC. O papel "Desenvolvedor" não existe,
+pelo que a fila técnica permanece responsabilidade do Super Admin.
