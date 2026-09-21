@@ -191,6 +191,18 @@
   duplicados em `/app/admin/suporte` (Super Admin).
 - Detalhe completo: `docs/ARCHITECTURE_SUPPORT_TICKETS.md`.
 
+## Suporte — encerramento e avisos (ADR-067)
+
+- `public.support_can_close_ticket(_user_id, _ticket_id)` — autoridade canónica
+  (Super Admin sempre; solicitante no próprio ticket; fila técnica só Super
+  Admin; filas Secretaria/Contabilista para manager/owner da empresa do ticket).
+- `src/lib/support/close-permission.ts` — espelho da regra no frontend, usado
+  apenas para esconder o botão em `src/routes/app.suporte.$id.tsx`.
+- `close_support_ticket` grava `closed_by`/`closed_at` e avisa o solicitante;
+  `post_support_ticket_message` avisa o solicitante ou a fila responsável.
+- Todos os `support_notify_*` suprimem o auto-aviso e são idempotentes
+  (janela de 1 minuto).
+
 ## Tarefas recorrentes — exclusão segura (ADR-051)
 
 - `public.task_series_delete(_task_id, _scope, _reason)` — âmbito `single` (soft-delete da ocorrência, série continua) ou `future` (ocorrências ≥ data de corte + encerramento da série). Ocorrências com histórico são canceladas, nunca apagadas.
