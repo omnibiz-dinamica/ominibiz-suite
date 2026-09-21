@@ -827,10 +827,10 @@ function SupportDetailPage() {
       </div>
 
       <aside className="space-y-4">
-        {isSuperAdmin && (
+        {(isSuperAdmin || canServeTicket) && (
           <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
             <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Ações do Super Admin
+              {isSuperAdmin ? "Ações do Super Admin" : "Ações do atendimento"}
             </h3>
             <div className="space-y-1.5">
               <label className="text-xs text-muted-foreground">Status</label>
@@ -839,7 +839,7 @@ function SupportDetailPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {TICKET_STATUS_LIST.map((s) => (
+                  {(isSuperAdmin ? TICKET_STATUS_LIST : QUEUE_STATUS_LIST).map((s) => (
                     <SelectItem key={s} value={s}>
                       {TICKET_STATUS_LABEL[s]}
                     </SelectItem>
