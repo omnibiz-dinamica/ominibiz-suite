@@ -66,7 +66,7 @@ import { canCloseTicketNow } from "@/lib/support/close-permission";
 
 export const Route = createFileRoute("/app/suporte/$id")({
   component: () => (
-    <RoleGuard allow={["super_admin", "owner", "manager", "accountant", "secretary"]}>
+    <RoleGuard allow={["super_admin", "owner", "manager", "accountant", "secretary", "employee"]}>
       <SupportDetailPage />
     </RoleGuard>
   ),
@@ -308,6 +308,25 @@ function SupportDetailPage() {
     [isSuperAdmin, roles, ticket, user],
   );
   const canCloseTicket = ticket ? canCloseTicketNow(closeCtx) : false;
+
+  /**
+   * Atendimento das filas administrativas (Secretaria/Contabilidade): hoje a
+   * responsabilidade é do Gestor/Proprietário da empresa do ticket. Espelha
+   * public.support_has_destination_access; o backend continua a ser a autoridade.
+   */
+  const ticketDestination = useMemo(
+    () => destinations.find((d) => d.code === (ticket?.destination_code ?? "")) ?? null,
+    [destinations, ticket?.destination_code],
+  );
+  const canServeTicket =
+    !!ticket && !ticketDestination?.is_technical && closeCtx.isCompanyManager;
+  /** Estados permitidos aos papéis de fila pela RPC update_support_ticket_status. */
+  const QUEUE_STATUS_LIST: SupportTicketStatus[] = [
+    "aberto",
+    "em_analise",
+    "aguardando_cliente",
+    "resolvido",
+  ];
 
   /** Papéis da empresa (para saber se o solicitante é Funcionário e listar funcionários ativos). */
   const rolesQ = useQuery<{ user_id: string; role: string }[]>({
@@ -808,10 +827,10 @@ function SupportDetailPage() {
       </div>
 
       <aside className="space-y-4">
-        {isSuperAdmin && (
+        {(isSuperAdmin || canServeTicket) && (
           <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
             <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Ações do Super Admin
+              {isSuperAdmin ? "Ações do Super Admin" : "Ações do atendimento"}
             </h3>
             <div className="space-y-1.5">
               <label className="text-xs text-muted-foreground">Status</label>
@@ -820,7 +839,7 @@ function SupportDetailPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {TICKET_STATUS_LIST.map((s) => (
+                  {(isSuperAdmin ? TICKET_STATUS_LIST : QUEUE_STATUS_LIST).map((s) => (
                     <SelectItem key={s} value={s}>
                       {TICKET_STATUS_LABEL[s]}
                     </SelectItem>

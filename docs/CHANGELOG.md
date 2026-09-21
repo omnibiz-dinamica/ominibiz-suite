@@ -1,3 +1,9 @@
+# 21092026-A/003 — Gestor atende Secretaria/Contabilidade e funcionário abre o ticket
+
+- O Gestor/Proprietário passa a ver o painel "Ações do atendimento" nos tickets das filas Secretária e Contabilista da sua empresa, podendo alterar a situação (Aberto, Em análise, Aguardando cliente, Resolvido) e a prioridade. A fila Suporte/Desenvolvimento continua exclusiva do Super Admin.
+- O Funcionário passa a abrir o ticket ao clicar nele (antes era devolvido ao início): consegue ler a conversa, responder, anexar ficheiros e validar/arquivar o seu próprio ticket, no computador e no telemóvel.
+- Verificação na base: acesso do Gestor à fila Secretária = sim, à fila técnica = não; Super Admin na fila técnica = sim; Funcionário em fila administrativa = não.
+
 # 21092026-A/002 — Filas administrativas sem titular recaem no Gestor
 
 - Regra de negócio confirmada: hoje os papéis Secretária e Contabilista são exercidos pelo Gestor.
