@@ -2190,6 +2190,7 @@ export type Database = {
           archived_at: string | null
           assigned_user_id: string | null
           closed_at: string | null
+          closed_by: string | null
           company_id: string
           created_at: string
           created_by_role: string | null
@@ -2231,6 +2232,7 @@ export type Database = {
           archived_at?: string | null
           assigned_user_id?: string | null
           closed_at?: string | null
+          closed_by?: string | null
           company_id: string
           created_at?: string
           created_by_role?: string | null
@@ -2272,6 +2274,7 @@ export type Database = {
           archived_at?: string | null
           assigned_user_id?: string | null
           closed_at?: string | null
+          closed_by?: string | null
           company_id?: string
           created_at?: string
           created_by_role?: string | null
@@ -4238,6 +4241,7 @@ export type Database = {
           archived_at: string | null
           assigned_user_id: string | null
           closed_at: string | null
+          closed_by: string | null
           company_id: string
           created_at: string
           created_by_role: string | null
@@ -5390,6 +5394,10 @@ export type Database = {
           _user_id: string
         }
         Returns: undefined
+      }
+      support_can_close_ticket: {
+        Args: { _ticket_id: string; _user_id: string }
+        Returns: boolean
       }
       support_detect_action: {
         Args: { _kw: string[]; _norm: string }
