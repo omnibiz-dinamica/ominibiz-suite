@@ -42,3 +42,7 @@
 - [x] Auditoria de encerramento (`closed_by` + evento).
 - [x] Avisos: encerramento, resposta do atendimento, resposta do solicitante; sem auto-aviso e idempotentes.
 - [ ] Etapa B (rename "Owner" -> "Proprietário Empresa" e matriz de atribuição de papéis) — apenas diagnóstico entregue, aguarda confirmação.
+
+## 21/09/2026 — Help Desk: filas administrativas e papéis
+- [x] Filas Secretária/Contabilista sem titular avisam os Gestores/Proprietários da empresa.
+- [ ] Etapa B — rename "Owner" → "Proprietário Empresa" e matriz de atribuição de papéis (diagnóstico entregue, aguarda decisão).
