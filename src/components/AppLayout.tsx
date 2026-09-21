@@ -94,7 +94,7 @@ const GROUPS_STORAGE_KEY = "omnibiz:sidebar:groups:v2";
 const FORCE_MENU_CLOSED_KEY = "omnibiz:force-mobile-menu-closed";
 const MOBILE_QUERY = "(max-width: 767px)";
 export function AppLayout({ children }: { children?: ReactNode }) {
-  const { user, isSuperAdmin, currentCompanyId, signOut, effectiveRole, switchCompany, initialized } = useAuth();
+  const { user, isManager, isSuperAdmin, currentCompanyId, signOut, effectiveRole, switchCompany, initialized } = useAuth();
   const { theme, toggle } = useTheme();
   const nav = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
