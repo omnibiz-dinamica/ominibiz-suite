@@ -2152,11 +2152,13 @@ function CalendarTaskCard({
       <TaskRefusalHistory records={refusalHistory} memberNames={memberNames} compact />
 
 
+      {(isManager ? actionsOpen : actions.length > 0 || (onNoStartReason && (task.status === "pendente" || task.status === "autorizado") && late)) && (
       <div className="flex flex-wrap justify-end gap-1">
         {isManager && (
           <>
-            <Button size="sm" variant="ghost" title="Editar" onClick={() => onEdit(task)}>
+            <Button size="sm" variant="outline" title="Editar tarefa" onClick={() => onEdit(task)}>
               <Pencil className="h-3 w-3" />
+              <span className="ml-1">Editar</span>
             </Button>
             {task.recurrence_id && (
               <Button size="sm" variant="ghost" title="Editar série" onClick={() => onEditSeries(task)}>
@@ -2192,6 +2194,7 @@ function CalendarTaskCard({
           />
         ))}
       </div>
+      )}
     </li>
   );
 }
