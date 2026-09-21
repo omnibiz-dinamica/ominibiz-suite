@@ -86,6 +86,19 @@ type NotificationRow = {
   state_changed_at: string | null;
 };
 
+type VacationQueueRow = {
+  id: string;
+  vacation_request_id: string;
+  company_id: string;
+  state: "pending" | "in_progress";
+  claimed_by: string | null;
+  claimed_at: string | null;
+  created_at: string;
+  employeeName: string;
+  startDate: string;
+  endDate: string;
+};
+
 type CancellationTaskContext = {
   id: string;
   title: string | null;
@@ -392,6 +405,44 @@ function NotificationsPage() {
   const [forwardTo, setForwardTo] = useState("");
   const [forwardNote, setForwardNote] = useState("");
 
+  const { data: vacationQueue = [], isLoading: vacationQueueLoading } = useQuery({
+    queryKey: ["vacation-manager-queue", user?.id, currentCompanyId],
+    enabled: !!user && !!currentCompanyId && (isManager || isSuperAdmin),
+    queryFn: async () => {
+      const { data: queueData, error: queueError } = await (supabase as any)
+        .from("vacation_manager_queue")
+        .select("id,vacation_request_id,company_id,state,claimed_by,claimed_at,created_at")
+        .eq("company_id", currentCompanyId)
+        .neq("state", "resolved")
+        .order("created_at", { ascending: false });
+      if (queueError) throw queueError;
+      const queue = (queueData ?? []) as Omit<VacationQueueRow, "employeeName" | "startDate" | "endDate">[];
+      if (queue.length === 0) return [] as VacationQueueRow[];
+      const { data: requests, error: requestError } = await supabase
+        .from("vacation_requests")
+        .select("id,user_id,start_date,end_date")
+        .in("id", queue.map((item) => item.vacation_request_id));
+      if (requestError) throw requestError;
+      const requestMap = new Map((requests ?? []).map((request) => [request.id, request]));
+      const employeeIds = [...new Set((requests ?? []).map((request) => request.user_id))];
+      const { data: profiles, error: profileError } = employeeIds.length
+        ? await supabase.from("profiles").select("id,full_name").in("id", employeeIds)
+        : { data: [] as { id: string; full_name: string | null }[], error: null };
+      if (profileError) throw profileError;
+      const names = new Map((profiles ?? []).map((profile) => [profile.id, profile.full_name ?? "Colaborador"]));
+      return queue.flatMap((item) => {
+        const request = requestMap.get(item.vacation_request_id);
+        if (!request) return [];
+        return [{
+          ...item,
+          employeeName: names.get(request.user_id) ?? "Colaborador",
+          startDate: request.start_date,
+          endDate: request.end_date,
+        }];
+      });
+    },
+  });
+
   const { data, isLoading } = useQuery({
     queryKey: ["notifications", user?.id, currentCompanyId],
     queryFn: async () => {
@@ -419,6 +470,31 @@ function NotificationsPage() {
     enabled: !!user,
     queryClient: qc,
     invalidate: invalidateNotificationsCache,
+  });
+
+  useRealtimeInvalidate({
+    channel: `company:${currentCompanyId ?? "none"}:vacation-manager-queue`,
+    table: "vacation_manager_queue",
+    filter: currentCompanyId ? `company_id=eq.${currentCompanyId}` : undefined,
+    enabled: !!currentCompanyId && (isManager || isSuperAdmin),
+    queryClient: qc,
+    invalidate: (client) => {
+      client.invalidateQueries({ queryKey: ["vacation-manager-queue"] });
+      client.invalidateQueries({ queryKey: ["notifications-unread-count"] });
+    },
+  });
+
+  const claimVacation = useMutation({
+    mutationFn: async (queueId: string) => {
+      const { error } = await (supabase as any).rpc("vacation_manager_queue_claim", { _queue_id: queueId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["vacation-manager-queue"] });
+      qc.invalidateQueries({ queryKey: ["notifications-unread-count"] });
+      toast.success("Pedido assumido. Agora só aparece para si.");
+    },
+    onError: (error: Error) => toast.error(error.message),
   });
 
   const markRead = useMutation({
@@ -498,8 +574,9 @@ function NotificationsPage() {
 
   const unreadCount = useMemo(
     () =>
-      rows.filter((n) => !n.read_at && n.state !== "resolvida" && n.state !== "arquivada").length,
-    [rows],
+      rows.filter((n) => !n.read_at && n.state !== "resolvida" && n.state !== "arquivada").length +
+      vacationQueue.length,
+    [rows, vacationQueue.length],
   );
 
   const openNotification = async (n: NotificationRow) => {
@@ -579,7 +656,48 @@ function NotificationsPage() {
         ))}
       </div>
 
-      {isLoading ? (
+      {tab === "ativas" && vacationQueue.length > 0 && (
+        <section className="overflow-hidden rounded-lg border border-border">
+          <div className="border-b border-border bg-muted/40 px-4 py-3">
+            <h2 className="font-semibold">Pedidos de férias aguardando gestor</h2>
+          </div>
+          <ul className="divide-y divide-border">
+            {vacationQueue.map((item) => {
+              const mine = item.claimed_by === user?.id;
+              return (
+                <li key={item.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded bg-warning/15 px-1.5 py-0.5 text-[10px] font-medium uppercase text-warning-foreground">
+                        Férias — solicitação
+                      </span>
+                      <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] font-medium uppercase text-secondary-foreground">
+                        {mine ? "Em tratamento" : "Pendente"}
+                      </span>
+                    </div>
+                    <p className="mt-1 font-medium">{item.employeeName}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(`${item.startDate}T00:00:00`).toLocaleDateString("pt-PT")} a {new Date(`${item.endDate}T00:00:00`).toLocaleDateString("pt-PT")}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {!mine && (
+                      <Button size="sm" disabled={claimVacation.isPending} onClick={() => claimVacation.mutate(item.id)}>
+                        <Timer className="mr-1.5 h-4 w-4" /> Tratar
+                      </Button>
+                    )}
+                    <Button size="sm" variant="ghost" onClick={() => nav({ to: "/app/ferias" })}>
+                      <ExternalLink className="mr-1.5 h-4 w-4" /> Abrir
+                    </Button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
+      {isLoading || vacationQueueLoading ? (
         <div className="rounded-lg border border-border p-8 text-center text-sm text-muted-foreground">
           Carregando…
         </div>

@@ -94,7 +94,7 @@ const GROUPS_STORAGE_KEY = "omnibiz:sidebar:groups:v2";
 const FORCE_MENU_CLOSED_KEY = "omnibiz:force-mobile-menu-closed";
 const MOBILE_QUERY = "(max-width: 767px)";
 export function AppLayout({ children }: { children?: ReactNode }) {
-  const { user, isSuperAdmin, currentCompanyId, signOut, effectiveRole, switchCompany, initialized } = useAuth();
+  const { user, isManager, isSuperAdmin, currentCompanyId, signOut, effectiveRole, switchCompany, initialized } = useAuth();
   const { theme, toggle } = useTheme();
   const nav = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
@@ -200,7 +200,14 @@ export function AppLayout({ children }: { children?: ReactNode }) {
         .is("read_at", null)
         .not("state", "in", "(resolvida,arquivada)");
       if (error) throw error;
-      return count ?? 0;
+      if (!currentCompanyId || !isManager) return count ?? 0;
+      const { count: vacationCount, error: vacationError } = await (supabase as any)
+        .from("vacation_manager_queue")
+        .select("*", { count: "exact", head: true })
+        .eq("company_id", currentCompanyId)
+        .neq("state", "resolved");
+      if (vacationError) throw vacationError;
+      return (count ?? 0) + (vacationCount ?? 0);
     },
   });
 

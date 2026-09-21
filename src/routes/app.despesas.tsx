@@ -11,7 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { EmployeePicker } from "@/components/common/EmployeePicker";
 import { toast } from "sonner";
 import { exportToExcel, exportToPdf, type ExportColumn } from "@/lib/exports";
-import { CreditCard, Check, X as XIcon, Upload, Camera, Download, Plus, Trash2, FileSpreadsheet, FileText } from "lucide-react";
+import { CreditCard, Check, X as XIcon, Upload, Camera, Download, Plus, Trash2, FileSpreadsheet, FileText, Printer, Package } from "lucide-react";
+import {
+  buildExpenseAttachmentsPdf,
+  openExpenseAttachmentsPrint,
+  type ExpenseAttachmentManifestItem,
+} from "@/lib/expense-attachments";
 
 export const Route = createFileRoute("/app/despesas")({ component: DespesasPage });
 
@@ -431,6 +436,8 @@ function DespesasPage() {
   const [filterDateBy, setFilterDateBy] = useState<"expense_date" | "created_at">("expense_date");
   const [filterStartDate, setFilterStartDate] = useState("");
   const [filterEndDate, setFilterEndDate] = useState("");
+  const [attachmentMonth, setAttachmentMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [attachmentAction, setAttachmentAction] = useState<"print" | "zip" | null>(null);
 
   const filtered = rows.filter((r) => {
     if (filterStatus !== "all" && r.status !== filterStatus) return false;
@@ -487,6 +494,57 @@ function DespesasPage() {
   const openAttachment = async (path: string) => {
     const { data } = await supabase.storage.from("employee-expenses").createSignedUrl(path, 60);
     if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+  };
+
+  const fetchAttachmentReport = async (format: "manifest" | "zip") => {
+    if (!currentCompanyId) throw new Error("Empresa não selecionada.");
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) throw new Error("Sessão expirada. Entre novamente.");
+    const params = new URLSearchParams({ companyId: currentCompanyId, month: attachmentMonth, format });
+    const response = await fetch(`/api/expenses/attachments?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null) as { error?: string } | null;
+      throw new Error(payload?.error ?? "Não foi possível preparar os comprovantes.");
+    }
+    return response;
+  };
+
+  const printAttachments = async () => {
+    setAttachmentAction("print");
+    try {
+      const response = await fetchAttachmentReport("manifest");
+      const payload = await response.json() as { items: ExpenseAttachmentManifestItem[] };
+      if (payload.items.length === 0) {
+        toast.info("Não há comprovantes no mês selecionado.");
+        return;
+      }
+      openExpenseAttachmentsPrint(await buildExpenseAttachmentsPdf(payload.items));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha ao imprimir comprovantes.");
+    } finally {
+      setAttachmentAction(null);
+    }
+  };
+
+  const downloadAttachments = async () => {
+    setAttachmentAction("zip");
+    try {
+      const response = await fetchAttachmentReport("zip");
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `comprovantes-despesas-${attachmentMonth}.zip`;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha ao baixar comprovantes.");
+    } finally {
+      setAttachmentAction(null);
+    }
   };
 
   return (
@@ -739,6 +797,35 @@ function DespesasPage() {
                 Limpar datas
               </Button>
             </div>
+          </div>
+        )}
+        {isManager && (
+          <div className="mb-4 flex flex-wrap items-end gap-2 border-t border-border pt-4">
+            <div className="min-w-[180px]">
+              <Label htmlFor="expense-attachment-month" className="text-xs">Mês dos comprovantes</Label>
+              <Input
+                id="expense-attachment-month"
+                type="month"
+                value={attachmentMonth}
+                onChange={(event) => setAttachmentMonth(event.target.value)}
+              />
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!attachmentMonth || attachmentAction !== null}
+              onClick={() => void printAttachments()}
+            >
+              <Printer className="h-4 w-4" /> Imprimir comprovantes
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!attachmentMonth || attachmentAction !== null}
+              onClick={() => void downloadAttachments()}
+            >
+              <Package className="h-4 w-4" /> Baixar comprovantes do mês
+            </Button>
           </div>
         )}
         {isLoading ? (

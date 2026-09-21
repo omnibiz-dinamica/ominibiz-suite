@@ -69,6 +69,7 @@ import { Route as AppComercialClientesRouteImport } from './routes/app.comercial
 import { Route as AppAdminSuporteRouteImport } from './routes/app.admin.suporte'
 import { Route as ApiUsersEmailChangeRequestsRouteImport } from './routes/api/users/email-change-requests'
 import { Route as ApiSupportTicketCreatedEmailRouteImport } from './routes/api/support/ticket-created-email'
+import { Route as ApiExpensesAttachmentsRouteImport } from './routes/api/expenses/attachments'
 import { Route as ApiEmailSendRouteImport } from './routes/api/email/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
@@ -393,6 +394,11 @@ const ApiSupportTicketCreatedEmailRoute =
     path: '/api/support/ticket-created-email',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiExpensesAttachmentsRoute = ApiExpensesAttachmentsRouteImport.update({
+  id: '/api/expenses/attachments',
+  path: '/api/expenses/attachments',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiEmailSendRoute = ApiEmailSendRouteImport.update({
   id: '/api/email/send',
   path: '/api/email/send',
@@ -463,6 +469,7 @@ export interface FileRoutesByFullPath {
   '/sign/$token': typeof SignTokenRoute
   '/app/': typeof AppIndexRoute
   '/api/email/send': typeof ApiEmailSendRoute
+  '/api/expenses/attachments': typeof ApiExpensesAttachmentsRoute
   '/api/support/ticket-created-email': typeof ApiSupportTicketCreatedEmailRoute
   '/api/users/email-change-requests': typeof ApiUsersEmailChangeRequestsRoute
   '/app/admin/suporte': typeof AppAdminSuporteRoute
@@ -530,6 +537,7 @@ export interface FileRoutesByTo {
   '/sign/$token': typeof SignTokenRoute
   '/app': typeof AppIndexRoute
   '/api/email/send': typeof ApiEmailSendRoute
+  '/api/expenses/attachments': typeof ApiExpensesAttachmentsRoute
   '/api/support/ticket-created-email': typeof ApiSupportTicketCreatedEmailRoute
   '/api/users/email-change-requests': typeof ApiUsersEmailChangeRequestsRoute
   '/app/admin/suporte': typeof AppAdminSuporteRoute
@@ -601,6 +609,7 @@ export interface FileRoutesById {
   '/sign/$token': typeof SignTokenRoute
   '/app/': typeof AppIndexRoute
   '/api/email/send': typeof ApiEmailSendRoute
+  '/api/expenses/attachments': typeof ApiExpensesAttachmentsRoute
   '/api/support/ticket-created-email': typeof ApiSupportTicketCreatedEmailRoute
   '/api/users/email-change-requests': typeof ApiUsersEmailChangeRequestsRoute
   '/app/admin/suporte': typeof AppAdminSuporteRoute
@@ -673,6 +682,7 @@ export interface FileRouteTypes {
     | '/sign/$token'
     | '/app/'
     | '/api/email/send'
+    | '/api/expenses/attachments'
     | '/api/support/ticket-created-email'
     | '/api/users/email-change-requests'
     | '/app/admin/suporte'
@@ -740,6 +750,7 @@ export interface FileRouteTypes {
     | '/sign/$token'
     | '/app'
     | '/api/email/send'
+    | '/api/expenses/attachments'
     | '/api/support/ticket-created-email'
     | '/api/users/email-change-requests'
     | '/app/admin/suporte'
@@ -810,6 +821,7 @@ export interface FileRouteTypes {
     | '/sign/$token'
     | '/app/'
     | '/api/email/send'
+    | '/api/expenses/attachments'
     | '/api/support/ticket-created-email'
     | '/api/users/email-change-requests'
     | '/app/admin/suporte'
@@ -863,6 +875,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignTokenRoute: typeof SignTokenRoute
   ApiEmailSendRoute: typeof ApiEmailSendRoute
+  ApiExpensesAttachmentsRoute: typeof ApiExpensesAttachmentsRoute
   ApiSupportTicketCreatedEmailRoute: typeof ApiSupportTicketCreatedEmailRoute
   ApiUsersEmailChangeRequestsRoute: typeof ApiUsersEmailChangeRequestsRoute
   LovableEmailEventsRoute: typeof LovableEmailEventsRoute
@@ -1295,6 +1308,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSupportTicketCreatedEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/expenses/attachments': {
+      id: '/api/expenses/attachments'
+      path: '/api/expenses/attachments'
+      fullPath: '/api/expenses/attachments'
+      preLoaderRoute: typeof ApiExpensesAttachmentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/email/send': {
       id: '/api/email/send'
       path: '/api/email/send'
@@ -1546,6 +1566,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SignTokenRoute: SignTokenRoute,
   ApiEmailSendRoute: ApiEmailSendRoute,
+  ApiExpensesAttachmentsRoute: ApiExpensesAttachmentsRoute,
   ApiSupportTicketCreatedEmailRoute: ApiSupportTicketCreatedEmailRoute,
   ApiUsersEmailChangeRequestsRoute: ApiUsersEmailChangeRequestsRoute,
   LovableEmailEventsRoute: LovableEmailEventsRoute,

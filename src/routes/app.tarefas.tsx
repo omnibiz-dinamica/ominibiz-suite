@@ -1992,7 +1992,6 @@ function CalendarTaskCard({
       ? formatWallDate(task.recurrence_date ?? task.due_at)
       : "";
   const memberName = taskMemberName(members, task.assigned_to);
-  const clientName = clients.find((c) => c.id === task.client_id)?.name ?? "Sem cliente";
   const taskPunch = taskPunches.get(task.id);
   const lateStartMinutes = startedLateMinutes(task, taskPunch?.started_at);
   const completionNote = completionNotes.get(task.id);
