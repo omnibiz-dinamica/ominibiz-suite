@@ -927,7 +927,7 @@ function SupportDetailPage() {
         )}
 
         {/* SUP-2026-000070 — ticket devolvido ao solicitante: validar ou contestar. */}
-        {!isClosed && awaitingValidation && canCloseTicket && (
+        {!isArchived && awaitingValidation && canCloseTicket && (
           <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
             <p className="text-xs text-muted-foreground">
               Este ticket aguarda a sua validação. Confirme a solução para arquivar ou informe que o problema continua.
@@ -941,7 +941,7 @@ function SupportDetailPage() {
           </div>
         )}
 
-        {!isClosed && canCloseTicket && !awaitingValidation && (
+        {!isArchived && canCloseTicket && !awaitingValidation && (
           <Button className="w-full" onClick={() => setArchiveOpen(true)}>
             <Archive className="mr-1 h-4 w-4" /> Arquivar ticket
           </Button>
