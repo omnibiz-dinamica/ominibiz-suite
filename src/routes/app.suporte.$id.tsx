@@ -62,6 +62,7 @@ import {
 } from "@/lib/support/destinations";
 import { invalidateSupportTicket } from "@/lib/cache/support";
 import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
+import { canCloseTicketNow } from "@/lib/support/close-permission";
 
 export const Route = createFileRoute("/app/suporte/$id")({
   component: () => (
@@ -191,7 +192,7 @@ function AttachmentThumb({ att, onOpen }: { att: AttachmentRow; onOpen: (a: Atta
 
 function SupportDetailPage() {
   const { id } = useParams({ from: "/app/suporte/$id" });
-  const { user, isSuperAdmin, isManager } = useAuth();
+  const { user, isSuperAdmin, isManager, roles } = useAuth();
   const qc = useQueryClient();
   const [reply, setReply] = useState("");
   const [isInternal, setIsInternal] = useState(false);
@@ -286,6 +287,27 @@ function SupportDetailPage() {
   });
 
   const ticket = ticketQ.data ?? null;
+
+  /**
+   * Etapa A — permissão de encerramento espelhada de public.support_can_close_ticket.
+   * O backend continua a ser a autoridade; aqui apenas escondemos o botão.
+   */
+  const closeCtx = useMemo(
+    () => ({
+      isSuperAdmin,
+      isCompanyManager:
+        !!ticket &&
+        roles.some(
+          (r) =>
+            (r.role === "manager" || r.role === "owner") && r.company_id === ticket.company_id,
+        ),
+      isRequester: !!ticket && !!user && ticket.requester_user_id === user.id,
+      destinationCode: ticket?.destination_code ?? null,
+      status: ticket?.status ?? "",
+    }),
+    [isSuperAdmin, roles, ticket, user],
+  );
+  const canCloseTicket = ticket ? canCloseTicketNow(closeCtx) : false;
 
   /** Papéis da empresa (para saber se o solicitante é Funcionário e listar funcionários ativos). */
   const rolesQ = useQuery<{ user_id: string; role: string }[]>({
