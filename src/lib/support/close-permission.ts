@@ -38,3 +38,38 @@ export function canCloseTicketNow(ctx: TicketCloseContext): boolean {
     ARCHIVABLE_STATUSES.includes(ctx.status) || AWAITING_VALIDATION_STATUSES.includes(ctx.status)
   );
 }
+
+/**
+ * Parte 3B — arquivar é só visibilidade (archived_at/archived_by) e nunca
+ * altera o status. Permissão espelha public.support_can_close_ticket.
+ */
+export function canArchiveTicketNow(
+  ctx: TicketCloseContext & { archivedAt: string | null },
+): boolean {
+  if (ctx.archivedAt) return false;
+  if (!canCloseTicketByRole(ctx)) return false;
+  if (ctx.isSuperAdmin) return true;
+  return (
+    ARCHIVABLE_STATUSES.includes(ctx.status) ||
+    AWAITING_VALIDATION_STATUSES.includes(ctx.status) ||
+    ctx.status === "fechado"
+  );
+}
+
+/**
+ * Parte 3A — assumir o ticket (responsável + claim da notificação numa só
+ * operação). Espelha public.support_can_serve_ticket: o solicitante não
+ * assume, e as filas técnicas continuam reservadas ao super_admin.
+ */
+export function canClaimTicket(ctx: {
+  isSuperAdmin: boolean;
+  isCompanyManager: boolean;
+  destinationCode: string | null;
+  assignedUserId: string | null;
+  currentUserId: string | null;
+}): boolean {
+  if (ctx.assignedUserId) return false;
+  if (ctx.isSuperAdmin) return true;
+  if (isTechnicalDestination(ctx.destinationCode)) return false;
+  return ctx.isCompanyManager && !!ctx.currentUserId;
+}

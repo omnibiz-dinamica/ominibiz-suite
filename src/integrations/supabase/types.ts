@@ -2188,6 +2188,7 @@ export type Database = {
       support_tickets: {
         Row: {
           archived_at: string | null
+          archived_by: string | null
           assigned_user_id: string | null
           closed_at: string | null
           closed_by: string | null
@@ -2230,6 +2231,7 @@ export type Database = {
         }
         Insert: {
           archived_at?: string | null
+          archived_by?: string | null
           assigned_user_id?: string | null
           closed_at?: string | null
           closed_by?: string | null
@@ -2272,6 +2274,7 @@ export type Database = {
         }
         Update: {
           archived_at?: string | null
+          archived_by?: string | null
           assigned_user_id?: string | null
           closed_at?: string | null
           closed_by?: string | null
@@ -4297,6 +4300,7 @@ export type Database = {
         Args: { _reason?: string; _ticket_id: string }
         Returns: {
           archived_at: string | null
+          archived_by: string | null
           assigned_user_id: string | null
           closed_at: string | null
           closed_by: string | null
@@ -5453,9 +5457,117 @@ export type Database = {
         }
         Returns: undefined
       }
+      support_archive_ticket: {
+        Args: { _reason?: string; _ticket_id: string }
+        Returns: {
+          archived_at: string | null
+          archived_by: string | null
+          assigned_user_id: string | null
+          closed_at: string | null
+          closed_by: string | null
+          company_id: string
+          created_at: string
+          created_by_role: string | null
+          current_owner_role: string
+          description: string
+          destination_code: string
+          destination_type: string | null
+          escalated_at: string | null
+          escalated_by: string | null
+          escalated_to_super_admin: boolean
+          escalation_reason: string | null
+          first_response_at: string | null
+          id: string
+          internal_resolution: string | null
+          module: string | null
+          norm_title: string | null
+          page_url: string | null
+          primary_ticket_id: string | null
+          priority: Database["public"]["Enums"]["support_ticket_priority"]
+          problem_action: string | null
+          problem_entity: string | null
+          problem_keywords: string[]
+          requester_user_id: string
+          resolved_at: string | null
+          returned_to_manager_at: string | null
+          returned_to_manager_by: string | null
+          route: string | null
+          search_norm: string | null
+          status: Database["public"]["Enums"]["support_ticket_status"]
+          support_level: string
+          technical_context: Json
+          technical_summary: string | null
+          ticket_number: string
+          title: string
+          type: Database["public"]["Enums"]["support_ticket_type"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "support_tickets"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       support_can_close_ticket: {
         Args: { _ticket_id: string; _user_id: string }
         Returns: boolean
+      }
+      support_can_serve_ticket: {
+        Args: { _ticket_id: string; _user_id: string }
+        Returns: boolean
+      }
+      support_claim_ticket: {
+        Args: { _ticket_id: string }
+        Returns: {
+          archived_at: string | null
+          archived_by: string | null
+          assigned_user_id: string | null
+          closed_at: string | null
+          closed_by: string | null
+          company_id: string
+          created_at: string
+          created_by_role: string | null
+          current_owner_role: string
+          description: string
+          destination_code: string
+          destination_type: string | null
+          escalated_at: string | null
+          escalated_by: string | null
+          escalated_to_super_admin: boolean
+          escalation_reason: string | null
+          first_response_at: string | null
+          id: string
+          internal_resolution: string | null
+          module: string | null
+          norm_title: string | null
+          page_url: string | null
+          primary_ticket_id: string | null
+          priority: Database["public"]["Enums"]["support_ticket_priority"]
+          problem_action: string | null
+          problem_entity: string | null
+          problem_keywords: string[]
+          requester_user_id: string
+          resolved_at: string | null
+          returned_to_manager_at: string | null
+          returned_to_manager_by: string | null
+          route: string | null
+          search_norm: string | null
+          status: Database["public"]["Enums"]["support_ticket_status"]
+          support_level: string
+          technical_context: Json
+          technical_summary: string | null
+          ticket_number: string
+          title: string
+          type: Database["public"]["Enums"]["support_ticket_type"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "support_tickets"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       support_detect_action: {
         Args: { _kw: string[]; _norm: string }
@@ -5560,6 +5672,10 @@ export type Database = {
           _ticket_id: string
         }
         Returns: undefined
+      }
+      support_sync_ticket_notifications: {
+        Args: { _claimed_by: string; _ticket_id: string }
+        Returns: number
       }
       support_ticket_log_event: {
         Args: {
