@@ -1,4 +1,11 @@
 
+## 22092026-A
+- 001 (suporte · Parte 3A): nova ação "Assumir ticket" — uma única operação atómica (RPC `support_claim_ticket`) define o responsável do ticket e assume o aviso da fila: some para os restantes gestores e fica em tratamento para quem assumiu. Só gestor/proprietário da empresa (filas administrativas) e super_admin; ticket com responsável não volta a ser assumido. (`src/routes/app.suporte.$id.tsx`, `src/lib/support/tickets.ts`, `src/lib/support/close-permission.ts`)
+- 002 (suporte · Parte 3A): `post_support_ticket_message` — com responsável definido, a resposta do solicitante notifica apenas o responsável (notificação de pessoa); sem responsável, mantém o fan-out da fila por papel.
+- 003 (suporte · Parte 3B): arquivamento passa a ser só visibilidade — `archived_at`/`archived_by` via RPC `support_archive_ticket`, que NUNCA altera o status. Permissão espelha a Etapa A (`support_can_close_ticket`). Modal "Arquivar agora?" abre ao marcar como resolvido (sim arquiva; não mantém resolvido e não-arquivado com botão "Arquivar ticket" disponível depois). Lista de tickets esconde arquivados com alternância "Mostrar arquivados". (`src/components/support/ArchiveTicketDialog.tsx`, `src/routes/app.suporte.tsx`)
+- 004 (suporte · backfill): 119 tickets históricos marcados como arquivados (Grupo V-clean 113: 69 legado "fechado", 41 resolvido, 2 resolvido pelo gestor, 1 rejeitado; OMNIBIZ TESTES 6), `archived_by` nulo (sistema/migração) e evento `archived` com `source=backfill`. Nenhum status alterado.
+- 005 (suporte · testes): `tests/support-ticket-archive.test.ts` (permissão de arquivar e assumir) + homologação ao vivo no banco: claim define responsável, segundo gestor bloqueado, funcionário sem permissão não arquiva, arquivar mantém `status=aberto`, fila técnica bloqueada ao gestor.
+
 ## 21092026-B
 - 001 (tarefas): cartão do quadro semanal simplificado — nome completo sem corte (quebra de linha), selo de status pequeno na linha do horário, apenas o lápis visível; demais ações (Editar, série, reatribuir, excluir, Autorizar/Iniciar/Cancelar) abrem ao tocar no lápis. Visão de funcionário inalterada. (src/routes/app.tarefas.tsx)
 - 002 (tarefas): removida a repetição do nome do cliente abaixo do título no quadro por colaborador; no agrupamento por cliente, o nome do colaborador continua visível como contexto. (src/routes/app.tarefas.tsx)
