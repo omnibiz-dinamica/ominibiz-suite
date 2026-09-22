@@ -1049,9 +1049,12 @@ function SupportDetailPage() {
       <ArchiveTicketDialog
         open={archiveOpen}
         onOpenChange={setArchiveOpen}
+        mode={archiveMode}
+        askAfterResolve={archiveAfterResolve}
         ticket={{ id: t.id, ticket_number: t.ticket_number, title: t.title, status: t.status }}
         onDone={() => invalidateSupportTicket(qc, id)}
       />
+
     </div>
   );
 }
