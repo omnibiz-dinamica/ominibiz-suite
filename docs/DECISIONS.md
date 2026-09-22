@@ -1556,3 +1556,18 @@ também não gerava aviso nenhum e não registava o autor.
 **Consequências.** O papel escolhido no frontend (`src/lib/support/close-permission.ts`) é apenas
 espelho para esconder o botão; a autoridade é sempre a RPC. O papel "Desenvolvedor" não existe,
 pelo que a fila técnica permanece responsabilidade do Super Admin.
+
+## ADR-066 — Arquivamento de tickets é só visibilidade; claim unifica responsável e notificação
+Data: 2026-09-22
+
+- Arquivar preenche `support_tickets.archived_at`/`archived_by` via `public.support_archive_ticket`
+  e **nunca** altera `status`. Permissão espelha `public.support_can_close_ticket` (Etapa A):
+  super_admin sempre, solicitante no próprio ticket, gestor/proprietário nas filas não técnicas.
+- Listas activas filtram `archived_at IS NULL`; a alternância "Mostrar arquivados" mostra o histórico.
+- Backfill único (2026-09-22): 119 tickets encerrados (incl. 70 legado `fechado`) marcados como
+  arquivados com `archived_by = NULL` (origem sistema) e evento `archived` com `source=backfill`.
+  Nenhum status foi alterado.
+- `public.support_claim_ticket` é a operação atómica única: define `assigned_user_id` (se livre) e
+  sincroniza os avisos do ticket — resolve para os restantes gestores, "em tratamento" para quem
+  assumiu. A partir do claim, `post_support_ticket_message` notifica a pessoa responsável em vez da
+  fila por papel.
