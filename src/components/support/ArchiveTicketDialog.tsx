@@ -6,15 +6,24 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, ModalBody, ModalFooter, ModalHeader, ModalSection } from "@/components/ui/dialog";
-import { closeTicket } from "@/lib/support/tickets";
+import { archiveTicket, closeTicket } from "@/lib/support/tickets";
 import { TICKET_STATUS_LABEL } from "@/lib/support/constants";
 
 const DEFAULT_REASON = "Validado como resolvido";
+
+/**
+ * `archive` — só visibilidade (archived_at/archived_by), status intacto (Parte 3B).
+ * `validate` — validação do solicitante: encerra o ticket e arquiva em seguida.
+ */
+export type ArchiveDialogMode = "archive" | "validate";
 
 export interface ArchiveTicketDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   ticket: { id: string; ticket_number: string; title: string; status: string };
+  mode?: ArchiveDialogMode;
+  /** Texto de apoio quando o modal é aberto logo após marcar como resolvido. */
+  askAfterResolve?: boolean;
   onDone: () => void;
 }
 
@@ -23,7 +32,14 @@ export interface ArchiveTicketDialogProps {
  * Nunca usa window.prompt: prompts nativos são suprimidos em PWA/mobile,
  * o que fazia o arquivamento falhar com "Motivo obrigatorio".
  */
-export function ArchiveTicketDialog({ open, onOpenChange, ticket, onDone }: ArchiveTicketDialogProps) {
+export function ArchiveTicketDialog({
+  open,
+  onOpenChange,
+  ticket,
+  mode = "archive",
+  askAfterResolve = false,
+  onDone,
+}: ArchiveTicketDialogProps) {
   const [reason, setReason] = useState(DEFAULT_REASON);
 
   useEffect(() => {
@@ -32,7 +48,10 @@ export function ArchiveTicketDialog({ open, onOpenChange, ticket, onDone }: Arch
 
   const mut = useMutation({
     mutationFn: async () => {
-      await closeTicket(ticket.id, reason.trim());
+      if (mode === "validate") {
+        await closeTicket(ticket.id, reason.trim());
+      }
+      await archiveTicket(ticket.id, reason.trim());
     },
     onSuccess: () => {
       toast.success("Ticket arquivado.");
@@ -47,8 +66,12 @@ export function ArchiveTicketDialog({ open, onOpenChange, ticket, onDone }: Arch
       <DialogContent size="md">
         <ModalHeader
           icon={Archive}
-          title="Arquivar ticket"
-          description="O ticket sai da lista ativa e passa a constar como arquivado. A reabertura continua disponível."
+          title={askAfterResolve ? "Arquivar agora?" : "Arquivar ticket"}
+          description={
+            askAfterResolve
+              ? "O ticket foi marcado como resolvido. Arquivar agora apenas o retira da lista de tickets activos — o status continua «resolvido» e pode arquivar mais tarde."
+              : "Arquivar é apenas visibilidade: o ticket sai da lista activa e o status não muda. A reabertura continua disponível."
+          }
         />
         <ModalBody className="space-y-3">
           <ModalSection title="Ticket">
@@ -82,13 +105,15 @@ export function ArchiveTicketDialog({ open, onOpenChange, ticket, onDone }: Arch
         </ModalBody>
         <ModalFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={mut.isPending}>
-            Cancelar
+            {askAfterResolve ? "Não, arquivar depois" : "Cancelar"}
           </Button>
           <Button onClick={() => mut.mutate()} disabled={!reason.trim() || mut.isPending}>
             {mut.isPending ? (
               <>
                 <Loader2 className="mr-1 h-4 w-4 animate-spin" /> Arquivando
               </>
+            ) : askAfterResolve ? (
+              "Sim, arquivar agora"
             ) : (
               "Arquivar ticket"
             )}

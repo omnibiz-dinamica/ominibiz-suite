@@ -136,6 +136,29 @@ export async function closeTicket(ticketId: string, reason: string | null = null
   if (error) throw error;
 }
 
+/**
+ * Parte 3B — arquivamento puro de visibilidade: preenche archived_at/archived_by
+ * e NUNCA altera o status do ticket (a RPC é a autoridade da permissão).
+ */
+export async function archiveTicket(ticketId: string, reason: string | null = null): Promise<void> {
+  const { error } = await (supabase as any).rpc("support_archive_ticket", {
+    _ticket_id: ticketId,
+    _reason: reason,
+  });
+  if (error) throw error;
+}
+
+/**
+ * Parte 3A — uma única operação atómica: define o responsável do ticket e
+ * assume a notificação de fila (some dos restantes gestores).
+ */
+export async function claimTicket(ticketId: string): Promise<void> {
+  const { error } = await (supabase as any).rpc("support_claim_ticket", {
+    _ticket_id: ticketId,
+  });
+  if (error) throw error;
+}
+
 export interface UploadAttachmentResult {
   attachmentId: string;
   storagePath: string;

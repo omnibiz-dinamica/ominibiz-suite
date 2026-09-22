@@ -26,6 +26,7 @@ import {
   ImageIcon,
   Zap,
   Archive,
+  UserCheck,
 } from "lucide-react";
 import {
   EVENT_TYPE_LABEL,
@@ -45,6 +46,7 @@ import {
   type SupportTicketStatus,
 } from "@/lib/support/constants";
 import {
+  claimTicket,
   postMessage,
   
   reopenTicketWithMessage,
@@ -62,7 +64,11 @@ import {
 } from "@/lib/support/destinations";
 import { invalidateSupportTicket } from "@/lib/cache/support";
 import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
-import { canCloseTicketNow } from "@/lib/support/close-permission";
+import {
+  canArchiveTicketNow,
+  canClaimTicket,
+  canCloseTicketNow,
+} from "@/lib/support/close-permission";
 
 export const Route = createFileRoute("/app/suporte/$id")({
   component: () => (
@@ -90,6 +96,9 @@ type TicketDetail = {
   technical_context: Record<string, unknown>;
   resolved_at: string | null;
   closed_at: string | null;
+  /** Parte 3B — arquivamento é só visibilidade; nunca reflete o status. */
+  archived_at: string | null;
+  archived_by: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -198,6 +207,9 @@ function SupportDetailPage() {
   const [isInternal, setIsInternal] = useState(false);
   const [reopenOpen, setReopenOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
+  /** `validate` encerra + arquiva (validação do solicitante); `archive` só arquiva. */
+  const [archiveMode, setArchiveMode] = useState<"archive" | "validate">("archive");
+  const [archiveAfterResolve, setArchiveAfterResolve] = useState(false);
   const replyRef = useRef<HTMLTextAreaElement | null>(null);
 
   const focusReply = () => {
@@ -308,6 +320,18 @@ function SupportDetailPage() {
     [isSuperAdmin, roles, ticket, user],
   );
   const canCloseTicket = ticket ? canCloseTicketNow(closeCtx) : false;
+  const canArchiveTicket = ticket
+    ? canArchiveTicketNow({ ...closeCtx, archivedAt: ticket.archived_at })
+    : false;
+  const canClaim = ticket
+    ? canClaimTicket({
+        isSuperAdmin,
+        isCompanyManager: closeCtx.isCompanyManager,
+        destinationCode: ticket.destination_code,
+        assignedUserId: ticket.assigned_user_id,
+        currentUserId: user?.id ?? null,
+      })
+    : false;
 
   /**
    * Atendimento das filas administrativas (Secretaria/Contabilidade): hoje a
@@ -407,10 +431,35 @@ function SupportDetailPage() {
   });
 
   const statusMut = useMutation({
-    mutationFn: async (s: SupportTicketStatus) => updateStatus(id, s),
-    onSuccess: () => {
+    mutationFn: async (s: SupportTicketStatus) => {
+      await updateStatus(id, s);
+      return s;
+    },
+    onSuccess: (s) => {
       invalidateSupportTicket(qc, id);
       toast.success("Status atualizado.");
+      // Parte 3B — ao resolver, perguntar se quer arquivar já (arquivar não altera o status).
+      if (
+        (s === "resolvido" || s === "resolved_by_manager") &&
+        ticketQ.data &&
+        !ticketQ.data.archived_at &&
+        canCloseTicket
+      ) {
+        setArchiveMode("archive");
+        setArchiveAfterResolve(true);
+        setArchiveOpen(true);
+      }
+    },
+    onError: (e) => toast.error("Erro: " + (e as Error).message),
+  });
+
+  /** Parte 3A — assumir o ticket: responsável + claim da notificação numa só operação. */
+  const claimMut = useMutation({
+    mutationFn: async () => claimTicket(id),
+    onSuccess: () => {
+      invalidateSupportTicket(qc, id);
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+      toast.success("Ticket assumido. Você é o responsável.");
     },
     onError: (e) => toast.error("Erro: " + (e as Error).message),
   });
@@ -504,8 +553,8 @@ function SupportDetailPage() {
     ["Timezone", String(tech.timezone ?? "—")],
   ];
   const isClosed = isClosedTicketStatus(t.status);
-  /** Só `fechado` já está arquivado; resolvido/rejeitado ainda podem ser arquivados. */
-  const isArchived = t.status === "fechado";
+  /** Parte 3B — arquivado é o campo archived_at, nunca o status do ticket. */
+  const isArchived = !!t.archived_at;
   const awaitingValidation = !isSuperAdmin && AWAITING_VALIDATION_STATUSES.includes(t.status);
 
 
@@ -926,13 +975,44 @@ function SupportDetailPage() {
           </Button>
         )}
 
+        {/* Parte 3A — assumir o ticket define o responsável e assume o aviso da fila. */}
+        {canClaim && (
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => claimMut.mutate()}
+            disabled={claimMut.isPending}
+          >
+            {claimMut.isPending ? (
+              <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+            ) : (
+              <UserCheck className="mr-1 h-4 w-4" />
+            )}
+            Assumir ticket
+          </Button>
+        )}
+
+        {isArchived && (
+          <p className="rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+            Ticket arquivado em {new Date(t.archived_at as string).toLocaleString("pt-PT")}. O status
+            continua «{TICKET_STATUS_LABEL[t.status] ?? t.status}».
+          </p>
+        )}
+
         {/* SUP-2026-000070 — ticket devolvido ao solicitante: validar ou contestar. */}
         {!isArchived && awaitingValidation && canCloseTicket && (
           <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
             <p className="text-xs text-muted-foreground">
               Este ticket aguarda a sua validação. Confirme a solução para arquivar ou informe que o problema continua.
             </p>
-            <Button className="w-full" onClick={() => setArchiveOpen(true)}>
+            <Button
+              className="w-full"
+              onClick={() => {
+                setArchiveMode("validate");
+                setArchiveAfterResolve(false);
+                setArchiveOpen(true);
+              }}
+            >
               <Archive className="mr-1 h-4 w-4" /> Confirmar solução e arquivar
             </Button>
             <Button variant="outline" className="w-full" onClick={focusReply}>
@@ -941,8 +1021,15 @@ function SupportDetailPage() {
           </div>
         )}
 
-        {!isArchived && canCloseTicket && !awaitingValidation && (
-          <Button className="w-full" onClick={() => setArchiveOpen(true)}>
+        {canArchiveTicket && !awaitingValidation && (
+          <Button
+            className="w-full"
+            onClick={() => {
+              setArchiveMode("archive");
+              setArchiveAfterResolve(false);
+              setArchiveOpen(true);
+            }}
+          >
             <Archive className="mr-1 h-4 w-4" /> Arquivar ticket
           </Button>
         )}
