@@ -221,3 +221,8 @@
 - `tasks_notify_insert` distingue o título para ocorrências de recorrência e inclui `origin` no metadata da notificação.
 - Selo "Recorrente (automática)" nos cartões de tarefa (`AUTO_RECURRENCE_BADGE_LABEL` em `src/lib/tasks.ts`).
 - Testes: `tests/recurrence-horizon.test.ts`.
+
+## Suporte — arquivamento e claim de tickets (ADR-068)
+- Arquivar é só visibilidade (`archived_at`/`archived_by`), nunca altera o status.
+- "Assumir ticket" define o responsável e assume o aviso da fila numa única operação atómica.
+- Ver `docs/DECISIONS.md` (ADR-068).
