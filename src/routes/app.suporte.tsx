@@ -62,6 +62,7 @@ function SupportListPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<"" | SupportTicketStatus>("");
   const [destinationFilter, setDestinationFilter] = useState<string>("");
+  const [showArchived, setShowArchived] = useState(false);
   const [q, setQ] = useState("");
 
   const destinationsQ = useQuery({
@@ -169,6 +170,14 @@ function SupportListPage() {
             ))}
           </SelectContent>
         </Select>
+        {/* Parte 3B — arquivados ficam fora da lista activa, sem mudar de status. */}
+        <Button
+          type="button"
+          variant={showArchived ? "default" : "outline"}
+          onClick={() => setShowArchived((v) => !v)}
+        >
+          {showArchived ? "A mostrar arquivados" : "Mostrar arquivados"}
+        </Button>
       </div>
 
 
