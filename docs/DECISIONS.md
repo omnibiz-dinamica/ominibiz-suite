@@ -1557,7 +1557,7 @@ também não gerava aviso nenhum e não registava o autor.
 espelho para esconder o botão; a autoridade é sempre a RPC. O papel "Desenvolvedor" não existe,
 pelo que a fila técnica permanece responsabilidade do Super Admin.
 
-## ADR-066 — Arquivamento de tickets é só visibilidade; claim unifica responsável e notificação
+## ADR-068 — Arquivamento de tickets é só visibilidade; claim unifica responsável e notificação
 Data: 2026-09-22
 
 - Arquivar preenche `support_tickets.archived_at`/`archived_by` via `public.support_archive_ticket`
