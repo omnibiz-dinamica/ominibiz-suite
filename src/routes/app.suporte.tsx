@@ -46,6 +46,7 @@ type TicketRow = {
   priority: SupportTicketPriority;
   status: SupportTicketStatus;
   title: string;
+  archived_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -73,13 +74,13 @@ function SupportListPage() {
   const destinations = destinationsQ.data ?? [];
 
   const { data: tickets = [], isLoading } = useQuery<TicketRow[]>({
-    queryKey: ["support-tickets", "list", currentCompanyId, statusFilter, destinationFilter],
+    queryKey: ["support-tickets", "list", currentCompanyId, statusFilter, destinationFilter, showArchived],
     enabled: !!currentCompanyId,
     queryFn: async () => {
       let query = supabase
         .from("support_tickets")
         .select(
-          "id, ticket_number, company_id, destination_code, type, priority, status, title, created_at, updated_at",
+          "id, ticket_number, company_id, destination_code, type, priority, status, title, archived_at, created_at, updated_at",
         )
         .order("created_at", { ascending: false })
         .limit(200);
@@ -87,12 +88,15 @@ function SupportListPage() {
       if (currentCompanyId) query = query.eq("company_id", currentCompanyId);
       if (destinationFilter) query = query.eq("destination_code", destinationFilter);
       if (statusFilter) query = query.eq("status", statusFilter);
-      else query = query.not("status", "in", "(fechado,rejeitado)");
+      // Arquivamento é só visibilidade (Parte 3B): a lista activa esconde arquivados.
+      if (showArchived) query = query.not("archived_at", "is", null);
+      else query = query.is("archived_at", null);
       const { data, error } = await query;
       if (error) throw error;
       return (data ?? []) as TicketRow[];
     },
   });
+
 
   useRealtimeInvalidate({
     channel: "support",
