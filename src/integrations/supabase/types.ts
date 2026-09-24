@@ -6798,6 +6798,39 @@ export type Database = {
         }
       }
       vacation_notify_payload: { Args: { _vacation_id: string }; Returns: Json }
+      vacation_request_authorization: {
+        Args: { _id: string }
+        Returns: {
+          assigned_approver_id: string | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          decided_at: string | null
+          decided_by: string | null
+          decision_reason: string | null
+          end_date: string
+          forwarded_at: string | null
+          forwarded_by: string | null
+          id: string
+          note: string | null
+          prior_validation: boolean
+          start_date: string
+          status: Database["public"]["Enums"]["vacation_status"]
+          updated_at: string
+          user_id: string
+          validated_by: string | null
+          work_location: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "vacation_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       whatsapp_claim_batch: {
         Args: { _limit?: number }
         Returns: {
@@ -6942,6 +6975,7 @@ export type Database = {
         | "timesheet_correction_requested"
         | "timesheet_manager_closed"
         | "timesheet_sent_to_accounting"
+        | "vacation_awaiting_approval"
       notification_priority: "baixa" | "media" | "alta" | "urgente"
       notification_state:
         | "nova"
@@ -7017,6 +7051,7 @@ export type Database = {
         | "rejeitado"
         | "cancelado"
         | "pendente_confirmacao"
+        | "aguardando_aprovacao"
       vehicle_kind:
         | "carro"
         | "moto"
@@ -7268,6 +7303,7 @@ export const Constants = {
         "timesheet_correction_requested",
         "timesheet_manager_closed",
         "timesheet_sent_to_accounting",
+        "vacation_awaiting_approval",
       ],
       notification_priority: ["baixa", "media", "alta", "urgente"],
       notification_state: [
@@ -7350,6 +7386,7 @@ export const Constants = {
         "rejeitado",
         "cancelado",
         "pendente_confirmacao",
+        "aguardando_aprovacao",
       ],
       vehicle_kind: [
         "carro",
