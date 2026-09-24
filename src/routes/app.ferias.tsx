@@ -31,7 +31,7 @@ import { CancelVacationDialog, type VacationCancelTarget } from "@/components/fe
 
 export const Route = createFileRoute("/app/ferias")({ component: FeriasPage });
 
-type VacationStatus = "pendente" | "pendente_confirmacao" | "aprovado" | "rejeitado" | "cancelado";
+type VacationStatus = "pendente" | "aguardando_aprovacao" | "pendente_confirmacao" | "aprovado" | "rejeitado" | "cancelado";
 type VacationRow = {
   id: string;
   company_id: string;
@@ -54,6 +54,7 @@ type VacationRow = {
 const STATUS_TONE: Record<VacationStatus, string> = {
   pendente: "bg-warning/15 text-warning-foreground",
   pendente_confirmacao: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+  aguardando_aprovacao: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
   aprovado: "bg-success/15 text-success",
   rejeitado: "bg-destructive/15 text-destructive",
   cancelado: "bg-muted text-muted-foreground",
@@ -62,6 +63,7 @@ const STATUS_TONE: Record<VacationStatus, string> = {
 const STATUS_LABEL: Record<VacationStatus, string> = {
   pendente: "pendente",
   pendente_confirmacao: "pendente de confirmação",
+  aguardando_aprovacao: "aguardando",
   aprovado: "aprovado",
   rejeitado: "rejeitado",
   cancelado: "cancelado",
@@ -383,6 +385,18 @@ function FeriasPage() {
     onError: (e: any) => toast.error(e.message ?? "Falha na operação"),
   });
 
+  const requestAuth = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await (supabase as any).rpc("vacation_request_authorization", { _id: id });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["vacations"] });
+      toast.success("Pedido marcado como aguardando aprovação");
+    },
+    onError: (e: any) => toast.error(e.message ?? "Falha na operação"),
+  });
+
   const [forwardTarget, setForwardTarget] = useState<VacationRow | null>(null);
   const [forwardApprover, setForwardApprover] = useState("");
   const [forwardReason, setForwardReason] = useState("");
@@ -428,7 +442,7 @@ function FeriasPage() {
     onError: (e: any) => toast.error(e.message ?? "Falha na operação"),
   });
 
-  const pending = rows.filter((r) => r.status === "pendente");
+  const pending = rows.filter((r) => r.status === "pendente" || r.status === "aguardando_aprovacao");
   // Filtros de visão
   const [filterUser, setFilterUser] = useState<string>("all");
   const [filterMonth, setFilterMonth] = useState<string>(""); // YYYY-MM
@@ -527,7 +541,7 @@ function FeriasPage() {
 
   // Requests this user needs to decide on
   const toApprove = rows.filter(
-    (r) => r.status === "pendente" && r.assigned_approver_id === user?.id && r.user_id !== user?.id,
+    (r) => (r.status === "pendente" || r.status === "aguardando_aprovacao") && r.assigned_approver_id === user?.id && r.user_id !== user?.id,
   );
   const forwardedByMe = rows.filter(
     (r) => r.status === "pendente" && r.forwarded_by === user?.id && r.user_id !== user?.id,
@@ -643,14 +657,10 @@ function FeriasPage() {
                   name={nameOf(r.user_id)}
                   onApprove={() => decide.mutate({ id: r.id, action: "aprovar" })}
                   onReject={(reason) => decide.mutate({ id: r.id, action: "rejeitar", reason })}
+                  // Fluxo antigo (modal + vacation_forward_for_authorization) desativado aqui.
+                  awaiting={r.status === "aguardando_aprovacao"}
                   onForward={
-                    !r.forwarded_by
-                      ? () => {
-                          setForwardTarget(r);
-                          setForwardApprover("");
-                          setForwardReason("");
-                        }
-                      : undefined
+                    r.status === "pendente" ? () => requestAuth.mutate(r.id) : undefined
                   }
                 />
               ))}
@@ -873,6 +883,7 @@ function FeriasPage() {
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="pendente">Pendente</SelectItem>
+                  <SelectItem value="aguardando_aprovacao">Aguardando</SelectItem>
                   <SelectItem value="pendente_confirmacao">Pendente de confirmação</SelectItem>
                   <SelectItem value="aprovado">Aprovado</SelectItem>
                   <SelectItem value="rejeitado">Rejeitado</SelectItem>
@@ -1174,12 +1185,14 @@ function PendingRow({
   onApprove,
   onReject,
   onForward,
+  awaiting,
 }: {
   row: VacationRow;
   name: string;
   onApprove: () => void;
   onReject: (reason: string) => void;
   onForward?: () => void;
+  awaiting?: boolean;
 }) {
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
@@ -1206,9 +1219,13 @@ function PendingRow({
         </div>
         {!rejecting ? (
           <div className="flex gap-2">
-            {onForward && (
+            {awaiting ? (
+              <span className="rounded-full bg-amber-500/15 px-2 py-1 text-xs text-amber-700 dark:text-amber-300">
+                Aguardando aprovação
+              </span>
+            ) : onForward && (
               <Button size="sm" variant="outline" onClick={onForward}>
-                <Send className="h-4 w-4" /> Enviar para autorização
+                <Send className="h-4 w-4" /> Pedir autorização
               </Button>
             )}
             <Button size="sm" onClick={onApprove}>
