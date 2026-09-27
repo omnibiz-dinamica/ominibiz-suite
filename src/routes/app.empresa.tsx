@@ -222,14 +222,11 @@ function HRSettingsCard({ companyId }: { companyId: string }) {
   const { data: members = [] } = useQuery({
     queryKey: ["company-members-lite", companyId],
     queryFn: async () => {
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("company_id", companyId);
-      const ids = Array.from(new Set((roles ?? []).map((r) => r.user_id)));
-      if (ids.length === 0) return [] as { id: string; full_name: string | null }[];
-      const { data } = await supabase.from("profiles").select("id, full_name").in("id", ids);
-      return data ?? [];
+      const { data, error } = await (supabase.rpc as any)("company_active_member_options");
+      if (error) throw error;
+      return ((data ?? []) as { id: string; full_name: string | null; company_id: string }[])
+        .filter((member) => member.company_id === companyId)
+        .map(({ id, full_name }) => ({ id, full_name }));
     },
   });
 

@@ -78,13 +78,11 @@ function CardsPage() {
     queryKey: ["fleet-members", currentCompanyId],
     enabled: !!currentCompanyId,
     queryFn: async () => {
-      const { data, error } = await supabase.from("user_roles").select("user_id")
-        .eq("company_id", currentCompanyId!);
+      const { data, error } = await (supabase.rpc as any)("company_active_member_options");
       if (error) throw error;
-      const ids = Array.from(new Set((data ?? []).map((r: any) => r.user_id)));
-      if (ids.length === 0) return [] as Member[];
-      const { data: profs } = await supabase.from("profiles").select("id, full_name").in("id", ids);
-      return (profs ?? []).map((p: any) => ({ id: p.id, name: p.full_name ?? "Usuário" }));
+      return ((data ?? []) as { id: string; full_name: string | null; company_id: string }[])
+        .filter((member) => member.company_id === currentCompanyId)
+        .map((member) => ({ id: member.id, name: member.full_name ?? "Usuário" }));
     },
   });
   const { data: cardVehicles = [] } = useQuery({

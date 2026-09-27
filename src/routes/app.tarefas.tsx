@@ -354,23 +354,13 @@ function TasksPage() {
     queryKey: ["members-active", currentCompanyId],
     queryFn: async (): Promise<TaskMember[]> => {
       if (!currentCompanyId) return [];
-      if (!isManager) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data, error } = await (supabase.rpc as any)("company_active_member_options");
-        if (error) throw error;
-        return ((data ?? []) as { id: string; full_name: string | null; company_id: string }[])
-          .filter((m) => m.company_id === currentCompanyId)
-          .map(({ id, full_name }) => ({ id, full_name }));
-      }
-      const { data: roles, error: rolesError } = await supabase
-        .from("user_roles").select("user_id").eq("company_id", currentCompanyId);
-      if (rolesError) throw rolesError;
-      const ids = (roles ?? []).map((r) => r.user_id);
-      if (ids.length === 0) return [];
-      const { data: profs, error } = await supabase
-        .from("profiles").select("id, full_name, job_title").in("id", ids).eq("is_active", true);
+      // A situação ativa/inativa pertence ao perfil global, não à empresa.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.rpc as any)("company_active_member_options");
       if (error) throw error;
-      return profs ?? [];
+      return ((data ?? []) as { id: string; full_name: string | null; company_id: string }[])
+        .filter((m) => m.company_id === currentCompanyId)
+        .map(({ id, full_name }) => ({ id, full_name }));
     },
     enabled: !!currentCompanyId,
   });
@@ -919,7 +909,12 @@ function TasksPage() {
             <TaskForm
               formId="task-form-edit"
               initial={editing}
-              members={members ?? []}
+              members={[
+                ...(activeMembers ?? []),
+                ...(members ?? []).filter(
+                  (m) => m.id === editing.assigned_to && !(activeMembers ?? []).some((active) => active.id === m.id),
+                ),
+              ]}
               clients={clientsList ?? []}
               companyId={editing.company_id}
               userId={user!.id}

@@ -182,18 +182,16 @@ function FeriasPage() {
       if (rolesError) throw rolesError;
       const ids = Array.from(new Set((roles ?? []).map((r) => r.user_id).filter((id) => id !== user?.id)));
       if (ids.length === 0) return [] as { id: string; name: string; role: string }[];
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, full_name, is_active")
-        .in("id", ids)
-        .eq("is_active", true);
+      const { data: profiles, error: profilesError } = await (supabase.rpc as any)("company_active_member_options");
       if (profilesError) throw profilesError;
       const roleByUser = new Map((roles ?? []).map((r) => [r.user_id, r.role]));
-      return (profiles ?? []).map((p: any) => ({
+      return ((profiles ?? []) as { id: string; full_name: string | null; company_id: string }[])
+        .filter((p) => p.company_id === currentCompanyId && ids.includes(p.id))
+        .map((p) => ({
         id: p.id,
         name: p.full_name ?? "Gestor",
         role: roleByUser.get(p.id) ?? "manager",
-      }));
+        }));
     },
   });
 

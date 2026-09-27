@@ -227,20 +227,18 @@ function GestaoPonto() {
     queryKey: ["punch-admin-members-filter", currentCompanyId],
     enabled: !!currentCompanyId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("user_id, profiles!inner(full_name)")
-        .eq("company_id", currentCompanyId!);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.rpc as any)("company_active_member_options");
       if (error) throw error;
       const seen = new Set<string>();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return ((data ?? []) as any[])
+      return ((data ?? []) as { id: string; full_name: string | null; company_id: string }[])
+        .filter((member) => member.company_id === currentCompanyId)
         .filter((r) => {
-          if (seen.has(r.user_id)) return false;
-          seen.add(r.user_id);
+          if (seen.has(r.id)) return false;
+          seen.add(r.id);
           return true;
         })
-        .map((r) => ({ id: r.user_id as string, name: (r.profiles?.full_name as string) ?? r.user_id }));
+        .map((r) => ({ id: r.id, name: r.full_name ?? r.id }));
     },
   });
 
