@@ -349,6 +349,23 @@ function TasksPage() {
     enabled: !!currentCompanyId,
   });
 
+  // Tipo A — telas de NOVA atribuição: só funcionários ATIVOS, filtrados no servidor.
+  const { data: activeMembers } = useQuery({
+    queryKey: ["members-active", currentCompanyId],
+    queryFn: async (): Promise<TaskMember[]> => {
+      if (!currentCompanyId) return [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.rpc as any)("company_active_member_options");
+      if (error) throw error;
+      const rows = ((data ?? []) as { id: string; full_name: string | null; company_id: string }[])
+        .filter((m) => m.company_id === currentCompanyId);
+      if (!isManager) return rows.map(({ id, full_name }) => ({ id, full_name }));
+      const byId = new Map((members ?? []).map((m) => [m.id, m]));
+      return rows.map(({ id, full_name }) => byId.get(id) ?? { id, full_name });
+    },
+    enabled: !!currentCompanyId && members !== undefined,
+  });
+
   const { data: clientsList } = useQuery({
     queryKey: ["clients-min", currentCompanyId],
     queryFn: async () => {
