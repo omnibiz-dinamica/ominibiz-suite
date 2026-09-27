@@ -88,11 +88,12 @@ function RecurrencesPage() {
   const { data: activeMembers } = useQuery({
     queryKey: ["members-active-rec", currentCompanyId],
     queryFn: async () => {
-      const { data: roles } = await supabase.from("user_roles").select("user_id").eq("company_id", currentCompanyId!);
-      const ids = [...new Set((roles ?? []).map((r) => r.user_id))];
-      if (ids.length === 0) return [];
-      const { data: profs } = await supabase.from("profiles").select("id, full_name, is_active").in("id", ids).eq("is_active", true);
-      return profs ?? [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.rpc as any)("company_active_member_options");
+      if (error) throw error;
+      return ((data ?? []) as { id: string; full_name: string | null; company_id: string }[])
+        .filter((member) => member.company_id === currentCompanyId)
+        .map(({ id, full_name }) => ({ id, full_name, is_active: true }));
     },
     enabled: isManager && !!currentCompanyId,
   });

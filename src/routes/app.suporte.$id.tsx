@@ -375,14 +375,12 @@ function SupportDetailPage() {
     queryKey: ["support-company-employees", ticket?.company_id ?? null, employeeIds.length],
     queryFn: async () => {
       if (employeeIds.length === 0) return [];
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, full_name, job_title, is_active")
-        .in("id", employeeIds);
+      const { data, error } = await (supabase.rpc as any)("company_active_member_options");
       if (error) throw error;
-      return ((data ?? []) as any[])
-        .filter((p) => p.is_active !== false)
-        .map((p) => ({ id: p.id, full_name: p.full_name, job_title: p.job_title }));
+      const allowed = new Set(employeeIds);
+      return ((data ?? []) as { id: string; full_name: string | null; company_id: string }[])
+        .filter((member) => member.company_id === ticket?.company_id && allowed.has(member.id))
+        .map(({ id, full_name }) => ({ id, full_name, job_title: null }));
     },
     enabled: employeeIds.length > 0,
   });
