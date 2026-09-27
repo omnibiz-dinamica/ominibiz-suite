@@ -354,16 +354,25 @@ function TasksPage() {
     queryKey: ["members-active", currentCompanyId],
     queryFn: async (): Promise<TaskMember[]> => {
       if (!currentCompanyId) return [];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase.rpc as any)("company_active_member_options");
+      if (!isManager) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data, error } = await (supabase.rpc as any)("company_active_member_options");
+        if (error) throw error;
+        return ((data ?? []) as { id: string; full_name: string | null; company_id: string }[])
+          .filter((m) => m.company_id === currentCompanyId)
+          .map(({ id, full_name }) => ({ id, full_name }));
+      }
+      const { data: roles, error: rolesError } = await supabase
+        .from("user_roles").select("user_id").eq("company_id", currentCompanyId);
+      if (rolesError) throw rolesError;
+      const ids = (roles ?? []).map((r) => r.user_id);
+      if (ids.length === 0) return [];
+      const { data: profs, error } = await supabase
+        .from("profiles").select("id, full_name, job_title").in("id", ids).eq("is_active", true);
       if (error) throw error;
-      const rows = ((data ?? []) as { id: string; full_name: string | null; company_id: string }[])
-        .filter((m) => m.company_id === currentCompanyId);
-      if (!isManager) return rows.map(({ id, full_name }) => ({ id, full_name }));
-      const byId = new Map((members ?? []).map((m) => [m.id, m]));
-      return rows.map(({ id, full_name }) => byId.get(id) ?? { id, full_name });
+      return profs ?? [];
     },
-    enabled: !!currentCompanyId && members !== undefined,
+    enabled: !!currentCompanyId,
   });
 
   const { data: clientsList } = useQuery({
