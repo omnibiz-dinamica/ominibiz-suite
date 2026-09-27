@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS uq_client_assignees_one_primary ON public.client_assignees (client_id) WHERE is_primary;

@@ -442,6 +442,15 @@ function ClientsPage() {
   );
 }
 
+function currencySymbolOf(code: string): string {
+  try {
+    return new Intl.NumberFormat("pt-PT", { style: "currency", currency: code, currencyDisplay: "narrowSymbol" })
+      .formatToParts(0).find((p) => p.type === "currency")?.value ?? code;
+  } catch {
+    return code;
+  }
+}
+
 function ClientForm({
   companyId,
   userId,
@@ -479,6 +488,14 @@ function ClientForm({
   const [dailyRate, setDailyRate] = useState<string>(
     initial?.daily_rate != null ? String(initial.daily_rate) : "",
   );
+  const { data: companyCurrency } = useQuery({
+    queryKey: ["company-currency", companyId],
+    queryFn: async () => {
+      const { data } = await supabase.from("companies").select("currency").eq("id", companyId).maybeSingle();
+      return (data?.currency as string | null) ?? "EUR";
+    },
+  });
+  const currencySymbol = currencySymbolOf(companyCurrency ?? "EUR");
   const existingSchedule = parseHabitualSchedule(initial?.habitual_schedule);
   const [scheduleEnabled, setScheduleEnabled] = useState(existingSchedule.length > 0);
   const [contractedHours, setContractedHours] = useState(
@@ -745,7 +762,7 @@ function ClientForm({
                     company_id: companyId,
                     client_id: clientId,
                     user_id: u,
-                    is_primary: u === effectivePrimary,
+                    is_primary: false,
                     assignment_type: assignmentTypes[u] ?? "habitual",
                   })),
                 ),
@@ -956,39 +973,14 @@ function ClientForm({
             </Button>
           </div>
         )}
-        <div className="space-y-1.5 rounded-lg border border-border bg-muted/20 p-3">
-          <Label>Horas totais contratadas</Label>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Horas</Label>
-              <Input
-                type="number"
-                min="0"
-                step="1"
-                inputMode="numeric"
-                value={contractedHours}
-                onChange={(e) => setContractedHours(e.target.value)}
-                placeholder="3"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Minutos</Label>
-              <Input
-                type="number"
-                min="0"
-                max="59"
-                step="1"
-                inputMode="numeric"
-                value={contractedRemainder}
-                onChange={(e) => setContractedRemainder(e.target.value)}
-                placeholder="00"
-              />
-            </div>
+        {initial?.contracted_minutes != null && (
+          <div className="rounded-lg border border-border bg-muted/20 p-3 text-xs text-muted-foreground">
+            Horas totais contratadas (registo antigo, só leitura):{" "}
+            <span className="font-medium text-foreground">
+              {Math.floor(initial.contracted_minutes / 60)}h{String(initial.contracted_minutes % 60).padStart(2, "0")}
+            </span>
           </div>
-          <p className="text-[10px] text-muted-foreground">
-            Carga total do serviço, distribuída entre os funcionários selecionados na tarefa. Não altera cobrança nem horas efetivas.
-          </p>
-        </div>
+        )}
             <div className="space-y-1.5">
               <Label>Observações do horário</Label>
               <Textarea maxLength={1000} rows={2} value={scheduleNotes} onChange={(e) => setScheduleNotes(e.target.value)} />
@@ -1011,51 +1003,31 @@ function ClientForm({
           </Select>
         </div>
 
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid gap-2 sm:grid-cols-2" translate="no">
+          {(billingMode === "hourly" || billingMode === "mixed") && (
           <div className="space-y-1.5">
-            <Label className="text-xs">Valor / hora (€)</Label>
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              value={hourlyRate}
-              onChange={(e) => setHourlyRate(e.target.value)}
-              placeholder="Herda da empresa"
-            />
+            <Label className="text-xs">Valor / hora ({currencySymbol})</Label>
+            <Input type="number" step="0.01" min="0" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} placeholder="Herda da empresa" />
           </div>
+          )}
+          {billingMode === "daily" && (
           <div className="space-y-1.5">
-            <Label className="text-xs">Valor / dia (€)</Label>
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              value={dailyRate}
-              onChange={(e) => setDailyRate(e.target.value)}
-              placeholder="Herda da empresa"
-            />
+            <Label className="text-xs">Valor / dia ({currencySymbol})</Label>
+            <Input type="number" step="0.01" min="0" value={dailyRate} onChange={(e) => setDailyRate(e.target.value)} placeholder="Herda da empresa" />
           </div>
+          )}
+          {billingMode === "monthly" && (
           <div className="space-y-1.5">
-            <Label className="text-xs">Valor mensal (€)</Label>
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              value={monthlyRate}
-              onChange={(e) => setMonthlyRate(e.target.value)}
-              placeholder="Herda da empresa"
-            />
+            <Label className="text-xs">Valor mensal ({currencySymbol})</Label>
+            <Input type="number" step="0.01" min="0" value={monthlyRate} onChange={(e) => setMonthlyRate(e.target.value)} placeholder="Herda da empresa" />
           </div>
+          )}
+          {(billingMode === "fixed" || billingMode === "mixed") && (
           <div className="space-y-1.5">
-            <Label className="text-xs">Valor fixo por tarefa (€)</Label>
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              value={fixedRate}
-              onChange={(e) => setFixedRate(e.target.value)}
-              placeholder="Herda da empresa"
-            />
+            <Label className="text-xs">Valor fixo por tarefa ({currencySymbol})</Label>
+            <Input type="number" step="0.01" min="0" value={fixedRate} onChange={(e) => setFixedRate(e.target.value)} placeholder="Herda da empresa" />
           </div>
+          )}
         </div>
         <p className="text-[10px] text-muted-foreground">
           Todos os valores são opcionais e independentes. Em branco, herda o valor padrão da

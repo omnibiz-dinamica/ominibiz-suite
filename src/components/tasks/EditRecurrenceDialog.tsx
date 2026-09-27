@@ -43,7 +43,7 @@ export function EditRecurrenceDialog({
   recurrence: RecurrenceRow | null;
   /** When set, scope selector includes "this" (single occurrence). */
   task?: TaskRow | null;
-  members: { id: string; full_name: string | null }[];
+  members: { id: string; full_name: string | null; is_active?: boolean | null }[];
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onDone: () => void;
@@ -252,11 +252,14 @@ export function EditRecurrenceDialog({
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
-                  {members.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>
-                      {m.full_name ?? m.id.slice(0, 8)}
-                    </SelectItem>
-                  ))}
+                  {members
+                    .filter((m) => m.is_active !== false || m.id === assignedTo)
+                    .map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.full_name ?? m.id.slice(0, 8)}
+                        {m.is_active === false && " (Inativo)"}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
