@@ -180,6 +180,18 @@ function ClientsPage() {
     (acc[a.client_id] ||= []).push(a);
     return acc;
   }, {});
+  // Tipo A — equipa do cliente: só ativos, filtrado no servidor.
+  const { data: activeMembers } = useQuery({
+    queryKey: ["members-active-clients", currentCompanyId],
+    queryFn: async () => {
+      const { data: roles } = await supabase.from("user_roles").select("user_id").eq("company_id", currentCompanyId!);
+      const ids = (roles ?? []).map((r) => r.user_id);
+      if (ids.length === 0) return [];
+      const { data: profs } = await supabase.from("profiles").select("id, full_name").in("id", ids).eq("is_active", true);
+      return (profs ?? []) as Member[];
+    },
+    enabled: isManager && !!currentCompanyId,
+  });
   const membersById = new Map((members ?? []).map((m) => [m.id, m.full_name]));
 
   const BILLING_LABEL: Record<ClientRow["billing_mode"], string> = {
@@ -300,7 +312,7 @@ function ClientsPage() {
                   companyId={currentCompanyId}
                   userId={user!.id}
                   initial={editing}
-                  members={members ?? []}
+                  members={[...(activeMembers ?? []), ...(members ?? []).filter((m) => !(activeMembers ?? []).some((x) => x.id === m.id) && (editing ? (assigneesByClient[editing.id] ?? []) : []).some((x) => x.user_id === m.id))]}
                   assignees={editing ? (assigneesByClient[editing.id] ?? []) : []}
                   onDone={() => {
                     setOpen(false);

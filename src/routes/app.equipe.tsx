@@ -146,6 +146,7 @@ function TeamPage() {
   });
 
   const [editing, setEditing] = useState<MemberRow | null>(null);
+  const [showInactive, setShowInactive] = useState(false);
 
   const { data: emailChangeRequests = [] } = useQuery({
     queryKey: ["email-change-requests", currentCompanyId, "pending"],
@@ -434,9 +435,14 @@ function TeamPage() {
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-6">
-        <h2 className="font-display text-lg font-semibold">Usuários</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-display text-lg font-semibold">Usuários</h2>
+          <Button type="button" size="sm" variant={showInactive ? "default" : "outline"} aria-pressed={showInactive} onClick={() => setShowInactive((v) => !v)}>
+            {showInactive ? "Lista Ativa" : "Lista Inativa"}
+          </Button>
+        </div>
         <ul className="mt-4 divide-y divide-border">
-          {(members ?? []).map((m) => {
+          {(members ?? []).filter((m) => (showInactive ? m.profile?.is_active === false : m.profile?.is_active !== false)).map((m) => {
             const active = m.profile?.is_active ?? true;
             const isSelf = m.user_id === user?.id;
             const displayName = getMemberDisplayName(m);
