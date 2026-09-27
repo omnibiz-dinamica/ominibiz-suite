@@ -71,7 +71,12 @@ function RecurrencesPage() {
         .from("user_roles")
         .select("user_id")
         .eq("company_id", currentCompanyId);
-      const ids = (roles ?? []).map((r) => r.user_id);
+      const { data: recs } = await supabase
+        .from("task_recurrences")
+        .select("assigned_to")
+        .eq("company_id", currentCompanyId)
+        .neq("status", "ended");
+      const ids = [...new Set([...(roles ?? []).map((r) => r.user_id), ...(recs ?? []).map((r) => r.assigned_to).filter(Boolean) as string[]])];
       if (ids.length === 0) return [];
       const { data: profs } = await supabase.from("profiles").select("id, full_name, is_active").in("id", ids);
       return profs ?? [];
