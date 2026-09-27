@@ -887,7 +887,7 @@ function TasksPage() {
                 <ModalHeader icon={ListTodo} title="Nova tarefa" description="Crie uma tarefa e atribua a um colaborador." />
                 <TaskForm
                   formId="task-form-create"
-                  members={members ?? []}
+                  members={activeMembers ?? []}
                   clients={clientsList ?? []}
                   companyId={currentCompanyId}
                   userId={user!.id}
@@ -927,7 +927,8 @@ function TasksPage() {
 
       <ReassignDialog
         task={reassigning}
-        members={members ?? []}
+        members={activeMembers ?? []}
+        currentAssigneeName={reassigning ? taskMemberName(members ?? [], reassigning.assigned_to) : null}
         open={!!reassigning}
         onOpenChange={(v) => !v && setReassigning(null)}
         onDone={() => qc.invalidateQueries({ queryKey: ["tasks"] })}
@@ -936,7 +937,7 @@ function TasksPage() {
       <EditRecurrenceDialog
         recurrence={seriesRow}
         task={editingSeries}
-        members={members ?? []}
+        members={[...(activeMembers ?? []), ...(members ?? []).filter((m) => m.id === editingSeries?.assigned_to && !(activeMembers ?? []).some((a) => a.id === m.id)).map((m) => ({ ...m, is_active: false }))]}
         open={!!editingSeries && !!seriesRow}
         onOpenChange={(v) => !v && setEditingSeries(null)}
         onDone={() => {
