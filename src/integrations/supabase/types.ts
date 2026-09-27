@@ -4354,6 +4354,14 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      company_active_member_options: {
+        Args: never
+        Returns: {
+          company_id: string
+          full_name: string
+          id: string
+        }[]
+      }
       company_member_emails: {
         Args: { _company_id: string }
         Returns: {
