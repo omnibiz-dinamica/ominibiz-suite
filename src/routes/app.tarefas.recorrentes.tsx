@@ -73,7 +73,7 @@ function RecurrencesPage() {
         .eq("company_id", currentCompanyId);
       const ids = (roles ?? []).map((r) => r.user_id);
       if (ids.length === 0) return [];
-      const { data: profs } = await supabase.from("profiles").select("id, full_name").in("id", ids);
+      const { data: profs } = await supabase.from("profiles").select("id, full_name, is_active").in("id", ids);
       return profs ?? [];
     },
     enabled: isManager && !!currentCompanyId,
@@ -214,6 +214,11 @@ function RecurrencesPage() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="font-medium">{r.title}</span>
+                  {r.assigned_to && (members ?? []).find((m) => m.id === r.assigned_to)?.is_active === false && (
+                    <span className="rounded-full bg-destructive/15 px-2 py-0.5 text-[10px] uppercase tracking-wide text-destructive" title="Responsável inativo — edite a série para trocar">
+                      Inativo
+                    </span>
+                  )}
                   <span
                     className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide ${
                       r.status === "active"
