@@ -14,12 +14,14 @@ export function ReassignDialog({
   open,
   onOpenChange,
   onDone,
+  currentAssigneeName,
 }: {
   task: TaskRow | null;
   members: EmployeeOption[];
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onDone: () => void;
+  currentAssigneeName?: string | null;
 }) {
   const [user, setUser] = useState<string>("");
   const [scope, setScope] = useState<ReassignScope>("this");
@@ -70,6 +72,12 @@ export function ReassignDialog({
                   Recusada em: {new Date(task.refused_at).toLocaleString("pt-PT")}
                 </div>
               )}
+            </div>
+          )}
+          {currentAssigneeName && (
+            <div className="text-sm">
+              <span className="text-muted-foreground">Responsável atual: </span>
+              <span className="font-medium">{currentAssigneeName}</span>
             </div>
           )}
           <div className="space-y-1.5">

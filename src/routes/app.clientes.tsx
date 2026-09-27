@@ -117,7 +117,8 @@ function ClientsPage() {
       const { data: roles } = await supabase.from("user_roles").select("user_id").eq("company_id", currentCompanyId);
       const ids = (roles ?? []).map((r) => r.user_id);
       if (ids.length === 0) return [];
-      const { data: profs } = await supabase.from("profiles").select("id, full_name").in("id", ids);
+      // Tipo A — equipa do cliente: só ativos, filtrado no servidor.
+      const { data: profs } = await supabase.from("profiles").select("id, full_name").in("id", ids).eq("is_active", true);
       return (profs ?? []) as Member[];
     },
     enabled: isManager && !!currentCompanyId,

@@ -84,6 +84,19 @@ function RecurrencesPage() {
     enabled: isManager && !!currentCompanyId,
   });
 
+  // Tipo A — lista para (re)atribuir: somente ativos, filtrado no servidor.
+  const { data: activeMembers } = useQuery({
+    queryKey: ["members-active-rec", currentCompanyId],
+    queryFn: async () => {
+      const { data: roles } = await supabase.from("user_roles").select("user_id").eq("company_id", currentCompanyId!);
+      const ids = [...new Set((roles ?? []).map((r) => r.user_id))];
+      if (ids.length === 0) return [];
+      const { data: profs } = await supabase.from("profiles").select("id, full_name, is_active").in("id", ids).eq("is_active", true);
+      return profs ?? [];
+    },
+    enabled: isManager && !!currentCompanyId,
+  });
+
   /**
    * Falhas por série na geração de ocorrências. A geração isola erros por
    * série (nada aborta a empresa inteira) e registra o motivo em auditoria.
@@ -286,7 +299,7 @@ function RecurrencesPage() {
 
       <EditRecurrenceDialog
         recurrence={editing}
-        members={members ?? []}
+        members={[...(activeMembers ?? []), ...(members ?? []).filter((m) => m.id === editing?.assigned_to && m.is_active === false)]}
         open={!!editing}
         onOpenChange={(v) => !v && setEditing(null)}
         onDone={() => {

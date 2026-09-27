@@ -258,7 +258,7 @@ function PontoPage() {
       // ADR-062 — funcionários não leem user_roles/profiles de terceiros por RLS;
       // a RPC company_member_options devolve apenas (id, nome) dos colegas da empresa.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase.rpc as any)("company_member_options");
+      const { data, error } = await (supabase.rpc as any)("company_active_member_options");
       if (error) throw error;
       return ((data ?? []) as { id: string; full_name: string | null; company_id: string }[])
         .filter((m) => m.company_id === currentCompanyId)
