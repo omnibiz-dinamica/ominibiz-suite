@@ -195,9 +195,14 @@ function TeamPage() {
 
   const toggleActive = useMutation({
     mutationFn: async (m: MemberRow) => {
+      const activate = !isEmployeeActive(m.profile);
       const { error } = await supabase
         .from("profiles")
-        .update({ is_active: !(m.profile?.is_active ?? true) })
+        .update({
+          is_active: activate,
+          status: activate ? "ativo" : "inativo",
+          ...(activate ? { termination_date: null } : {}),
+        })
         .eq("id", m.user_id);
       if (error) throw error;
     },
