@@ -50,6 +50,8 @@ interface ClientRow {
   email: string | null;
   address: string | null;
   notes: string | null;
+  schedule_notes?: string | null;
+  instructions?: string | null;
   status: "ativo" | "inativo";
   created_at: string;
   billing_mode: "hourly" | "fixed" | "mixed" | "monthly" | "daily";
@@ -288,10 +290,10 @@ function ClientsPage() {
                   <Plus className="mr-2 h-4 w-4" /> Novo cliente
                 </Button>
               </DialogTrigger>
-              <DialogContent size="lg">
+              <DialogContent size="xl">
                 <ModalHeader
                   icon={Users}
-                  title={editing ? "Editar cliente" : "Novo cliente"}
+                  title="Ficha do cliente"
                   description={editing ? "Atualize os dados do cliente." : "Registe um novo cliente e a sua equipa responsável."}
                 />
                 <ClientForm
@@ -306,6 +308,11 @@ function ClientsPage() {
                     invalidateClientsCache(qc);
                   }}
                   onCancel={() => {
+                    setOpen(false);
+                    setEditing(null);
+                  }}
+                  onDelete={(id) => {
+                    remove.mutate(id);
                     setOpen(false);
                     setEditing(null);
                   }}
@@ -443,6 +450,7 @@ function ClientForm({
   assignees,
   onDone,
   onCancel,
+  onDelete,
 }: {
   companyId: string;
   userId: string;
@@ -451,12 +459,15 @@ function ClientForm({
   assignees: AssigneeRow[];
   onDone: () => void;
   onCancel: () => void;
+  onDelete?: (id: string) => void;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [phone, setPhone] = useState(initial?.phone ?? "");
   const [email, setEmail] = useState(initial?.email ?? "");
   const [address, setAddress] = useState(initial?.address ?? initial?.geo_address ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [scheduleNotes, setScheduleNotes] = useState(initial?.schedule_notes ?? "");
+  const [instructions, setInstructions] = useState(initial?.instructions ?? "");
   const [status, setStatus] = useState<"ativo" | "inativo">(initial?.status ?? "ativo");
   const timingMode: "start_stop" = "start_stop";
   const [billingMode, setBillingMode] = useState<ClientRow["billing_mode"]>(initial?.billing_mode ?? "hourly");
@@ -659,6 +670,8 @@ function ClientForm({
                 email: email.trim() || null,
                 address: address.trim() || null,
                 notes: notes.trim() || null,
+                schedule_notes: scheduleNotes.trim() || null,
+                instructions: instructions.trim() || null,
                 status,
                 timing_mode: timingMode,
                 billing_mode: billingMode,
@@ -681,6 +694,8 @@ function ClientForm({
                 email: email.trim() || null,
                 address: address.trim() || null,
                 notes: notes.trim() || null,
+                schedule_notes: scheduleNotes.trim() || null,
+                instructions: instructions.trim() || null,
                 status,
                 created_by: userId,
                 timing_mode: timingMode,
@@ -768,30 +783,26 @@ function ClientForm({
         }
       }}
     >
-      <ModalSection title="Dados do cliente" icon={Users}>
-        <div className="space-y-1.5">
-          <Label>Nome</Label>
-          <Input required maxLength={150} value={name} onChange={(e) => setName(e.target.value)} />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
+        <div className="min-w-0 space-y-1.5">
+          <Label className="text-xs uppercase tracking-wide text-muted-foreground">Nome cliente</Label>
+          <Input required maxLength={150} value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome completo" />
         </div>
         <div className="space-y-1.5">
-          <Label>Observações</Label>
-          <Textarea maxLength={1000} value={notes} onChange={(e) => setNotes(e.target.value)} />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Status</Label>
+          <Label className="text-xs uppercase tracking-wide text-muted-foreground">Status</Label>
           <Select value={status} onValueChange={(v) => setStatus(v as typeof status)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
+            <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="ativo">Ativo</SelectItem>
               <SelectItem value="inativo">Inativo</SelectItem>
             </SelectContent>
           </Select>
         </div>
-      </ModalSection>
+      </div>
 
-      <ModalSection title="Contacto" icon={Mail}>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="min-w-0 space-y-4">
+          <ModalSection title="Dados cadastrais" icon={Mail}>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label>Telefone</Label>
@@ -802,13 +813,43 @@ function ClientForm({
             <Input type="email" maxLength={150} value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
         </div>
-      </ModalSection>
-
-      <ModalSection
-        title="Programação habitual"
-        description="Usada como sugestão ao criar tarefas para este cliente."
-        icon={CalendarDays}
-      >
+          </ModalSection>
+          <ModalSection title="Geolocalização" icon={MapPin}>
+        <div className="space-y-1.5">
+          <Label>Endereço do cliente</Label>
+          <Input
+            maxLength={250}
+            value={address}
+            onChange={(e) => {
+              const nextAddress = e.target.value;
+              setAddress(nextAddress);
+              setGeo((current) => ({ ...current, address: nextAddress }));
+            }}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Modo de apontamento</Label>
+          <div className="flex gap-2">
+            {([{ v: "start_stop", label: "Start/Stop", hint: "Funcionário marca início e fim" }] as const).map((opt) => (
+              <button
+                key={opt.v}
+                type="button"
+                onClick={() => undefined}
+                className={`flex-1 rounded-lg border p-2 text-left text-xs transition ${
+                  timingMode === opt.v ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
+                }`}
+              >
+                <div className="font-medium">{opt.label}</div>
+                <div className="text-[10px] text-muted-foreground">{opt.hint}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+        <ClientGeoEditor value={geo} onChange={updateGeo} showAddressField={false} />
+          </ModalSection>
+        </div>
+        <div className="min-w-0 space-y-4">
+          <ModalSection title="Horários & programação" description="Usada como sugestão ao criar tarefas para este cliente." icon={CalendarDays}>
         <div className="flex items-start justify-between gap-3 rounded-lg border border-border bg-muted/20 p-3">
           <div>
             <p className="text-sm font-medium">Usar horário habitual</p>
@@ -948,9 +989,12 @@ function ClientForm({
             Carga total do serviço, distribuída entre os funcionários selecionados na tarefa. Não altera cobrança nem horas efetivas.
           </p>
         </div>
-      </ModalSection>
-
-      <ModalSection title="Cobrança" icon={FileSpreadsheet}>
+            <div className="space-y-1.5">
+              <Label>Observações do horário</Label>
+              <Textarea maxLength={1000} rows={2} value={scheduleNotes} onChange={(e) => setScheduleNotes(e.target.value)} />
+            </div>
+          </ModalSection>
+          <ModalSection title="Cobrança" icon={FileSpreadsheet}>
         <div className="space-y-1.5">
           <Label>Forma de cobrança</Label>
           <Select value={billingMode} onValueChange={(v) => setBillingMode(v as ClientRow["billing_mode"])}>
@@ -1018,41 +1062,20 @@ function ClientForm({
           empresa. A modalidade aplicada ao pagamento é sempre a do funcionário
           (Funcionário &gt; Cliente &gt; Empresa).
         </p>
-      </ModalSection>
+          </ModalSection>
+        </div>
+      </div>
 
-      <ModalSection title="Endereço e geolocalização" icon={MapPin}>
+      <div className="grid grid-cols-1 gap-4">
         <div className="space-y-1.5">
-          <Label>Endereço do cliente</Label>
-          <Input
-            maxLength={250}
-            value={address}
-            onChange={(e) => {
-              const nextAddress = e.target.value;
-              setAddress(nextAddress);
-              setGeo((current) => ({ ...current, address: nextAddress }));
-            }}
-          />
+          <Label className="text-xs uppercase tracking-wide text-muted-foreground">Observações gerais</Label>
+          <Textarea className="w-full" maxLength={1000} value={notes} onChange={(e) => setNotes(e.target.value)} />
         </div>
         <div className="space-y-1.5">
-          <Label>Modo de apontamento</Label>
-          <div className="flex gap-2">
-            {([{ v: "start_stop", label: "Start/Stop", hint: "Funcionário marca início e fim" }] as const).map((opt) => (
-              <button
-                key={opt.v}
-                type="button"
-                onClick={() => undefined}
-                className={`flex-1 rounded-lg border p-2 text-left text-xs transition ${
-                  timingMode === opt.v ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
-                }`}
-              >
-                <div className="font-medium">{opt.label}</div>
-                <div className="text-[10px] text-muted-foreground">{opt.hint}</div>
-              </button>
-            ))}
-          </div>
+          <Label className="text-xs uppercase tracking-wide text-muted-foreground">Instruções adicionais</Label>
+          <Textarea className="w-full" maxLength={2000} value={instructions} onChange={(e) => setInstructions(e.target.value)} placeholder="Ex.: código do portão, onde deixar as chaves, cuidados especiais" />
         </div>
-        <ClientGeoEditor value={geo} onChange={updateGeo} showAddressField={false} />
-      </ModalSection>
+      </div>
 
       {members.length > 0 && (
         <ModalSection title="Equipa responsável" icon={UserCog}>
@@ -1127,6 +1150,11 @@ function ClientForm({
     </form>
     </ModalBody>
     <ModalFooter>
+      {initial && onDelete && (
+        <Button type="button" variant="destructive" className="sm:mr-auto" onClick={() => { if (confirm(`Excluir o cliente "${initial.name}"?`)) onDelete(initial.id); }}>
+          <Trash2 className="mr-1 h-4 w-4" /> Excluir cliente
+        </Button>
+      )}
       <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
       <Button type="submit" form="client-form" disabled={loading}>
         {loading ? "Salvando..." : initial ? "Salvar alterações" : "Criar cliente"}
