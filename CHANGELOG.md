@@ -3,6 +3,9 @@
 - 002 (férias): `vacation_decide` passa a aceitar também `aguardando_aprovacao` para aprovar/rejeitar/cancelar (sem outras mudanças). Fila compartilhada de gestores mantém o pedido em aberto enquanto aguarda.
 
 
+## 27092026-A
+- 001 Ficha do Cliente: modal reorganizado (nome/status no topo, 2 colunas, observações gerais e instruções adicionais, botão Excluir). Novos campos `clients.schedule_notes` e `clients.instructions`.
+
 ## 22092026-A
 - 001 (suporte · Parte 3A): nova ação "Assumir ticket" — uma única operação atómica (RPC `support_claim_ticket`) define o responsável do ticket e assume o aviso da fila: some para os restantes gestores e fica em tratamento para quem assumiu. Só gestor/proprietário da empresa (filas administrativas) e super_admin; ticket com responsável não volta a ser assumido. (`src/routes/app.suporte.$id.tsx`, `src/lib/support/tickets.ts`, `src/lib/support/close-permission.ts`)
 - 002 (suporte · Parte 3A): `post_support_ticket_message` — com responsável definido, a resposta do solicitante notifica apenas o responsável (notificação de pessoa); sem responsável, mantém o fan-out da fila por papel.
