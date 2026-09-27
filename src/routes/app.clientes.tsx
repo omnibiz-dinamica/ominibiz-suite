@@ -762,7 +762,7 @@ function ClientForm({
                     company_id: companyId,
                     client_id: clientId,
                     user_id: u,
-                    is_primary: u === effectivePrimary,
+                    is_primary: false,
                     assignment_type: assignmentTypes[u] ?? "habitual",
                   })),
                 ),
