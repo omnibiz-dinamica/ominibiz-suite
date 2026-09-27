@@ -15,6 +15,7 @@ import { sendTransactionalEmail } from "@/lib/email/send";
 import { buildAppUrl } from "@/lib/app-url";
 import { EmployeeEditor } from "@/components/equipe/EmployeeEditor";
 import { decideEmailChangeRequest } from "@/lib/user-email";
+import { isEmployeeActive } from "@/lib/employee-status";
 
 interface MemberRow {
   user_id: string;
@@ -30,6 +31,8 @@ interface MemberRow {
     supervisor_id: string | null;
     team: string | null;
     sector: string | null;
+    status: string | null;
+    termination_date: string | null;
   } | null;
 }
 
@@ -96,7 +99,7 @@ function TeamPage() {
       // Keep the primary profile query independent from newer optional
       // columns so older Cloud Database environments still show names.
       const { data: profs } = await (supabase.from("profiles" as never) as any)
-        .select("id, full_name, phone, is_active, job_title, work_location, supervisor_id, team")
+        .select("id, full_name, phone, is_active, status, termination_date, job_title, work_location, supervisor_id, team")
         .in("id", ids);
 
       let emailsById = new Map<string, string>();
@@ -442,8 +445,8 @@ function TeamPage() {
           </Button>
         </div>
         <ul className="mt-4 divide-y divide-border">
-          {(members ?? []).filter((m) => (showInactive ? m.profile?.is_active === false : m.profile?.is_active !== false)).map((m) => {
-            const active = m.profile?.is_active ?? true;
+          {(members ?? []).filter((m) => (showInactive ? !isEmployeeActive(m.profile) : isEmployeeActive(m.profile))).map((m) => {
+            const active = isEmployeeActive(m.profile);
             const isSelf = m.user_id === user?.id;
             const displayName = getMemberDisplayName(m);
             const email = m.profile?.email?.trim() || null;

@@ -54,3 +54,8 @@
 - [ ] Parte 2 — download mensal em pacote, com permissão e isolamento por empresa no servidor.
 - [ ] Parte 2 — validar conteúdo, isolamento, bloqueio de funcionário e desempenho com volume equivalente à V-Clean.
 - [x] Tarefas — remover repetição do nome do cliente no cartão por colaborador.
+
+## 27/09/2026 — Funcionários inativos
+- [x] Aplicar uma regra global de inatividade, independente da empresa.
+- [x] Ocultar inativos no servidor em todas as listas de nova seleção identificadas.
+- [ ] Validar visualmente em empresas distintas e confirmar regressões.

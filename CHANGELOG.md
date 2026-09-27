@@ -1,4 +1,5 @@
 ## 27092026-B
+- 004 (inativos, regra global): seleção de pessoas passa a usar uma única regra no servidor, independente da empresa (`is_active`, estado cadastral e data de saída). Aplicada também em edição de tarefa, gestão do Ponto, configuração da empresa, recibos, cartões de combustível e reabertura de tickets; históricos mantêm o nome. A Lista Inativa usa a mesma regra e conserva o selo.
 - 001 (inativos, tipo A): nova RPC `company_active_member_options` (só ativos, filtro no servidor). Nova Tarefa, Reatribuir, edição de série, Equipa do cliente e sugestão de colega no Ponto passam a listar só ativos (consulta com `is_active = true`). Reatribuir mostra "Responsável atual" mesmo se inativo; edição de série mantém só o atual como "(Inativo)".
 - 002 (inativos, tipo B): Usuários esconde inativos por padrão; botão "Lista Inativa" mostra só os inativos com o selo.
 - 003 (recorrências): a página /app/tarefas/recorrentes não abria (rota aninhada sem Outlet mostrava Tarefas); rota passou a ser independente.
