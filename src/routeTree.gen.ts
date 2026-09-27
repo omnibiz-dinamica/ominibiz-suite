@@ -38,7 +38,7 @@ import { Route as AppRestauranteIndexRouteImport } from './routes/app.restaurant
 import { Route as AppMaterialConstrucaoIndexRouteImport } from './routes/app.material-construcao.index'
 import { Route as AppComercialIndexRouteImport } from './routes/app.comercial.index'
 import { Route as LovableEmailEventsRouteImport } from './routes/lovable/email/events'
-import { Route as AppTarefasRecorrentesRouteImport } from './routes/app.tarefas.recorrentes'
+import { Route as AppTarefasRecorrentesRouteImport } from './routes/app.tarefas_.recorrentes'
 import { Route as AppSuporteIdRouteImport } from './routes/app.suporte.$id'
 import { Route as AppRhRecibosRouteImport } from './routes/app.rh.recibos'
 import { Route as AppRestauranteZonasRouteImport } from './routes/app.restaurante.zonas'
@@ -226,9 +226,9 @@ const LovableEmailEventsRoute = LovableEmailEventsRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppTarefasRecorrentesRoute = AppTarefasRecorrentesRouteImport.update({
-  id: '/recorrentes',
-  path: '/recorrentes',
-  getParentRoute: () => AppTarefasRoute,
+  id: '/tarefas_/recorrentes',
+  path: '/tarefas/recorrentes',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppSuporteIdRoute = AppSuporteIdRouteImport.update({
   id: '/$id',
@@ -465,7 +465,7 @@ export interface FileRoutesByFullPath {
   '/app/ponto': typeof AppPontoRoute
   '/app/rh': typeof AppRhRouteWithChildren
   '/app/suporte': typeof AppSuporteRouteWithChildren
-  '/app/tarefas': typeof AppTarefasRouteWithChildren
+  '/app/tarefas': typeof AppTarefasRoute
   '/sign/$token': typeof SignTokenRoute
   '/app/': typeof AppIndexRoute
   '/api/email/send': typeof ApiEmailSendRoute
@@ -533,7 +533,7 @@ export interface FileRoutesByTo {
   '/app/perfil': typeof AppPerfilRoute
   '/app/ponto': typeof AppPontoRoute
   '/app/suporte': typeof AppSuporteRouteWithChildren
-  '/app/tarefas': typeof AppTarefasRouteWithChildren
+  '/app/tarefas': typeof AppTarefasRoute
   '/sign/$token': typeof SignTokenRoute
   '/app': typeof AppIndexRoute
   '/api/email/send': typeof ApiEmailSendRoute
@@ -605,7 +605,7 @@ export interface FileRoutesById {
   '/app/ponto': typeof AppPontoRoute
   '/app/rh': typeof AppRhRouteWithChildren
   '/app/suporte': typeof AppSuporteRouteWithChildren
-  '/app/tarefas': typeof AppTarefasRouteWithChildren
+  '/app/tarefas': typeof AppTarefasRoute
   '/sign/$token': typeof SignTokenRoute
   '/app/': typeof AppIndexRoute
   '/api/email/send': typeof ApiEmailSendRoute
@@ -640,7 +640,7 @@ export interface FileRoutesById {
   '/app/restaurante/zonas': typeof AppRestauranteZonasRoute
   '/app/rh/recibos': typeof AppRhRecibosRoute
   '/app/suporte/$id': typeof AppSuporteIdRoute
-  '/app/tarefas/recorrentes': typeof AppTarefasRecorrentesRoute
+  '/app/tarefas_/recorrentes': typeof AppTarefasRecorrentesRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
   '/app/comercial/': typeof AppComercialIndexRoute
   '/app/material-construcao/': typeof AppMaterialConstrucaoIndexRoute
@@ -852,7 +852,7 @@ export interface FileRouteTypes {
     | '/app/restaurante/zonas'
     | '/app/rh/recibos'
     | '/app/suporte/$id'
-    | '/app/tarefas/recorrentes'
+    | '/app/tarefas_/recorrentes'
     | '/lovable/email/events'
     | '/app/comercial/'
     | '/app/material-construcao/'
@@ -1091,12 +1091,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailEventsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/app/tarefas/recorrentes': {
-      id: '/app/tarefas/recorrentes'
-      path: '/recorrentes'
+    '/app/tarefas_/recorrentes': {
+      id: '/app/tarefas_/recorrentes'
+      path: '/tarefas/recorrentes'
       fullPath: '/app/tarefas/recorrentes'
       preLoaderRoute: typeof AppTarefasRecorrentesRouteImport
-      parentRoute: typeof AppTarefasRoute
+      parentRoute: typeof AppRoute
     }
     '/app/suporte/$id': {
       id: '/app/suporte/$id'
@@ -1455,18 +1455,6 @@ const AppSuporteRouteWithChildren = AppSuporteRoute._addFileChildren(
   AppSuporteRouteChildren,
 )
 
-interface AppTarefasRouteChildren {
-  AppTarefasRecorrentesRoute: typeof AppTarefasRecorrentesRoute
-}
-
-const AppTarefasRouteChildren: AppTarefasRouteChildren = {
-  AppTarefasRecorrentesRoute: AppTarefasRecorrentesRoute,
-}
-
-const AppTarefasRouteWithChildren = AppTarefasRoute._addFileChildren(
-  AppTarefasRouteChildren,
-)
-
 interface AppRouteChildren {
   AppAdminRoute: typeof AppAdminRouteWithChildren
   AppAssistenteRoute: typeof AppAssistenteRoute
@@ -1484,7 +1472,7 @@ interface AppRouteChildren {
   AppPontoRoute: typeof AppPontoRoute
   AppRhRoute: typeof AppRhRouteWithChildren
   AppSuporteRoute: typeof AppSuporteRouteWithChildren
-  AppTarefasRoute: typeof AppTarefasRouteWithChildren
+  AppTarefasRoute: typeof AppTarefasRoute
   AppIndexRoute: typeof AppIndexRoute
   AppContabilidadeFolhasPontoRoute: typeof AppContabilidadeFolhasPontoRoute
   AppMaterialConstrucaoCategoriasRoute: typeof AppMaterialConstrucaoCategoriasRoute
@@ -1507,6 +1495,7 @@ interface AppRouteChildren {
   AppRestauranteMesasRoute: typeof AppRestauranteMesasRoute
   AppRestaurantePedidosRoute: typeof AppRestaurantePedidosRoute
   AppRestauranteZonasRoute: typeof AppRestauranteZonasRoute
+  AppTarefasRecorrentesRoute: typeof AppTarefasRecorrentesRoute
   AppMaterialConstrucaoIndexRoute: typeof AppMaterialConstrucaoIndexRoute
   AppRestauranteIndexRoute: typeof AppRestauranteIndexRoute
 }
@@ -1528,7 +1517,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppPontoRoute: AppPontoRoute,
   AppRhRoute: AppRhRouteWithChildren,
   AppSuporteRoute: AppSuporteRouteWithChildren,
-  AppTarefasRoute: AppTarefasRouteWithChildren,
+  AppTarefasRoute: AppTarefasRoute,
   AppIndexRoute: AppIndexRoute,
   AppContabilidadeFolhasPontoRoute: AppContabilidadeFolhasPontoRoute,
   AppMaterialConstrucaoCategoriasRoute: AppMaterialConstrucaoCategoriasRoute,
@@ -1552,6 +1541,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppRestauranteMesasRoute: AppRestauranteMesasRoute,
   AppRestaurantePedidosRoute: AppRestaurantePedidosRoute,
   AppRestauranteZonasRoute: AppRestauranteZonasRoute,
+  AppTarefasRecorrentesRoute: AppTarefasRecorrentesRoute,
   AppMaterialConstrucaoIndexRoute: AppMaterialConstrucaoIndexRoute,
   AppRestauranteIndexRoute: AppRestauranteIndexRoute,
 }
