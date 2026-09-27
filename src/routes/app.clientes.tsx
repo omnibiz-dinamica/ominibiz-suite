@@ -442,6 +442,15 @@ function ClientsPage() {
   );
 }
 
+function currencySymbolOf(code: string): string {
+  try {
+    return new Intl.NumberFormat("pt-PT", { style: "currency", currency: code, currencyDisplay: "narrowSymbol" })
+      .formatToParts(0).find((p) => p.type === "currency")?.value ?? code;
+  } catch {
+    return code;
+  }
+}
+
 function ClientForm({
   companyId,
   userId,
