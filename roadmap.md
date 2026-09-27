@@ -58,4 +58,4 @@
 ## 27/09/2026 — Funcionários inativos
 - [x] Aplicar uma regra global de inatividade, independente da empresa.
 - [x] Ocultar inativos no servidor em todas as listas de nova seleção identificadas.
-- [ ] Validar visualmente em empresas distintas e confirmar regressões.
+- [x] Validar visualmente em empresas distintas e confirmar regressões.
