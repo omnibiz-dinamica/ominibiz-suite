@@ -92,7 +92,7 @@ function DashboardRH() {
         .from("vacation_requests")
         .select("id, user_id, start_date, end_date, status")
         .eq("company_id", currentCompanyId!)
-        .in("status", ["pendente", "pendente_confirmacao", "aguardando_aprovacao"])
+        .in("status", ["pendente", "pendente_confirmacao"])
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];

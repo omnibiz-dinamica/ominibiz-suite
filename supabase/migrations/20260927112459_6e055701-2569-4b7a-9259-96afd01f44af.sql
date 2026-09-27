@@ -1,3 +1,0 @@
-CREATE INDEX IF NOT EXISTS idx_tasks_client_assignee_active ON public.tasks (client_id, assigned_to) WHERE archived_at IS NULL AND deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_user_roles_user_company_role ON public.user_roles (user_id, company_id, role);
-CREATE INDEX IF NOT EXISTS idx_notifications_user_company_unread ON public.notifications (user_id, company_id, created_at DESC) WHERE read_at IS NULL;
