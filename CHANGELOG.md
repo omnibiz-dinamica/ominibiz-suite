@@ -1,3 +1,8 @@
+## 27092026-B
+- 001 (inativos, tipo A): nova RPC `company_active_member_options` (só ativos, filtro no servidor). Nova Tarefa, Reatribuir, edição de série, Equipa do cliente e sugestão de colega no Ponto passam a listar só ativos (consulta com `is_active = true`). Reatribuir mostra "Responsável atual" mesmo se inativo; edição de série mantém só o atual como "(Inativo)".
+- 002 (inativos, tipo B): Usuários esconde inativos por padrão; botão "Lista Inativa" mostra só os inativos com o selo.
+- 003 (recorrências): a página /app/tarefas/recorrentes não abria (rota aninhada sem Outlet mostrava Tarefas); rota passou a ser independente.
+
 ## 24092026-A
 - 001 (férias): "Enviar para autorização" (modal com gestor autorizador) substituído por "Pedir autorização": RPC `vacation_request_authorization` muda o pedido para o novo estado `aguardando_aprovacao`, avisa o funcionário (`vacation_awaiting_approval`) e registra em `vacation_audit` (`pedir_autorizacao`). Mesma checagem de permissão de `vacation_decide`; idempotente (segundo clique não gera aviso). Gestor vê "Aguardando aprovação" fixo; funcionário vê "aguardando". O modal/RPC antigo continuam no código, mas não são mais chamados.
 - 002 (férias): `vacation_decide` passa a aceitar também `aguardando_aprovacao` para aprovar/rejeitar/cancelar (sem outras mudanças). Fila compartilhada de gestores mantém o pedido em aberto enquanto aguarda.

@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 
 const tasksPage = readFileSync(new URL("../src/routes/app.tarefas.tsx", import.meta.url), "utf8");
 const recurrencesPage = readFileSync(
-  new URL("../src/routes/app.tarefas.recorrentes.tsx", import.meta.url),
+  new URL("../src/routes/app.tarefas_.recorrentes.tsx", import.meta.url),
   "utf8",
 );
 

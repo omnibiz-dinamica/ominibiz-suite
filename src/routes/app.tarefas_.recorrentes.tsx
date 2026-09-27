@@ -40,7 +40,7 @@ const FAILURE_WINDOW_HOURS = 24;
  */
 const MATERIALIZE_HORIZON_DAYS = 365;
 
-export const Route = createFileRoute("/app/tarefas/recorrentes")({ component: RecurrencesPage });
+export const Route = createFileRoute("/app/tarefas_/recorrentes")({ component: RecurrencesPage });
 
 function RecurrencesPage() {
   const { isManager, currentCompanyId } = useAuth();
