@@ -119,6 +119,7 @@ export type Database = {
           habitual_schedule: Json
           hourly_rate: number | null
           id: string
+          instructions: string | null
           mixed_base_fixed: number | null
           mixed_extra_hour_rate: number | null
           mixed_included_minutes: number | null
@@ -126,6 +127,7 @@ export type Database = {
           name: string
           notes: string | null
           phone: string | null
+          schedule_notes: string | null
           status: Database["public"]["Enums"]["client_status"]
           timing_mode: string
           updated_at: string
@@ -147,6 +149,7 @@ export type Database = {
           habitual_schedule?: Json
           hourly_rate?: number | null
           id?: string
+          instructions?: string | null
           mixed_base_fixed?: number | null
           mixed_extra_hour_rate?: number | null
           mixed_included_minutes?: number | null
@@ -154,6 +157,7 @@ export type Database = {
           name: string
           notes?: string | null
           phone?: string | null
+          schedule_notes?: string | null
           status?: Database["public"]["Enums"]["client_status"]
           timing_mode?: string
           updated_at?: string
@@ -175,6 +179,7 @@ export type Database = {
           habitual_schedule?: Json
           hourly_rate?: number | null
           id?: string
+          instructions?: string | null
           mixed_base_fixed?: number | null
           mixed_extra_hour_rate?: number | null
           mixed_included_minutes?: number | null
@@ -182,6 +187,7 @@ export type Database = {
           name?: string
           notes?: string | null
           phone?: string | null
+          schedule_notes?: string | null
           status?: Database["public"]["Enums"]["client_status"]
           timing_mode?: string
           updated_at?: string
@@ -6524,6 +6530,7 @@ export type Database = {
           habitual_schedule: Json
           hourly_rate: number | null
           id: string
+          instructions: string | null
           mixed_base_fixed: number | null
           mixed_extra_hour_rate: number | null
           mixed_included_minutes: number | null
@@ -6531,6 +6538,7 @@ export type Database = {
           name: string
           notes: string | null
           phone: string | null
+          schedule_notes: string | null
           status: Database["public"]["Enums"]["client_status"]
           timing_mode: string
           updated_at: string

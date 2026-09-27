@@ -1,0 +1,1 @@
+ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS schedule_notes text, ADD COLUMN IF NOT EXISTS instructions text;
