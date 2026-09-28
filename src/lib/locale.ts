@@ -487,7 +487,7 @@ export const ROUTE_MODULES: Array<{ prefix: string; module: ModuleKey }> = [
   { prefix: "/app/ferias", module: "hr" },
   { prefix: "/app/meus-recibos", module: "hr" },
   { prefix: "/app/despesas", module: "finance" },
-  { prefix: "/app/clientes", module: "crm" },
+  { prefix: "/app/clientes", module: "tasks" },
   { prefix: "/app/comercial", module: "crm" },
   { prefix: "/app/frota", module: "fleet" },
   { prefix: "/app/assistente", module: "whatsapp_ai" },
