@@ -66,13 +66,9 @@ export type BusinessVertical =
   | "auto_repair"
   | "generic";
 
+/** De momento apenas Limpeza está disponível (decisão 2026-09-28). */
 export const BUSINESS_VERTICALS: { value: BusinessVertical; label: string }[] = [
   { value: "cleaning_services", label: "Serviços de Limpeza" },
-  { value: "restaurant_delivery", label: "Restaurante & Delivery" },
-  { value: "building_materials", label: "Material de Construção" },
-  { value: "hospitality", label: "Hotelaria (preparado)" },
-  { value: "auto_repair", label: "Oficina Mecânica (preparado)" },
-  { value: "generic", label: "Genérico" },
 ];
 
 const KNOWN_VERTICALS: BusinessVertical[] = [
@@ -457,7 +453,12 @@ export const MODULE_TABS: Array<{
   },
   { key: "hospitality", label: "Hotelaria", vertical: "hospitality", modules: [] },
   { key: "auto_repair", label: "Oficina", vertical: "auto_repair", modules: [] },
-];
+].filter((t) => t.key === "general" || t.key === "cleaning") as Array<{
+  key: ModuleTabKey;
+  label: string;
+  vertical: BusinessVertical | null;
+  modules: ModuleKey[];
+}>; // Ramos não-limpeza ocultos de momento (decisão 2026-09-28).
 
 
 export const ROUTE_MODULES: Array<{ prefix: string; module: ModuleKey }> = [

@@ -234,12 +234,11 @@ function managerGroups(args: { superAdminOperating: boolean; vertical: BusinessV
     label: "Material de Construção",
     items: BUILDING_MATERIALS_ITEMS,
   };
-  const groups =
-    vertical === "restaurant_delivery"
-      ? [general[0], verticalGroup, ...general.slice(1), materialsGroup]
-      : vertical === "building_materials"
-        ? [general[0], materialsGroup, ...general.slice(1), verticalGroup]
-        : [...general, verticalGroup, materialsGroup];
+  // De momento apenas Limpeza: grupos de Restaurante e Material ocultos.
+  void verticalGroup;
+  void materialsGroup;
+  void vertical;
+  const groups = [...general];
 
 
   if (superAdminOperating) {
