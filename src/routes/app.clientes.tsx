@@ -258,6 +258,26 @@ function ClientsPage() {
     { header: "Status", accessor: (c) => c.status, width: 60 },
   ];
 
+  const normalizeText = (value: string) =>
+    value
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+
+  const filteredClients = useMemo(() => {
+    const list = clients ?? [];
+    const term = normalizeText(search);
+    if (!term) return list;
+    return list.filter((c) =>
+      [c.name, c.address, c.phone, c.email, c.notes].some((field) =>
+        field ? normalizeText(String(field)).includes(term) : false,
+      ),
+    );
+  }, [clients, search]);
+
+
+
   const handleExport = (kind: "xlsx" | "pdf") => {
     const list = clients ?? [];
     if (list.length === 0) {
