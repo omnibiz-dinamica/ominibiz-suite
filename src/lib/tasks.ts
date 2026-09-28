@@ -102,6 +102,8 @@ export interface TaskRow {
   created_at: string;
   updated_at: string;
   punch_mode_override?: PunchMode | null;
+  /** Nome da programação do cliente (ex.: "Klein", "Grote") — etiqueta visual. */
+  schedule_name?: string | null;
   recurrence_id?: string | null;
   /**
    * Fase B — lote de criação multi-responsável. Cada responsável tem a SUA
