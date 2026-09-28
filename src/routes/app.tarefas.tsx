@@ -1370,6 +1370,7 @@ function TasksPage() {
           completionNotes={completionNoteByTask}
           refusalsByTask={refusalsByTask}
           memberNames={memberNames}
+          groupMemberNames={groupMemberNames}
           selectedTaskIds={new Set(selectedTaskIds)}
           taskPunches={taskPunchByTask}
           onToggleTaskSelection={(id) => setSelectedTaskIds((current) => current.includes(id) ? current.filter((x) => x !== id) : [...current, id])}
@@ -1401,6 +1402,7 @@ function TasksPage() {
            completionNotes={completionNoteByTask}
            refusalsByTask={refusalsByTask}
            memberNames={memberNames}
+           groupMemberNames={groupMemberNames}
           selectedTaskIds={new Set(selectedTaskIds)}
           taskPunches={taskPunchByTask}
            onToggleTaskSelection={(id) => setSelectedTaskIds((current) => current.includes(id) ? current.filter((x) => x !== id) : [...current, id])}
@@ -1439,6 +1441,7 @@ function TasksPage() {
           completionNotes={completionNoteByTask}
           refusalsByTask={refusalsByTask}
           memberNames={memberNames}
+          groupMemberNames={groupMemberNames}
            selectedTaskIds={new Set(selectedTaskIds)}
            taskPunches={taskPunchByTask}
           onToggleTaskSelection={(id) => setSelectedTaskIds((current) => current.includes(id) ? current.filter((x) => x !== id) : [...current, id])}
@@ -1483,6 +1486,7 @@ interface RowHandlers {
   completionNotes: ReadonlyMap<string, CompletionNote>;
   refusalsByTask: ReadonlyMap<string, TaskRefusalRecord[]>;
   memberNames: ReadonlyMap<string, string>;
+  groupMemberNames?: ReadonlyMap<string, string>;
   taskPunches: ReadonlyMap<string, TimeEntryRow>;
   selectedTaskIds?: ReadonlySet<string>;
   onToggleTaskSelection?: (taskId: string) => void;
