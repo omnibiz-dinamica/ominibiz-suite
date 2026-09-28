@@ -145,6 +145,7 @@ export async function fetchClientSchedule(clientId: string): Promise<ClientSched
     .map((slot, index) => ({
     id: `client-habitual:${clientId}:${slot.id || index}`,
     title: slot.label?.trim() || `Programação ${index + 1}`,
+    label: slot.label?.trim() || null,
     weekdays: slot.weekdays,
     startTime: slot.startTime,
     endTime:
