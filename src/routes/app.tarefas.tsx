@@ -620,6 +620,24 @@ function TasksPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // Anexos NÃO impedem a exclusão de uma tarefa não iniciada: o modal apenas
+  // informa o gestor de que existem ficheiros e a exclusão segue em frente.
+  const { data: deletingDocsCount } = useQuery({
+    queryKey: ["task-documents-count", deleting?.id],
+    queryFn: async () => {
+      if (!deleting?.id) return 0;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { count, error } = await (supabase.from("task_documents" as any) as any)
+        .select("id", { count: "exact", head: true })
+        .eq("task_id", deleting.id);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: !!deleting?.id && !deleting?.recurrence_id,
+    refetchOnWindowFocus: false,
+  });
+
+
   const archiveMut = useMutation({
     mutationFn: ({ id, archive }: { id: string; archive: boolean }) => archiveTask(id, archive),
     onSuccess: (_d, vars) => {
