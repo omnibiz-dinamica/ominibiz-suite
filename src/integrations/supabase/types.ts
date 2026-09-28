@@ -346,8 +346,11 @@ export type Database = {
           billing_country: string
           billing_currency: string
           billing_cycle: string
+          billing_discount_kind: string
+          billing_discount_value: number
           billing_notes: string | null
           billing_plan: string
+          billing_setup_fee: number
           billing_trial_ends_at: string | null
           business_vertical: string
           country: string
@@ -377,8 +380,11 @@ export type Database = {
           billing_country?: string
           billing_currency?: string
           billing_cycle?: string
+          billing_discount_kind?: string
+          billing_discount_value?: number
           billing_notes?: string | null
           billing_plan?: string
+          billing_setup_fee?: number
           billing_trial_ends_at?: string | null
           business_vertical?: string
           country?: string
@@ -408,8 +414,11 @@ export type Database = {
           billing_country?: string
           billing_currency?: string
           billing_cycle?: string
+          billing_discount_kind?: string
+          billing_discount_value?: number
           billing_notes?: string | null
           billing_plan?: string
+          billing_setup_fee?: number
           billing_trial_ends_at?: string | null
           business_vertical?: string
           country?: string
