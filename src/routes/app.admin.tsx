@@ -384,6 +384,14 @@ function BillingControls({ company }: { company: AdminCompany }) {
   const [country, setCountry] = useState<"PT" | "BE" | "ES" | "BR">(initialCountry);
   const [modules, setModules] = useState<ModuleKey[]>(normalizeModules(company.enabled_modules));
   const [notes, setNotes] = useState(company.billing_notes ?? "");
+  const [discountKind, setDiscountKind] = useState<BillingDiscountKind>(
+    normalizeDiscountKind(company.billing_discount_kind),
+  );
+  const [discountValue, setDiscountValue] = useState(
+    company.billing_discount_value != null && Number(company.billing_discount_value) > 0
+      ? String(company.billing_discount_value)
+      : "",
+  );
   const [vertical, setVertical] = useState<BusinessVertical>(normalizeBusinessVertical(company.business_vertical));
   const [activeTab, setActiveTab] = useState<ModuleTabKey>(() => {
     const v = normalizeBusinessVertical(company.business_vertical);
