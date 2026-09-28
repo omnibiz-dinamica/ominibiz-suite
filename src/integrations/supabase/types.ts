@@ -347,6 +347,7 @@ export type Database = {
           billing_currency: string
           billing_cycle: string
           billing_discount_kind: string
+          billing_discount_target: string
           billing_discount_value: number
           billing_notes: string | null
           billing_plan: string
@@ -381,6 +382,7 @@ export type Database = {
           billing_currency?: string
           billing_cycle?: string
           billing_discount_kind?: string
+          billing_discount_target?: string
           billing_discount_value?: number
           billing_notes?: string | null
           billing_plan?: string
@@ -415,6 +417,7 @@ export type Database = {
           billing_currency?: string
           billing_cycle?: string
           billing_discount_kind?: string
+          billing_discount_target?: string
           billing_discount_value?: number
           billing_notes?: string | null
           billing_plan?: string

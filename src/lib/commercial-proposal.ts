@@ -8,6 +8,7 @@ import {
   MODULE_CATALOG,
   PLAN_OPTIONS,
   billingDiscountAmount,
+  billingSetupDiscountAmount,
   billingMonthlySubtotal,
   billingMonthlyTotal,
   billingAnnualTotal,
@@ -19,6 +20,7 @@ import {
   planSetupFee,
   type BillingCycle,
   type BillingDiscountKind,
+  type BillingDiscountTarget,
   type BillingPlan,
   type ModuleKey,
 } from "@/lib/locale";
@@ -33,6 +35,7 @@ export type ProposalInput = {
   modules: ModuleKey[];
   discountKind: BillingDiscountKind;
   discountValue: number;
+  discountTarget?: BillingDiscountTarget;
   notes?: string | null;
   /** Validade da proposta em dias (padrão 15). */
   validityDays?: number;
@@ -78,6 +81,7 @@ export function buildProposalHtml(input: ProposalInput, issuedAt: Date = new Dat
     enabled_modules: modules,
     billing_discount_kind: input.discountKind,
     billing_discount_value: input.discountValue,
+    billing_discount_target: input.discountTarget ?? "setup",
   };
 
   const planInfo = PLAN_OPTIONS[input.plan];
@@ -88,7 +92,9 @@ export function buildProposalHtml(input: ProposalInput, issuedAt: Date = new Dat
   const monthly = billingMonthlyTotal(billing);
   const annual = billingAnnualTotal(billing);
   const setupFee = planSetupFee(input.plan, input.country);
-  const setup = billingSetupInstallments(setupFee);
+  const setupDiscount = billingSetupDiscountAmount(billing, setupFee);
+  const setupTotal = Math.round((setupFee - setupDiscount) * 100) / 100;
+  const setup = billingSetupInstallments(setupTotal);
 
   const includedModules = modules.filter((m) => MODULE_CATALOG[m].included || MODULE_CATALOG[m].addonMonthly === 0);
   const addonModules = modules.filter((m) => !MODULE_CATALOG[m].included && MODULE_CATALOG[m].addonMonthly > 0);
@@ -241,12 +247,13 @@ export function buildProposalHtml(input: ProposalInput, issuedAt: Date = new Dat
   <table class="avoid-break">
     <tbody>
       <tr><td>Implantação, configuração e formação inicial</td><td class="right">${money(setupFee)}</td></tr>
+      ${setupDiscount > 0 ? `<tr class="discount"><td>${discountLabel}</td><td class="right">− ${money(setupDiscount)}</td></tr><tr><td><strong>Implantação final</strong></td><td class="right"><strong>${money(setupTotal)}</strong></td></tr>` : ""}
       <tr><td>1.ª prestação — na assinatura</td><td class="right">${money(setup.first)}</td></tr>
       <tr><td>2.ª prestação — 15 dias após a assinatura</td><td class="right">${money(setup.second)}</td></tr>
       <tr class="total"><td>Primeiro pagamento (entrada + 1.º mês)</td><td class="right">${money(setup.first + monthly)}</td></tr>
     </tbody>
   </table>
-  <p class="muted">O valor de implantação é único e não é objeto de desconto.</p>
+  <p class="muted">O valor de implantação é único${setupDiscount > 0 ? ", já com o desconto comercial aplicado" : ""}.</p>
 
   <h2>Condições gerais</h2>
   <div class="callout avoid-break">

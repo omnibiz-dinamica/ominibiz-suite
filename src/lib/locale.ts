@@ -103,8 +103,10 @@ export const RESTAURANT_ENABLED_MODULES: ModuleKey[] = [
   "restaurant_delivery_zones",
 ];
 
-/** Desconto aplicado apenas à mensalidade (decisão 2026-09-28). */
+/** Tipo de desconto comercial. */
 export type BillingDiscountKind = "none" | "percent" | "amount";
+/** Onde o desconto é aplicado: implantação (padrão) ou mensalidade. */
+export type BillingDiscountTarget = "setup" | "monthly";
 
 export type CompanyBilling = {
   billing_plan?: BillingPlan | null;
@@ -116,6 +118,7 @@ export type CompanyBilling = {
   user_limit?: number | null;
   billing_discount_kind?: BillingDiscountKind | string | null;
   billing_discount_value?: number | null;
+  billing_discount_target?: BillingDiscountTarget | string | null;
 };
 
 export const PLAN_OPTIONS: Record<
@@ -554,18 +557,28 @@ export function normalizeDiscountKind(kind: unknown): BillingDiscountKind {
   return kind === "percent" || kind === "amount" ? kind : "none";
 }
 
-/**
- * Desconto aplicado SÓ à mensalidade (decisão 2026-09-28).
- * Percentagem limitada a 100% e valor fixo limitado ao subtotal: a mensalidade
- * final nunca fica negativa.
- */
-export function billingDiscountAmount(company: CompanyBilling): number {
-  const subtotal = billingMonthlySubtotal(company);
+export function normalizeDiscountTarget(target: unknown): BillingDiscountTarget {
+  return target === "monthly" ? "monthly" : "setup";
+}
+
+function discountOn(company: CompanyBilling, base: number): number {
   const kind = normalizeDiscountKind(company.billing_discount_kind);
   const raw = Number(company.billing_discount_value ?? 0);
-  if (kind === "none" || !Number.isFinite(raw) || raw <= 0) return 0;
-  const discount = kind === "percent" ? (subtotal * Math.min(raw, 100)) / 100 : raw;
-  return roundCents(Math.min(discount, subtotal));
+  if (kind === "none" || !Number.isFinite(raw) || raw <= 0 || base <= 0) return 0;
+  const discount = kind === "percent" ? (base * Math.min(raw, 100)) / 100 : raw;
+  return roundCents(Math.min(discount, base));
+}
+
+/** Desconto na mensalidade (só quando o destino é "monthly"). Nunca negativa. */
+export function billingDiscountAmount(company: CompanyBilling): number {
+  if (normalizeDiscountTarget(company.billing_discount_target) !== "monthly") return 0;
+  return discountOn(company, billingMonthlySubtotal(company));
+}
+
+/** Desconto na implantação (só quando o destino é "setup"). Nunca negativa. */
+export function billingSetupDiscountAmount(company: CompanyBilling, setupFee: number): number {
+  if (normalizeDiscountTarget(company.billing_discount_target) !== "setup") return 0;
+  return discountOn(company, setupFee);
 }
 
 /** Mensalidade final já com desconto. */
@@ -582,7 +595,7 @@ export function planSetupFee(plan: BillingPlan, country: string | null | undefin
 }
 
 /**
- * Implantação sem desconto, dividida em 2x: entrada + 15 dias.
+ * Implantação (já com eventual desconto), dividida em 2x: entrada + 15 dias.
  * Cêntimos ímpares vão para a entrada, garantindo soma exata.
  */
 export function billingSetupInstallments(total: number): { first: number; second: number } {
