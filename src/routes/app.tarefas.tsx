@@ -620,6 +620,24 @@ function TasksPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // Anexos NÃO impedem a exclusão de uma tarefa não iniciada: o modal apenas
+  // informa o gestor de que existem ficheiros e a exclusão segue em frente.
+  const { data: deletingDocsCount } = useQuery({
+    queryKey: ["task-documents-count", deleting?.id],
+    queryFn: async () => {
+      if (!deleting?.id) return 0;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { count, error } = await (supabase.from("task_documents" as any) as any)
+        .select("id", { count: "exact", head: true })
+        .eq("task_id", deleting.id);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: !!deleting?.id && !deleting?.recurrence_id,
+    refetchOnWindowFocus: false,
+  });
+
+
   const archiveMut = useMutation({
     mutationFn: ({ id, archive }: { id: string; archive: boolean }) => archiveTask(id, archive),
     onSuccess: (_d, vars) => {
@@ -701,9 +719,10 @@ function TasksPage() {
   });
 
   // Status que podem ser excluídos (tarefas que ainda não foram iniciadas).
-  // A presença de histórico operacional (folha de ponto, documentos)
-  // é validada no servidor e devolve a mensagem padrão.
+  // Anexos não bloqueiam: apenas o histórico real de ponto é validado no
+  // servidor. O modal informa o gestor quando existem ficheiros anexados.
   const DELETABLE_STATUSES: TaskRow["status"][] = ["pendente", "autorizado", "cancelado", "ausente"];
+
   const canDelete = (t: TaskRow) => isManager && DELETABLE_STATUSES.includes(t.status);
 
   const handleDeleteRequest = (t: TaskRow) => {
@@ -976,7 +995,14 @@ function TasksPage() {
                 ? `A tarefa "${deleting.title}" será removida das listas, calendário, folha de ponto e notificações. O histórico permanece registado para auditoria.`
                 : ""}
             </AlertDialogDescription>
+            {(deletingDocsCount ?? 0) > 0 && (
+              <p className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+                Atenção: esta tarefa tem {deletingDocsCount}{" "}
+                {deletingDocsCount === 1 ? "anexo" : "anexos"}. Ao confirmar, a tarefa e os anexos serão excluídos.
+              </p>
+            )}
           </AlertDialogHeader>
+
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteTask.isPending}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
@@ -2853,17 +2879,10 @@ function TaskForm({
     if (contractedMinutes != null && assignees.length > 0) setManualEndOverride(false);
   }, [assignees.length, contractedMinutes]);
 
-  useEffect(() => {
-    if ((initial && !touchedAssignees) || manualEndOverride || contractedMinutes == null || !startDate || !startTime || assignees.length === 0) {
-      return;
-    }
-    const [minutesForFirstEmployee] = distributedMinutes;
-    if (minutesForFirstEmployee == null) return;
-    const derivedEnd = addWallMinutes(startDate, startTime, minutesForFirstEmployee);
-    if (!derivedEnd) return;
-    setEndDate((current) => (current === derivedEnd.date ? current : derivedEnd.date));
-    setEndTime((current) => (current === derivedEnd.time ? current : derivedEnd.time));
-  }, [assignees.length, contractedMinutes, distributedMinutes, initial, manualEndOverride, startDate, startTime, touchedAssignees]);
+  // A hora de fim é OPCIONAL e pertence exclusivamente ao gestor/super admin.
+  // O sistema nunca preenche nem deriva esse campo: se o gestor não digitar,
+  // a tarefa é gravada sem hora de fim (scheduled_end = null).
+
 
   /**
    * 12092026-001c — a data de fim acompanha o intervalo em wall clock:
@@ -3099,8 +3118,11 @@ function TaskForm({
           absence_grace_minutes: graceMinutes,
           punch_mode_override: punchMode || null,
         };
+        // A distribuição da carga contratada só pode recalcular uma hora de fim
+        // que o gestor JÁ registou. Sem hora de fim digitada, nada é derivado.
         const useContractedSchedule =
-          contractedMinutes != null && !manualEndOverride && startDate !== "" && startTime !== "";
+          contractedMinutes != null && !manualEndOverride && startDate !== "" && startTime !== "" && endTime !== "";
+
         const scheduleRulesByEmployee = selectedSchedule?.cycleLengthWeeks && selectedSchedule.cycleLengthWeeks > 1
           ? selectedAssignees.map((_, employeeIndex) => clientSchedule
               .filter((slot) =>
