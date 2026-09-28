@@ -13,13 +13,17 @@ import { SignatureVistoCard } from "@/components/perfil/SignatureVistoCard";
 import { MailCheck } from "lucide-react";
 import { submitEmailChangeRequest } from "@/lib/user-email";
 import { isValidEmailChangeReason, isValidUserEmail, normalizeUserEmail } from "@/lib/user-email-security";
+import { lastNameLabel, splitFullName, useCompanyCountry } from "@/lib/person-name";
 
 export const Route = createFileRoute("/app/perfil")({ component: ProfilePage });
 
 function ProfilePage() {
   const { user, profile, effectiveRole, currentCompanyId, refresh } = useAuth();
   const qc = useQueryClient();
-  const [fullName, setFullName] = useState(profile?.full_name ?? "");
+  const initialName = splitFullName(profile?.full_name);
+  const [firstName, setFirstName] = useState(initialName.first);
+  const [lastName, setLastName] = useState(initialName.last);
+  const companyCountry = useCompanyCountry(currentCompanyId);
   const [phone, setPhone] = useState("");
   const [whatsapp, setWhatsapp] = useState<string | null>(null);
   const [emailRequestOpen, setEmailRequestOpen] = useState(false);
@@ -95,7 +99,9 @@ function ProfilePage() {
       const { error } = await supabase
         .from("profiles")
         .update({
-          full_name: fullName.trim() || null,
+          first_name: firstName.trim() || null,
+          last_name: lastName.trim() || null,
+          full_name: [firstName.trim(), lastName.trim()].filter(Boolean).join(" ") || null,
           phone: phone.trim() || null,
           whatsapp: whatsappValue.trim() || null,
         })
@@ -188,13 +194,15 @@ function ProfilePage() {
           save.mutate();
         }}
       >
-        <div className="space-y-1.5">
-          <Label>Nome completo</Label>
-          <Input
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            maxLength={150}
-          />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label>Primeiro nome</Label>
+            <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} maxLength={75} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>{lastNameLabel(companyCountry)}</Label>
+            <Input value={lastName} onChange={(e) => setLastName(e.target.value)} maxLength={75} />
+          </div>
         </div>
         <div className="space-y-1.5">
           <Label>Telefone</Label>
