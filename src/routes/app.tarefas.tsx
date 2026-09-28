@@ -450,6 +450,27 @@ function TasksPage() {
   }, [members, profile?.full_name, user?.id]);
 
   /**
+   * Tarefas criadas em equipe: o selo mostra os primeiros nomes de todos os
+   * responsáveis do grupo, em vez de apenas "em equipe".
+   */
+  const groupMemberNames = useMemo(() => {
+    const byGroup = new Map<string, string[]>();
+    for (const task of tasks ?? []) {
+      const groupId = (task as { task_group_id?: string | null }).task_group_id;
+      if (!groupId || !task.assigned_to) continue;
+      const name = memberNames.get(task.assigned_to) ?? taskMemberName(members ?? [], task.assigned_to);
+      const list = byGroup.get(groupId) ?? [];
+      if (!list.includes(name)) list.push(name);
+      byGroup.set(groupId, list);
+    }
+    const labels = new Map<string, string>();
+    for (const [groupId, names] of byGroup) {
+      labels.set(groupId, names.sort((a, b) => a.localeCompare(b, "pt-BR")).join(", "));
+    }
+    return labels as ReadonlyMap<string, string>;
+  }, [tasks, memberNames, members]);
+
+  /**
    * SUP-2026-000074 — pontos ainda em aberto (esquecimento de saída).
    * Gestor vê os da empresa; funcionário apenas o seu.
    */
