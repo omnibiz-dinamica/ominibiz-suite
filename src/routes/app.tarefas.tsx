@@ -2095,6 +2095,7 @@ function CalendarTaskCard({
             ) : (
               <span className="italic">Sem horário definido</span>
             )}
+            <ScheduleNameBadge name={task.schedule_name} />
             {taskPunch && <PauseSummary entry={taskPunch} />}
             <span
               className={`inline-flex items-center rounded-full px-1.5 py-px text-[9px] font-medium ${operationalStatus === "atrasada" ? "bg-destructive/15 text-destructive" : STATUS_TONE[operationalStatus]}`}
