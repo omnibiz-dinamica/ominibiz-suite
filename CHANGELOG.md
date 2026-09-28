@@ -27,3 +27,8 @@
 - 001 (tarefas): cartão do quadro semanal simplificado — nome completo sem corte (quebra de linha), selo de status pequeno na linha do horário, apenas o lápis visível; demais ações (Editar, série, reatribuir, excluir, Autorizar/Iniciar/Cancelar) abrem ao tocar no lápis. Visão de funcionário inalterada. (src/routes/app.tarefas.tsx)
 - 002 (tarefas): removida a repetição do nome do cliente abaixo do título no quadro por colaborador; no agrupamento por cliente, o nome do colaborador continua visível como contexto. (src/routes/app.tarefas.tsx)
 - 003 (tarefas): removida definitivamente a segunda linha de identificação dos cartões do calendário em todos os agrupamentos; o cartão mantém apenas o nome em negrito, horário, estado e lápis. (src/routes/app.tarefas.tsx)
+
+## Tarefas — hora de fim opcional e exclusão com anexos (28/09/2026)
+- A hora de fim deixou de ser preenchida ou derivada pelo sistema. Se o gestor ou super admin não a registar, a tarefa é gravada sem hora de fim. A distribuição da carga contratada só recalcula uma hora de fim já registada manualmente.
+- `task_soft_delete`: documentos anexados não bloqueiam mais a exclusão de tarefas não iniciadas (pendente, autorizado, cancelado, ausente). Apenas execução real (status em andamento/concluído ou registos de ponto) impede. Os anexos são removidos junto com a tarefa.
+- O modal de exclusão informa quantos anexos existem antes de confirmar.
