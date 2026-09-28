@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Receipt, Upload, Download, Mail, UserPlus, Trash2, Loader2, FileText, AlertTriangle, CheckCircle2, History, Send, UserCog } from "lucide-react";
 import { extractPdfText, parsePayslipText, fuzzyMatchEmployee, MONTH_LABEL_PT } from "@/lib/payslip-parser";
+import { isEmployeeActive } from "@/lib/employee-status";
 
 export const Route = createFileRoute("/app/rh/recibos")({ component: PayslipsAdminPage });
 
@@ -27,7 +28,8 @@ type Payslip = {
   email_to: string | null; email_sent_at: string | null; email_delivery_status: string | null; email_error: string | null;
   created_at: string;
 };
-type Member = { id: string; name: string };
+type Member = { id: string; name: string; inactive?: boolean };
+const memberLabel = (m: Member) => (m.inactive ? `${m.name} (Inativo)` : m.name);
 
 const STATUS_LABEL: Record<Payslip["status"], { label: string; tone: string }> = {
   unassigned: { label: "Não associado", tone: "bg-amber-500/15 text-amber-600 dark:text-amber-400" },
@@ -77,15 +79,27 @@ function PayslipsAdminPage() {
     },
   });
 
+  // Tela histórica: inclui inativos para resolver nomes de recibos antigos
+  // e permitir reassociação no fechamento da folha. Novas atribuições em
+  // outras telas continuam usando company_active_member_options (só ativos).
   const { data: members = [] } = useQuery({
     queryKey: ["payslip-members", currentCompanyId],
     enabled: !!currentCompanyId,
     queryFn: async () => {
-      const { data, error } = await (supabase.rpc as any)("company_active_member_options");
-      if (error) throw error;
-      return ((data ?? []) as { id: string; full_name: string | null; company_id: string }[])
-        .filter((member) => member.company_id === currentCompanyId)
-        .map((member) => ({ id: member.id, name: member.full_name ?? "Sem nome" }));
+      const { data: roles, error: rolesErr } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("company_id", currentCompanyId!);
+      if (rolesErr) throw rolesErr;
+      const ids = [...new Set((roles ?? []).map((r) => r.user_id))];
+      if (ids.length === 0) return [] as Member[];
+      const { data: profs, error: profsErr } = await (supabase.from("profiles" as never) as any)
+        .select("id, full_name, is_active, status, termination_date")
+        .in("id", ids);
+      if (profsErr) throw profsErr;
+      return ((profs ?? []) as { id: string; full_name: string | null; is_active: boolean | null; status: string | null; termination_date: string | null }[])
+        .map((p) => ({ id: p.id, name: p.full_name ?? "Sem nome", inactive: !isEmployeeActive(p) }))
+        .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
     },
   });
 
@@ -305,7 +319,8 @@ function PayslipsAdminPage() {
                 Nenhum recibo nesta categoria.
               </div>
             ) : payslips.map((p) => {
-              const memberName = p.user_id ? members.find((m) => m.id === p.user_id)?.name : null;
+              const member = p.user_id ? members.find((m) => m.id === p.user_id) : null;
+              const memberName = member ? memberLabel(member) : null;
               return (
                 <div key={p.id} className="grid grid-cols-1 gap-2 border-b border-border px-4 py-3 last:border-b-0 md:grid-cols-12 md:items-center">
                   <div className="md:col-span-2 text-sm font-medium">{fmtPeriod(p)}</div>
@@ -475,7 +490,7 @@ function AssignDrawer({
             <Select value={userId} onValueChange={setUserId}>
               <SelectTrigger><SelectValue placeholder="Selecione o funcionário" /></SelectTrigger>
               <SelectContent>
-                {members.map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
+                {members.map((m) => <SelectItem key={m.id} value={m.id}>{memberLabel(m)}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
