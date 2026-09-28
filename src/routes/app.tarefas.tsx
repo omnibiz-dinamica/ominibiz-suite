@@ -2770,13 +2770,21 @@ function TaskForm({
       .toLocaleLowerCase("pt-BR")
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "");
-    if (!q.trim()) return members;
-    return members.filter((m) => {
-      const name = (m.full_name ?? "").toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      const email = (m.email ?? "").toLocaleLowerCase("pt-BR");
-      return name.includes(q) || email.includes(q);
+    const base = !q.trim()
+      ? members
+      : members.filter((m) => {
+          const name = (m.full_name ?? "").toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          const email = (m.email ?? "").toLocaleLowerCase("pt-BR");
+          return name.includes(q) || email.includes(q);
+        });
+    // Selecionados primeiro, depois ordem alfabética (mesma regra da ficha do cliente).
+    return [...base].sort((a, b) => {
+      const sa = assignees.includes(a.id) ? 0 : 1;
+      const sb = assignees.includes(b.id) ? 0 : 1;
+      if (sa !== sb) return sa - sb;
+      return (a.full_name ?? "").localeCompare(b.full_name ?? "", "pt-BR", { sensitivity: "base" });
     });
-  }, [members, assigneeQuery]);
+  }, [members, assigneeQuery, assignees]);
   const [clientId, setClientId] = useState<string>(initial?.client_id ?? "");
   /**
    * 12092026-002a — pesquisa OPCIONAL dentro do dropdown de Cliente.
@@ -3267,7 +3275,27 @@ function TaskForm({
         // (estado, ponto, recusa e conclusão próprios); o grupo só correlaciona.
         const groupId = selectedAssignees.length > 1 ? crypto.randomUUID() : null;
         if (initial) {
-          ({ error } = await supabase.from("tasks").update(payload).eq("id", initial.id));
+          // Edição: a tarefa original fica com o primeiro responsável; cada
+          // responsável acrescentado recebe a sua própria tarefa no mesmo grupo.
+          const extras = selectedAssignees.slice(1);
+          const existingGroup = (initial as { task_group_id?: string | null }).task_group_id ?? null;
+          const editGroupId = extras.length > 0 ? existingGroup ?? crypto.randomUUID() : existingGroup;
+          ({ error } = await supabase
+            .from("tasks")
+            .update({ ...payload, task_group_id: editGroupId })
+            .eq("id", initial.id));
+          if (!error && extras.length > 0) {
+            const inserted = await supabase.from("tasks").insert(
+              extras.map((memberId) => ({
+                ...payload,
+                assigned_to: memberId,
+                company_id: companyId,
+                created_by: userId,
+                task_group_id: editGroupId,
+              })),
+            );
+            error = inserted.error;
+          }
         } else if (recurrence.enabled) {
           // Horario e duracao da recorrencia sao derivados do topo do formulario.
           // Sem horario, a recorrencia fica por dia; nunca materializa 00:00.
@@ -3646,20 +3674,7 @@ function TaskForm({
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5 col-span-2">
           <Label>Atribuir a</Label>
-          {initial ? (
-            <Select value={assignedTo} onValueChange={(v) => setAssignees([v])}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione" />
-              </SelectTrigger>
-              <SelectContent>
-                {members.map((m) => (
-                  <SelectItem key={m.id} value={m.id}>
-                    {taskMemberName(members, m.id, "Funcionário")}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : (
+          {(
             <>
               <Label htmlFor="task-assignee-search">Nome do funcionário</Label>
               <div className="relative">
