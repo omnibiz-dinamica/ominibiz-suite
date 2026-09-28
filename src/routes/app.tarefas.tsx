@@ -450,6 +450,27 @@ function TasksPage() {
   }, [members, profile?.full_name, user?.id]);
 
   /**
+   * Tarefas criadas em equipe: o selo mostra os primeiros nomes de todos os
+   * responsáveis do grupo, em vez de apenas "em equipe".
+   */
+  const groupMemberNames = useMemo(() => {
+    const byGroup = new Map<string, string[]>();
+    for (const task of tasks ?? []) {
+      const groupId = (task as { task_group_id?: string | null }).task_group_id;
+      if (!groupId || !task.assigned_to) continue;
+      const name = memberNames.get(task.assigned_to) ?? taskMemberName(members ?? [], task.assigned_to);
+      const list = byGroup.get(groupId) ?? [];
+      if (!list.includes(name)) list.push(name);
+      byGroup.set(groupId, list);
+    }
+    const labels = new Map<string, string>();
+    for (const [groupId, names] of byGroup) {
+      labels.set(groupId, names.sort((a, b) => a.localeCompare(b, "pt-BR")).join(", "));
+    }
+    return labels as ReadonlyMap<string, string>;
+  }, [tasks, memberNames, members]);
+
+  /**
    * SUP-2026-000074 — pontos ainda em aberto (esquecimento de saída).
    * Gestor vê os da empresa; funcionário apenas o seu.
    */
@@ -1349,6 +1370,7 @@ function TasksPage() {
           completionNotes={completionNoteByTask}
           refusalsByTask={refusalsByTask}
           memberNames={memberNames}
+          groupMemberNames={groupMemberNames}
           selectedTaskIds={new Set(selectedTaskIds)}
           taskPunches={taskPunchByTask}
           onToggleTaskSelection={(id) => setSelectedTaskIds((current) => current.includes(id) ? current.filter((x) => x !== id) : [...current, id])}
@@ -1380,6 +1402,7 @@ function TasksPage() {
            completionNotes={completionNoteByTask}
            refusalsByTask={refusalsByTask}
            memberNames={memberNames}
+           groupMemberNames={groupMemberNames}
           selectedTaskIds={new Set(selectedTaskIds)}
           taskPunches={taskPunchByTask}
            onToggleTaskSelection={(id) => setSelectedTaskIds((current) => current.includes(id) ? current.filter((x) => x !== id) : [...current, id])}
@@ -1418,6 +1441,7 @@ function TasksPage() {
           completionNotes={completionNoteByTask}
           refusalsByTask={refusalsByTask}
           memberNames={memberNames}
+          groupMemberNames={groupMemberNames}
            selectedTaskIds={new Set(selectedTaskIds)}
            taskPunches={taskPunchByTask}
           onToggleTaskSelection={(id) => setSelectedTaskIds((current) => current.includes(id) ? current.filter((x) => x !== id) : [...current, id])}
@@ -1462,6 +1486,7 @@ interface RowHandlers {
   completionNotes: ReadonlyMap<string, CompletionNote>;
   refusalsByTask: ReadonlyMap<string, TaskRefusalRecord[]>;
   memberNames: ReadonlyMap<string, string>;
+  groupMemberNames?: ReadonlyMap<string, string>;
   taskPunches: ReadonlyMap<string, TimeEntryRow>;
   selectedTaskIds?: ReadonlySet<string>;
   onToggleTaskSelection?: (taskId: string) => void;
@@ -2034,6 +2059,7 @@ function CalendarTaskCard({
   transitionPending,
   refusalsByTask,
   memberNames,
+  groupMemberNames,
   selectedTaskIds,
   onToggleTaskSelection,
   onNoStartReason,
@@ -2131,10 +2157,13 @@ function CalendarTaskCard({
         ) : null}
         {task.task_group_id && (
           <span
-            className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+            className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
             title="Tarefa criada em equipe: cada responsável tem a sua própria tarefa, com ponto e conclusão independentes."
           >
-            <Users className="h-3 w-3" /> em equipe
+            <Users className="h-3 w-3" />
+            <span className="truncate">
+              {groupMemberNames?.get(task.task_group_id) ?? "Em equipe"}
+            </span>
           </span>
         )}
         {task.recurrence_id && (
