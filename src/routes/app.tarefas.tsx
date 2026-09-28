@@ -442,9 +442,9 @@ function TasksPage() {
   const memberNames = useMemo(() => {
     const names = new Map<string, string>();
     for (const member of members ?? []) {
-      if (member.full_name?.trim()) names.set(member.id, member.full_name.trim());
+      if (member.full_name?.trim()) names.set(member.id, firstNameOf(member.full_name));
     }
-    if (user?.id && profile?.full_name?.trim()) names.set(user.id, profile.full_name.trim());
+    if (user?.id && profile?.full_name?.trim()) names.set(user.id, firstNameOf(profile.full_name));
     return names as ReadonlyMap<string, string>;
   }, [members, profile?.full_name, user?.id]);
 
