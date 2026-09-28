@@ -57,6 +57,7 @@ import {
   type TaskStatus,
 } from "@/lib/tasks";
 import { formatWallDate, formatWallTime } from "@/lib/wall-clock";
+import { isEmployeeActive } from "@/lib/employee-status";
 import { classifyEventStatus, type GeoPointRow } from "@/lib/punch/geo-view";
 import { exportToExcel, exportToPdf, type ExportColumn } from "@/lib/exports";
 import { toast } from "sonner";
@@ -222,25 +223,34 @@ function GestaoPonto() {
   const [taskAuditTarget, setTaskAuditTarget] = useState<Row | null>(null);
   const [manualPointTarget, setManualPointTarget] = useState<Row | null>(null);
 
-  // Membros
+  // Membros — tela histórica: inclui inativos (com selo) para filtrar e
+  // nomear registros de quem saiu no meio do mês. Novas atribuições em
+  // outras telas continuam usando company_active_member_options (só ativos).
   const { data: members } = useQuery({
     queryKey: ["punch-admin-members-filter", currentCompanyId],
     enabled: !!currentCompanyId,
     queryFn: async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase.rpc as any)("company_active_member_options");
-      if (error) throw error;
-      const seen = new Set<string>();
-      return ((data ?? []) as { id: string; full_name: string | null; company_id: string }[])
-        .filter((member) => member.company_id === currentCompanyId)
-        .filter((r) => {
-          if (seen.has(r.id)) return false;
-          seen.add(r.id);
-          return true;
-        })
-        .map((r) => ({ id: r.id, name: r.full_name ?? r.id }));
+      const { data: roles, error: rolesErr } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("company_id", currentCompanyId!);
+      if (rolesErr) throw rolesErr;
+      const ids = [...new Set((roles ?? []).map((r) => r.user_id))];
+      if (ids.length === 0) return [] as { id: string; name: string; inactive: boolean }[];
+      const { data: profs, error: profsErr } = await (supabase.from("profiles" as never) as any)
+        .select("id, full_name, is_active, status, termination_date")
+        .in("id", ids);
+      if (profsErr) throw profsErr;
+      return ((profs ?? []) as { id: string; full_name: string | null; is_active: boolean | null; status: string | null; termination_date: string | null }[])
+        .map((p) => ({ id: p.id, name: p.full_name ?? p.id, inactive: !isEmployeeActive(p) }))
+        .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
     },
   });
+  const memberDisplayName = (id: string | null | undefined) => {
+    if (!id) return undefined;
+    const m = members?.find((mm) => mm.id === id);
+    return m ? (m.inactive ? `${m.name} (Inativo)` : m.name) : undefined;
+  };
 
   // Clientes
   const { data: clients } = useQuery({
@@ -585,8 +595,8 @@ function GestaoPonto() {
       if (filters.from) subtitleParts.push(`De ${filters.from}`);
       if (filters.to) subtitleParts.push(`Até ${filters.to}`);
       if (filters.userId !== "all") {
-        const m = members?.find((mm) => mm.id === filters.userId);
-        if (m) subtitleParts.push(`Funcionário: ${m.name}`);
+        const name = memberDisplayName(filters.userId);
+        if (name) subtitleParts.push(`Funcionário: ${name}`);
       }
       const meta = {
         fileName: `folha-ponto-${new Date().toISOString().slice(0, 10)}`,
@@ -657,7 +667,7 @@ function GestaoPonto() {
           <div>
             <Label className="text-xs">Funcionário</Label>
             <EmployeePicker
-              employees={(members ?? []).map((m) => ({ id: m.id, full_name: m.name }))}
+              employees={(members ?? []).map((m) => ({ id: m.id, full_name: m.inactive ? `${m.name} (Inativo)` : m.name }))}
               value={filters.userId === "all" ? null : filters.userId}
               onChange={(id: string) => onFilterChange("userId", id || "all")}
               placeholder="Todos"
@@ -914,7 +924,7 @@ function GestaoPonto() {
       <MarkAbsentDialog
         mode="edit"
         task={absenceEditTarget}
-        employeeName={absenceEditTarget?.assigned_to ? (members?.find((member) => member.id === absenceEditTarget.assigned_to)?.name ?? undefined) : undefined}
+        employeeName={absenceEditTarget?.assigned_to ? memberDisplayName(absenceEditTarget.assigned_to) : undefined}
         clientName={absenceEditTarget?.client_id ? (clientsMap[absenceEditTarget.client_id] ?? undefined) : undefined}
         open={!!absenceEditTarget}
         onOpenChange={(open) => !open && setAbsenceEditTarget(null)}
