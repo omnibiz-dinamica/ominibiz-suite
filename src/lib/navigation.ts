@@ -179,6 +179,8 @@ function managerGroups(args: { superAdminOperating: boolean; vertical: BusinessV
       label: "Operação",
       items: [
         { to: "/app", label: "Dashboard", icon: LayoutDashboard },
+        // Clientes faz parte de Planeamento e Tarefas (decisão 2026-09-28).
+        { to: "/app/clientes", label: "Clientes", icon: Briefcase, module: "tasks" },
         { to: "/app/tarefas", label: "Tarefas", icon: ClipboardList, module: "tasks" },
         { to: "/app/ponto", label: "Folha de Ponto", icon: Clock, module: "time_clock" },
         { to: "/app/ponto/gestao", label: "Ponto · Gestão", icon: ListChecks, module: "time_clock" },
@@ -200,10 +202,7 @@ function managerGroups(args: { superAdminOperating: boolean; vertical: BusinessV
     {
       id: "comercial",
       label: "Comercial",
-      items: [
-        { to: "/app/clientes", label: "Clientes", icon: Briefcase, module: "crm" },
-        { to: "/app/comercial", label: "Contratos", icon: FileSignature, module: "crm" },
-      ],
+      items: [{ to: "/app/comercial", label: "Contratos", icon: FileSignature, module: "crm" }],
     },
     { id: "administracao", label: "Administração", items: [{ to: "/app/empresa", label: "Empresa", icon: Building2 }] },
     { id: "frota", label: "Frota", items: [{ to: "/app/frota", label: "Frota", icon: Car, module: "fleet" }] },
