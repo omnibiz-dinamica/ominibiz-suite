@@ -1,3 +1,4 @@
+import { firstNameOf } from "@/lib/person-name";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -190,7 +191,7 @@ type TaskMember = { id: string; full_name: string | null; job_title?: string | n
 
 function taskMemberName(members: readonly TaskMember[], id: string | null, unassigned = "Sem responsável") {
   if (!id) return unassigned;
-  return members.find((member) => member.id === id)?.full_name?.trim() || "Funcionário";
+  return firstNameOf(members.find((member) => member.id === id)?.full_name) || "Funcionário";
 }
 
 export const Route = createFileRoute("/app/tarefas")({
@@ -442,9 +443,9 @@ function TasksPage() {
   const memberNames = useMemo(() => {
     const names = new Map<string, string>();
     for (const member of members ?? []) {
-      if (member.full_name?.trim()) names.set(member.id, member.full_name.trim());
+      if (member.full_name?.trim()) names.set(member.id, firstNameOf(member.full_name));
     }
-    if (user?.id && profile?.full_name?.trim()) names.set(user.id, profile.full_name.trim());
+    if (user?.id && profile?.full_name?.trim()) names.set(user.id, firstNameOf(profile.full_name));
     return names as ReadonlyMap<string, string>;
   }, [members, profile?.full_name, user?.id]);
 
