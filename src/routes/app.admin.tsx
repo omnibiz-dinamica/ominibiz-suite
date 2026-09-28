@@ -72,6 +72,9 @@ type AdminCompany = {
   enabled_modules?: ModuleKey[] | string[] | null;
   billing_notes?: string | null;
   business_vertical?: string | null;
+  billing_setup_fee?: number | null;
+  billing_discount_kind?: string | null;
+  billing_discount_value?: number | null;
 };
 
 function AdminRouteContent() {
