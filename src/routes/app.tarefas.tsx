@@ -3122,6 +3122,8 @@ function TaskForm({
           recurrence_date: startDate,
           absence_grace_minutes: graceMinutes,
           punch_mode_override: punchMode || null,
+          // Etiqueta da programação do cliente escolhida pelo gestor.
+          schedule_name: scheduleName,
         };
         // A distribuição da carga contratada só pode recalcular uma hora de fim
         // que o gestor JÁ registou. Sem hora de fim digitada, nada é derivado.
