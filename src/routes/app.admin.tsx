@@ -542,18 +542,89 @@ function BillingControls({ company }: { company: AdminCompany }) {
             </SelectContent>
           </Select>
         </div>
+        <div className="space-y-1.5">
+          <Label>Desconto na mensalidade</Label>
+          <Select
+            value={discountKind}
+            onValueChange={(v) => {
+              const next = v as BillingDiscountKind;
+              setDiscountKind(next);
+              if (next === "none") setDiscountValue("");
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Sem desconto</SelectItem>
+              <SelectItem value="percent">Percentagem (%)</SelectItem>
+              <SelectItem value="amount">Valor fixo ({currency === "BRL" ? "R$" : "€"})</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Valor do desconto</Label>
+          <Input
+            inputMode="decimal"
+            value={discountValue}
+            onChange={(e) => setDiscountValue(e.target.value)}
+            disabled={discountKind === "none"}
+            placeholder={discountKind === "percent" ? "Ex.: 10" : "Ex.: 20"}
+          />
+        </div>
+      </div>
+
+      <div className="mt-3 grid gap-3 md:grid-cols-2">
         <div className="rounded-lg border border-border bg-background px-3 py-2 text-sm">
-          <div className="text-xs text-muted-foreground">Estimativa</div>
-          <div className="font-semibold">
-            {cycle === "annual"
-              ? `${formatBillingAmount(annual, currency)}/ano`
-              : `${formatBillingAmount(monthly, currency)}/mês`}
+          <div className="text-xs font-medium text-muted-foreground">Mensalidade</div>
+          <dl className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+            <div className="flex justify-between">
+              <dt>Plano {planLimits.employeeLimit === null ? "(ilimitado)" : ""}</dt>
+              <dd>{formatBillingAmount(baseMonthly, currency)}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt>Adicionais ativos</dt>
+              <dd>{formatBillingAmount(addonsMonthly, currency)}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt>Subtotal</dt>
+              <dd>{formatBillingAmount(subtotal, currency)}</dd>
+            </div>
+            {discount > 0 && (
+              <div className="flex justify-between text-success">
+                <dt>Desconto {discountKind === "percent" ? `(${safeDiscount}%)` : ""}</dt>
+                <dd>− {formatBillingAmount(discount, currency)}</dd>
+              </div>
+            )}
+          </dl>
+          <div className="mt-2 border-t border-border pt-2 text-base font-semibold">
+            {formatBillingAmount(monthly, currency)}/mês
           </div>
           <div className="text-xs text-muted-foreground">
+            {cycle === "annual" && <>Anual: {formatBillingAmount(annual, currency)} · </>}
             {planLimits.employeeLimit ?? "Ilimitado"} funcionários · {planLimits.userLimit ?? "Ilimitado"} utilizadores
           </div>
         </div>
+
+        <div className="rounded-lg border border-border bg-background px-3 py-2 text-sm">
+          <div className="text-xs font-medium text-muted-foreground">Implantação (sem desconto)</div>
+          <div className="mt-1 text-base font-semibold">{formatBillingAmount(setupFee, currency)}</div>
+          <dl className="mt-2 space-y-0.5 text-xs text-muted-foreground">
+            <div className="flex justify-between">
+              <dt>1ª parcela · entrada</dt>
+              <dd>{formatBillingAmount(setup.first, currency)}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt>2ª parcela · 15 dias depois</dt>
+              <dd>{formatBillingAmount(setup.second, currency)}</dd>
+            </div>
+          </dl>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Primeiro pagamento: {formatBillingAmount(setup.first + monthly, currency)} (entrada + primeiro mês).
+          </p>
+        </div>
       </div>
+
 
       <div className="mt-4 flex flex-wrap gap-1 rounded-xl border border-border bg-background p-1">
         {MODULE_TABS.map((tab) => (
