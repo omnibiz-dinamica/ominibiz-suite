@@ -99,7 +99,7 @@ function AdminPage() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase.from("companies" as any) as any)
         .select(
-          "id, name, slug, country, currency, language, timezone, status, created_at, billing_plan, billing_cycle, billing_country, billing_currency, employee_limit, user_limit, enabled_modules, billing_notes, business_vertical",
+          "id, name, slug, country, currency, language, timezone, status, created_at, billing_plan, billing_cycle, billing_country, billing_currency, employee_limit, user_limit, enabled_modules, billing_notes, business_vertical, billing_setup_fee, billing_discount_kind, billing_discount_value",
         )
         .order("created_at", { ascending: false });
       if (error) throw error;
