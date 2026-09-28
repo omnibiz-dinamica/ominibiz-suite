@@ -40,11 +40,14 @@ test("equipe do cliente é sugestão e nunca sobrescreve a escolha manual", () =
   assert.match(taskForm, /responsáveis sugeridos pelo cadastro do cliente/);
 });
 
-test("trocar responsáveis reabre o recálculo automático da hora de fim", () => {
+test("trocar responsáveis nunca preenche a hora de fim automaticamente", () => {
+  // A hora de fim é opcional e pertence só ao gestor: nenhum recálculo
+  // automático escreve nesse campo ao mudar os responsáveis.
   assert.match(taskForm, /const assigneeCountRef = useRef\(assignees\.length\);/);
-  assert.match(taskForm, /if \(contractedMinutes != null && assignees\.length > 0\) setManualEndOverride\(false\);/);
-  assert.match(taskForm, /if \(\(initial && !touchedAssignees\) \|\| manualEndOverride/);
+  assert.doesNotMatch(taskForm, /if \(\(initial && !touchedAssignees\) \|\| manualEndOverride/);
+  assert.doesNotMatch(taskForm, /setEndTime\(\(current\) =>/);
 });
+
 
 test("sem responsável selecionado a validação é clara e não trava em Salvando", () => {
   assert.match(taskForm, /Selecione pelo menos um funcionário para esta tarefa\./);
