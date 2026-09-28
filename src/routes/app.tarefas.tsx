@@ -3092,8 +3092,11 @@ function TaskForm({
           absence_grace_minutes: graceMinutes,
           punch_mode_override: punchMode || null,
         };
+        // A distribuição da carga contratada só pode recalcular uma hora de fim
+        // que o gestor JÁ registou. Sem hora de fim digitada, nada é derivado.
         const useContractedSchedule =
-          contractedMinutes != null && !manualEndOverride && startDate !== "" && startTime !== "";
+          contractedMinutes != null && !manualEndOverride && startDate !== "" && startTime !== "" && endTime !== "";
+
         const scheduleRulesByEmployee = selectedSchedule?.cycleLengthWeeks && selectedSchedule.cycleLengthWeeks > 1
           ? selectedAssignees.map((_, employeeIndex) => clientSchedule
               .filter((slot) =>
