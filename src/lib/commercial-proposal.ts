@@ -212,13 +212,15 @@ export function buildProposalHtml(input: ProposalInput, issuedAt: Date = new Dat
   </div>
 
   <h2>Módulos incluídos no plano</h2>
-  <table class="avoid-break">
+  <table>
+
     <thead><tr><th>Módulo</th><th class="right">Valor</th></tr></thead>
     <tbody>${includedRows}</tbody>
   </table>
 
   <h2>Módulos adicionais</h2>
-  <table class="avoid-break">
+  <table>
+
     <thead><tr><th>Módulo</th><th class="right">Valor mensal</th></tr></thead>
     <tbody>${addonRows}</tbody>
   </table>
