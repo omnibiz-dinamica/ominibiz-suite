@@ -101,6 +101,36 @@ export type Database = {
           },
         ]
       }
+      client_primary_audit: {
+        Row: {
+          actor_id: string | null
+          client_id: string
+          company_id: string
+          created_at: string
+          id: string
+          origin: string
+          user_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          client_id: string
+          company_id: string
+          created_at?: string
+          id?: string
+          origin: string
+          user_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          client_id?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          origin?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           address: string | null
