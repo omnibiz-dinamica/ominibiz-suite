@@ -1832,6 +1832,19 @@ function CalendarDayColumn({
   );
 }
 
+/** Etiqueta da programação do cliente (ex.: Klein / Grote). */
+function ScheduleNameBadge({ name }: { name?: string | null }) {
+  if (!name) return null;
+  return (
+    <span
+      className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary"
+      title={`Programação do cliente: ${name}`}
+    >
+      {name}
+    </span>
+  );
+}
+
 function MiniTaskChip({
   task,
   startedAt,
@@ -1852,6 +1865,7 @@ function MiniTaskChip({
       title={lateMinutes != null ? `${task.title} · Início com atraso · ${formatStartedLateMinutes(lateMinutes)}` : task.title}
     >
       {start ? `${start} ` : ""}
+      {task.schedule_name ? `[${task.schedule_name}] ` : ""}
       {task.title}
     </button>
   );
@@ -2081,6 +2095,7 @@ function CalendarTaskCard({
             ) : (
               <span className="italic">Sem horário definido</span>
             )}
+            <ScheduleNameBadge name={task.schedule_name} />
             {taskPunch && <PauseSummary entry={taskPunch} />}
             <span
               className={`inline-flex items-center rounded-full px-1.5 py-px text-[9px] font-medium ${operationalStatus === "atrasada" ? "bg-destructive/15 text-destructive" : STATUS_TONE[operationalStatus]}`}
@@ -2470,6 +2485,7 @@ function TaskRowItem({
               <Repeat className="h-3 w-3" /> {AUTO_RECURRENCE_BADGE_LABEL}
             </span>
           )}
+          <ScheduleNameBadge name={t.schedule_name} />
         </div>
         {refusal && (
           <div className="mt-2 space-y-0.5 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs">
@@ -2848,6 +2864,11 @@ function TaskForm({
 
   const selectedClient = clients.find((client) => client.id === clientId);
   const selectedSchedule = clientSchedule.find((schedule) => schedule.id === selectedScheduleId) ?? null;
+  // Programações com nome no cadastro do cliente (ex.: "Klein", "Grote").
+  const namedSchedules = clientSchedule.filter(
+    (schedule) => Boolean(schedule.label) && schedule.id.startsWith("client-habitual:"),
+  );
+  const scheduleName = selectedSchedule?.label?.trim() || null;
   const contractedMinutes = selectedSchedule?.contractedMinutes ?? selectedClient?.contracted_minutes ?? null;
   const distributedMinutes = useMemo(
     () => distributeContractedMinutes(contractedMinutes, assignees.length),
@@ -3117,6 +3138,8 @@ function TaskForm({
           recurrence_date: startDate,
           absence_grace_minutes: graceMinutes,
           punch_mode_override: punchMode || null,
+          // Etiqueta da programação do cliente escolhida pelo gestor.
+          schedule_name: scheduleName,
         };
         // A distribuição da carga contratada só pode recalcular uma hora de fim
         // que o gestor JÁ registou. Sem hora de fim digitada, nada é derivado.
@@ -3132,6 +3155,7 @@ function TaskForm({
               )
               .map((slot) => ({
                 weekdays: slot.weekdays,
+                schedule_name: slot.label ?? null,
                 start_time: slot.startTime,
                 duration_minutes: distributeContractedMinutes(
                   slot.contractedMinutes ?? slot.durationMinutes,
@@ -3289,6 +3313,7 @@ function TaskForm({
                 ? selectedDistributedMinutes[index] ?? selectedDistributedMinutes[0] ?? derivedDuration
                 : derivedDuration,
               schedule_rules: scheduleRulesByEmployee[index] ?? [],
+              schedule_name: payload.schedule_name,
               task_group_id: groupId,
             }).select("id");
             if (ins.error) {
@@ -3446,6 +3471,38 @@ function TaskForm({
             )}
           </SelectContent>
         </Select>
+        {!initial && namedSchedules.length > 0 && (
+          <div className="space-y-1" data-testid="client-schedule-picker">
+            <Label>Programação do cliente</Label>
+            <Select
+              value={selectedScheduleId ?? "__free__"}
+              onValueChange={(value) => {
+                if (value === "__free__") {
+                  setSelectedScheduleId(null);
+                  setScheduleHint(null);
+                  return;
+                }
+                const slot = namedSchedules.find((s) => s.id === value);
+                if (slot) applySlot(slot);
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Livre / Manual" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__free__">Livre / Manual</SelectItem>
+                {namedSchedules.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              O nome escolhido aparece como etiqueta nas tarefas e no calendário.
+            </p>
+          </div>
+        )}
         {!initial && (clientSchedule.length > 0 || contractedMinutes != null) && (
           <div className="rounded-lg border border-border bg-muted/40 p-3 text-xs">
             <p className="font-medium text-foreground">Configuração do cliente</p>
