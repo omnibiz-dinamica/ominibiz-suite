@@ -2485,6 +2485,7 @@ function TaskRowItem({
               <Repeat className="h-3 w-3" /> {AUTO_RECURRENCE_BADGE_LABEL}
             </span>
           )}
+          <ScheduleNameBadge name={t.schedule_name} />
         </div>
         {refusal && (
           <div className="mt-2 space-y-0.5 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs">
