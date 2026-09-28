@@ -425,18 +425,27 @@ function BillingControls({ company }: { company: AdminCompany }) {
   const currentTab = MODULE_TABS.find((t) => t.key === activeTab) ?? MODULE_TABS[0];
 
   const currency = COUNTRY_CURRENCY[country];
+  const parsedDiscount = Number(discountValue.replace(",", "."));
+  const safeDiscount = Number.isFinite(parsedDiscount) && parsedDiscount > 0 ? parsedDiscount : 0;
   const effectiveCompany = {
     billing_plan: plan,
     billing_cycle: cycle,
     billing_country: country,
     billing_currency: currency,
     enabled_modules: modules,
+    billing_discount_kind: discountKind,
+    billing_discount_value: safeDiscount,
   };
+  const subtotal = billingMonthlySubtotal(effectiveCompany);
+  const discount = billingDiscountAmount(effectiveCompany);
   const monthly = billingMonthlyTotal(effectiveCompany);
   const annual = billingAnnualTotal(effectiveCompany);
   const baseMonthly = planMonthlyPrice(plan, country);
   const addonsMonthly = moduleAddonsMonthly(modules);
   const planLimits = PLAN_OPTIONS[plan];
+  // Implantação nunca recebe desconto; é sempre dividida em entrada + 15 dias.
+  const setupFee = planSetupFee(plan, country);
+  const setup = billingSetupInstallments(setupFee);
 
   const toggleModule = (module: ModuleKey) => {
     if (MODULE_CATALOG[module].included) return;
@@ -457,6 +466,9 @@ function BillingControls({ company }: { company: AdminCompany }) {
           enabled_modules: modules,
           billing_base_monthly: baseMonthly,
           billing_addons_monthly: addonsMonthly,
+          billing_setup_fee: setupFee,
+          billing_discount_kind: discountKind,
+          billing_discount_value: discountKind === "none" ? 0 : safeDiscount,
           billing_notes: notes.trim() || null,
           business_vertical: vertical,
         })
