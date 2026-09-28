@@ -994,7 +994,14 @@ function TasksPage() {
                 ? `A tarefa "${deleting.title}" será removida das listas, calendário, folha de ponto e notificações. O histórico permanece registado para auditoria.`
                 : ""}
             </AlertDialogDescription>
+            {(deletingDocsCount ?? 0) > 0 && (
+              <p className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+                Atenção: esta tarefa tem {deletingDocsCount}{" "}
+                {deletingDocsCount === 1 ? "anexo" : "anexos"}. Ao confirmar, a tarefa e os anexos serão excluídos.
+              </p>
+            )}
           </AlertDialogHeader>
+
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteTask.isPending}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
