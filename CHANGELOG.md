@@ -1,3 +1,7 @@
+## 28092026-A
+- 001 (clientes · equipa): as duas categorias listam todos os ativos da empresa (vinculados primeiro, depois alfabética), 5 linhas visíveis com rolagem, pesquisa sem maiúsculas/acentos; vinculado inativo aparece com selo "Inativo" só para remoção; estados carregando/erro/vazio.
+- 002 (clientes · principal): trigger `trg_unlink_primary_on_inactivation` retira `is_primary` quando a pessoa fica inativa, com auditoria em `client_primary_audit`. `client_default_assignees` usa a regra completa de ativo. Sem ajuste retroativo.
+
 ## 27092026-B
 - 004 (inativos, regra global): seleção de pessoas passa a usar uma única regra no servidor, independente da empresa (`is_active`, estado cadastral e data de saída). Aplicada também em edição de tarefa, gestão do Ponto, configuração da empresa, recibos, cartões de combustível e reabertura de tickets; históricos mantêm o nome. A Lista Inativa usa a mesma regra e conserva o selo.
 - 001 (inativos, tipo A): nova RPC `company_active_member_options` (só ativos, filtro no servidor). Nova Tarefa, Reatribuir, edição de série, Equipa do cliente e sugestão de colega no Ponto passam a listar só ativos (consulta com `is_active = true`). Reatribuir mostra "Responsável atual" mesmo se inativo; edição de série mantém só o atual como "(Inativo)".
