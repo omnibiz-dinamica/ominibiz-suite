@@ -1089,29 +1089,27 @@ function ClientForm({
           ) : membersError ? (
             <p className="px-2 py-1 text-xs text-destructive">Não foi possível carregar os funcionários.</p>
           ) : (
-          <div className="space-y-3">
-            {(["habitual", "recurso"] as const).map((type) => {
-              const linked = sortedMembers.filter((m) => selected.has(m.id) && (assignmentTypes[m.id] ?? "habitual") === type && matchesTeamSearch(m));
+          <div className="space-y-1 rounded-lg border border-border p-2">
+            {(() => {
+              const linked = sortedMembers.filter((m) => selected.has(m.id) && matchesTeamSearch(m));
               const available = sortedMembers.filter((m) => !selected.has(m.id) && !m.inactive && matchesTeamSearch(m));
               const rows = [...linked, ...available];
-              return (
-              <div key={type} className="space-y-1 rounded-lg border border-border p-2">
-                <div className="px-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {type === "habitual" ? "Equipa habitual" : "Equipa de recurso / substituição"}
-                </div>
-                {rows.length === 0 ? (
+              if (rows.length === 0) {
+                return (
                   <p className="px-2 py-1 text-xs text-muted-foreground">
-                    {teamSearch.trim() ? "Nenhum funcionário encontrado." : "Nenhum funcionário nesta categoria."}
+                    {teamSearch.trim() ? "Nenhum funcionário encontrado." : "Nenhum funcionário disponível."}
                   </p>
-                ) : (
-                <div className="max-h-[11.5rem] overflow-y-auto" data-testid={`team-list-${type}`}>
+                );
+              }
+              return (
+                <div className="max-h-[11.5rem] overflow-y-auto" data-testid="team-list-habitual">
                 {rows.map((m) => {
                   const checked = selected.has(m.id);
-                  const memberType = checked ? (assignmentTypes[m.id] ?? "habitual") : type;
+                  const memberType = assignmentTypes[m.id] ?? "habitual";
                   return (
                     <div key={m.id} className="flex h-9 items-center justify-between gap-2 rounded px-2 hover:bg-accent">
                       <label className="flex min-w-0 items-center gap-2 text-sm">
-                        <input type="checkbox" checked={checked} onChange={() => toggleMember(m.id, type)} />
+                        <input type="checkbox" checked={checked} onChange={() => toggleMember(m.id, "habitual")} />
                         <span className="truncate">{m.full_name ?? m.id.slice(0, 8)}</span>
                         {m.inactive && (
                           <span className="shrink-0 rounded border border-border px-1 text-[10px] text-muted-foreground">Inativo</span>
@@ -1149,11 +1147,10 @@ function ClientForm({
                   );
                 })}
                 </div>
-                )}
-              </div>
               );
-            })}
+            })()}
           </div>
+
           )}
         </ModalSection>
     </form>
