@@ -44,6 +44,8 @@ import {
 } from "@/lib/locale";
 import { RoleGuard } from "@/components/RoleGuard";
 import { sendInviteEmail } from "@/lib/invites/send-invite-email";
+import { CommercialProposalDialog } from "@/components/admin/CommercialProposalDialog";
+
 
 export const Route = createFileRoute("/app/admin")({
   component: () => (
@@ -695,9 +697,26 @@ function BillingControls({ company }: { company: AdminCompany }) {
             maxLength={240}
           />
         </div>
-        <Button type="button" onClick={() => save.mutate()} disabled={save.isPending}>
-          {save.isPending ? "Salvando..." : "Salvar plano e módulos"}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <CommercialProposalDialog
+            proposal={{
+              companyName: company.name,
+              companySlug: company.slug,
+              plan,
+              cycle,
+              country,
+              currency,
+              modules,
+              discountKind,
+              discountValue: safeDiscount,
+              notes,
+            }}
+          />
+          <Button type="button" onClick={() => save.mutate()} disabled={save.isPending}>
+            {save.isPending ? "Salvando..." : "Salvar plano e módulos"}
+          </Button>
+        </div>
+
       </div>
     </div>
   );
