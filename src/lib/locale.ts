@@ -426,19 +426,20 @@ export const MODULE_TABS: Array<{
     key: "general",
     label: "Geral",
     vertical: null,
+    // Plano base primeiro, adicionais em seguida (decisão 2026-09-28).
     modules: [
       "core",
       "tasks",
       "time_clock",
       "hr",
       "support",
-      "finance",
+      "notes",
       "crm",
       "fleet",
       "whatsapp_ai",
       "bi_advanced",
       "ai_automations",
-      "notes",
+      "finance",
     ],
   },
   {
