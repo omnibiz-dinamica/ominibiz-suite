@@ -24,6 +24,8 @@ import {
   UserCog,
   CalendarDays,
   Clock,
+  Search,
+  X,
 } from "lucide-react";
 import { RoleGuard } from "@/components/RoleGuard";
 import { exportToExcel, exportToPdf, type ExportColumn } from "@/lib/exports";
