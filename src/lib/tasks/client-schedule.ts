@@ -13,6 +13,8 @@ import { scheduleRuleAppliesToDate } from "@/lib/tasks/client-schedule-rules";
 export type ClientScheduleSlot = {
   id: string;
   title: string;
+  /** Nome dado pelo gestor no cadastro do cliente (ex.: "Klein"). */
+  label?: string | null;
   weekdays: number[]; // 0 = domingo … 6 = sábado (mesmo índice de Date#getDay)
   startTime: string | null; // "HH:MM"
   endTime: string | null; // "HH:MM" derivado de duration_minutes
