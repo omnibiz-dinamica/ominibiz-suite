@@ -2848,6 +2848,11 @@ function TaskForm({
 
   const selectedClient = clients.find((client) => client.id === clientId);
   const selectedSchedule = clientSchedule.find((schedule) => schedule.id === selectedScheduleId) ?? null;
+  // Programações com nome no cadastro do cliente (ex.: "Klein", "Grote").
+  const namedSchedules = clientSchedule.filter(
+    (schedule) => Boolean(schedule.label) && schedule.id.startsWith("client-habitual:"),
+  );
+  const scheduleName = selectedSchedule?.label?.trim() || null;
   const contractedMinutes = selectedSchedule?.contractedMinutes ?? selectedClient?.contracted_minutes ?? null;
   const distributedMinutes = useMemo(
     () => distributeContractedMinutes(contractedMinutes, assignees.length),
