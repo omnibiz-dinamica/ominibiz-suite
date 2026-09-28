@@ -234,18 +234,45 @@ export const FREQUENCY_LABELS: Record<RecurrenceFrequency, string> = {
 /**
  * Frequência apresentada ao Gestor.
  *  • biweekly    = weekly + interval_weeks 2.
+ *  • weekly_2x / weekly_3x = weekly + exatamente 2 ou 3 dias da semana.
  *  • monthly_pos = monthly + monthly_rule { position, weekday }.
  */
-export type RecurrenceUiFrequency = RecurrenceFrequency | "biweekly" | "monthly_pos";
+export type RecurrenceUiFrequency =
+  | RecurrenceFrequency
+  | "biweekly"
+  | "monthly_pos"
+  | "weekly_2x"
+  | "weekly_3x";
 
 export const UI_FREQUENCY_LABELS: Record<RecurrenceUiFrequency, string> = {
   daily: "Diariamente",
-  weekly: "Semanalmente",
-  biweekly: "Semana sim, semana não (a cada 2 semanas)",
+  weekly: "Semanalmente (dias escolhidos)",
+  weekly_2x: "2x por semana",
+  weekly_3x: "3x por semana",
+  biweekly: "Quinzenal (semana sim, semana não)",
   monthly: "Mensalmente (dia do mês)",
   monthly_pos: "Mensalmente (posição no mês)",
   custom: "Personalizada",
 };
+
+/** Ordem canónica das frequências, partilhada entre Cliente e Tarefas. */
+export const UI_FREQUENCY_ORDER: RecurrenceUiFrequency[] = [
+  "daily",
+  "weekly",
+  "weekly_2x",
+  "weekly_3x",
+  "biweekly",
+  "monthly",
+  "monthly_pos",
+  "custom",
+];
+
+/** Quantidade exata de dias da semana exigida pela opção (null = livre). */
+export function weeklyDayQuota(f: RecurrenceUiFrequency): number | null {
+  if (f === "weekly_2x") return 2;
+  if (f === "weekly_3x") return 3;
+  return null;
+}
 
 export const MONTH_POSITIONS = [
   { value: 1, label: "Primeira" },
@@ -266,8 +293,10 @@ export function uiFrequencyToStored(f: RecurrenceUiFrequency): {
 } {
   if (f === "biweekly") return { frequency: "weekly", intervalWeeks: 2 };
   if (f === "monthly_pos") return { frequency: "monthly", intervalWeeks: 1 };
+  if (f === "weekly_2x" || f === "weekly_3x") return { frequency: "weekly", intervalWeeks: 1 };
   return { frequency: f, intervalWeeks: 1 };
 }
+
 
 /** Converte o par persistido na opção exibida ao Gestor. */
 export function storedToUiFrequency(
