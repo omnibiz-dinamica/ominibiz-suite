@@ -2059,6 +2059,7 @@ function CalendarTaskCard({
   transitionPending,
   refusalsByTask,
   memberNames,
+  groupMemberNames,
   selectedTaskIds,
   onToggleTaskSelection,
   onNoStartReason,
@@ -2156,10 +2157,13 @@ function CalendarTaskCard({
         ) : null}
         {task.task_group_id && (
           <span
-            className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+            className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
             title="Tarefa criada em equipe: cada responsável tem a sua própria tarefa, com ponto e conclusão independentes."
           >
-            <Users className="h-3 w-3" /> em equipe
+            <Users className="h-3 w-3" />
+            <span className="truncate">
+              {groupMemberNames?.get(task.task_group_id) ?? "Em equipe"}
+            </span>
           </span>
         )}
         {task.recurrence_id && (
