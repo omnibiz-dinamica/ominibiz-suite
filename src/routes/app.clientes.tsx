@@ -24,6 +24,8 @@ import {
   UserCog,
   CalendarDays,
   Clock,
+  Search,
+  X,
 } from "lucide-react";
 import { RoleGuard } from "@/components/RoleGuard";
 import { exportToExcel, exportToPdf, type ExportColumn } from "@/lib/exports";
@@ -88,6 +90,8 @@ function ClientsPage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<ClientRow | null>(null);
+  const [search, setSearch] = useState("");
+
 
   const { data: clients, isLoading } = useQuery({
     queryKey: ["clients", currentCompanyId, isManager, user?.id],
@@ -254,6 +258,26 @@ function ClientsPage() {
     { header: "Status", accessor: (c) => c.status, width: 60 },
   ];
 
+  const normalizeText = (value: string) =>
+    value
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+
+  const filteredClients = useMemo(() => {
+    const list = clients ?? [];
+    const term = normalizeText(search);
+    if (!term) return list;
+    return list.filter((c) =>
+      [c.name, c.address, c.phone, c.email, c.notes].some((field) =>
+        field ? normalizeText(String(field)).includes(term) : false,
+      ),
+    );
+  }, [clients, search]);
+
+
+
   const handleExport = (kind: "xlsx" | "pdf") => {
     const list = clients ?? [];
     if (list.length === 0) {
@@ -339,6 +363,35 @@ function ClientsPage() {
         )}
       </div>
 
+      {!isLoading && (clients ?? []).length > 0 && (
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative w-full sm:max-w-sm">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Pesquisar cliente por nome, morada ou contacto..."
+              className="pl-9 pr-9"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                title="Limpar pesquisa"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted-foreground hover:bg-muted"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          {search && (
+            <span className="text-xs text-muted-foreground">
+              {filteredClients.length} de {(clients ?? []).length} cliente(s)
+            </span>
+          )}
+        </div>
+      )}
+
       {isLoading ? (
         <div className="rounded-2xl border border-border bg-card px-5 py-12 text-center text-sm text-muted-foreground">
           Carregando...
@@ -355,9 +408,21 @@ function ClientsPage() {
               : "Você ainda não foi vinculado a nenhum cliente."}
           </p>
         </div>
+      ) : filteredClients.length === 0 ? (
+        <div className="rounded-2xl border border-border bg-card p-10 text-center">
+          <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-muted text-muted-foreground">
+            <Search className="h-6 w-6" />
+          </div>
+          <h2 className="mt-4 font-display text-xl font-semibold">Nenhum cliente encontrado</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Nada corresponde a “{search}”.</p>
+          <Button variant="outline" size="sm" className="mt-4" onClick={() => setSearch("")}>
+            Limpar pesquisa
+          </Button>
+        </div>
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {(clients ?? []).map((c) => {
+          {filteredClients.map((c) => {
+
             const team = assigneesByClient[c.id] ?? [];
             return (
               <li key={c.id} className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4">
