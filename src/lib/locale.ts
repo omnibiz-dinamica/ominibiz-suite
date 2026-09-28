@@ -160,25 +160,25 @@ export const MODULE_CATALOG: Record<
 > = {
   core: {
     label: "Base OmniBiz",
-    description: "Dashboard, empresa, notificacoes e perfil.",
+    description: "Dashboard, empresa, notificações e perfil.",
     addonMonthly: 0,
     included: true,
   },
   tasks: {
     label: "Planeamento e tarefas",
-    description: "Tarefas, calendario, recorrencias e planeamento operacional.",
+    description: "Clientes, tarefas, calendário, recorrências e planeamento operacional.",
     addonMonthly: 0,
     included: true,
   },
   time_clock: {
     label: "Folha de ponto",
-    description: "Registo de ponto, gestao e validacoes operacionais.",
+    description: "Registo de ponto, gestão e validações operacionais.",
     addonMonthly: 0,
     included: true,
   },
   hr: {
     label: "RH",
-    description: "Funcionarios, ferias/ausencias e recibos.",
+    description: "Funcionários, férias/ausências e recibos.",
     addonMonthly: 0,
     included: true,
   },
