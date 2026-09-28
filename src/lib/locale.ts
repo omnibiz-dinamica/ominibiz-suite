@@ -540,20 +540,64 @@ export function moduleAddonsMonthly(modules: CompanyBilling["enabled_modules"]):
   return normalizeModules(modules).reduce((total, module) => total + MODULE_CATALOG[module].addonMonthly, 0);
 }
 
-export function billingMonthlyTotal(company: CompanyBilling): number {
+/** Mensalidade antes do desconto: plano + adicionais ativos. */
+export function billingMonthlySubtotal(company: CompanyBilling): number {
   const plan = company.billing_plan ?? "professional";
   return planMonthlyPrice(plan, company.billing_country) + moduleAddonsMonthly(company.enabled_modules);
 }
 
+function roundCents(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+export function normalizeDiscountKind(kind: unknown): BillingDiscountKind {
+  return kind === "percent" || kind === "amount" ? kind : "none";
+}
+
+/**
+ * Desconto aplicado SÓ à mensalidade (decisão 2026-09-28).
+ * Percentagem limitada a 100% e valor fixo limitado ao subtotal: a mensalidade
+ * final nunca fica negativa.
+ */
+export function billingDiscountAmount(company: CompanyBilling): number {
+  const subtotal = billingMonthlySubtotal(company);
+  const kind = normalizeDiscountKind(company.billing_discount_kind);
+  const raw = Number(company.billing_discount_value ?? 0);
+  if (kind === "none" || !Number.isFinite(raw) || raw <= 0) return 0;
+  const discount = kind === "percent" ? (subtotal * Math.min(raw, 100)) / 100 : raw;
+  return roundCents(Math.min(discount, subtotal));
+}
+
+/** Mensalidade final já com desconto. */
+export function billingMonthlyTotal(company: CompanyBilling): number {
+  return roundCents(billingMonthlySubtotal(company) - billingDiscountAmount(company));
+}
+
 export function billingAnnualTotal(company: CompanyBilling): number {
-  return billingMonthlyTotal(company) * 10;
+  return roundCents(billingMonthlyTotal(company) * 10);
+}
+
+export function planSetupFee(plan: BillingPlan, country: string | null | undefined): number {
+  return PLAN_SETUP_PRICES[normalizeBillingCountry(country)][plan];
+}
+
+/**
+ * Implantação sem desconto, dividida em 2x: entrada + 15 dias.
+ * Cêntimos ímpares vão para a entrada, garantindo soma exata.
+ */
+export function billingSetupInstallments(total: number): { first: number; second: number } {
+  const safe = Number.isFinite(total) && total > 0 ? roundCents(total) : 0;
+  const second = Math.floor((safe * 100) / 2) / 100;
+  return { first: roundCents(safe - second), second };
 }
 
 export function formatBillingAmount(value: number, currency: string | null | undefined): string {
   const resolved = currency || "EUR";
+  const hasCents = Math.round(value * 100) % 100 !== 0;
   return new Intl.NumberFormat(resolved === "BRL" ? "pt-BR" : "pt-PT", {
     style: "currency",
     currency: resolved,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: hasCents ? 2 : 0,
+    maximumFractionDigits: hasCents ? 2 : 0,
   }).format(value);
 }
