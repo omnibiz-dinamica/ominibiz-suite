@@ -103,6 +103,9 @@ export const RESTAURANT_ENABLED_MODULES: ModuleKey[] = [
   "restaurant_delivery_zones",
 ];
 
+/** Desconto aplicado apenas à mensalidade (decisão 2026-09-28). */
+export type BillingDiscountKind = "none" | "percent" | "amount";
+
 export type CompanyBilling = {
   billing_plan?: BillingPlan | null;
   billing_cycle?: BillingCycle | null;
@@ -111,6 +114,8 @@ export type CompanyBilling = {
   enabled_modules?: ModuleKey[] | string[] | null;
   employee_limit?: number | null;
   user_limit?: number | null;
+  billing_discount_kind?: BillingDiscountKind | string | null;
+  billing_discount_value?: number | null;
 };
 
 export const PLAN_OPTIONS: Record<
@@ -123,11 +128,23 @@ export const PLAN_OPTIONS: Record<
   enterprise: { label: "Enterprise", employeeLimit: null, userLimit: null, support: "Dedicado" },
 };
 
+/**
+ * Tabela comercial 2026-09-28 — países europeus atualizados.
+ * Brasil mantém os valores atuais por decisão do Super Admin.
+ */
 export const PLAN_PRICES: Record<BillingCountry, Record<BillingPlan, number>> = {
-  PT: { starter: 29, professional: 59, business: 99, enterprise: 199 },
-  BE: { starter: 29, professional: 59, business: 99, enterprise: 199 },
-  ES: { starter: 29, professional: 59, business: 99, enterprise: 199 },
+  PT: { starter: 80, professional: 115, business: 150, enterprise: 185 },
+  BE: { starter: 80, professional: 115, business: 150, enterprise: 185 },
+  ES: { starter: 80, professional: 115, business: 150, enterprise: 185 },
   BR: { starter: 99, professional: 179, business: 299, enterprise: 599 },
+};
+
+/** Implantação (pagamento único) = 2x a mensalidade do plano. */
+export const PLAN_SETUP_PRICES: Record<BillingCountry, Record<BillingPlan, number>> = {
+  PT: { starter: 160, professional: 230, business: 300, enterprise: 370 },
+  BE: { starter: 160, professional: 230, business: 300, enterprise: 370 },
+  ES: { starter: 160, professional: 230, business: 300, enterprise: 370 },
+  BR: { starter: 198, professional: 358, business: 598, enterprise: 1198 },
 };
 
 export const COUNTRY_CURRENCY: Record<BillingCountry, string> = {
