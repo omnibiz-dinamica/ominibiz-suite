@@ -80,6 +80,7 @@ interface AssigneeRow {
 interface Member {
   id: string;
   full_name: string | null;
+  inactive?: boolean;
 }
 
 function ClientsPage() {
@@ -181,7 +182,7 @@ function ClientsPage() {
     return acc;
   }, {});
   // Tipo A — equipa do cliente: só ativos, filtrado no servidor.
-  const { data: activeMembers } = useQuery({
+  const { data: activeMembers, isLoading: activeMembersLoading, error: activeMembersError } = useQuery({
     queryKey: ["members-active-clients", currentCompanyId],
     queryFn: async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -313,7 +314,9 @@ function ClientsPage() {
                   companyId={currentCompanyId}
                   userId={user!.id}
                   initial={editing}
-                  members={[...(activeMembers ?? []), ...(members ?? []).filter((m) => !(activeMembers ?? []).some((x) => x.id === m.id) && (editing ? (assigneesByClient[editing.id] ?? []) : []).some((x) => x.user_id === m.id))]}
+                  members={[...(activeMembers ?? []), ...(members ?? []).filter((m) => !(activeMembers ?? []).some((x) => x.id === m.id) && (editing ? (assigneesByClient[editing.id] ?? []) : []).some((x) => x.user_id === m.id)).map((m) => ({ ...m, inactive: true }))]}
+                  membersLoading={activeMembersLoading}
+                  membersError={!!activeMembersError}
                   assignees={editing ? (assigneesByClient[editing.id] ?? []) : []}
                   onDone={() => {
                     setOpen(false);
@@ -549,7 +552,7 @@ function ClientForm({
     if (next.address !== null && next.address !== address) setAddress(next.address);
   };
 
-  const toggleMember = (id: string) => {
+  const toggleMember = (id: string, type: ClientTeamType = "habitual") => {
     setSelected((s) => {
       const n = new Set(s);
       if (n.has(id)) {
@@ -557,25 +560,27 @@ function ClientForm({
         if (primary === id) setPrimary("");
       } else {
         n.add(id);
-        setAssignmentTypes((current) => ({ ...current, [id]: current[id] ?? "habitual" }));
+        setAssignmentTypes((current) => ({ ...current, [id]: type }));
       }
       return n;
     });
   };
 
-  // 11092026-004a — pesquisa opcional por nome. Vazio mostra a lista completa
-  // e a pesquisa nunca esconde quem já está selecionado.
+  // Pesquisa sem distinção de maiúsculas/acentos; alcança qualquer ativo da empresa.
   const [teamSearch, setTeamSearch] = useState("");
   const normalizeName = (value: string) =>
     value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
   const matchesTeamSearch = (member: { id: string; full_name: string | null }) => {
     const query = normalizeName(teamSearch);
     if (!query) return true;
-    if (selected.has(member.id)) return true;
     return query
       .split(/\s+/)
       .every((token) => normalizeName(member.full_name ?? "").includes(token));
   };
+  const sortedMembers = useMemo(
+    () => [...members].sort((a, b) => (a.full_name ?? "").localeCompare(b.full_name ?? "", "pt-BR", { sensitivity: "base" })),
+    [members],
+  );
 
   const setAssignmentType = (userId: string, type: ClientTeamType) => {
     setAssignmentTypes((current) => ({ ...current, [userId]: type }));
@@ -1062,8 +1067,7 @@ function ClientForm({
         </div>
       </div>
 
-      {members.length > 0 && (
-        <ModalSection title="Equipa responsável" icon={UserCog}>
+      <ModalSection title="Equipa responsável" icon={UserCog}>
           <p className="mb-2 text-xs text-muted-foreground">
             A equipa habitual é pré-selecionada nas novas tarefas. Recursos só entram na operação quando forem atribuídos explicitamente.
           </p>
@@ -1076,22 +1080,38 @@ function ClientForm({
               onChange={(e) => setTeamSearch(e.target.value)}
             />
           </div>
+          {membersLoading ? (
+            <p className="px-2 py-1 text-xs text-muted-foreground">A carregar funcionários…</p>
+          ) : membersError ? (
+            <p className="px-2 py-1 text-xs text-destructive">Não foi possível carregar os funcionários.</p>
+          ) : (
           <div className="space-y-3">
-            {(["habitual", "recurso"] as const).map((type) => (
+            {(["habitual", "recurso"] as const).map((type) => {
+              const linked = sortedMembers.filter((m) => selected.has(m.id) && (assignmentTypes[m.id] ?? "habitual") === type && matchesTeamSearch(m));
+              const available = sortedMembers.filter((m) => !selected.has(m.id) && !m.inactive && matchesTeamSearch(m));
+              const rows = [...linked, ...available];
+              return (
               <div key={type} className="space-y-1 rounded-lg border border-border p-2">
                 <div className="px-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                   {type === "habitual" ? "Equipa habitual" : "Equipa de recurso / substituição"}
                 </div>
-                {members.filter(matchesTeamSearch).map((m) => {
+                {rows.length === 0 ? (
+                  <p className="px-2 py-1 text-xs text-muted-foreground">
+                    {teamSearch.trim() ? "Nenhum funcionário encontrado." : "Nenhum funcionário nesta categoria."}
+                  </p>
+                ) : (
+                <div className="max-h-[11.5rem] overflow-y-auto" data-testid={`team-list-${type}`}>
+                {rows.map((m) => {
                   const checked = selected.has(m.id);
                   const memberType = checked ? (assignmentTypes[m.id] ?? "habitual") : type;
-                  if (!checked && type !== "habitual") return null;
-                  if (checked && memberType !== type) return null;
                   return (
-                    <div key={m.id} className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-accent">
+                    <div key={m.id} className="flex h-9 items-center justify-between gap-2 rounded px-2 hover:bg-accent">
                       <label className="flex min-w-0 items-center gap-2 text-sm">
-                        <input type="checkbox" checked={checked} onChange={() => toggleMember(m.id)} />
+                        <input type="checkbox" checked={checked} onChange={() => toggleMember(m.id, type)} />
                         <span className="truncate">{m.full_name ?? m.id.slice(0, 8)}</span>
+                        {m.inactive && (
+                          <span className="shrink-0 rounded border border-border px-1 text-[10px] text-muted-foreground">Inativo</span>
+                        )}
                       </label>
                       {checked && (
                         <div className="flex shrink-0 items-center gap-2 text-[11px] text-muted-foreground">
@@ -1113,7 +1133,7 @@ function ClientForm({
                             />
                             recurso
                           </label>
-                          {memberType === "habitual" && (
+                          {memberType === "habitual" && !m.inactive && (
                             <label className="flex items-center gap-1">
                               <input type="radio" name="primary" checked={primary === m.id} onChange={() => setPrimary(m.id)} />
                               principal
@@ -1124,14 +1144,14 @@ function ClientForm({
                     </div>
                   );
                 })}
-                {!members.some((m) => selected.has(m.id) && (assignmentTypes[m.id] ?? "habitual") === type) && (
-                  <p className="px-2 py-1 text-xs text-muted-foreground">Nenhum funcionário nesta categoria.</p>
+                </div>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
+          )}
         </ModalSection>
-      )}
     </form>
     </ModalBody>
     <ModalFooter>
