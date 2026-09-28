@@ -3139,6 +3139,7 @@ function TaskForm({
               )
               .map((slot) => ({
                 weekdays: slot.weekdays,
+                schedule_name: slot.label ?? null,
                 start_time: slot.startTime,
                 duration_minutes: distributeContractedMinutes(
                   slot.contractedMinutes ?? slot.durationMinutes,
