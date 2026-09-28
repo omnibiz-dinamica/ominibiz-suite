@@ -173,6 +173,10 @@ export function buildProposalHtml(input: ProposalInput, issuedAt: Date = new Dat
   .sign div { flex: 1; border-top: 1px solid #10182a; padding-top: 6px; font-size: 10px; color: #5b6880; }
   footer.doc { margin-top: 18px; border-top: 1px solid #dde3ec; padding-top: 8px; font-size: 9.5px; color: #5b6880; text-align: center; }
   .avoid-break { page-break-inside: avoid; }
+  h2 { page-break-after: avoid; break-after: avoid; }
+  tr { page-break-inside: avoid; }
+  thead { display: table-header-group; }
+
   @media print { .no-print { display: none !important; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 </style>
 </head>
