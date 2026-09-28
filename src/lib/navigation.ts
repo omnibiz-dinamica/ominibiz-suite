@@ -220,7 +220,7 @@ function managerGroups(args: { superAdminOperating: boolean; vertical: BusinessV
       id: "outros",
       label: "Outros",
       items: [
-        { to: "/app/notas", label: "Notas", icon: FileText, module: "notes", soon: true },
+        { to: "/app/notas", label: "Notas", icon: FileText, module: "notes" },
         { to: "/app/perfil", label: "Perfil", icon: UserCircle },
       ],
     },
