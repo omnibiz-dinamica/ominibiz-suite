@@ -1651,6 +1651,7 @@ export type Database = {
           dependents_count: number | null
           driver_license_expires_at: string | null
           driver_license_number: string | null
+          first_name: string | null
           full_name: string | null
           health_card_expires_at: string | null
           health_card_number: string | null
@@ -1660,6 +1661,7 @@ export type Database = {
           initials_url: string | null
           is_active: boolean
           job_title: string | null
+          last_name: string | null
           main_doc_expires_at: string | null
           main_doc_number: string | null
           main_doc_type: string | null
@@ -1719,6 +1721,7 @@ export type Database = {
           dependents_count?: number | null
           driver_license_expires_at?: string | null
           driver_license_number?: string | null
+          first_name?: string | null
           full_name?: string | null
           health_card_expires_at?: string | null
           health_card_number?: string | null
@@ -1728,6 +1731,7 @@ export type Database = {
           initials_url?: string | null
           is_active?: boolean
           job_title?: string | null
+          last_name?: string | null
           main_doc_expires_at?: string | null
           main_doc_number?: string | null
           main_doc_type?: string | null
@@ -1787,6 +1791,7 @@ export type Database = {
           dependents_count?: number | null
           driver_license_expires_at?: string | null
           driver_license_number?: string | null
+          first_name?: string | null
           full_name?: string | null
           health_card_expires_at?: string | null
           health_card_number?: string | null
@@ -1796,6 +1801,7 @@ export type Database = {
           initials_url?: string | null
           is_active?: boolean
           job_title?: string | null
+          last_name?: string | null
           main_doc_expires_at?: string | null
           main_doc_number?: string | null
           main_doc_type?: string | null
@@ -6669,6 +6675,7 @@ export type Database = {
           dependents_count: number | null
           driver_license_expires_at: string | null
           driver_license_number: string | null
+          first_name: string | null
           full_name: string | null
           health_card_expires_at: string | null
           health_card_number: string | null
@@ -6678,6 +6685,7 @@ export type Database = {
           initials_url: string | null
           is_active: boolean
           job_title: string | null
+          last_name: string | null
           main_doc_expires_at: string | null
           main_doc_number: string | null
           main_doc_type: string | null
