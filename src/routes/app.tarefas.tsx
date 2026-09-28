@@ -1865,6 +1865,7 @@ function MiniTaskChip({
       title={lateMinutes != null ? `${task.title} · Início com atraso · ${formatStartedLateMinutes(lateMinutes)}` : task.title}
     >
       {start ? `${start} ` : ""}
+      {task.schedule_name ? `[${task.schedule_name}] ` : ""}
       {task.title}
     </button>
   );
