@@ -2853,17 +2853,10 @@ function TaskForm({
     if (contractedMinutes != null && assignees.length > 0) setManualEndOverride(false);
   }, [assignees.length, contractedMinutes]);
 
-  useEffect(() => {
-    if ((initial && !touchedAssignees) || manualEndOverride || contractedMinutes == null || !startDate || !startTime || assignees.length === 0) {
-      return;
-    }
-    const [minutesForFirstEmployee] = distributedMinutes;
-    if (minutesForFirstEmployee == null) return;
-    const derivedEnd = addWallMinutes(startDate, startTime, minutesForFirstEmployee);
-    if (!derivedEnd) return;
-    setEndDate((current) => (current === derivedEnd.date ? current : derivedEnd.date));
-    setEndTime((current) => (current === derivedEnd.time ? current : derivedEnd.time));
-  }, [assignees.length, contractedMinutes, distributedMinutes, initial, manualEndOverride, startDate, startTime, touchedAssignees]);
+  // A hora de fim é OPCIONAL e pertence exclusivamente ao gestor/super admin.
+  // O sistema nunca preenche nem deriva esse campo: se o gestor não digitar,
+  // a tarefa é gravada sem hora de fim (scheduled_end = null).
+
 
   /**
    * 12092026-001c — a data de fim acompanha o intervalo em wall clock:
