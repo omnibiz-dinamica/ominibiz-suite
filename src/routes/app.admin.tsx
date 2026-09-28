@@ -26,6 +26,8 @@ import {
   billingDiscountAmount,
   billingSetupInstallments,
   normalizeDiscountKind,
+  normalizeDiscountTarget,
+  billingSetupDiscountAmount,
   planSetupFee,
   countryDefaults,
   formatBillingAmount,
@@ -37,6 +39,7 @@ import {
   type BillingCycle,
   type BillingPlan,
   type BillingDiscountKind,
+  type BillingDiscountTarget,
   type CountryCode,
   type ModuleKey,
   type BusinessVertical,
@@ -77,6 +80,7 @@ type AdminCompany = {
   billing_setup_fee?: number | null;
   billing_discount_kind?: string | null;
   billing_discount_value?: number | null;
+  billing_discount_target?: string | null;
 };
 
 function AdminRouteContent() {
@@ -101,7 +105,7 @@ function AdminPage() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase.from("companies" as any) as any)
         .select(
-          "id, name, slug, country, currency, language, timezone, status, created_at, billing_plan, billing_cycle, billing_country, billing_currency, employee_limit, user_limit, enabled_modules, billing_notes, business_vertical, billing_setup_fee, billing_discount_kind, billing_discount_value",
+          "id, name, slug, country, currency, language, timezone, status, created_at, billing_plan, billing_cycle, billing_country, billing_currency, employee_limit, user_limit, enabled_modules, billing_notes, business_vertical, billing_setup_fee, billing_discount_kind, billing_discount_value, billing_discount_target",
         )
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -389,6 +393,9 @@ function BillingControls({ company }: { company: AdminCompany }) {
   const [discountKind, setDiscountKind] = useState<BillingDiscountKind>(
     normalizeDiscountKind(company.billing_discount_kind),
   );
+  const [discountTarget, setDiscountTarget] = useState<BillingDiscountTarget>(
+    normalizeDiscountTarget(company.billing_discount_target),
+  );
   const [discountValue, setDiscountValue] = useState(
     company.billing_discount_value != null && Number(company.billing_discount_value) > 0
       ? String(company.billing_discount_value)
@@ -437,6 +444,7 @@ function BillingControls({ company }: { company: AdminCompany }) {
     enabled_modules: modules,
     billing_discount_kind: discountKind,
     billing_discount_value: safeDiscount,
+    billing_discount_target: discountTarget,
   };
   const subtotal = billingMonthlySubtotal(effectiveCompany);
   const discount = billingDiscountAmount(effectiveCompany);
@@ -445,9 +453,11 @@ function BillingControls({ company }: { company: AdminCompany }) {
   const baseMonthly = planMonthlyPrice(plan, country);
   const addonsMonthly = moduleAddonsMonthly(modules);
   const planLimits = PLAN_OPTIONS[plan];
-  // Implantação nunca recebe desconto; é sempre dividida em entrada + 15 dias.
+  // Desconto vai para a implantação ou para a mensalidade, conforme o destino.
   const setupFee = planSetupFee(plan, country);
-  const setup = billingSetupInstallments(setupFee);
+  const setupDiscount = billingSetupDiscountAmount(effectiveCompany, setupFee);
+  const setupTotal = Math.round((setupFee - setupDiscount) * 100) / 100;
+  const setup = billingSetupInstallments(setupTotal);
 
   const toggleModule = (module: ModuleKey) => {
     if (MODULE_CATALOG[module].included) return;
@@ -471,6 +481,7 @@ function BillingControls({ company }: { company: AdminCompany }) {
           billing_setup_fee: setupFee,
           billing_discount_kind: discountKind,
           billing_discount_value: discountKind === "none" ? 0 : safeDiscount,
+          billing_discount_target: discountTarget,
           billing_notes: notes.trim() || null,
           business_vertical: vertical,
         })
@@ -545,7 +556,19 @@ function BillingControls({ company }: { company: AdminCompany }) {
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label>Desconto na mensalidade</Label>
+          <Label>Aplicar desconto em</Label>
+          <Select value={discountTarget} onValueChange={(v) => setDiscountTarget(v as BillingDiscountTarget)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="setup">Implantação</SelectItem>
+              <SelectItem value="monthly">Mensalidade</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Tipo de desconto</Label>
           <Select
             value={discountKind}
             onValueChange={(v) => {
@@ -609,8 +632,20 @@ function BillingControls({ company }: { company: AdminCompany }) {
         </div>
 
         <div className="rounded-lg border border-border bg-background px-3 py-2 text-sm">
-          <div className="text-xs font-medium text-muted-foreground">Implantação (sem desconto)</div>
-          <div className="mt-1 text-base font-semibold">{formatBillingAmount(setupFee, currency)}</div>
+          <div className="text-xs font-medium text-muted-foreground">Implantação</div>
+          {setupDiscount > 0 && (
+            <dl className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+              <div className="flex justify-between">
+                <dt>Valor de tabela</dt>
+                <dd>{formatBillingAmount(setupFee, currency)}</dd>
+              </div>
+              <div className="flex justify-between text-success">
+                <dt>Desconto {discountKind === "percent" ? `(${safeDiscount}%)` : ""}</dt>
+                <dd>− {formatBillingAmount(setupDiscount, currency)}</dd>
+              </div>
+            </dl>
+          )}
+          <div className="mt-1 text-base font-semibold">{formatBillingAmount(setupTotal, currency)}</div>
           <dl className="mt-2 space-y-0.5 text-xs text-muted-foreground">
             <div className="flex justify-between">
               <dt>1ª parcela · entrada</dt>
@@ -709,6 +744,7 @@ function BillingControls({ company }: { company: AdminCompany }) {
               modules,
               discountKind,
               discountValue: safeDiscount,
+              discountTarget,
               notes,
             }}
           />
