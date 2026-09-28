@@ -719,9 +719,10 @@ function TasksPage() {
   });
 
   // Status que podem ser excluídos (tarefas que ainda não foram iniciadas).
-  // A presença de histórico operacional (folha de ponto, documentos)
-  // é validada no servidor e devolve a mensagem padrão.
+  // Anexos não bloqueiam: apenas o histórico real de ponto é validado no
+  // servidor. O modal informa o gestor quando existem ficheiros anexados.
   const DELETABLE_STATUSES: TaskRow["status"][] = ["pendente", "autorizado", "cancelado", "ausente"];
+
   const canDelete = (t: TaskRow) => isManager && DELETABLE_STATUSES.includes(t.status);
 
   const handleDeleteRequest = (t: TaskRow) => {
