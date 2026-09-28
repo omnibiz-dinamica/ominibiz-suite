@@ -347,14 +347,14 @@ export const MODULE_CATALOG: Record<
 };
 
 
+/** Plano base (decisão 2026-09-28): Notas passa a ser padrão; adicionais ficam desmarcados. */
 export const DEFAULT_ENABLED_MODULES: ModuleKey[] = [
   "core",
   "tasks",
   "time_clock",
   "hr",
   "support",
-  "crm",
-  "fleet",
+  "notes",
   "finance",
 ];
 
