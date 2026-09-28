@@ -1832,6 +1832,19 @@ function CalendarDayColumn({
   );
 }
 
+/** Etiqueta da programação do cliente (ex.: Klein / Grote). */
+function ScheduleNameBadge({ name }: { name?: string | null }) {
+  if (!name) return null;
+  return (
+    <span
+      className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary"
+      title={`Programação do cliente: ${name}`}
+    >
+      {name}
+    </span>
+  );
+}
+
 function MiniTaskChip({
   task,
   startedAt,
