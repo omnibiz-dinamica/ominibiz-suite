@@ -3,7 +3,13 @@ export type ScheduleRule = {
   cycleLengthWeeks?: number | null;
   cyclePosition?: number | null;
   cycleAnchorDate?: string | null;
+  /** Mensal por dia do mês (1..28). */
+  monthlyDayOfMonth?: number | null;
+  /** Mensal por posição: 1..4 ou -1 (última) + dia da semana. */
+  monthlyPosition?: number | null;
+  monthlyWeekday?: number | null;
 };
+
 
 function dateParts(dateKey: string): [number, number, number] | null {
   const parts = dateKey.split("-").map(Number);
@@ -30,8 +36,19 @@ export function scheduleRuleAppliesToDate(rule: ScheduleRule, dateKey: string): 
   const date = dateParts(dateKey);
   if (!date) return false;
   const dow = new Date(Date.UTC(date[0], date[1] - 1, date[2])).getUTCDay();
+  // Regras mensais não dependem dos dias da semana selecionados.
+  if (rule.monthlyDayOfMonth != null) return date[2] === rule.monthlyDayOfMonth;
+  if (rule.monthlyPosition != null && rule.monthlyWeekday != null) {
+    if (dow !== rule.monthlyWeekday) return false;
+    if (rule.monthlyPosition === -1) {
+      const daysInMonth = new Date(Date.UTC(date[0], date[1], 0)).getUTCDate();
+      return date[2] + 7 > daysInMonth;
+    }
+    return Math.ceil(date[2] / 7) === rule.monthlyPosition;
+  }
   if (rule.weekdays.length > 0 && !rule.weekdays.includes(dow)) return false;
   const cycleLength = rule.cycleLengthWeeks && rule.cycleLengthWeeks > 1 ? rule.cycleLengthWeeks : null;
   if (!cycleLength || rule.cyclePosition == null || !rule.cycleAnchorDate) return true;
   return cyclePositionForDate(dateKey, rule.cycleAnchorDate, cycleLength) === rule.cyclePosition;
 }
+

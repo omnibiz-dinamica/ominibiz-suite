@@ -13,6 +13,9 @@ import {
 import {
   MONTH_POSITIONS,
   UI_FREQUENCY_LABELS,
+  UI_FREQUENCY_ORDER,
+  weeklyDayQuota,
+
   WEEKDAY_FULL,
   WEEKDAY_LABELS,
   describeRecurrence,
@@ -80,11 +83,18 @@ export function RecurrenceForm({
     onChange({ ...value, [k]: v });
 
   const [open, setOpen] = useState(value.enabled);
+  // "2x/3x por semana" são weekly com um número exato de dias: a escolha do
+  // gestor fica em estado local porque o par persistido não a distingue.
+  const [weeklyChoice, setWeeklyChoice] = useState<"weekly_2x" | "weekly_3x" | null>(null);
   const monthlyRule =
     value.monthPosition != null
       ? { position: value.monthPosition, weekday: value.monthWeekday }
       : { day_of_month: value.dayOfMonth };
-  const uiFrequency = storedToUiFrequency(value.frequency, value.intervalWeeks, monthlyRule);
+  const storedUiFrequency = storedToUiFrequency(value.frequency, value.intervalWeeks, monthlyRule);
+  const uiFrequency: RecurrenceUiFrequency =
+    storedUiFrequency === "weekly" && weeklyChoice ? weeklyChoice : storedUiFrequency;
+  const dayQuota = weeklyDayQuota(uiFrequency);
+
   const previewInput = {
     frequency: value.frequency,
     intervalWeeks: value.intervalWeeks,
@@ -139,28 +149,36 @@ export function RecurrenceForm({
             <Select
               value={uiFrequency}
               onValueChange={(v) => {
-                const stored = uiFrequencyToStored(v as RecurrenceUiFrequency);
+                const choice = v as RecurrenceUiFrequency;
+                const stored = uiFrequencyToStored(choice);
+                setWeeklyChoice(choice === "weekly_2x" || choice === "weekly_3x" ? choice : null);
                 // "Semana sim, semana não" ancora no dia da semana da data inicial.
                 const anchorDow = value.startDate
                   ? new Date(`${value.startDate}T12:00:00`).getDay()
                   : new Date().getDay();
+                const quota = weeklyDayQuota(choice);
                 onChange({
                   ...value,
                   frequency: stored.frequency,
                   intervalWeeks: stored.intervalWeeks,
-                  weekdays: v === "biweekly" ? [anchorDow] : value.weekdays,
+                  weekdays:
+                    choice === "biweekly"
+                      ? [anchorDow]
+                      : quota != null
+                        ? value.weekdays.slice(0, quota)
+                        : value.weekdays,
                   selectedDates: [],
-                  startDate: v === "custom" ? "" : value.startDate,
-                  endDate: v === "custom" ? "" : value.endDate,
+                  startDate: choice === "custom" ? "" : value.startDate,
+                  endDate: choice === "custom" ? "" : value.endDate,
                   monthPosition:
-                    v === "monthly_pos" ? (value.monthPosition ?? -1) : null,
-                  monthWeekday: v === "monthly_pos" ? (value.monthPosition != null ? value.monthWeekday : anchorDow) : value.monthWeekday,
+                    choice === "monthly_pos" ? (value.monthPosition ?? -1) : null,
+                  monthWeekday: choice === "monthly_pos" ? (value.monthPosition != null ? value.monthWeekday : anchorDow) : value.monthWeekday,
                 });
               }}
             >
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {(["daily", "weekly", "biweekly", "monthly", "monthly_pos", "custom"] as RecurrenceUiFrequency[]).map((f) => (
+                {UI_FREQUENCY_ORDER.map((f) => (
                   <SelectItem key={f} value={f}>{UI_FREQUENCY_LABELS[f]}</SelectItem>
                 ))}
               </SelectContent>
@@ -178,6 +196,11 @@ export function RecurrenceForm({
           {value.frequency === "weekly" && (
             <div className="space-y-1.5">
               <Label>Dias da semana</Label>
+              {dayQuota != null && (
+                <p className="text-[11px] text-muted-foreground">
+                  Escolha exatamente {dayQuota} dias de atendimento.
+                </p>
+              )}
               <div className="flex flex-wrap gap-1.5">
                 {WEEKDAY_LABELS.map((lbl, i) => {
                   const active = value.weekdays.includes(i);
@@ -186,12 +209,16 @@ export function RecurrenceForm({
                       key={i}
                       type="button"
                       onClick={() => {
+                        const added = [...value.weekdays, i].sort();
                         const next = active
                           ? value.weekdays.filter((x) => x !== i)
-                          : [...value.weekdays, i].sort();
+                          : dayQuota != null && added.length > dayQuota
+                            ? added.slice(added.length - dayQuota)
+                            : added;
                         set("weekdays", next);
                       }}
                       className={`h-9 w-9 rounded-md border text-sm font-medium transition ${
+
                         active
                           ? "border-primary bg-primary text-primary-foreground"
                           : "border-border bg-background text-muted-foreground hover:border-primary/50"

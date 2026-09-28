@@ -269,28 +269,41 @@ function TasksPage() {
   const { data: tasks, isLoading } = useQuery({
     queryKey: ["tasks", currentCompanyId, user?.id, isManager, view, search.task],
     queryFn: async () => {
-      let q = supabase
-        .from("tasks")
-        .select("*")
-        .order("scheduled_for", { ascending: true, nullsFirst: false })
-        .order("recurrence_date", { ascending: true, nullsFirst: false })
-        .order("due_at", { ascending: true, nullsFirst: false })
-        .order("created_at", { ascending: true, nullsFirst: false });
-      // O contexto da empresa faz parte da identidade da consulta. Sem este
-      // filtro, uma sessão com mais de uma empresa podia carregar tarefas de
-      // outro contexto enquanto o AuthContext ainda era inicializado.
-      if (currentCompanyId) q = q.eq("company_id", currentCompanyId);
-      if (!isManager) q = q.eq("assigned_to", user!.id);
-      // Tarefas removidas (soft delete) nunca são fonte de verdade operacional:
-      // sem este filtro a mesma ocorrência aparecia repetida para o gestor.
-      q = q.is("deleted_at", null);
-      if (search.task) q = q.eq("id", search.task);
-      else if (view === "archived") q = q.not("archived_at", "is", null);
-      else q = q.is("archived_at", null);
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data ?? []) as unknown as TaskRow[];
+      const buildQuery = () => {
+        let q = supabase
+          .from("tasks")
+          .select("*")
+          .order("scheduled_for", { ascending: true, nullsFirst: false })
+          .order("recurrence_date", { ascending: true, nullsFirst: false })
+          .order("due_at", { ascending: true, nullsFirst: false })
+          .order("created_at", { ascending: true, nullsFirst: false });
+        // O contexto da empresa faz parte da identidade da consulta. Sem este
+        // filtro, uma sessão com mais de uma empresa podia carregar tarefas de
+        // outro contexto enquanto o AuthContext ainda era inicializado.
+        if (currentCompanyId) q = q.eq("company_id", currentCompanyId);
+        if (!isManager) q = q.eq("assigned_to", user!.id);
+        // Tarefas removidas (soft delete) nunca são fonte de verdade operacional:
+        // sem este filtro a mesma ocorrência aparecia repetida para o gestor.
+        q = q.is("deleted_at", null);
+        if (search.task) q = q.eq("id", search.task);
+        else if (view === "archived") q = q.not("archived_at", "is", null);
+        else q = q.is("archived_at", null);
+        return q;
+      };
+      // A API corta a resposta em 1000 linhas: sem paginação, empresas com
+      // muitas ocorrências perdiam tarefas (e colaboradores) na listagem.
+      const pageSize = 1000;
+      const rows: TaskRow[] = [];
+      for (let page = 0; page < 50; page += 1) {
+        const { data, error } = await buildQuery().range(page * pageSize, page * pageSize + pageSize - 1);
+        if (error) throw error;
+        const batch = (data ?? []) as unknown as TaskRow[];
+        rows.push(...batch);
+        if (batch.length < pageSize) break;
+      }
+      return rows;
     },
+
     enabled: !!user && !!currentCompanyId,
     // 11092026-002c — voltar à aba/janela nunca atualiza a lista. O estado
     // atual (filtros, seleção, modal, formulário) é a fonte de verdade; a
@@ -1388,6 +1401,14 @@ function TasksPage() {
           members={members ?? []}
           clients={clientsList ?? []}
           groupBy={calendarGroup}
+          seedAssigneeIds={
+            calendarGroup === "assignee"
+              ? selectedEmployeeIds.length > 0
+                ? selectedEmployeeIds
+                : (activeMembers ?? []).map((m) => m.id)
+              : []
+          }
+
           userId={user!.id}
           isManager={isManager}
           onEdit={setEditing}
@@ -1499,6 +1520,7 @@ function TaskPlanningCalendar({
   members,
   clients,
   groupBy,
+  seedAssigneeIds,
   ...handlers
 }: RowHandlers & {
   tasks: TaskRow[];
@@ -1506,6 +1528,9 @@ function TaskPlanningCalendar({
   members: { id: string; full_name: string | null }[];
   clients: ClientOption[];
   groupBy: "assignee" | "client" | "all";
+  /** Colaboradores que devem aparecer mesmo sem tarefas no período. */
+  seedAssigneeIds?: string[];
+
 }) {
   const [mode, setMode] = useState<CalendarMode>("week");
   const [cursor, setCursor] = useState(() => new Date());
@@ -1564,6 +1589,12 @@ function TaskPlanningCalendar({
   );
 
   const groups = new Map<string, TaskRow[]>();
+  // Na vista por colaborador, toda a equipa aparece — quem não tem tarefas no
+  // período fica com o bloco vazio, sem desaparecer da lista.
+  if (groupBy === "assignee") {
+    for (const id of seedAssigneeIds ?? []) if (!groups.has(id)) groups.set(id, []);
+  }
+
   for (const task of tasks) {
     const key =
       groupBy === "all"

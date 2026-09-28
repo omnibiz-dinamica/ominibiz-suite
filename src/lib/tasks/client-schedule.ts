@@ -22,7 +22,12 @@ export type ClientScheduleSlot = {
   contractedMinutes: number | null;
   punchMode: string | null;
   frequency: string;
+  /** Opção escolhida pelo gestor (catálogo unificado Cliente/Tarefas). */
+  uiFrequency?: string | null;
   intervalWeeks: number | null;
+  monthlyDayOfMonth?: number | null;
+  monthlyPosition?: number | null;
+  monthlyWeekday?: number | null;
   scheduleType: "fixed" | "flexible";
   cycleLengthWeeks?: number | null;
   cyclePosition?: number | null;
@@ -37,7 +42,12 @@ export type ClientHabitualSchedule = {
   startTime: string | null;
   endTime: string | null;
   contractedMinutes?: number | null;
-  frequency?: "weekly" | "cycle";
+  frequency?: "weekly" | "cycle" | "monthly";
+  /** Opção do catálogo unificado: daily/weekly/weekly_2x/weekly_3x/biweekly/cycle/monthly/monthly_pos. */
+  uiFrequency?: string | null;
+  monthlyDayOfMonth?: number | null;
+  monthlyPosition?: number | null;
+  monthlyWeekday?: number | null;
   cycleLengthWeeks?: number | null;
   cyclePosition?: number | null;
   cycleAnchorDate?: string | null;
@@ -85,7 +95,17 @@ export function parseHabitualSchedule(value: unknown): ClientHabitualSchedule[] 
     const weekdays = Array.isArray(row.weekdays)
       ? row.weekdays.filter((day): day is number => Number.isInteger(day) && day >= 0 && day <= 6)
       : [];
-    if (weekdays.length === 0) return [];
+    const monthlyDayOfMonth = positiveInteger(row.monthly_day_of_month);
+    const monthlyPosition =
+      Number.isInteger(row.monthly_position) && (row.monthly_position as number) !== 0
+        ? (row.monthly_position as number)
+        : null;
+    const monthlyWeekday =
+      Number.isInteger(row.monthly_weekday) && (row.monthly_weekday as number) >= 0 && (row.monthly_weekday as number) <= 6
+        ? (row.monthly_weekday as number)
+        : null;
+    const isMonthly = monthlyDayOfMonth != null || (monthlyPosition != null && monthlyWeekday != null);
+    if (weekdays.length === 0 && !isMonthly) return [];
     const mode = normaliseMode(row.mode);
     // Flexible means the times are optional, not that persisted times must be
     // discarded. A configured pair remains useful as a suggestion for tasks.
@@ -106,7 +126,20 @@ export function parseHabitualSchedule(value: unknown): ClientHabitualSchedule[] 
       startTime,
       endTime,
       contractedMinutes,
-      frequency: row.frequency === "cycle" || cycleLengthWeeks ? "cycle" : "weekly",
+      frequency: isMonthly ? "monthly" : row.frequency === "cycle" || cycleLengthWeeks ? "cycle" : "weekly",
+      uiFrequency:
+        typeof row.ui_frequency === "string"
+          ? row.ui_frequency
+          : isMonthly
+            ? monthlyDayOfMonth != null
+              ? "monthly"
+              : "monthly_pos"
+            : cycleLengthWeeks
+              ? "cycle"
+              : "weekly",
+      monthlyDayOfMonth,
+      monthlyPosition,
+      monthlyWeekday,
       cycleLengthWeeks,
       cyclePosition,
       cycleAnchorDate: normaliseDate(row.cycle_anchor_date),
@@ -160,8 +193,12 @@ export async function fetchClientSchedule(clientId: string): Promise<ClientSched
         : null),
     contractedMinutes: slot.contractedMinutes ?? contractedMinutes,
     punchMode: null,
-    frequency: slot.frequency === "cycle" ? "cycle" : "weekly",
+    frequency: slot.frequency === "cycle" ? "cycle" : slot.frequency === "monthly" ? "monthly" : "weekly",
+    uiFrequency: slot.uiFrequency ?? null,
     intervalWeeks: slot.cycleLengthWeeks ?? 1,
+    monthlyDayOfMonth: slot.monthlyDayOfMonth ?? null,
+    monthlyPosition: slot.monthlyPosition ?? null,
+    monthlyWeekday: slot.monthlyWeekday ?? null,
     scheduleType: slot.mode,
     cycleLengthWeeks: slot.cycleLengthWeeks,
     cyclePosition: slot.cyclePosition,
