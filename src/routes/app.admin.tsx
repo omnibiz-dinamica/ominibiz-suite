@@ -22,6 +22,11 @@ import {
   normalizeBusinessVertical,
   billingAnnualTotal,
   billingMonthlyTotal,
+  billingMonthlySubtotal,
+  billingDiscountAmount,
+  billingSetupInstallments,
+  normalizeDiscountKind,
+  planSetupFee,
   countryDefaults,
   formatBillingAmount,
   moduleAddonsMonthly,
@@ -31,6 +36,7 @@ import {
   slugify,
   type BillingCycle,
   type BillingPlan,
+  type BillingDiscountKind,
   type CountryCode,
   type ModuleKey,
   type BusinessVertical,
@@ -66,6 +72,9 @@ type AdminCompany = {
   enabled_modules?: ModuleKey[] | string[] | null;
   billing_notes?: string | null;
   business_vertical?: string | null;
+  billing_setup_fee?: number | null;
+  billing_discount_kind?: string | null;
+  billing_discount_value?: number | null;
 };
 
 function AdminRouteContent() {
@@ -90,7 +99,7 @@ function AdminPage() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase.from("companies" as any) as any)
         .select(
-          "id, name, slug, country, currency, language, timezone, status, created_at, billing_plan, billing_cycle, billing_country, billing_currency, employee_limit, user_limit, enabled_modules, billing_notes, business_vertical",
+          "id, name, slug, country, currency, language, timezone, status, created_at, billing_plan, billing_cycle, billing_country, billing_currency, employee_limit, user_limit, enabled_modules, billing_notes, business_vertical, billing_setup_fee, billing_discount_kind, billing_discount_value",
         )
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -375,6 +384,14 @@ function BillingControls({ company }: { company: AdminCompany }) {
   const [country, setCountry] = useState<"PT" | "BE" | "ES" | "BR">(initialCountry);
   const [modules, setModules] = useState<ModuleKey[]>(normalizeModules(company.enabled_modules));
   const [notes, setNotes] = useState(company.billing_notes ?? "");
+  const [discountKind, setDiscountKind] = useState<BillingDiscountKind>(
+    normalizeDiscountKind(company.billing_discount_kind),
+  );
+  const [discountValue, setDiscountValue] = useState(
+    company.billing_discount_value != null && Number(company.billing_discount_value) > 0
+      ? String(company.billing_discount_value)
+      : "",
+  );
   const [vertical, setVertical] = useState<BusinessVertical>(normalizeBusinessVertical(company.business_vertical));
   const [activeTab, setActiveTab] = useState<ModuleTabKey>(() => {
     const v = normalizeBusinessVertical(company.business_vertical);
@@ -408,18 +425,27 @@ function BillingControls({ company }: { company: AdminCompany }) {
   const currentTab = MODULE_TABS.find((t) => t.key === activeTab) ?? MODULE_TABS[0];
 
   const currency = COUNTRY_CURRENCY[country];
+  const parsedDiscount = Number(discountValue.replace(",", "."));
+  const safeDiscount = Number.isFinite(parsedDiscount) && parsedDiscount > 0 ? parsedDiscount : 0;
   const effectiveCompany = {
     billing_plan: plan,
     billing_cycle: cycle,
     billing_country: country,
     billing_currency: currency,
     enabled_modules: modules,
+    billing_discount_kind: discountKind,
+    billing_discount_value: safeDiscount,
   };
+  const subtotal = billingMonthlySubtotal(effectiveCompany);
+  const discount = billingDiscountAmount(effectiveCompany);
   const monthly = billingMonthlyTotal(effectiveCompany);
   const annual = billingAnnualTotal(effectiveCompany);
   const baseMonthly = planMonthlyPrice(plan, country);
   const addonsMonthly = moduleAddonsMonthly(modules);
   const planLimits = PLAN_OPTIONS[plan];
+  // Implantação nunca recebe desconto; é sempre dividida em entrada + 15 dias.
+  const setupFee = planSetupFee(plan, country);
+  const setup = billingSetupInstallments(setupFee);
 
   const toggleModule = (module: ModuleKey) => {
     if (MODULE_CATALOG[module].included) return;
@@ -440,6 +466,9 @@ function BillingControls({ company }: { company: AdminCompany }) {
           enabled_modules: modules,
           billing_base_monthly: baseMonthly,
           billing_addons_monthly: addonsMonthly,
+          billing_setup_fee: setupFee,
+          billing_discount_kind: discountKind,
+          billing_discount_value: discountKind === "none" ? 0 : safeDiscount,
           billing_notes: notes.trim() || null,
           business_vertical: vertical,
         })
@@ -513,18 +542,89 @@ function BillingControls({ company }: { company: AdminCompany }) {
             </SelectContent>
           </Select>
         </div>
+        <div className="space-y-1.5">
+          <Label>Desconto na mensalidade</Label>
+          <Select
+            value={discountKind}
+            onValueChange={(v) => {
+              const next = v as BillingDiscountKind;
+              setDiscountKind(next);
+              if (next === "none") setDiscountValue("");
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Sem desconto</SelectItem>
+              <SelectItem value="percent">Percentagem (%)</SelectItem>
+              <SelectItem value="amount">Valor fixo ({currency === "BRL" ? "R$" : "€"})</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Valor do desconto</Label>
+          <Input
+            inputMode="decimal"
+            value={discountValue}
+            onChange={(e) => setDiscountValue(e.target.value)}
+            disabled={discountKind === "none"}
+            placeholder={discountKind === "percent" ? "Ex.: 10" : "Ex.: 20"}
+          />
+        </div>
+      </div>
+
+      <div className="mt-3 grid gap-3 md:grid-cols-2">
         <div className="rounded-lg border border-border bg-background px-3 py-2 text-sm">
-          <div className="text-xs text-muted-foreground">Estimativa</div>
-          <div className="font-semibold">
-            {cycle === "annual"
-              ? `${formatBillingAmount(annual, currency)}/ano`
-              : `${formatBillingAmount(monthly, currency)}/mês`}
+          <div className="text-xs font-medium text-muted-foreground">Mensalidade</div>
+          <dl className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+            <div className="flex justify-between">
+              <dt>Plano {planLimits.employeeLimit === null ? "(ilimitado)" : ""}</dt>
+              <dd>{formatBillingAmount(baseMonthly, currency)}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt>Adicionais ativos</dt>
+              <dd>{formatBillingAmount(addonsMonthly, currency)}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt>Subtotal</dt>
+              <dd>{formatBillingAmount(subtotal, currency)}</dd>
+            </div>
+            {discount > 0 && (
+              <div className="flex justify-between text-success">
+                <dt>Desconto {discountKind === "percent" ? `(${safeDiscount}%)` : ""}</dt>
+                <dd>− {formatBillingAmount(discount, currency)}</dd>
+              </div>
+            )}
+          </dl>
+          <div className="mt-2 border-t border-border pt-2 text-base font-semibold">
+            {formatBillingAmount(monthly, currency)}/mês
           </div>
           <div className="text-xs text-muted-foreground">
+            {cycle === "annual" && <>Anual: {formatBillingAmount(annual, currency)} · </>}
             {planLimits.employeeLimit ?? "Ilimitado"} funcionários · {planLimits.userLimit ?? "Ilimitado"} utilizadores
           </div>
         </div>
+
+        <div className="rounded-lg border border-border bg-background px-3 py-2 text-sm">
+          <div className="text-xs font-medium text-muted-foreground">Implantação (sem desconto)</div>
+          <div className="mt-1 text-base font-semibold">{formatBillingAmount(setupFee, currency)}</div>
+          <dl className="mt-2 space-y-0.5 text-xs text-muted-foreground">
+            <div className="flex justify-between">
+              <dt>1ª parcela · entrada</dt>
+              <dd>{formatBillingAmount(setup.first, currency)}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt>2ª parcela · 15 dias depois</dt>
+              <dd>{formatBillingAmount(setup.second, currency)}</dd>
+            </div>
+          </dl>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Primeiro pagamento: {formatBillingAmount(setup.first + monthly, currency)} (entrada + primeiro mês).
+          </p>
+        </div>
       </div>
+
 
       <div className="mt-4 flex flex-wrap gap-1 rounded-xl border border-border bg-background p-1">
         {MODULE_TABS.map((tab) => (

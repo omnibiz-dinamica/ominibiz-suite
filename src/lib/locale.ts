@@ -103,6 +103,9 @@ export const RESTAURANT_ENABLED_MODULES: ModuleKey[] = [
   "restaurant_delivery_zones",
 ];
 
+/** Desconto aplicado apenas à mensalidade (decisão 2026-09-28). */
+export type BillingDiscountKind = "none" | "percent" | "amount";
+
 export type CompanyBilling = {
   billing_plan?: BillingPlan | null;
   billing_cycle?: BillingCycle | null;
@@ -111,6 +114,8 @@ export type CompanyBilling = {
   enabled_modules?: ModuleKey[] | string[] | null;
   employee_limit?: number | null;
   user_limit?: number | null;
+  billing_discount_kind?: BillingDiscountKind | string | null;
+  billing_discount_value?: number | null;
 };
 
 export const PLAN_OPTIONS: Record<
@@ -123,11 +128,23 @@ export const PLAN_OPTIONS: Record<
   enterprise: { label: "Enterprise", employeeLimit: null, userLimit: null, support: "Dedicado" },
 };
 
+/**
+ * Tabela comercial 2026-09-28 — países europeus atualizados.
+ * Brasil mantém os valores atuais por decisão do Super Admin.
+ */
 export const PLAN_PRICES: Record<BillingCountry, Record<BillingPlan, number>> = {
-  PT: { starter: 29, professional: 59, business: 99, enterprise: 199 },
-  BE: { starter: 29, professional: 59, business: 99, enterprise: 199 },
-  ES: { starter: 29, professional: 59, business: 99, enterprise: 199 },
+  PT: { starter: 80, professional: 115, business: 150, enterprise: 185 },
+  BE: { starter: 80, professional: 115, business: 150, enterprise: 185 },
+  ES: { starter: 80, professional: 115, business: 150, enterprise: 185 },
   BR: { starter: 99, professional: 179, business: 299, enterprise: 599 },
+};
+
+/** Implantação (pagamento único) = 2x a mensalidade do plano. */
+export const PLAN_SETUP_PRICES: Record<BillingCountry, Record<BillingPlan, number>> = {
+  PT: { starter: 160, professional: 230, business: 300, enterprise: 370 },
+  BE: { starter: 160, professional: 230, business: 300, enterprise: 370 },
+  ES: { starter: 160, professional: 230, business: 300, enterprise: 370 },
+  BR: { starter: 198, professional: 358, business: 598, enterprise: 1198 },
 };
 
 export const COUNTRY_CURRENCY: Record<BillingCountry, string> = {
@@ -143,25 +160,25 @@ export const MODULE_CATALOG: Record<
 > = {
   core: {
     label: "Base OmniBiz",
-    description: "Dashboard, empresa, notificacoes e perfil.",
+    description: "Dashboard, empresa, notificações e perfil.",
     addonMonthly: 0,
     included: true,
   },
   tasks: {
     label: "Planeamento e tarefas",
-    description: "Tarefas, calendario, recorrencias e planeamento operacional.",
+    description: "Clientes, tarefas, calendário, recorrências e planeamento operacional.",
     addonMonthly: 0,
     included: true,
   },
   time_clock: {
     label: "Folha de ponto",
-    description: "Registo de ponto, gestao e validacoes operacionais.",
+    description: "Registo de ponto, gestão e validações operacionais.",
     addonMonthly: 0,
     included: true,
   },
   hr: {
     label: "RH",
-    description: "Funcionarios, ferias/ausencias e recibos.",
+    description: "Funcionários, férias/ausências e recibos.",
     addonMonthly: 0,
     included: true,
   },
@@ -173,45 +190,45 @@ export const MODULE_CATALOG: Record<
   },
   crm: {
     label: "CRM / Comercial",
-    description: "Clientes, contratos e gestao comercial.",
-    addonMonthly: 15,
+    description: "Contratos e gestão comercial: faturas, compras, vendas e estoque.",
+    addonMonthly: 24,
     included: false,
   },
   fleet: {
     label: "Frota",
-    description: "Gestao de veiculos e cartoes.",
-    addonMonthly: 20,
+    description: "Gestão de veículos e cartões.",
+    addonMonthly: 19,
     included: false,
   },
   finance: {
-    label: "Financeiro",
-    description: "Despesas e controlo financeiro operacional.",
-    addonMonthly: 20,
+    label: "Financeiro operacional",
+    description: "Despesas da equipa. Sem custo adicional.",
+    addonMonthly: 0,
     included: false,
   },
   whatsapp_ai: {
     label: "WhatsApp com IA",
-    description: "Atendimento e automacoes por WhatsApp com IA.",
-    addonMonthly: 39,
+    description: "Atendimento e automações por WhatsApp com IA.",
+    addonMonthly: 49,
     included: false,
   },
   bi_advanced: {
-    label: "BI e dashboards avancados",
-    description: "Relatorios completos e indicadores avancados.",
-    addonMonthly: 25,
+    label: "BI e dashboards avançados",
+    description: "Relatórios completos e indicadores avançados.",
+    addonMonthly: 24,
     included: false,
   },
   ai_automations: {
-    label: "Automacoes com IA",
-    description: "Fluxos inteligentes e automacoes conectadas.",
+    label: "Automações com IA",
+    description: "Fluxos inteligentes e automações conectadas.",
     addonMonthly: 49,
     included: false,
   },
   notes: {
     label: "Notas",
-    description: "Notas internas e documentacao simples.",
+    description: "Notas internas e documentação simples.",
     addonMonthly: 0,
-    included: false,
+    included: true,
   },
   restaurant_dashboard: {
     label: "Restaurante · Dashboard",
@@ -330,14 +347,14 @@ export const MODULE_CATALOG: Record<
 };
 
 
+/** Plano base (decisão 2026-09-28): Notas passa a ser padrão; adicionais ficam desmarcados. */
 export const DEFAULT_ENABLED_MODULES: ModuleKey[] = [
   "core",
   "tasks",
   "time_clock",
   "hr",
   "support",
-  "crm",
-  "fleet",
+  "notes",
   "finance",
 ];
 
@@ -409,19 +426,20 @@ export const MODULE_TABS: Array<{
     key: "general",
     label: "Geral",
     vertical: null,
+    // Plano base primeiro, adicionais em seguida (decisão 2026-09-28).
     modules: [
       "core",
       "tasks",
       "time_clock",
       "hr",
       "support",
-      "finance",
+      "notes",
       "crm",
       "fleet",
       "whatsapp_ai",
       "bi_advanced",
       "ai_automations",
-      "notes",
+      "finance",
     ],
   },
   {
@@ -469,7 +487,7 @@ export const ROUTE_MODULES: Array<{ prefix: string; module: ModuleKey }> = [
   { prefix: "/app/ferias", module: "hr" },
   { prefix: "/app/meus-recibos", module: "hr" },
   { prefix: "/app/despesas", module: "finance" },
-  { prefix: "/app/clientes", module: "crm" },
+  { prefix: "/app/clientes", module: "tasks" },
   { prefix: "/app/comercial", module: "crm" },
   { prefix: "/app/frota", module: "fleet" },
   { prefix: "/app/assistente", module: "whatsapp_ai" },
@@ -522,20 +540,64 @@ export function moduleAddonsMonthly(modules: CompanyBilling["enabled_modules"]):
   return normalizeModules(modules).reduce((total, module) => total + MODULE_CATALOG[module].addonMonthly, 0);
 }
 
-export function billingMonthlyTotal(company: CompanyBilling): number {
+/** Mensalidade antes do desconto: plano + adicionais ativos. */
+export function billingMonthlySubtotal(company: CompanyBilling): number {
   const plan = company.billing_plan ?? "professional";
   return planMonthlyPrice(plan, company.billing_country) + moduleAddonsMonthly(company.enabled_modules);
 }
 
+function roundCents(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+export function normalizeDiscountKind(kind: unknown): BillingDiscountKind {
+  return kind === "percent" || kind === "amount" ? kind : "none";
+}
+
+/**
+ * Desconto aplicado SÓ à mensalidade (decisão 2026-09-28).
+ * Percentagem limitada a 100% e valor fixo limitado ao subtotal: a mensalidade
+ * final nunca fica negativa.
+ */
+export function billingDiscountAmount(company: CompanyBilling): number {
+  const subtotal = billingMonthlySubtotal(company);
+  const kind = normalizeDiscountKind(company.billing_discount_kind);
+  const raw = Number(company.billing_discount_value ?? 0);
+  if (kind === "none" || !Number.isFinite(raw) || raw <= 0) return 0;
+  const discount = kind === "percent" ? (subtotal * Math.min(raw, 100)) / 100 : raw;
+  return roundCents(Math.min(discount, subtotal));
+}
+
+/** Mensalidade final já com desconto. */
+export function billingMonthlyTotal(company: CompanyBilling): number {
+  return roundCents(billingMonthlySubtotal(company) - billingDiscountAmount(company));
+}
+
 export function billingAnnualTotal(company: CompanyBilling): number {
-  return billingMonthlyTotal(company) * 10;
+  return roundCents(billingMonthlyTotal(company) * 10);
+}
+
+export function planSetupFee(plan: BillingPlan, country: string | null | undefined): number {
+  return PLAN_SETUP_PRICES[normalizeBillingCountry(country)][plan];
+}
+
+/**
+ * Implantação sem desconto, dividida em 2x: entrada + 15 dias.
+ * Cêntimos ímpares vão para a entrada, garantindo soma exata.
+ */
+export function billingSetupInstallments(total: number): { first: number; second: number } {
+  const safe = Number.isFinite(total) && total > 0 ? roundCents(total) : 0;
+  const second = Math.floor((safe * 100) / 2) / 100;
+  return { first: roundCents(safe - second), second };
 }
 
 export function formatBillingAmount(value: number, currency: string | null | undefined): string {
   const resolved = currency || "EUR";
+  const hasCents = Math.round(value * 100) % 100 !== 0;
   return new Intl.NumberFormat(resolved === "BRL" ? "pt-BR" : "pt-PT", {
     style: "currency",
     currency: resolved,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: hasCents ? 2 : 0,
+    maximumFractionDigits: hasCents ? 2 : 0,
   }).format(value);
 }
