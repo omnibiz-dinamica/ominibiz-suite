@@ -3297,6 +3297,7 @@ function TaskForm({
                 ? selectedDistributedMinutes[index] ?? selectedDistributedMinutes[0] ?? derivedDuration
                 : derivedDuration,
               schedule_rules: scheduleRulesByEmployee[index] ?? [],
+              schedule_name: payload.schedule_name,
               task_group_id: groupId,
             }).select("id");
             if (ins.error) {
