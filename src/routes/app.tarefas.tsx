@@ -3455,6 +3455,38 @@ function TaskForm({
             )}
           </SelectContent>
         </Select>
+        {!initial && namedSchedules.length > 0 && (
+          <div className="space-y-1" data-testid="client-schedule-picker">
+            <Label>Programação do cliente</Label>
+            <Select
+              value={selectedScheduleId ?? "__free__"}
+              onValueChange={(value) => {
+                if (value === "__free__") {
+                  setSelectedScheduleId(null);
+                  setScheduleHint(null);
+                  return;
+                }
+                const slot = namedSchedules.find((s) => s.id === value);
+                if (slot) applySlot(slot);
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Livre / Manual" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__free__">Livre / Manual</SelectItem>
+                {namedSchedules.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              O nome escolhido aparece como etiqueta nas tarefas e no calendário.
+            </p>
+          </div>
+        )}
         {!initial && (clientSchedule.length > 0 || contractedMinutes != null) && (
           <div className="rounded-lg border border-border bg-muted/40 p-3 text-xs">
             <p className="font-medium text-foreground">Configuração do cliente</p>
