@@ -1,3 +1,6 @@
+## 28092026-B
+- 001 (tarefas · programação do cliente): novo campo `schedule_name` em `tasks` e `task_recurrences`. O formulário de tarefa mostra o seletor "Programação do cliente" (Livre/Manual + programações com nome, ex.: Klein/Grote) quando o cliente tem programações nomeadas; a escolha carrega horários/ciclo e grava a etiqueta na tarefa avulsa e na série. `recurrence_materialize` copia a etiqueta (por regra de ciclo ou da série) para cada ocorrência gerada. Etiqueta exibida no calendário (mês/ano e cartões do dia/semana) e na lista de tarefas. (`src/routes/app.tarefas.tsx`, `src/lib/tasks/client-schedule.ts`, `src/lib/tasks.ts`, `tests/client-schedule-name.test.ts`)
+
 ## 28092026-A
 - 001 (clientes · equipa): as duas categorias listam todos os ativos da empresa (vinculados primeiro, depois alfabética), 5 linhas visíveis com rolagem, pesquisa sem maiúsculas/acentos; vinculado inativo aparece com selo "Inativo" só para remoção; estados carregando/erro/vazio.
 - 002 (clientes · principal): trigger `trg_unlink_primary_on_inactivation` retira `is_primary` quando a pessoa fica inativa, com auditoria em `client_primary_audit`. `client_default_assignees` usa a regra completa de ativo. Sem ajuste retroativo.
