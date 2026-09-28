@@ -1,0 +1,2 @@
+REVOKE ALL ON FUNCTION public.companies_enforce_essential_modules() FROM anon, authenticated, public;
+REVOKE ALL ON FUNCTION public.companies_billing_super_admin_guard() FROM anon, authenticated, public;
