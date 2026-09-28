@@ -14,6 +14,7 @@ import { Check, ChevronDown, Download, Plus, Trash2, Upload, IdCard, Building2, 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ModalSection } from "@/components/ui/dialog";
 import { EMPLOYEE_PAYMENT_TYPES, PAYMENT_TYPE_LABEL, type PaymentType } from "@/lib/compensation";
+import { lastNameLabel, splitFullName, useCompanyCountry } from "@/lib/person-name";
 
 
 /**
@@ -210,7 +211,12 @@ function TabDadosGerais({
   onSave: (p: Record<string, unknown>, msg?: string) => Promise<void>;
   onDone: () => void;
 }) {
-  const [fullName, setFullName] = useState(str(profile.full_name));
+  const initialName = splitFullName(str(profile.full_name));
+  const [firstName, setFirstName] = useState(str(profile.first_name) || initialName.first);
+  const [lastName, setLastName] = useState(
+    profile.first_name || profile.last_name ? str(profile.last_name) : initialName.last,
+  );
+  const companyCountry = useCompanyCountry(companyId);
   const [phone, setPhone] = useState(str(profile.phone));
   const [companyPrimary, setCompanyPrimary] = useState(str(profile.company_id_primary) || companyId);
   const [jobTitle, setJobTitle] = useState(str(profile.job_title));
@@ -230,7 +236,9 @@ function TabDadosGerais({
         setLoading(true);
         try {
           await onSave({
-            full_name: toNullableString(fullName),
+            first_name: toNullableString(firstName),
+            last_name: toNullableString(lastName),
+            full_name: toNullableString([firstName.trim(), lastName.trim()].filter(Boolean).join(" ")),
             phone: toNullableString(phone),
             company_id_primary: toNullableString(companyPrimary),
             job_title: toNullableString(jobTitle),
@@ -263,8 +271,11 @@ function TabDadosGerais({
     >
       <ModalSection title="Identificação" icon={IdCard}>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Nome completo">
-            <Input maxLength={150} value={fullName} onChange={(e) => setFullName(e.target.value)} />
+          <Field label="Primeiro nome">
+            <Input maxLength={75} value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+          </Field>
+          <Field label={lastNameLabel(companyCountry)}>
+            <Input maxLength={75} value={lastName} onChange={(e) => setLastName(e.target.value)} />
           </Field>
           <Field label="Telefone">
             <Input maxLength={40} value={phone} onChange={(e) => setPhone(e.target.value)} />

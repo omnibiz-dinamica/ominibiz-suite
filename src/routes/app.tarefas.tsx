@@ -190,7 +190,7 @@ type TaskMember = { id: string; full_name: string | null; job_title?: string | n
 
 function taskMemberName(members: readonly TaskMember[], id: string | null, unassigned = "Sem responsável") {
   if (!id) return unassigned;
-  return members.find((member) => member.id === id)?.full_name?.trim() || "Funcionário";
+  return firstNameOf(members.find((member) => member.id === id)?.full_name) || "Funcionário";
 }
 
 export const Route = createFileRoute("/app/tarefas")({
