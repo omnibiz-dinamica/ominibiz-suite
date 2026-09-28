@@ -90,6 +90,8 @@ function ClientsPage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<ClientRow | null>(null);
+  const [search, setSearch] = useState("");
+
 
   const { data: clients, isLoading } = useQuery({
     queryKey: ["clients", currentCompanyId, isManager, user?.id],
