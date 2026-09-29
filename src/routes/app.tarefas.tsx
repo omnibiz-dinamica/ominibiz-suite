@@ -189,8 +189,19 @@ type CalendarMode = "day" | "week" | "month" | "year";
 
 type TaskMember = { id: string; full_name: string | null; job_title?: string | null };
 
+/**
+ * 29092026-001 — nome COMPLETO (primeiro nome + apelido) em qualquer lugar que
+ * liste, pesquise ou selecione funcionário. O corte, quando necessário, é
+ * apenas visual (CSS truncate + tooltip), nunca na lógica ou no dado exibido.
+ */
 function taskMemberName(members: readonly TaskMember[], id: string | null, unassigned = "Sem responsável") {
   if (!id) return unassigned;
+  return members.find((member) => member.id === id)?.full_name?.trim() || "Funcionário";
+}
+
+/** Apenas para o selo compacto de tarefas em equipe, onde o espaço é mínimo. */
+function taskMemberFirstName(members: readonly TaskMember[], id: string | null) {
+  if (!id) return "Sem responsável";
   return firstNameOf(members.find((member) => member.id === id)?.full_name) || "Funcionário";
 }
 
