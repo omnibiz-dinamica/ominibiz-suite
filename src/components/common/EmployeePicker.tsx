@@ -131,7 +131,8 @@ export function EmployeePicker({
         >
           <span className="flex min-w-0 items-center gap-2 truncate">
             <User className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-            <span className="truncate">
+            {/* 29092026-001 — nome completo sempre; corte só visual, com tooltip. */}
+            <span className="truncate" title={selected ? labelFor(selected) : undefined}>
               {selected ? labelFor(selected) : placeholder}
             </span>
           </span>
