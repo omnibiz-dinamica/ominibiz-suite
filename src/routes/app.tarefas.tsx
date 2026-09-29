@@ -3783,7 +3783,9 @@ function TaskForm({
                         checked={checked}
                         onChange={() => toggleAssignee(m.id)}
                       />
-                      <span className="truncate">{taskMemberName(members, m.id, "Funcionário")}</span>
+                      <span className="truncate" title={taskMemberName(members, m.id, "Funcionário")}>
+                        {taskMemberName(members, m.id, "Funcionário")}
+                      </span>
                     </label>
                   );
                 })}
