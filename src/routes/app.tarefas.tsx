@@ -189,8 +189,19 @@ type CalendarMode = "day" | "week" | "month" | "year";
 
 type TaskMember = { id: string; full_name: string | null; job_title?: string | null };
 
+/**
+ * 29092026-001 — nome COMPLETO (primeiro nome + apelido) em qualquer lugar que
+ * liste, pesquise ou selecione funcionário. O corte, quando necessário, é
+ * apenas visual (CSS truncate + tooltip), nunca na lógica ou no dado exibido.
+ */
 function taskMemberName(members: readonly TaskMember[], id: string | null, unassigned = "Sem responsável") {
   if (!id) return unassigned;
+  return members.find((member) => member.id === id)?.full_name?.trim() || "Funcionário";
+}
+
+/** Apenas para o selo compacto de tarefas em equipe, onde o espaço é mínimo. */
+function taskMemberFirstName(members: readonly TaskMember[], id: string | null) {
+  if (!id) return "Sem responsável";
   return firstNameOf(members.find((member) => member.id === id)?.full_name) || "Funcionário";
 }
 
@@ -456,22 +467,23 @@ function TasksPage() {
   const memberNames = useMemo(() => {
     const names = new Map<string, string>();
     for (const member of members ?? []) {
-      if (member.full_name?.trim()) names.set(member.id, firstNameOf(member.full_name));
+      if (member.full_name?.trim()) names.set(member.id, member.full_name.trim());
     }
-    if (user?.id && profile?.full_name?.trim()) names.set(user.id, firstNameOf(profile.full_name));
+    if (user?.id && profile?.full_name?.trim()) names.set(user.id, profile.full_name.trim());
     return names as ReadonlyMap<string, string>;
   }, [members, profile?.full_name, user?.id]);
 
   /**
    * Tarefas criadas em equipe: o selo mostra os primeiros nomes de todos os
-   * responsáveis do grupo, em vez de apenas "em equipe".
+   * responsáveis do grupo, em vez de apenas "em equipe". Este é o único lugar
+   * que continua abreviado, por ser um selo compacto dentro do cartão.
    */
   const groupMemberNames = useMemo(() => {
     const byGroup = new Map<string, string[]>();
     for (const task of tasks ?? []) {
       const groupId = (task as { task_group_id?: string | null }).task_group_id;
       if (!groupId || !task.assigned_to) continue;
-      const name = memberNames.get(task.assigned_to) ?? taskMemberName(members ?? [], task.assigned_to);
+      const name = taskMemberFirstName(members ?? [], task.assigned_to);
       const list = byGroup.get(groupId) ?? [];
       if (!list.includes(name)) list.push(name);
       byGroup.set(groupId, list);
@@ -481,7 +493,7 @@ function TasksPage() {
       labels.set(groupId, names.sort((a, b) => a.localeCompare(b, "pt-BR")).join(", "));
     }
     return labels as ReadonlyMap<string, string>;
-  }, [tasks, memberNames, members]);
+  }, [tasks, members]);
 
   /**
    * SUP-2026-000074 — pontos ainda em aberto (esquecimento de saída).
@@ -3771,7 +3783,9 @@ function TaskForm({
                         checked={checked}
                         onChange={() => toggleAssignee(m.id)}
                       />
-                      <span className="truncate">{taskMemberName(members, m.id, "Funcionário")}</span>
+                      <span className="truncate" title={taskMemberName(members, m.id, "Funcionário")}>
+                        {taskMemberName(members, m.id, "Funcionário")}
+                      </span>
                     </label>
                   );
                 })}

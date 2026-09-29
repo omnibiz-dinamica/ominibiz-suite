@@ -131,7 +131,8 @@ export function EmployeePicker({
         >
           <span className="flex min-w-0 items-center gap-2 truncate">
             <User className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-            <span className="truncate">
+            {/* 29092026-001 — nome completo sempre; corte só visual, com tooltip. */}
+            <span className="truncate" title={selected ? labelFor(selected) : undefined}>
               {selected ? labelFor(selected) : placeholder}
             </span>
           </span>
@@ -195,7 +196,7 @@ export function EmployeePicker({
                       aria-hidden
                     />
                     <div className="min-w-0 flex-1">
-                      <div className="truncate font-medium">{labelFor(e)}</div>
+                      <div className="truncate font-medium" title={labelFor(e)}>{labelFor(e)}</div>
                       {secondary && (
                         <div className="truncate text-xs text-muted-foreground">
                           {secondary}
@@ -286,7 +287,7 @@ export function EmployeeMultiPicker({
         >
           <span className="flex min-w-0 items-center gap-2 truncate">
             <User className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-            <span className="truncate">{label}</span>
+            <span className="truncate" title={selectedLabels.length ? selectedLabels.join(", ") : undefined}>{label}</span>
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" aria-hidden />
         </Button>
@@ -311,7 +312,7 @@ export function EmployeeMultiPicker({
                     {isSelected && <Check className="h-3 w-3" aria-hidden />}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <div className="truncate font-medium">{labelFor(e)}</div>
+                    <div className="truncate font-medium" title={labelFor(e)}>{labelFor(e)}</div>
                     {secondary && <div className="truncate text-xs text-muted-foreground">{secondary}</div>}
                   </div>
                 </button>
