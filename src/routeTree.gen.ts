@@ -9,89 +9,79 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as AceitarConviteRouteImport } from './routes/aceitar-convite'
-import { Route as AppRouteImport } from './routes/app'
-import { Route as LoginRouteImport } from './routes/login'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as AppRouteImport } from './routes/app'
+import { Route as AceitarConviteRouteImport } from './routes/aceitar-convite'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
-import { Route as AppAdminRouteImport } from './routes/app.admin'
-import { Route as AppAssistenteRouteImport } from './routes/app.assistente'
-import { Route as AppClientesRouteImport } from './routes/app.clientes'
-import { Route as AppComercialRouteImport } from './routes/app.comercial'
-import { Route as AppDespesasRouteImport } from './routes/app.despesas'
-import { Route as AppEmpresaRouteImport } from './routes/app.empresa'
-import { Route as AppEquipeRouteImport } from './routes/app.equipe'
-import { Route as AppFeriasRouteImport } from './routes/app.ferias'
-import { Route as AppFrotaRouteImport } from './routes/app.frota'
-import { Route as AppMeusRecibosRouteImport } from './routes/app.meus-recibos'
-import { Route as AppNotasRouteImport } from './routes/app.notas'
-import { Route as AppNotificacoesRouteImport } from './routes/app.notificacoes'
-import { Route as AppPerfilRouteImport } from './routes/app.perfil'
-import { Route as AppPontoRouteImport } from './routes/app.ponto'
-import { Route as AppRhRouteImport } from './routes/app.rh'
-import { Route as AppSuporteRouteImport } from './routes/app.suporte'
-import { Route as AppTarefasRouteImport } from './routes/app.tarefas'
 import { Route as SignTokenRouteImport } from './routes/sign.$token'
-import { Route as ApiEmailSendRouteImport } from './routes/api/email/send'
-import { Route as ApiExpensesAttachmentsRouteImport } from './routes/api/expenses/attachments'
-import { Route as ApiSupportTicketCreatedEmailRouteImport } from './routes/api/support/ticket-created-email'
-import { Route as ApiUsersEmailChangeRequestsRouteImport } from './routes/api/users/email-change-requests'
-import { Route as AppAdminSuporteRouteImport } from './routes/app.admin.suporte'
-import { Route as AppComercialIndexRouteImport } from './routes/app.comercial.index'
-import { Route as AppComercialClientesRouteImport } from './routes/app.comercial.clientes'
-import { Route as AppComercialContratosRouteImport } from './routes/app.comercial.contratos'
-import { Route as AppComercialTemplatesRouteImport } from './routes/app.comercial.templates'
-import { Route as AppContabilidadeFolhasPontoRouteImport } from './routes/app.contabilidade.folhas-ponto'
-import { Route as AppFrotaCartoesRouteImport } from './routes/app.frota.cartoes'
-import { Route as AppMaterialConstrucaoIndexRouteImport } from './routes/app.material-construcao.index'
-import { Route as AppMaterialConstrucaoCategoriasRouteImport } from './routes/app.material-construcao.categorias'
-import { Route as AppMaterialConstrucaoClientesRouteImport } from './routes/app.material-construcao.clientes'
-import { Route as AppMaterialConstrucaoComprasRouteImport } from './routes/app.material-construcao.compras'
-import { Route as AppMaterialConstrucaoEntregasRouteImport } from './routes/app.material-construcao.entregas'
-import { Route as AppMaterialConstrucaoEstoqueRouteImport } from './routes/app.material-construcao.estoque'
-import { Route as AppMaterialConstrucaoFinanceiroRouteImport } from './routes/app.material-construcao.financeiro'
-import { Route as AppMaterialConstrucaoFornecedoresRouteImport } from './routes/app.material-construcao.fornecedores'
-import { Route as AppMaterialConstrucaoOrcamentosRouteImport } from './routes/app.material-construcao.orcamentos'
-import { Route as AppMaterialConstrucaoProdutosRouteImport } from './routes/app.material-construcao.produtos'
-import { Route as AppMaterialConstrucaoVendasRouteImport } from './routes/app.material-construcao.vendas'
-import { Route as AppPontoFechamentoRouteImport } from './routes/app.ponto_.fechamento'
-import { Route as AppPontoGestaoRouteImport } from './routes/app.ponto_.gestao'
-import { Route as AppPontoMeusRelatoriosRouteImport } from './routes/app.ponto_.meus-relatorios'
-import { Route as AppRestauranteIndexRouteImport } from './routes/app.restaurante.index'
-import { Route as AppRestauranteCozinhaRouteImport } from './routes/app.restaurante.cozinha'
-import { Route as AppRestauranteDeliveryRouteImport } from './routes/app.restaurante.delivery'
-import { Route as AppRestauranteEntregadoresRouteImport } from './routes/app.restaurante.entregadores'
-import { Route as AppRestauranteMenuRouteImport } from './routes/app.restaurante.menu'
-import { Route as AppRestauranteMesasRouteImport } from './routes/app.restaurante.mesas'
-import { Route as AppRestaurantePedidosRouteImport } from './routes/app.restaurante.pedidos'
-import { Route as AppRestauranteZonasRouteImport } from './routes/app.restaurante.zonas'
+import { Route as AppTarefasRouteImport } from './routes/app.tarefas'
+import { Route as AppSuporteRouteImport } from './routes/app.suporte'
+import { Route as AppRhRouteImport } from './routes/app.rh'
+import { Route as AppPontoRouteImport } from './routes/app.ponto'
+import { Route as AppPerfilRouteImport } from './routes/app.perfil'
+import { Route as AppNotificacoesRouteImport } from './routes/app.notificacoes'
+import { Route as AppNotasRouteImport } from './routes/app.notas'
+import { Route as AppMeusRecibosRouteImport } from './routes/app.meus-recibos'
+import { Route as AppFrotaRouteImport } from './routes/app.frota'
+import { Route as AppFeriasRouteImport } from './routes/app.ferias'
+import { Route as AppEquipeRouteImport } from './routes/app.equipe'
+import { Route as AppEmpresaRouteImport } from './routes/app.empresa'
+import { Route as AppDespesasRouteImport } from './routes/app.despesas'
+import { Route as AppComercialRouteImport } from './routes/app.comercial'
+import { Route as AppClientesRouteImport } from './routes/app.clientes'
+import { Route as AppAssistenteRouteImport } from './routes/app.assistente'
+import { Route as AppAdminRouteImport } from './routes/app.admin'
 import { Route as AppRhIndexRouteImport } from './routes/app.rh.index'
-import { Route as AppRhRecibosRouteImport } from './routes/app.rh.recibos'
-import { Route as AppSuporteIdRouteImport } from './routes/app.suporte.$id'
-import { Route as AppTarefasRecorrentesRouteImport } from './routes/app.tarefas_.recorrentes'
+import { Route as AppRestauranteIndexRouteImport } from './routes/app.restaurante.index'
+import { Route as AppMaterialConstrucaoIndexRouteImport } from './routes/app.material-construcao.index'
+import { Route as AppComercialIndexRouteImport } from './routes/app.comercial.index'
 import { Route as LovableEmailEventsRouteImport } from './routes/lovable/email/events'
-import { Route as ApiAdminUsersEmailRouteImport } from './routes/api/admin/users/email'
-import { Route as ApiPublicWhatsappDispatchRouteImport } from './routes/api/public/whatsapp/dispatch'
-import { Route as AppComercialContratosIdRouteImport } from './routes/app.comercial.contratos.$id'
-import { Route as AppComercialContratosNovoRouteImport } from './routes/app.comercial.contratos.novo'
-import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
-import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
+import { Route as AppTarefasRecorrentesRouteImport } from './routes/app.tarefas_.recorrentes'
+import { Route as AppSuporteIdRouteImport } from './routes/app.suporte.$id'
+import { Route as AppRhRecibosRouteImport } from './routes/app.rh.recibos'
+import { Route as AppRestauranteZonasRouteImport } from './routes/app.restaurante.zonas'
+import { Route as AppRestaurantePedidosRouteImport } from './routes/app.restaurante.pedidos'
+import { Route as AppRestauranteMesasRouteImport } from './routes/app.restaurante.mesas'
+import { Route as AppRestauranteMenuRouteImport } from './routes/app.restaurante.menu'
+import { Route as AppRestauranteEntregadoresRouteImport } from './routes/app.restaurante.entregadores'
+import { Route as AppRestauranteDeliveryRouteImport } from './routes/app.restaurante.delivery'
+import { Route as AppRestauranteCozinhaRouteImport } from './routes/app.restaurante.cozinha'
+import { Route as AppPontoMeusRelatoriosRouteImport } from './routes/app.ponto_.meus-relatorios'
+import { Route as AppPontoGestaoRouteImport } from './routes/app.ponto_.gestao'
+import { Route as AppPontoFechamentoRouteImport } from './routes/app.ponto_.fechamento'
+import { Route as AppMaterialConstrucaoVendasRouteImport } from './routes/app.material-construcao.vendas'
+import { Route as AppMaterialConstrucaoProdutosRouteImport } from './routes/app.material-construcao.produtos'
+import { Route as AppMaterialConstrucaoOrcamentosRouteImport } from './routes/app.material-construcao.orcamentos'
+import { Route as AppMaterialConstrucaoFornecedoresRouteImport } from './routes/app.material-construcao.fornecedores'
+import { Route as AppMaterialConstrucaoFinanceiroRouteImport } from './routes/app.material-construcao.financeiro'
+import { Route as AppMaterialConstrucaoEstoqueRouteImport } from './routes/app.material-construcao.estoque'
+import { Route as AppMaterialConstrucaoEntregasRouteImport } from './routes/app.material-construcao.entregas'
+import { Route as AppMaterialConstrucaoComprasRouteImport } from './routes/app.material-construcao.compras'
+import { Route as AppMaterialConstrucaoClientesRouteImport } from './routes/app.material-construcao.clientes'
+import { Route as AppMaterialConstrucaoCategoriasRouteImport } from './routes/app.material-construcao.categorias'
+import { Route as AppFrotaCartoesRouteImport } from './routes/app.frota.cartoes'
+import { Route as AppContabilidadeFolhasPontoRouteImport } from './routes/app.contabilidade.folhas-ponto'
+import { Route as AppComercialTemplatesRouteImport } from './routes/app.comercial.templates'
+import { Route as AppComercialContratosRouteImport } from './routes/app.comercial.contratos'
+import { Route as AppComercialClientesRouteImport } from './routes/app.comercial.clientes'
+import { Route as AppAdminSuporteRouteImport } from './routes/app.admin.suporte'
+import { Route as ApiUsersEmailChangeRequestsRouteImport } from './routes/api/users/email-change-requests'
+import { Route as ApiSupportTicketCreatedEmailRouteImport } from './routes/api/support/ticket-created-email'
+import { Route as ApiExpensesAttachmentsRouteImport } from './routes/api/expenses/attachments'
+import { Route as ApiEmailSendRouteImport } from './routes/api/email/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
+import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
+import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
+import { Route as AppComercialContratosNovoRouteImport } from './routes/app.comercial.contratos.novo'
+import { Route as AppComercialContratosIdRouteImport } from './routes/app.comercial.contratos.$id'
+import { Route as ApiPublicWhatsappDispatchRouteImport } from './routes/api/public/whatsapp/dispatch'
+import { Route as ApiAdminUsersEmailRouteImport } from './routes/api/admin/users/email'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AceitarConviteRoute = AceitarConviteRouteImport.update({
-  id: '/aceitar-convite',
-  path: '/aceitar-convite',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AppRoute = AppRouteImport.update({
-  id: '/app',
-  path: '/app',
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -99,9 +89,19 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
+const AppRoute = AppRouteImport.update({
+  id: '/app',
+  path: '/app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AceitarConviteRoute = AceitarConviteRouteImport.update({
+  id: '/aceitar-convite',
+  path: '/aceitar-convite',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -109,79 +109,14 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
-const AppAdminRoute = AppAdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
-  getParentRoute: () => AppRoute,
+const SignTokenRoute = SignTokenRouteImport.update({
+  id: '/sign/$token',
+  path: '/sign/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AppAssistenteRoute = AppAssistenteRouteImport.update({
-  id: '/assistente',
-  path: '/assistente',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppClientesRoute = AppClientesRouteImport.update({
-  id: '/clientes',
-  path: '/clientes',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppComercialRoute = AppComercialRouteImport.update({
-  id: '/comercial',
-  path: '/comercial',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppDespesasRoute = AppDespesasRouteImport.update({
-  id: '/despesas',
-  path: '/despesas',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppEmpresaRoute = AppEmpresaRouteImport.update({
-  id: '/empresa',
-  path: '/empresa',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppEquipeRoute = AppEquipeRouteImport.update({
-  id: '/equipe',
-  path: '/equipe',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppFeriasRoute = AppFeriasRouteImport.update({
-  id: '/ferias',
-  path: '/ferias',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppFrotaRoute = AppFrotaRouteImport.update({
-  id: '/frota',
-  path: '/frota',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppMeusRecibosRoute = AppMeusRecibosRouteImport.update({
-  id: '/meus-recibos',
-  path: '/meus-recibos',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppNotasRoute = AppNotasRouteImport.update({
-  id: '/notas',
-  path: '/notas',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppNotificacoesRoute = AppNotificacoesRouteImport.update({
-  id: '/notificacoes',
-  path: '/notificacoes',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppPerfilRoute = AppPerfilRouteImport.update({
-  id: '/perfil',
-  path: '/perfil',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppPontoRoute = AppPontoRouteImport.update({
-  id: '/ponto',
-  path: '/ponto',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppRhRoute = AppRhRouteImport.update({
-  id: '/rh',
-  path: '/rh',
+const AppTarefasRoute = AppTarefasRouteImport.update({
+  id: '/tarefas',
+  path: '/tarefas',
   getParentRoute: () => AppRoute,
 } as any)
 const AppSuporteRoute = AppSuporteRouteImport.update({
@@ -189,73 +124,90 @@ const AppSuporteRoute = AppSuporteRouteImport.update({
   path: '/suporte',
   getParentRoute: () => AppRoute,
 } as any)
-const AppTarefasRoute = AppTarefasRouteImport.update({
-  id: '/tarefas',
-  path: '/tarefas',
+const AppRhRoute = AppRhRouteImport.update({
+  id: '/rh',
+  path: '/rh',
   getParentRoute: () => AppRoute,
 } as any)
-const SignTokenRoute = SignTokenRouteImport.update({
-  id: '/sign/$token',
-  path: '/sign/$token',
-  getParentRoute: () => rootRouteImport,
+const AppPontoRoute = AppPontoRouteImport.update({
+  id: '/ponto',
+  path: '/ponto',
+  getParentRoute: () => AppRoute,
 } as any)
-const ApiEmailSendRoute = ApiEmailSendRouteImport.update({
-  id: '/api/email/send',
-  path: '/api/email/send',
-  getParentRoute: () => rootRouteImport,
+const AppPerfilRoute = AppPerfilRouteImport.update({
+  id: '/perfil',
+  path: '/perfil',
+  getParentRoute: () => AppRoute,
 } as any)
-const ApiExpensesAttachmentsRoute = ApiExpensesAttachmentsRouteImport.update({
-  id: '/api/expenses/attachments',
-  path: '/api/expenses/attachments',
-  getParentRoute: () => rootRouteImport,
+const AppNotificacoesRoute = AppNotificacoesRouteImport.update({
+  id: '/notificacoes',
+  path: '/notificacoes',
+  getParentRoute: () => AppRoute,
 } as any)
-const ApiSupportTicketCreatedEmailRoute =
-  ApiSupportTicketCreatedEmailRouteImport.update({
-    id: '/api/support/ticket-created-email',
-    path: '/api/support/ticket-created-email',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiUsersEmailChangeRequestsRoute =
-  ApiUsersEmailChangeRequestsRouteImport.update({
-    id: '/api/users/email-change-requests',
-    path: '/api/users/email-change-requests',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const AppAdminSuporteRoute = AppAdminSuporteRouteImport.update({
-  id: '/suporte',
-  path: '/suporte',
-  getParentRoute: () => AppAdminRoute,
+const AppNotasRoute = AppNotasRouteImport.update({
+  id: '/notas',
+  path: '/notas',
+  getParentRoute: () => AppRoute,
 } as any)
-const AppComercialIndexRoute = AppComercialIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AppComercialRoute,
+const AppMeusRecibosRoute = AppMeusRecibosRouteImport.update({
+  id: '/meus-recibos',
+  path: '/meus-recibos',
+  getParentRoute: () => AppRoute,
 } as any)
-const AppComercialClientesRoute = AppComercialClientesRouteImport.update({
+const AppFrotaRoute = AppFrotaRouteImport.update({
+  id: '/frota',
+  path: '/frota',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFeriasRoute = AppFeriasRouteImport.update({
+  id: '/ferias',
+  path: '/ferias',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppEquipeRoute = AppEquipeRouteImport.update({
+  id: '/equipe',
+  path: '/equipe',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppEmpresaRoute = AppEmpresaRouteImport.update({
+  id: '/empresa',
+  path: '/empresa',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDespesasRoute = AppDespesasRouteImport.update({
+  id: '/despesas',
+  path: '/despesas',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppComercialRoute = AppComercialRouteImport.update({
+  id: '/comercial',
+  path: '/comercial',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppClientesRoute = AppClientesRouteImport.update({
   id: '/clientes',
   path: '/clientes',
-  getParentRoute: () => AppComercialRoute,
+  getParentRoute: () => AppRoute,
 } as any)
-const AppComercialContratosRoute = AppComercialContratosRouteImport.update({
-  id: '/contratos',
-  path: '/contratos',
-  getParentRoute: () => AppComercialRoute,
+const AppAssistenteRoute = AppAssistenteRouteImport.update({
+  id: '/assistente',
+  path: '/assistente',
+  getParentRoute: () => AppRoute,
 } as any)
-const AppComercialTemplatesRoute = AppComercialTemplatesRouteImport.update({
-  id: '/templates',
-  path: '/templates',
-  getParentRoute: () => AppComercialRoute,
+const AppAdminRoute = AppAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AppRoute,
 } as any)
-const AppContabilidadeFolhasPontoRoute =
-  AppContabilidadeFolhasPontoRouteImport.update({
-    id: '/contabilidade/folhas-ponto',
-    path: '/contabilidade/folhas-ponto',
-    getParentRoute: () => AppRoute,
-  } as any)
-const AppFrotaCartoesRoute = AppFrotaCartoesRouteImport.update({
-  id: '/cartoes',
-  path: '/cartoes',
-  getParentRoute: () => AppFrotaRoute,
+const AppRhIndexRoute = AppRhIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRhRoute,
+} as any)
+const AppRestauranteIndexRoute = AppRestauranteIndexRouteImport.update({
+  id: '/restaurante/',
+  path: '/restaurante/',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppMaterialConstrucaoIndexRoute =
   AppMaterialConstrucaoIndexRouteImport.update({
@@ -263,94 +215,49 @@ const AppMaterialConstrucaoIndexRoute =
     path: '/material-construcao/',
     getParentRoute: () => AppRoute,
   } as any)
-const AppMaterialConstrucaoCategoriasRoute =
-  AppMaterialConstrucaoCategoriasRouteImport.update({
-    id: '/material-construcao/categorias',
-    path: '/material-construcao/categorias',
-    getParentRoute: () => AppRoute,
-  } as any)
-const AppMaterialConstrucaoClientesRoute =
-  AppMaterialConstrucaoClientesRouteImport.update({
-    id: '/material-construcao/clientes',
-    path: '/material-construcao/clientes',
-    getParentRoute: () => AppRoute,
-  } as any)
-const AppMaterialConstrucaoComprasRoute =
-  AppMaterialConstrucaoComprasRouteImport.update({
-    id: '/material-construcao/compras',
-    path: '/material-construcao/compras',
-    getParentRoute: () => AppRoute,
-  } as any)
-const AppMaterialConstrucaoEntregasRoute =
-  AppMaterialConstrucaoEntregasRouteImport.update({
-    id: '/material-construcao/entregas',
-    path: '/material-construcao/entregas',
-    getParentRoute: () => AppRoute,
-  } as any)
-const AppMaterialConstrucaoEstoqueRoute =
-  AppMaterialConstrucaoEstoqueRouteImport.update({
-    id: '/material-construcao/estoque',
-    path: '/material-construcao/estoque',
-    getParentRoute: () => AppRoute,
-  } as any)
-const AppMaterialConstrucaoFinanceiroRoute =
-  AppMaterialConstrucaoFinanceiroRouteImport.update({
-    id: '/material-construcao/financeiro',
-    path: '/material-construcao/financeiro',
-    getParentRoute: () => AppRoute,
-  } as any)
-const AppMaterialConstrucaoFornecedoresRoute =
-  AppMaterialConstrucaoFornecedoresRouteImport.update({
-    id: '/material-construcao/fornecedores',
-    path: '/material-construcao/fornecedores',
-    getParentRoute: () => AppRoute,
-  } as any)
-const AppMaterialConstrucaoOrcamentosRoute =
-  AppMaterialConstrucaoOrcamentosRouteImport.update({
-    id: '/material-construcao/orcamentos',
-    path: '/material-construcao/orcamentos',
-    getParentRoute: () => AppRoute,
-  } as any)
-const AppMaterialConstrucaoProdutosRoute =
-  AppMaterialConstrucaoProdutosRouteImport.update({
-    id: '/material-construcao/produtos',
-    path: '/material-construcao/produtos',
-    getParentRoute: () => AppRoute,
-  } as any)
-const AppMaterialConstrucaoVendasRoute =
-  AppMaterialConstrucaoVendasRouteImport.update({
-    id: '/material-construcao/vendas',
-    path: '/material-construcao/vendas',
-    getParentRoute: () => AppRoute,
-  } as any)
-const AppPontoFechamentoRoute = AppPontoFechamentoRouteImport.update({
-  id: '/ponto_/fechamento',
-  path: '/ponto/fechamento',
+const AppComercialIndexRoute = AppComercialIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppComercialRoute,
+} as any)
+const LovableEmailEventsRoute = LovableEmailEventsRouteImport.update({
+  id: '/lovable/email/events',
+  path: '/lovable/email/events',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppTarefasRecorrentesRoute = AppTarefasRecorrentesRouteImport.update({
+  id: '/tarefas_/recorrentes',
+  path: '/tarefas/recorrentes',
   getParentRoute: () => AppRoute,
 } as any)
-const AppPontoGestaoRoute = AppPontoGestaoRouteImport.update({
-  id: '/ponto_/gestao',
-  path: '/ponto/gestao',
+const AppSuporteIdRoute = AppSuporteIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppSuporteRoute,
+} as any)
+const AppRhRecibosRoute = AppRhRecibosRouteImport.update({
+  id: '/recibos',
+  path: '/recibos',
+  getParentRoute: () => AppRhRoute,
+} as any)
+const AppRestauranteZonasRoute = AppRestauranteZonasRouteImport.update({
+  id: '/restaurante/zonas',
+  path: '/restaurante/zonas',
   getParentRoute: () => AppRoute,
 } as any)
-const AppPontoMeusRelatoriosRoute = AppPontoMeusRelatoriosRouteImport.update({
-  id: '/ponto_/meus-relatorios',
-  path: '/ponto/meus-relatorios',
+const AppRestaurantePedidosRoute = AppRestaurantePedidosRouteImport.update({
+  id: '/restaurante/pedidos',
+  path: '/restaurante/pedidos',
   getParentRoute: () => AppRoute,
 } as any)
-const AppRestauranteIndexRoute = AppRestauranteIndexRouteImport.update({
-  id: '/restaurante/',
-  path: '/restaurante/',
+const AppRestauranteMesasRoute = AppRestauranteMesasRouteImport.update({
+  id: '/restaurante/mesas',
+  path: '/restaurante/mesas',
   getParentRoute: () => AppRoute,
 } as any)
-const AppRestauranteCozinhaRoute = AppRestauranteCozinhaRouteImport.update({
-  id: '/restaurante/cozinha',
-  path: '/restaurante/cozinha',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppRestauranteDeliveryRoute = AppRestauranteDeliveryRouteImport.update({
-  id: '/restaurante/delivery',
-  path: '/restaurante/delivery',
+const AppRestauranteMenuRoute = AppRestauranteMenuRouteImport.update({
+  id: '/restaurante/menu',
+  path: '/restaurante/menu',
   getParentRoute: () => AppRoute,
 } as any)
 const AppRestauranteEntregadoresRoute =
@@ -359,81 +266,142 @@ const AppRestauranteEntregadoresRoute =
     path: '/restaurante/entregadores',
     getParentRoute: () => AppRoute,
   } as any)
-const AppRestauranteMenuRoute = AppRestauranteMenuRouteImport.update({
-  id: '/restaurante/menu',
-  path: '/restaurante/menu',
+const AppRestauranteDeliveryRoute = AppRestauranteDeliveryRouteImport.update({
+  id: '/restaurante/delivery',
+  path: '/restaurante/delivery',
   getParentRoute: () => AppRoute,
 } as any)
-const AppRestauranteMesasRoute = AppRestauranteMesasRouteImport.update({
-  id: '/restaurante/mesas',
-  path: '/restaurante/mesas',
+const AppRestauranteCozinhaRoute = AppRestauranteCozinhaRouteImport.update({
+  id: '/restaurante/cozinha',
+  path: '/restaurante/cozinha',
   getParentRoute: () => AppRoute,
 } as any)
-const AppRestaurantePedidosRoute = AppRestaurantePedidosRouteImport.update({
-  id: '/restaurante/pedidos',
-  path: '/restaurante/pedidos',
+const AppPontoMeusRelatoriosRoute = AppPontoMeusRelatoriosRouteImport.update({
+  id: '/ponto_/meus-relatorios',
+  path: '/ponto/meus-relatorios',
   getParentRoute: () => AppRoute,
 } as any)
-const AppRestauranteZonasRoute = AppRestauranteZonasRouteImport.update({
-  id: '/restaurante/zonas',
-  path: '/restaurante/zonas',
+const AppPontoGestaoRoute = AppPontoGestaoRouteImport.update({
+  id: '/ponto_/gestao',
+  path: '/ponto/gestao',
   getParentRoute: () => AppRoute,
 } as any)
-const AppRhIndexRoute = AppRhIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AppRhRoute,
-} as any)
-const AppRhRecibosRoute = AppRhRecibosRouteImport.update({
-  id: '/recibos',
-  path: '/recibos',
-  getParentRoute: () => AppRhRoute,
-} as any)
-const AppSuporteIdRoute = AppSuporteIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AppSuporteRoute,
-} as any)
-const AppTarefasRecorrentesRoute = AppTarefasRecorrentesRouteImport.update({
-  id: '/tarefas_/recorrentes',
-  path: '/tarefas/recorrentes',
+const AppPontoFechamentoRoute = AppPontoFechamentoRouteImport.update({
+  id: '/ponto_/fechamento',
+  path: '/ponto/fechamento',
   getParentRoute: () => AppRoute,
 } as any)
-const LovableEmailEventsRoute = LovableEmailEventsRouteImport.update({
-  id: '/lovable/email/events',
-  path: '/lovable/email/events',
-  getParentRoute: () => rootRouteImport,
+const AppMaterialConstrucaoVendasRoute =
+  AppMaterialConstrucaoVendasRouteImport.update({
+    id: '/material-construcao/vendas',
+    path: '/material-construcao/vendas',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppMaterialConstrucaoProdutosRoute =
+  AppMaterialConstrucaoProdutosRouteImport.update({
+    id: '/material-construcao/produtos',
+    path: '/material-construcao/produtos',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppMaterialConstrucaoOrcamentosRoute =
+  AppMaterialConstrucaoOrcamentosRouteImport.update({
+    id: '/material-construcao/orcamentos',
+    path: '/material-construcao/orcamentos',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppMaterialConstrucaoFornecedoresRoute =
+  AppMaterialConstrucaoFornecedoresRouteImport.update({
+    id: '/material-construcao/fornecedores',
+    path: '/material-construcao/fornecedores',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppMaterialConstrucaoFinanceiroRoute =
+  AppMaterialConstrucaoFinanceiroRouteImport.update({
+    id: '/material-construcao/financeiro',
+    path: '/material-construcao/financeiro',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppMaterialConstrucaoEstoqueRoute =
+  AppMaterialConstrucaoEstoqueRouteImport.update({
+    id: '/material-construcao/estoque',
+    path: '/material-construcao/estoque',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppMaterialConstrucaoEntregasRoute =
+  AppMaterialConstrucaoEntregasRouteImport.update({
+    id: '/material-construcao/entregas',
+    path: '/material-construcao/entregas',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppMaterialConstrucaoComprasRoute =
+  AppMaterialConstrucaoComprasRouteImport.update({
+    id: '/material-construcao/compras',
+    path: '/material-construcao/compras',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppMaterialConstrucaoClientesRoute =
+  AppMaterialConstrucaoClientesRouteImport.update({
+    id: '/material-construcao/clientes',
+    path: '/material-construcao/clientes',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppMaterialConstrucaoCategoriasRoute =
+  AppMaterialConstrucaoCategoriasRouteImport.update({
+    id: '/material-construcao/categorias',
+    path: '/material-construcao/categorias',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppFrotaCartoesRoute = AppFrotaCartoesRouteImport.update({
+  id: '/cartoes',
+  path: '/cartoes',
+  getParentRoute: () => AppFrotaRoute,
 } as any)
-const ApiAdminUsersEmailRoute = ApiAdminUsersEmailRouteImport.update({
-  id: '/api/admin/users/email',
-  path: '/api/admin/users/email',
-  getParentRoute: () => rootRouteImport,
+const AppContabilidadeFolhasPontoRoute =
+  AppContabilidadeFolhasPontoRouteImport.update({
+    id: '/contabilidade/folhas-ponto',
+    path: '/contabilidade/folhas-ponto',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppComercialTemplatesRoute = AppComercialTemplatesRouteImport.update({
+  id: '/templates',
+  path: '/templates',
+  getParentRoute: () => AppComercialRoute,
 } as any)
-const ApiPublicWhatsappDispatchRoute =
-  ApiPublicWhatsappDispatchRouteImport.update({
-    id: '/api/public/whatsapp/dispatch',
-    path: '/api/public/whatsapp/dispatch',
+const AppComercialContratosRoute = AppComercialContratosRouteImport.update({
+  id: '/contratos',
+  path: '/contratos',
+  getParentRoute: () => AppComercialRoute,
+} as any)
+const AppComercialClientesRoute = AppComercialClientesRouteImport.update({
+  id: '/clientes',
+  path: '/clientes',
+  getParentRoute: () => AppComercialRoute,
+} as any)
+const AppAdminSuporteRoute = AppAdminSuporteRouteImport.update({
+  id: '/suporte',
+  path: '/suporte',
+  getParentRoute: () => AppAdminRoute,
+} as any)
+const ApiUsersEmailChangeRequestsRoute =
+  ApiUsersEmailChangeRequestsRouteImport.update({
+    id: '/api/users/email-change-requests',
+    path: '/api/users/email-change-requests',
     getParentRoute: () => rootRouteImport,
   } as any)
-const AppComercialContratosIdRoute = AppComercialContratosIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AppComercialContratosRoute,
-} as any)
-const AppComercialContratosNovoRoute =
-  AppComercialContratosNovoRouteImport.update({
-    id: '/novo',
-    path: '/novo',
-    getParentRoute: () => AppComercialContratosRoute,
+const ApiSupportTicketCreatedEmailRoute =
+  ApiSupportTicketCreatedEmailRouteImport.update({
+    id: '/api/support/ticket-created-email',
+    path: '/api/support/ticket-created-email',
+    getParentRoute: () => rootRouteImport,
   } as any)
-const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
-  id: '/lovable/email/auth/preview',
-  path: '/lovable/email/auth/preview',
+const ApiExpensesAttachmentsRoute = ApiExpensesAttachmentsRouteImport.update({
+  id: '/api/expenses/attachments',
+  path: '/api/expenses/attachments',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LovableEmailAuthWebhookRoute = LovableEmailAuthWebhookRouteImport.update({
-  id: '/lovable/email/auth/webhook',
-  path: '/lovable/email/auth/webhook',
+const ApiEmailSendRoute = ApiEmailSendRouteImport.update({
+  id: '/api/email/send',
+  path: '/api/email/send',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LovableEmailTransactionalPreviewRoute =
@@ -442,6 +410,38 @@ const LovableEmailTransactionalPreviewRoute =
     path: '/lovable/email/transactional/preview',
     getParentRoute: () => rootRouteImport,
   } as any)
+const LovableEmailAuthWebhookRoute = LovableEmailAuthWebhookRouteImport.update({
+  id: '/lovable/email/auth/webhook',
+  path: '/lovable/email/auth/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
+  id: '/lovable/email/auth/preview',
+  path: '/lovable/email/auth/preview',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppComercialContratosNovoRoute =
+  AppComercialContratosNovoRouteImport.update({
+    id: '/novo',
+    path: '/novo',
+    getParentRoute: () => AppComercialContratosRoute,
+  } as any)
+const AppComercialContratosIdRoute = AppComercialContratosIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppComercialContratosRoute,
+} as any)
+const ApiPublicWhatsappDispatchRoute =
+  ApiPublicWhatsappDispatchRouteImport.update({
+    id: '/api/public/whatsapp/dispatch',
+    path: '/api/public/whatsapp/dispatch',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiAdminUsersEmailRoute = ApiAdminUsersEmailRouteImport.update({
+  id: '/api/admin/users/email',
+  path: '/api/admin/users/email',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -888,25 +888,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/aceitar-convite': {
-      id: '/aceitar-convite'
-      path: '/aceitar-convite'
-      fullPath: '/aceitar-convite'
-      preLoaderRoute: typeof AceitarConviteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app': {
-      id: '/app'
-      path: '/app'
-      fullPath: '/app'
-      preLoaderRoute: typeof AppRouteImport
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -916,11 +902,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
+    '/app': {
+      id: '/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/aceitar-convite': {
+      id: '/aceitar-convite'
+      path: '/aceitar-convite'
+      fullPath: '/aceitar-convite'
+      preLoaderRoute: typeof AceitarConviteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app/': {
@@ -930,109 +930,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
-    '/app/admin': {
-      id: '/app/admin'
-      path: '/admin'
-      fullPath: '/app/admin'
-      preLoaderRoute: typeof AppAdminRouteImport
-      parentRoute: typeof AppRoute
+    '/sign/$token': {
+      id: '/sign/$token'
+      path: '/sign/$token'
+      fullPath: '/sign/$token'
+      preLoaderRoute: typeof SignTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/app/assistente': {
-      id: '/app/assistente'
-      path: '/assistente'
-      fullPath: '/app/assistente'
-      preLoaderRoute: typeof AppAssistenteRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/clientes': {
-      id: '/app/clientes'
-      path: '/clientes'
-      fullPath: '/app/clientes'
-      preLoaderRoute: typeof AppClientesRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/comercial': {
-      id: '/app/comercial'
-      path: '/comercial'
-      fullPath: '/app/comercial'
-      preLoaderRoute: typeof AppComercialRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/despesas': {
-      id: '/app/despesas'
-      path: '/despesas'
-      fullPath: '/app/despesas'
-      preLoaderRoute: typeof AppDespesasRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/empresa': {
-      id: '/app/empresa'
-      path: '/empresa'
-      fullPath: '/app/empresa'
-      preLoaderRoute: typeof AppEmpresaRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/equipe': {
-      id: '/app/equipe'
-      path: '/equipe'
-      fullPath: '/app/equipe'
-      preLoaderRoute: typeof AppEquipeRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/ferias': {
-      id: '/app/ferias'
-      path: '/ferias'
-      fullPath: '/app/ferias'
-      preLoaderRoute: typeof AppFeriasRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/frota': {
-      id: '/app/frota'
-      path: '/frota'
-      fullPath: '/app/frota'
-      preLoaderRoute: typeof AppFrotaRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/meus-recibos': {
-      id: '/app/meus-recibos'
-      path: '/meus-recibos'
-      fullPath: '/app/meus-recibos'
-      preLoaderRoute: typeof AppMeusRecibosRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/notas': {
-      id: '/app/notas'
-      path: '/notas'
-      fullPath: '/app/notas'
-      preLoaderRoute: typeof AppNotasRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/notificacoes': {
-      id: '/app/notificacoes'
-      path: '/notificacoes'
-      fullPath: '/app/notificacoes'
-      preLoaderRoute: typeof AppNotificacoesRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/perfil': {
-      id: '/app/perfil'
-      path: '/perfil'
-      fullPath: '/app/perfil'
-      preLoaderRoute: typeof AppPerfilRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/ponto': {
-      id: '/app/ponto'
-      path: '/ponto'
-      fullPath: '/app/ponto'
-      preLoaderRoute: typeof AppPontoRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/rh': {
-      id: '/app/rh'
-      path: '/rh'
-      fullPath: '/app/rh'
-      preLoaderRoute: typeof AppRhRouteImport
+    '/app/tarefas': {
+      id: '/app/tarefas'
+      path: '/tarefas'
+      fullPath: '/app/tarefas'
+      preLoaderRoute: typeof AppTarefasRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/suporte': {
@@ -1042,249 +951,109 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSuporteRouteImport
       parentRoute: typeof AppRoute
     }
-    '/app/tarefas': {
-      id: '/app/tarefas'
-      path: '/tarefas'
-      fullPath: '/app/tarefas'
-      preLoaderRoute: typeof AppTarefasRouteImport
+    '/app/rh': {
+      id: '/app/rh'
+      path: '/rh'
+      fullPath: '/app/rh'
+      preLoaderRoute: typeof AppRhRouteImport
       parentRoute: typeof AppRoute
     }
-    '/sign/$token': {
-      id: '/sign/$token'
-      path: '/sign/$token'
-      fullPath: '/sign/$token'
-      preLoaderRoute: typeof SignTokenRouteImport
-      parentRoute: typeof rootRouteImport
+    '/app/ponto': {
+      id: '/app/ponto'
+      path: '/ponto'
+      fullPath: '/app/ponto'
+      preLoaderRoute: typeof AppPontoRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/api/email/send': {
-      id: '/api/email/send'
-      path: '/api/email/send'
-      fullPath: '/api/email/send'
-      preLoaderRoute: typeof ApiEmailSendRouteImport
-      parentRoute: typeof rootRouteImport
+    '/app/perfil': {
+      id: '/app/perfil'
+      path: '/perfil'
+      fullPath: '/app/perfil'
+      preLoaderRoute: typeof AppPerfilRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/api/expenses/attachments': {
-      id: '/api/expenses/attachments'
-      path: '/api/expenses/attachments'
-      fullPath: '/api/expenses/attachments'
-      preLoaderRoute: typeof ApiExpensesAttachmentsRouteImport
-      parentRoute: typeof rootRouteImport
+    '/app/notificacoes': {
+      id: '/app/notificacoes'
+      path: '/notificacoes'
+      fullPath: '/app/notificacoes'
+      preLoaderRoute: typeof AppNotificacoesRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/api/support/ticket-created-email': {
-      id: '/api/support/ticket-created-email'
-      path: '/api/support/ticket-created-email'
-      fullPath: '/api/support/ticket-created-email'
-      preLoaderRoute: typeof ApiSupportTicketCreatedEmailRouteImport
-      parentRoute: typeof rootRouteImport
+    '/app/notas': {
+      id: '/app/notas'
+      path: '/notas'
+      fullPath: '/app/notas'
+      preLoaderRoute: typeof AppNotasRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/api/users/email-change-requests': {
-      id: '/api/users/email-change-requests'
-      path: '/api/users/email-change-requests'
-      fullPath: '/api/users/email-change-requests'
-      preLoaderRoute: typeof ApiUsersEmailChangeRequestsRouteImport
-      parentRoute: typeof rootRouteImport
+    '/app/meus-recibos': {
+      id: '/app/meus-recibos'
+      path: '/meus-recibos'
+      fullPath: '/app/meus-recibos'
+      preLoaderRoute: typeof AppMeusRecibosRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/app/admin/suporte': {
-      id: '/app/admin/suporte'
-      path: '/suporte'
-      fullPath: '/app/admin/suporte'
-      preLoaderRoute: typeof AppAdminSuporteRouteImport
-      parentRoute: typeof AppAdminRoute
+    '/app/frota': {
+      id: '/app/frota'
+      path: '/frota'
+      fullPath: '/app/frota'
+      preLoaderRoute: typeof AppFrotaRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/app/comercial/': {
-      id: '/app/comercial/'
-      path: '/'
-      fullPath: '/app/comercial/'
-      preLoaderRoute: typeof AppComercialIndexRouteImport
-      parentRoute: typeof AppComercialRoute
+    '/app/ferias': {
+      id: '/app/ferias'
+      path: '/ferias'
+      fullPath: '/app/ferias'
+      preLoaderRoute: typeof AppFeriasRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/app/comercial/clientes': {
-      id: '/app/comercial/clientes'
+    '/app/equipe': {
+      id: '/app/equipe'
+      path: '/equipe'
+      fullPath: '/app/equipe'
+      preLoaderRoute: typeof AppEquipeRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/empresa': {
+      id: '/app/empresa'
+      path: '/empresa'
+      fullPath: '/app/empresa'
+      preLoaderRoute: typeof AppEmpresaRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/despesas': {
+      id: '/app/despesas'
+      path: '/despesas'
+      fullPath: '/app/despesas'
+      preLoaderRoute: typeof AppDespesasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/comercial': {
+      id: '/app/comercial'
+      path: '/comercial'
+      fullPath: '/app/comercial'
+      preLoaderRoute: typeof AppComercialRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/clientes': {
+      id: '/app/clientes'
       path: '/clientes'
-      fullPath: '/app/comercial/clientes'
-      preLoaderRoute: typeof AppComercialClientesRouteImport
-      parentRoute: typeof AppComercialRoute
-    }
-    '/app/comercial/contratos': {
-      id: '/app/comercial/contratos'
-      path: '/contratos'
-      fullPath: '/app/comercial/contratos'
-      preLoaderRoute: typeof AppComercialContratosRouteImport
-      parentRoute: typeof AppComercialRoute
-    }
-    '/app/comercial/templates': {
-      id: '/app/comercial/templates'
-      path: '/templates'
-      fullPath: '/app/comercial/templates'
-      preLoaderRoute: typeof AppComercialTemplatesRouteImport
-      parentRoute: typeof AppComercialRoute
-    }
-    '/app/contabilidade/folhas-ponto': {
-      id: '/app/contabilidade/folhas-ponto'
-      path: '/contabilidade/folhas-ponto'
-      fullPath: '/app/contabilidade/folhas-ponto'
-      preLoaderRoute: typeof AppContabilidadeFolhasPontoRouteImport
+      fullPath: '/app/clientes'
+      preLoaderRoute: typeof AppClientesRouteImport
       parentRoute: typeof AppRoute
     }
-    '/app/frota/cartoes': {
-      id: '/app/frota/cartoes'
-      path: '/cartoes'
-      fullPath: '/app/frota/cartoes'
-      preLoaderRoute: typeof AppFrotaCartoesRouteImport
-      parentRoute: typeof AppFrotaRoute
-    }
-    '/app/material-construcao/': {
-      id: '/app/material-construcao/'
-      path: '/material-construcao'
-      fullPath: '/app/material-construcao/'
-      preLoaderRoute: typeof AppMaterialConstrucaoIndexRouteImport
+    '/app/assistente': {
+      id: '/app/assistente'
+      path: '/assistente'
+      fullPath: '/app/assistente'
+      preLoaderRoute: typeof AppAssistenteRouteImport
       parentRoute: typeof AppRoute
     }
-    '/app/material-construcao/categorias': {
-      id: '/app/material-construcao/categorias'
-      path: '/material-construcao/categorias'
-      fullPath: '/app/material-construcao/categorias'
-      preLoaderRoute: typeof AppMaterialConstrucaoCategoriasRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/material-construcao/clientes': {
-      id: '/app/material-construcao/clientes'
-      path: '/material-construcao/clientes'
-      fullPath: '/app/material-construcao/clientes'
-      preLoaderRoute: typeof AppMaterialConstrucaoClientesRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/material-construcao/compras': {
-      id: '/app/material-construcao/compras'
-      path: '/material-construcao/compras'
-      fullPath: '/app/material-construcao/compras'
-      preLoaderRoute: typeof AppMaterialConstrucaoComprasRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/material-construcao/entregas': {
-      id: '/app/material-construcao/entregas'
-      path: '/material-construcao/entregas'
-      fullPath: '/app/material-construcao/entregas'
-      preLoaderRoute: typeof AppMaterialConstrucaoEntregasRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/material-construcao/estoque': {
-      id: '/app/material-construcao/estoque'
-      path: '/material-construcao/estoque'
-      fullPath: '/app/material-construcao/estoque'
-      preLoaderRoute: typeof AppMaterialConstrucaoEstoqueRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/material-construcao/financeiro': {
-      id: '/app/material-construcao/financeiro'
-      path: '/material-construcao/financeiro'
-      fullPath: '/app/material-construcao/financeiro'
-      preLoaderRoute: typeof AppMaterialConstrucaoFinanceiroRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/material-construcao/fornecedores': {
-      id: '/app/material-construcao/fornecedores'
-      path: '/material-construcao/fornecedores'
-      fullPath: '/app/material-construcao/fornecedores'
-      preLoaderRoute: typeof AppMaterialConstrucaoFornecedoresRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/material-construcao/orcamentos': {
-      id: '/app/material-construcao/orcamentos'
-      path: '/material-construcao/orcamentos'
-      fullPath: '/app/material-construcao/orcamentos'
-      preLoaderRoute: typeof AppMaterialConstrucaoOrcamentosRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/material-construcao/produtos': {
-      id: '/app/material-construcao/produtos'
-      path: '/material-construcao/produtos'
-      fullPath: '/app/material-construcao/produtos'
-      preLoaderRoute: typeof AppMaterialConstrucaoProdutosRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/material-construcao/vendas': {
-      id: '/app/material-construcao/vendas'
-      path: '/material-construcao/vendas'
-      fullPath: '/app/material-construcao/vendas'
-      preLoaderRoute: typeof AppMaterialConstrucaoVendasRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/ponto_/fechamento': {
-      id: '/app/ponto_/fechamento'
-      path: '/ponto/fechamento'
-      fullPath: '/app/ponto/fechamento'
-      preLoaderRoute: typeof AppPontoFechamentoRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/ponto_/gestao': {
-      id: '/app/ponto_/gestao'
-      path: '/ponto/gestao'
-      fullPath: '/app/ponto/gestao'
-      preLoaderRoute: typeof AppPontoGestaoRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/ponto_/meus-relatorios': {
-      id: '/app/ponto_/meus-relatorios'
-      path: '/ponto/meus-relatorios'
-      fullPath: '/app/ponto/meus-relatorios'
-      preLoaderRoute: typeof AppPontoMeusRelatoriosRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/restaurante/': {
-      id: '/app/restaurante/'
-      path: '/restaurante'
-      fullPath: '/app/restaurante/'
-      preLoaderRoute: typeof AppRestauranteIndexRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/restaurante/cozinha': {
-      id: '/app/restaurante/cozinha'
-      path: '/restaurante/cozinha'
-      fullPath: '/app/restaurante/cozinha'
-      preLoaderRoute: typeof AppRestauranteCozinhaRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/restaurante/delivery': {
-      id: '/app/restaurante/delivery'
-      path: '/restaurante/delivery'
-      fullPath: '/app/restaurante/delivery'
-      preLoaderRoute: typeof AppRestauranteDeliveryRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/restaurante/entregadores': {
-      id: '/app/restaurante/entregadores'
-      path: '/restaurante/entregadores'
-      fullPath: '/app/restaurante/entregadores'
-      preLoaderRoute: typeof AppRestauranteEntregadoresRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/restaurante/menu': {
-      id: '/app/restaurante/menu'
-      path: '/restaurante/menu'
-      fullPath: '/app/restaurante/menu'
-      preLoaderRoute: typeof AppRestauranteMenuRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/restaurante/mesas': {
-      id: '/app/restaurante/mesas'
-      path: '/restaurante/mesas'
-      fullPath: '/app/restaurante/mesas'
-      preLoaderRoute: typeof AppRestauranteMesasRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/restaurante/pedidos': {
-      id: '/app/restaurante/pedidos'
-      path: '/restaurante/pedidos'
-      fullPath: '/app/restaurante/pedidos'
-      preLoaderRoute: typeof AppRestaurantePedidosRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/restaurante/zonas': {
-      id: '/app/restaurante/zonas'
-      path: '/restaurante/zonas'
-      fullPath: '/app/restaurante/zonas'
-      preLoaderRoute: typeof AppRestauranteZonasRouteImport
+    '/app/admin': {
+      id: '/app/admin'
+      path: '/admin'
+      fullPath: '/app/admin'
+      preLoaderRoute: typeof AppAdminRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/rh/': {
@@ -1294,26 +1063,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRhIndexRouteImport
       parentRoute: typeof AppRhRoute
     }
-    '/app/rh/recibos': {
-      id: '/app/rh/recibos'
-      path: '/recibos'
-      fullPath: '/app/rh/recibos'
-      preLoaderRoute: typeof AppRhRecibosRouteImport
-      parentRoute: typeof AppRhRoute
-    }
-    '/app/suporte/$id': {
-      id: '/app/suporte/$id'
-      path: '/$id'
-      fullPath: '/app/suporte/$id'
-      preLoaderRoute: typeof AppSuporteIdRouteImport
-      parentRoute: typeof AppSuporteRoute
-    }
-    '/app/tarefas_/recorrentes': {
-      id: '/app/tarefas_/recorrentes'
-      path: '/tarefas/recorrentes'
-      fullPath: '/app/tarefas/recorrentes'
-      preLoaderRoute: typeof AppTarefasRecorrentesRouteImport
+    '/app/restaurante/': {
+      id: '/app/restaurante/'
+      path: '/restaurante'
+      fullPath: '/app/restaurante/'
+      preLoaderRoute: typeof AppRestauranteIndexRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/app/material-construcao/': {
+      id: '/app/material-construcao/'
+      path: '/material-construcao'
+      fullPath: '/app/material-construcao/'
+      preLoaderRoute: typeof AppMaterialConstrucaoIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/comercial/': {
+      id: '/app/comercial/'
+      path: '/'
+      fullPath: '/app/comercial/'
+      preLoaderRoute: typeof AppComercialIndexRouteImport
+      parentRoute: typeof AppComercialRoute
     }
     '/lovable/email/events': {
       id: '/lovable/email/events'
@@ -1322,39 +1091,242 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailEventsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/admin/users/email': {
-      id: '/api/admin/users/email'
-      path: '/api/admin/users/email'
-      fullPath: '/api/admin/users/email'
-      preLoaderRoute: typeof ApiAdminUsersEmailRouteImport
-      parentRoute: typeof rootRouteImport
+    '/app/tarefas_/recorrentes': {
+      id: '/app/tarefas_/recorrentes'
+      path: '/tarefas/recorrentes'
+      fullPath: '/app/tarefas/recorrentes'
+      preLoaderRoute: typeof AppTarefasRecorrentesRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/api/public/whatsapp/dispatch': {
-      id: '/api/public/whatsapp/dispatch'
-      path: '/api/public/whatsapp/dispatch'
-      fullPath: '/api/public/whatsapp/dispatch'
-      preLoaderRoute: typeof ApiPublicWhatsappDispatchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app/comercial/contratos/$id': {
-      id: '/app/comercial/contratos/$id'
+    '/app/suporte/$id': {
+      id: '/app/suporte/$id'
       path: '/$id'
-      fullPath: '/app/comercial/contratos/$id'
-      preLoaderRoute: typeof AppComercialContratosIdRouteImport
-      parentRoute: typeof AppComercialContratosRoute
+      fullPath: '/app/suporte/$id'
+      preLoaderRoute: typeof AppSuporteIdRouteImport
+      parentRoute: typeof AppSuporteRoute
     }
-    '/app/comercial/contratos/novo': {
-      id: '/app/comercial/contratos/novo'
-      path: '/novo'
-      fullPath: '/app/comercial/contratos/novo'
-      preLoaderRoute: typeof AppComercialContratosNovoRouteImport
-      parentRoute: typeof AppComercialContratosRoute
+    '/app/rh/recibos': {
+      id: '/app/rh/recibos'
+      path: '/recibos'
+      fullPath: '/app/rh/recibos'
+      preLoaderRoute: typeof AppRhRecibosRouteImport
+      parentRoute: typeof AppRhRoute
     }
-    '/lovable/email/auth/preview': {
-      id: '/lovable/email/auth/preview'
-      path: '/lovable/email/auth/preview'
-      fullPath: '/lovable/email/auth/preview'
-      preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
+    '/app/restaurante/zonas': {
+      id: '/app/restaurante/zonas'
+      path: '/restaurante/zonas'
+      fullPath: '/app/restaurante/zonas'
+      preLoaderRoute: typeof AppRestauranteZonasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/restaurante/pedidos': {
+      id: '/app/restaurante/pedidos'
+      path: '/restaurante/pedidos'
+      fullPath: '/app/restaurante/pedidos'
+      preLoaderRoute: typeof AppRestaurantePedidosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/restaurante/mesas': {
+      id: '/app/restaurante/mesas'
+      path: '/restaurante/mesas'
+      fullPath: '/app/restaurante/mesas'
+      preLoaderRoute: typeof AppRestauranteMesasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/restaurante/menu': {
+      id: '/app/restaurante/menu'
+      path: '/restaurante/menu'
+      fullPath: '/app/restaurante/menu'
+      preLoaderRoute: typeof AppRestauranteMenuRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/restaurante/entregadores': {
+      id: '/app/restaurante/entregadores'
+      path: '/restaurante/entregadores'
+      fullPath: '/app/restaurante/entregadores'
+      preLoaderRoute: typeof AppRestauranteEntregadoresRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/restaurante/delivery': {
+      id: '/app/restaurante/delivery'
+      path: '/restaurante/delivery'
+      fullPath: '/app/restaurante/delivery'
+      preLoaderRoute: typeof AppRestauranteDeliveryRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/restaurante/cozinha': {
+      id: '/app/restaurante/cozinha'
+      path: '/restaurante/cozinha'
+      fullPath: '/app/restaurante/cozinha'
+      preLoaderRoute: typeof AppRestauranteCozinhaRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/ponto_/meus-relatorios': {
+      id: '/app/ponto_/meus-relatorios'
+      path: '/ponto/meus-relatorios'
+      fullPath: '/app/ponto/meus-relatorios'
+      preLoaderRoute: typeof AppPontoMeusRelatoriosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/ponto_/gestao': {
+      id: '/app/ponto_/gestao'
+      path: '/ponto/gestao'
+      fullPath: '/app/ponto/gestao'
+      preLoaderRoute: typeof AppPontoGestaoRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/ponto_/fechamento': {
+      id: '/app/ponto_/fechamento'
+      path: '/ponto/fechamento'
+      fullPath: '/app/ponto/fechamento'
+      preLoaderRoute: typeof AppPontoFechamentoRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/material-construcao/vendas': {
+      id: '/app/material-construcao/vendas'
+      path: '/material-construcao/vendas'
+      fullPath: '/app/material-construcao/vendas'
+      preLoaderRoute: typeof AppMaterialConstrucaoVendasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/material-construcao/produtos': {
+      id: '/app/material-construcao/produtos'
+      path: '/material-construcao/produtos'
+      fullPath: '/app/material-construcao/produtos'
+      preLoaderRoute: typeof AppMaterialConstrucaoProdutosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/material-construcao/orcamentos': {
+      id: '/app/material-construcao/orcamentos'
+      path: '/material-construcao/orcamentos'
+      fullPath: '/app/material-construcao/orcamentos'
+      preLoaderRoute: typeof AppMaterialConstrucaoOrcamentosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/material-construcao/fornecedores': {
+      id: '/app/material-construcao/fornecedores'
+      path: '/material-construcao/fornecedores'
+      fullPath: '/app/material-construcao/fornecedores'
+      preLoaderRoute: typeof AppMaterialConstrucaoFornecedoresRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/material-construcao/financeiro': {
+      id: '/app/material-construcao/financeiro'
+      path: '/material-construcao/financeiro'
+      fullPath: '/app/material-construcao/financeiro'
+      preLoaderRoute: typeof AppMaterialConstrucaoFinanceiroRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/material-construcao/estoque': {
+      id: '/app/material-construcao/estoque'
+      path: '/material-construcao/estoque'
+      fullPath: '/app/material-construcao/estoque'
+      preLoaderRoute: typeof AppMaterialConstrucaoEstoqueRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/material-construcao/entregas': {
+      id: '/app/material-construcao/entregas'
+      path: '/material-construcao/entregas'
+      fullPath: '/app/material-construcao/entregas'
+      preLoaderRoute: typeof AppMaterialConstrucaoEntregasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/material-construcao/compras': {
+      id: '/app/material-construcao/compras'
+      path: '/material-construcao/compras'
+      fullPath: '/app/material-construcao/compras'
+      preLoaderRoute: typeof AppMaterialConstrucaoComprasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/material-construcao/clientes': {
+      id: '/app/material-construcao/clientes'
+      path: '/material-construcao/clientes'
+      fullPath: '/app/material-construcao/clientes'
+      preLoaderRoute: typeof AppMaterialConstrucaoClientesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/material-construcao/categorias': {
+      id: '/app/material-construcao/categorias'
+      path: '/material-construcao/categorias'
+      fullPath: '/app/material-construcao/categorias'
+      preLoaderRoute: typeof AppMaterialConstrucaoCategoriasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/frota/cartoes': {
+      id: '/app/frota/cartoes'
+      path: '/cartoes'
+      fullPath: '/app/frota/cartoes'
+      preLoaderRoute: typeof AppFrotaCartoesRouteImport
+      parentRoute: typeof AppFrotaRoute
+    }
+    '/app/contabilidade/folhas-ponto': {
+      id: '/app/contabilidade/folhas-ponto'
+      path: '/contabilidade/folhas-ponto'
+      fullPath: '/app/contabilidade/folhas-ponto'
+      preLoaderRoute: typeof AppContabilidadeFolhasPontoRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/comercial/templates': {
+      id: '/app/comercial/templates'
+      path: '/templates'
+      fullPath: '/app/comercial/templates'
+      preLoaderRoute: typeof AppComercialTemplatesRouteImport
+      parentRoute: typeof AppComercialRoute
+    }
+    '/app/comercial/contratos': {
+      id: '/app/comercial/contratos'
+      path: '/contratos'
+      fullPath: '/app/comercial/contratos'
+      preLoaderRoute: typeof AppComercialContratosRouteImport
+      parentRoute: typeof AppComercialRoute
+    }
+    '/app/comercial/clientes': {
+      id: '/app/comercial/clientes'
+      path: '/clientes'
+      fullPath: '/app/comercial/clientes'
+      preLoaderRoute: typeof AppComercialClientesRouteImport
+      parentRoute: typeof AppComercialRoute
+    }
+    '/app/admin/suporte': {
+      id: '/app/admin/suporte'
+      path: '/suporte'
+      fullPath: '/app/admin/suporte'
+      preLoaderRoute: typeof AppAdminSuporteRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
+    '/api/users/email-change-requests': {
+      id: '/api/users/email-change-requests'
+      path: '/api/users/email-change-requests'
+      fullPath: '/api/users/email-change-requests'
+      preLoaderRoute: typeof ApiUsersEmailChangeRequestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/support/ticket-created-email': {
+      id: '/api/support/ticket-created-email'
+      path: '/api/support/ticket-created-email'
+      fullPath: '/api/support/ticket-created-email'
+      preLoaderRoute: typeof ApiSupportTicketCreatedEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/expenses/attachments': {
+      id: '/api/expenses/attachments'
+      path: '/api/expenses/attachments'
+      fullPath: '/api/expenses/attachments'
+      preLoaderRoute: typeof ApiExpensesAttachmentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/email/send': {
+      id: '/api/email/send'
+      path: '/api/email/send'
+      fullPath: '/api/email/send'
+      preLoaderRoute: typeof ApiEmailSendRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/transactional/preview': {
+      id: '/lovable/email/transactional/preview'
+      path: '/lovable/email/transactional/preview'
+      fullPath: '/lovable/email/transactional/preview'
+      preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lovable/email/auth/webhook': {
@@ -1364,11 +1336,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailAuthWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/lovable/email/transactional/preview': {
-      id: '/lovable/email/transactional/preview'
-      path: '/lovable/email/transactional/preview'
-      fullPath: '/lovable/email/transactional/preview'
-      preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
+    '/lovable/email/auth/preview': {
+      id: '/lovable/email/auth/preview'
+      path: '/lovable/email/auth/preview'
+      fullPath: '/lovable/email/auth/preview'
+      preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/app/comercial/contratos/novo': {
+      id: '/app/comercial/contratos/novo'
+      path: '/novo'
+      fullPath: '/app/comercial/contratos/novo'
+      preLoaderRoute: typeof AppComercialContratosNovoRouteImport
+      parentRoute: typeof AppComercialContratosRoute
+    }
+    '/app/comercial/contratos/$id': {
+      id: '/app/comercial/contratos/$id'
+      path: '/$id'
+      fullPath: '/app/comercial/contratos/$id'
+      preLoaderRoute: typeof AppComercialContratosIdRouteImport
+      parentRoute: typeof AppComercialContratosRoute
+    }
+    '/api/public/whatsapp/dispatch': {
+      id: '/api/public/whatsapp/dispatch'
+      path: '/api/public/whatsapp/dispatch'
+      fullPath: '/api/public/whatsapp/dispatch'
+      preLoaderRoute: typeof ApiPublicWhatsappDispatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/users/email': {
+      id: '/api/admin/users/email'
+      path: '/api/admin/users/email'
+      fullPath: '/api/admin/users/email'
+      preLoaderRoute: typeof ApiAdminUsersEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
