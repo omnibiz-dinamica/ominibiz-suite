@@ -3174,6 +3174,20 @@ function TaskForm({
           toast.error("A data de fim deve ser igual ou posterior à data de início.");
           return;
         }
+        {
+          const spanDays = Math.round(
+            (Date.parse(`${endDate}T00:00:00Z`) - Date.parse(`${startDate}T00:00:00Z`)) / 86_400_000,
+          );
+          if (spanDays > 2) {
+            const ok = window.confirm(
+              `Atenção: a data de fim está ${spanDays} dias depois da data de início.\n\n` +
+                "A data de fim é o fim do turno de trabalho (normalmente o mesmo dia ou o dia seguinte). " +
+                "Para repetir a tarefa em vários dias, use a opção de recorrência.\n\n" +
+                "Deseja manter mesmo assim?",
+            );
+            if (!ok) return;
+          }
+        }
         if (startISO && endISO && endISO < startISO) {
           toast.error("O horário de fim deve ser posterior ao de início.");
           return;
