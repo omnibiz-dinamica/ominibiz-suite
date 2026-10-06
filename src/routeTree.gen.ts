@@ -37,6 +37,7 @@ import { Route as ApiEmailSendRouteImport } from './routes/api/email/send'
 import { Route as ApiExpensesAttachmentsRouteImport } from './routes/api/expenses/attachments'
 import { Route as ApiSupportTicketCreatedEmailRouteImport } from './routes/api/support/ticket-created-email'
 import { Route as ApiUsersEmailChangeRequestsRouteImport } from './routes/api/users/email-change-requests'
+import { Route as AppAdminPreviewRouteImport } from './routes/app.admin.preview'
 import { Route as AppAdminSuporteRouteImport } from './routes/app.admin.suporte'
 import { Route as AppComercialIndexRouteImport } from './routes/app.comercial.index'
 import { Route as AppComercialClientesRouteImport } from './routes/app.comercial.clientes'
@@ -221,6 +222,11 @@ const ApiUsersEmailChangeRequestsRoute =
     path: '/api/users/email-change-requests',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AppAdminPreviewRoute = AppAdminPreviewRouteImport.update({
+  id: '/preview',
+  path: '/preview',
+  getParentRoute: () => AppAdminRoute,
+} as any)
 const AppAdminSuporteRoute = AppAdminSuporteRouteImport.update({
   id: '/suporte',
   path: '/suporte',
@@ -472,6 +478,7 @@ export interface FileRoutesByFullPath {
   '/api/expenses/attachments': typeof ApiExpensesAttachmentsRoute
   '/api/support/ticket-created-email': typeof ApiSupportTicketCreatedEmailRoute
   '/api/users/email-change-requests': typeof ApiUsersEmailChangeRequestsRoute
+  '/app/admin/preview': typeof AppAdminPreviewRoute
   '/app/admin/suporte': typeof AppAdminSuporteRoute
   '/app/comercial/clientes': typeof AppComercialClientesRoute
   '/app/comercial/contratos': typeof AppComercialContratosRouteWithChildren
@@ -540,6 +547,7 @@ export interface FileRoutesByTo {
   '/api/expenses/attachments': typeof ApiExpensesAttachmentsRoute
   '/api/support/ticket-created-email': typeof ApiSupportTicketCreatedEmailRoute
   '/api/users/email-change-requests': typeof ApiUsersEmailChangeRequestsRoute
+  '/app/admin/preview': typeof AppAdminPreviewRoute
   '/app/admin/suporte': typeof AppAdminSuporteRoute
   '/app/comercial/clientes': typeof AppComercialClientesRoute
   '/app/comercial/contratos': typeof AppComercialContratosRouteWithChildren
@@ -612,6 +620,7 @@ export interface FileRoutesById {
   '/api/expenses/attachments': typeof ApiExpensesAttachmentsRoute
   '/api/support/ticket-created-email': typeof ApiSupportTicketCreatedEmailRoute
   '/api/users/email-change-requests': typeof ApiUsersEmailChangeRequestsRoute
+  '/app/admin/preview': typeof AppAdminPreviewRoute
   '/app/admin/suporte': typeof AppAdminSuporteRoute
   '/app/comercial/clientes': typeof AppComercialClientesRoute
   '/app/comercial/contratos': typeof AppComercialContratosRouteWithChildren
@@ -685,6 +694,7 @@ export interface FileRouteTypes {
     | '/api/expenses/attachments'
     | '/api/support/ticket-created-email'
     | '/api/users/email-change-requests'
+    | '/app/admin/preview'
     | '/app/admin/suporte'
     | '/app/comercial/clientes'
     | '/app/comercial/contratos'
@@ -753,6 +763,7 @@ export interface FileRouteTypes {
     | '/api/expenses/attachments'
     | '/api/support/ticket-created-email'
     | '/api/users/email-change-requests'
+    | '/app/admin/preview'
     | '/app/admin/suporte'
     | '/app/comercial/clientes'
     | '/app/comercial/contratos'
@@ -824,6 +835,7 @@ export interface FileRouteTypes {
     | '/api/expenses/attachments'
     | '/api/support/ticket-created-email'
     | '/api/users/email-change-requests'
+    | '/app/admin/preview'
     | '/app/admin/suporte'
     | '/app/comercial/clientes'
     | '/app/comercial/contratos'
@@ -1083,6 +1095,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/users/email-change-requests'
       preLoaderRoute: typeof ApiUsersEmailChangeRequestsRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/app/admin/preview': {
+      id: '/app/admin/preview'
+      path: '/preview'
+      fullPath: '/app/admin/preview'
+      preLoaderRoute: typeof AppAdminPreviewRouteImport
+      parentRoute: typeof AppAdminRoute
     }
     '/app/admin/suporte': {
       id: '/app/admin/suporte'
@@ -1375,10 +1394,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppAdminRouteChildren {
+  AppAdminPreviewRoute: typeof AppAdminPreviewRoute
   AppAdminSuporteRoute: typeof AppAdminSuporteRoute
 }
 
 const AppAdminRouteChildren: AppAdminRouteChildren = {
+  AppAdminPreviewRoute: AppAdminPreviewRoute,
   AppAdminSuporteRoute: AppAdminSuporteRoute,
 }
 
