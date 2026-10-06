@@ -8,6 +8,13 @@
       "when": 1791285643373,
       "tag": "0000_admin_employee_preview",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791286065923,
+      "tag": "0001_admin_preview_full",
+      "breakpoints": true
     }
   ]
 }

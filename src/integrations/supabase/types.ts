@@ -4300,6 +4300,10 @@ export type Database = {
         Args: { _target_employee_id: string }
         Returns: Json
       }
+      admin_preview_employee_full: {
+        Args: { _company_id: string; _target_employee_id: string }
+        Returns: Json
+      }
       admin_release_user_identity: { Args: { _user_id: string }; Returns: Json }
       admin_replace_manager_invite: {
         Args: { _invite_id: string; _new_email: string }
