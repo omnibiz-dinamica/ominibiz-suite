@@ -40,10 +40,11 @@ function PreviewPage() {
     queryKey: ["preview-members", currentCompanyId],
     enabled: !!currentCompanyId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any).rpc("company_active_member_options", { _company_id: currentCompanyId });
+      const { data, error } = await (supabase as any).rpc("company_active_member_options");
       if (error) throw error;
-      return ((data ?? []) as { user_id?: string; id?: string; full_name: string | null }[])
-        .map((m) => ({ id: (m.user_id ?? m.id) as string, name: (m.full_name ?? "").trim() }))
+      return ((data ?? []) as { company_id: string; id: string; full_name: string | null }[])
+        .filter((m) => m.company_id === currentCompanyId)
+        .map((m) => ({ id: m.id, name: (m.full_name ?? "").trim() }))
         .sort((a, b) => a.name.localeCompare(b.name));
     },
   });
