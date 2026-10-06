@@ -119,6 +119,8 @@ export type CompanyBilling = {
   billing_discount_kind?: BillingDiscountKind | string | null;
   billing_discount_value?: number | null;
   billing_discount_target?: BillingDiscountTarget | string | null;
+  billing_monthly_discount_kind?: BillingDiscountKind | string | null;
+  billing_monthly_discount_value?: number | null;
 };
 
 export const PLAN_OPTIONS: Record<
@@ -561,24 +563,26 @@ export function normalizeDiscountTarget(target: unknown): BillingDiscountTarget 
   return target === "monthly" ? "monthly" : "setup";
 }
 
-function discountOn(company: CompanyBilling, base: number): number {
-  const kind = normalizeDiscountKind(company.billing_discount_kind);
-  const raw = Number(company.billing_discount_value ?? 0);
+function discountOn(kindRaw: unknown, valueRaw: unknown, base: number): number {
+  const kind = normalizeDiscountKind(kindRaw);
+  const raw = Number(valueRaw ?? 0);
   if (kind === "none" || !Number.isFinite(raw) || raw <= 0 || base <= 0) return 0;
   const discount = kind === "percent" ? (base * Math.min(raw, 100)) / 100 : raw;
   return roundCents(Math.min(discount, base));
 }
 
-/** Desconto na mensalidade (só quando o destino é "monthly"). Nunca negativa. */
+/** Desconto na mensalidade (independente do da implantação). Nunca negativa. */
 export function billingDiscountAmount(company: CompanyBilling): number {
-  if (normalizeDiscountTarget(company.billing_discount_target) !== "monthly") return 0;
-  return discountOn(company, billingMonthlySubtotal(company));
+  return discountOn(
+    company.billing_monthly_discount_kind,
+    company.billing_monthly_discount_value,
+    billingMonthlySubtotal(company),
+  );
 }
 
-/** Desconto na implantação (só quando o destino é "setup"). Nunca negativa. */
+/** Desconto na implantação (independente do da mensalidade). Nunca negativa. */
 export function billingSetupDiscountAmount(company: CompanyBilling, setupFee: number): number {
-  if (normalizeDiscountTarget(company.billing_discount_target) !== "setup") return 0;
-  return discountOn(company, setupFee);
+  return discountOn(company.billing_discount_kind, company.billing_discount_value, setupFee);
 }
 
 /** Mensalidade final já com desconto. */
