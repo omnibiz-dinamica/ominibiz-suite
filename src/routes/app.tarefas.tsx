@@ -3386,7 +3386,11 @@ function TaskForm({
           // Horario e duracao da recorrencia sao derivados do topo do formulario.
           // Sem horario, a recorrencia fica por dia; nunca materializa 00:00.
           const derivedTime = startTime ? `${startTime}:00` : null;
-          const derivedDuration = manualDurationMinutes;
+          // Em recorrências a "data fim" é o fim da série, não do turno:
+          // a duração é só a do turno diário (hora fim − hora início,
+          // com passagem de meia-noite), nunca a amplitude entre as datas.
+          const derivedDuration =
+            manualDurationMinutes > 1440 ? manualDurationMinutes % 1440 : manualDurationMinutes;
           // Uma série (task_recurrence) por funcionário selecionado.
           // ADR-041: inserção individual + idempotência. Se o banco recusar por
           // série ativa equivalente (RECURRENCE_DUPLICATE_ACTIVE), tratamos como
