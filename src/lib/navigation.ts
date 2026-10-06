@@ -247,6 +247,7 @@ function managerGroups(args: { superAdminOperating: boolean; vertical: BusinessV
       items: [
         { to: "/app/admin", label: "Empresas (Super Admin)", icon: Shield },
         { to: "/app/admin/suporte", label: "Todos os Tickets", icon: LifeBuoy },
+        { to: "/app/admin/preview", label: "Ver como funcionário", icon: Shield },
       ],
     });
   }

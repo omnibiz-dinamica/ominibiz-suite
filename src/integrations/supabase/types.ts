@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_preview_logs: {
+        Row: {
+          admin_id: string
+          company_id: string | null
+          id: string
+          target_user_id: string
+          viewed_at: string
+        }
+        Insert: {
+          admin_id: string
+          company_id?: string | null
+          id?: string
+          target_user_id: string
+          viewed_at?: string
+        }
+        Update: {
+          admin_id?: string
+          company_id?: string | null
+          id?: string
+          target_user_id?: string
+          viewed_at?: string
+        }
+        Relationships: []
+      }
       ai_usage: {
         Row: {
           contract_id: string
@@ -4271,6 +4295,10 @@ export type Database = {
           invite_id: string
           invite_token: string
         }[]
+      }
+      admin_preview_employee: {
+        Args: { _target_employee_id: string }
+        Returns: Json
       }
       admin_release_user_identity: { Args: { _user_id: string }; Returns: Json }
       admin_replace_manager_invite: {
