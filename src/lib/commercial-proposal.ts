@@ -35,7 +35,8 @@ export type ProposalInput = {
   modules: ModuleKey[];
   discountKind: BillingDiscountKind;
   discountValue: number;
-  discountTarget?: BillingDiscountTarget;
+  monthlyDiscountKind?: BillingDiscountKind;
+  monthlyDiscountValue?: number;
   notes?: string | null;
   /** Validade da proposta em dias (padrão 15). */
   validityDays?: number;
@@ -81,7 +82,8 @@ export function buildProposalHtml(input: ProposalInput, issuedAt: Date = new Dat
     enabled_modules: modules,
     billing_discount_kind: input.discountKind,
     billing_discount_value: input.discountValue,
-    billing_discount_target: input.discountTarget ?? "setup",
+    billing_monthly_discount_kind: input.monthlyDiscountKind ?? "none",
+    billing_monthly_discount_value: input.monthlyDiscountValue ?? 0,
   };
 
   const planInfo = PLAN_OPTIONS[input.plan];
@@ -128,6 +130,10 @@ export function buildProposalHtml(input: ProposalInput, issuedAt: Date = new Dat
   const discountLabel =
     input.discountKind === "percent"
       ? `Desconto comercial (${escapeHtml(String(input.discountValue))}%)`
+      : "Desconto comercial";
+  const monthlyDiscountLabel =
+    input.monthlyDiscountKind === "percent"
+      ? `Desconto comercial (${escapeHtml(String(input.monthlyDiscountValue ?? 0))}%)`
       : "Desconto comercial";
 
   return `<!doctype html>
