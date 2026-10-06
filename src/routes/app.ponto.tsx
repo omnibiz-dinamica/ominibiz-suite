@@ -210,8 +210,10 @@ function PontoPage() {
         // Tarefas removidas (soft delete) saem da fila operacional.
         .is("deleted_at", null)
         .in("status", ["pendente", "autorizado", "ausente", "em_andamento", "cancelado"])
-        .order("due_at", { ascending: true, nullsFirst: false })
+        // Ordem cronológica pelo início real da tarefa (não pelo prazo/fim).
         .order("scheduled_for", { ascending: true, nullsFirst: false })
+        .order("recurrence_date", { ascending: true, nullsFirst: false })
+        .order("due_at", { ascending: true, nullsFirst: false })
         .limit(20);
       // Gestor/super admin: vê tarefas da empresa (toda a operação).
       // Funcionário: vê apenas as suas.
@@ -222,7 +224,7 @@ function PontoPage() {
       }
       const { data, error } = await q;
       if (error) throw error;
-      const rows = (data ?? []) as unknown as TaskRow[];
+      const rows = sortTasksForList((data ?? []) as unknown as TaskRow[]);
       return isManager || isSuperAdmin
         ? rows
         : rows.filter((task) => !isEmployeeCancelledTask(task, user.id));
