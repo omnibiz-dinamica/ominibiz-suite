@@ -24,6 +24,7 @@ import {
   type BillingPlan,
   type ModuleKey,
 } from "@/lib/locale";
+import representativeSignature from "@/assets/assinatura-eduardo.png.asset.json";
 
 export type ProposalInput = {
   companyName: string;
@@ -47,6 +48,12 @@ const COUNTRY_LABEL: Record<ProposalInput["country"], string> = {
   BE: "Bélgica",
   ES: "Espanha",
   BR: "Brasil",
+};
+
+const COMMERCIAL_REPRESENTATIVE = {
+  name: "Eduardo R S Júnior",
+  role: "Representante comercial",
+  signatureUrl: representativeSignature.url,
 };
 
 function escapeHtml(value: string): string {
@@ -182,7 +189,11 @@ export function buildProposalHtml(input: ProposalInput, issuedAt: Date = new Dat
   ul { margin: 0; padding-left: 16px; }
   li { margin-bottom: 3px; }
   .sign { display: flex; gap: 24px; margin-top: 26px; }
-  .sign div { flex: 1; border-top: 1px solid #10182a; padding-top: 6px; font-size: 10px; color: #5b6880; }
+  .sign div { flex: 1; padding-top: 6px; font-size: 10px; color: #5b6880; }
+  .signature-slot { min-height: 64px; display: flex; align-items: flex-end; }
+  .signature-image { max-width: 170px; max-height: 58px; object-fit: contain; display: block; }
+  .signature-line { border-top: 1px solid #10182a; padding-top: 6px; }
+  .signature-name { color: #10182a; font-weight: 700; }
   footer.doc { margin-top: 18px; border-top: 1px solid #dde3ec; padding-top: 8px; font-size: 9.5px; color: #5b6880; text-align: center; }
   .avoid-break { page-break-inside: avoid; }
   h2 { page-break-after: avoid; break-after: avoid; }
@@ -278,8 +289,14 @@ export function buildProposalHtml(input: ProposalInput, issuedAt: Date = new Dat
 
   <h2>Aceitação</h2>
   <div class="sign avoid-break">
-    <div>OmniBiz Suite — Representante comercial<br />Data: ____ / ____ / ________</div>
-    <div>${escapeHtml(input.companyName)} — Representante legal<br />Data: ____ / ____ / ________</div>
+    <div>
+      <div class="signature-slot"><img class="signature-image" src="${escapeHtml(COMMERCIAL_REPRESENTATIVE.signatureUrl)}" alt="Assinatura de ${escapeHtml(COMMERCIAL_REPRESENTATIVE.name)}" /></div>
+      <div class="signature-line"><span class="signature-name">${escapeHtml(COMMERCIAL_REPRESENTATIVE.name)}</span><br />OmniBiz Suite — ${escapeHtml(COMMERCIAL_REPRESENTATIVE.role)}<br />Data: ${escapeHtml(formatDate(issuedAt))}</div>
+    </div>
+    <div>
+      <div class="signature-slot"></div>
+      <div class="signature-line">${escapeHtml(input.companyName)} — Representante legal<br />Data: ____ / ____ / ________</div>
+    </div>
   </div>
 
   <footer class="doc">OmniBiz Suite · Proposta ${escapeHtml(proposalReference(input, issuedAt))} · Documento gerado automaticamente pelo sistema</footer>
