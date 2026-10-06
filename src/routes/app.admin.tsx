@@ -81,6 +81,8 @@ type AdminCompany = {
   billing_discount_kind?: string | null;
   billing_discount_value?: number | null;
   billing_discount_target?: string | null;
+  billing_monthly_discount_kind?: string | null;
+  billing_monthly_discount_value?: number | null;
 };
 
 function AdminRouteContent() {
@@ -105,7 +107,7 @@ function AdminPage() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase.from("companies" as any) as any)
         .select(
-          "id, name, slug, country, currency, language, timezone, status, created_at, billing_plan, billing_cycle, billing_country, billing_currency, employee_limit, user_limit, enabled_modules, billing_notes, business_vertical, billing_setup_fee, billing_discount_kind, billing_discount_value, billing_discount_target",
+          "id, name, slug, country, currency, language, timezone, status, created_at, billing_plan, billing_cycle, billing_country, billing_currency, employee_limit, user_limit, enabled_modules, billing_notes, business_vertical, billing_setup_fee, billing_discount_kind, billing_discount_value, billing_discount_target, billing_monthly_discount_kind, billing_monthly_discount_value",
         )
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -393,8 +395,13 @@ function BillingControls({ company }: { company: AdminCompany }) {
   const [discountKind, setDiscountKind] = useState<BillingDiscountKind>(
     normalizeDiscountKind(company.billing_discount_kind),
   );
-  const [discountTarget, setDiscountTarget] = useState<BillingDiscountTarget>(
-    normalizeDiscountTarget(company.billing_discount_target),
+  const [monthlyDiscountKind, setMonthlyDiscountKind] = useState<BillingDiscountKind>(
+    normalizeDiscountKind(company.billing_monthly_discount_kind),
+  );
+  const [monthlyDiscountValue, setMonthlyDiscountValue] = useState(
+    company.billing_monthly_discount_value != null && Number(company.billing_monthly_discount_value) > 0
+      ? String(company.billing_monthly_discount_value)
+      : "",
   );
   const [discountValue, setDiscountValue] = useState(
     company.billing_discount_value != null && Number(company.billing_discount_value) > 0
@@ -434,8 +441,12 @@ function BillingControls({ company }: { company: AdminCompany }) {
   const currentTab = MODULE_TABS.find((t) => t.key === activeTab) ?? MODULE_TABS[0];
 
   const currency = COUNTRY_CURRENCY[country];
-  const parsedDiscount = Number(discountValue.replace(",", "."));
-  const safeDiscount = Number.isFinite(parsedDiscount) && parsedDiscount > 0 ? parsedDiscount : 0;
+  const toSafe = (s: string) => {
+    const n = Number(s.replace(",", "."));
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
+  const safeDiscount = toSafe(discountValue);
+  const safeMonthlyDiscount = toSafe(monthlyDiscountValue);
   const effectiveCompany = {
     billing_plan: plan,
     billing_cycle: cycle,
@@ -444,7 +455,8 @@ function BillingControls({ company }: { company: AdminCompany }) {
     enabled_modules: modules,
     billing_discount_kind: discountKind,
     billing_discount_value: safeDiscount,
-    billing_discount_target: discountTarget,
+    billing_monthly_discount_kind: monthlyDiscountKind,
+    billing_monthly_discount_value: safeMonthlyDiscount,
   };
   const subtotal = billingMonthlySubtotal(effectiveCompany);
   const discount = billingDiscountAmount(effectiveCompany);
@@ -481,7 +493,9 @@ function BillingControls({ company }: { company: AdminCompany }) {
           billing_setup_fee: setupFee,
           billing_discount_kind: discountKind,
           billing_discount_value: discountKind === "none" ? 0 : safeDiscount,
-          billing_discount_target: discountTarget,
+          billing_discount_target: "setup",
+          billing_monthly_discount_kind: monthlyDiscountKind,
+          billing_monthly_discount_value: monthlyDiscountKind === "none" ? 0 : safeMonthlyDiscount,
           billing_notes: notes.trim() || null,
           business_vertical: vertical,
         })
@@ -555,48 +569,40 @@ function BillingControls({ company }: { company: AdminCompany }) {
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-1.5">
-          <Label>Aplicar desconto em</Label>
-          <Select value={discountTarget} onValueChange={(v) => setDiscountTarget(v as BillingDiscountTarget)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="setup">Implantação</SelectItem>
-              <SelectItem value="monthly">Mensalidade</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label>Tipo de desconto</Label>
-          <Select
-            value={discountKind}
-            onValueChange={(v) => {
-              const next = v as BillingDiscountKind;
-              setDiscountKind(next);
-              if (next === "none") setDiscountValue("");
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Sem desconto</SelectItem>
-              <SelectItem value="percent">Percentagem (%)</SelectItem>
-              <SelectItem value="amount">Valor fixo ({currency === "BRL" ? "R$" : "€"})</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label>Valor do desconto</Label>
-          <Input
-            inputMode="decimal"
-            value={discountValue}
-            onChange={(e) => setDiscountValue(e.target.value)}
-            disabled={discountKind === "none"}
-            placeholder={discountKind === "percent" ? "Ex.: 10" : "Ex.: 20"}
-          />
-        </div>
+        {([
+          ["Desconto na implantação", discountKind, setDiscountKind, discountValue, setDiscountValue],
+          ["Desconto na mensalidade", monthlyDiscountKind, setMonthlyDiscountKind, monthlyDiscountValue, setMonthlyDiscountValue],
+        ] as const).map(([label, kind, setKind, value, setValue]) => (
+          <div key={label} className="space-y-1.5">
+            <Label>{label}</Label>
+            <div className="flex gap-2">
+              <Select
+                value={kind}
+                onValueChange={(v) => {
+                  const next = v as BillingDiscountKind;
+                  setKind(next);
+                  if (next === "none") setValue("");
+                }}
+              >
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem desconto</SelectItem>
+                  <SelectItem value="percent">Percentagem (%)</SelectItem>
+                  <SelectItem value="amount">Valor fixo ({currency === "BRL" ? "R$" : "€"})</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                inputMode="decimal"
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                disabled={kind === "none"}
+                placeholder={kind === "percent" ? "Ex.: 10" : "Ex.: 20"}
+              />
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className="mt-3 grid gap-3 md:grid-cols-2">
@@ -617,7 +623,7 @@ function BillingControls({ company }: { company: AdminCompany }) {
             </div>
             {discount > 0 && (
               <div className="flex justify-between text-success">
-                <dt>Desconto {discountKind === "percent" ? `(${safeDiscount}%)` : ""}</dt>
+                <dt>Desconto {monthlyDiscountKind === "percent" ? `(${safeMonthlyDiscount}%)` : ""}</dt>
                 <dd>− {formatBillingAmount(discount, currency)}</dd>
               </div>
             )}
@@ -744,7 +750,8 @@ function BillingControls({ company }: { company: AdminCompany }) {
               modules,
               discountKind,
               discountValue: safeDiscount,
-              discountTarget,
+              monthlyDiscountKind,
+              monthlyDiscountValue: safeMonthlyDiscount,
               notes,
             }}
           />
