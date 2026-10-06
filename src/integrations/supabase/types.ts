@@ -373,6 +373,8 @@ export type Database = {
           billing_discount_kind: string
           billing_discount_target: string
           billing_discount_value: number
+          billing_monthly_discount_kind: string
+          billing_monthly_discount_value: number
           billing_notes: string | null
           billing_plan: string
           billing_setup_fee: number
@@ -408,6 +410,8 @@ export type Database = {
           billing_discount_kind?: string
           billing_discount_target?: string
           billing_discount_value?: number
+          billing_monthly_discount_kind?: string
+          billing_monthly_discount_value?: number
           billing_notes?: string | null
           billing_plan?: string
           billing_setup_fee?: number
@@ -443,6 +447,8 @@ export type Database = {
           billing_discount_kind?: string
           billing_discount_target?: string
           billing_discount_value?: number
+          billing_monthly_discount_kind?: string
+          billing_monthly_discount_value?: number
           billing_notes?: string | null
           billing_plan?: string
           billing_setup_fee?: number
