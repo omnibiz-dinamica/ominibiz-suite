@@ -243,7 +243,7 @@ export function buildProposalHtml(input: ProposalInput, issuedAt: Date = new Dat
       <tr><td>Plano ${escapeHtml(planInfo.label)}</td><td class="right">${money(base)}/mês</td></tr>
       <tr><td>Módulos adicionais</td><td class="right">${money(addons)}/mês</td></tr>
       <tr><td>Subtotal mensal</td><td class="right">${money(subtotal)}/mês</td></tr>
-      ${discount > 0 ? `<tr class="discount"><td>${discountLabel}</td><td class="right">− ${money(discount)}</td></tr>` : ""}
+      ${discount > 0 ? `<tr class="discount"><td>${monthlyDiscountLabel}</td><td class="right">− ${money(discount)}</td></tr>` : ""}
       <tr class="total"><td>Mensalidade final</td><td class="right">${money(monthly)}/mês</td></tr>
     </tbody>
   </table>
