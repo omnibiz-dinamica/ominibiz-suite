@@ -62,6 +62,8 @@ export const Route = createFileRoute("/api/expenses/attachments")({
           .from("employee_expenses")
           .select("id,expense_date,user_id,amount,reason,attachment_path,attachment_mime,attachment_size")
           .eq("company_id", companyId)
+          // Regra fixa: só despesas aprovadas entram no pacote, independentemente do pedido.
+          .eq("status", "aprovada")
           .gte("expense_date", bounds.start)
           .lt("expense_date", bounds.end)
           .not("attachment_path", "is", null)

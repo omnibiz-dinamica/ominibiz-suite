@@ -518,7 +518,7 @@ function DespesasPage() {
       const response = await fetchAttachmentReport("manifest");
       const payload = await response.json() as { items: ExpenseAttachmentManifestItem[] };
       if (payload.items.length === 0) {
-        toast.info("Não há comprovantes no mês selecionado.");
+        toast.info("Não há comprovantes de despesas aprovadas no mês selecionado.");
         return;
       }
       openExpenseAttachmentsPrint(await buildExpenseAttachmentsPdf(payload.items));
