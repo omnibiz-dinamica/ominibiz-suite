@@ -1,6 +1,7 @@
 # Roadmap
 - [x] Cleanup TESTE-LOTE-% (170 tasks, 677 notifications + 508 audit rows via cascade)
-- [ ] _notify fix: proposal ready (notify_correcao_proposta.sql), not applied; pending: before/after inside ROLLBACK, employee start/complete 20, manager end series ~100 occurrences
-- [ ] Apply v3 in 01:00–02:00 Brussels — waiting for user to confirm window; dry run BEGIN/ROLLBACK first
-- [ ] After applying: cron EXECUTE check + manual extend run; own-trigger timing (≤1 s/100, ≤20 ms/1); full test list
-- [ ] Then: timeline UI + kind='queue' filters in the same publish
+- [x] Ensaios 07/10: ACL originais, reversão v3, _notify dois ramos medido (sem aplicar), ensaio v3 com rollback, janela 19–20h, linha de base TESTE-ANTES (arquivada)
+- [ ] _notify v2 (dois ramos): pronta em notify_correcao_v2.sql, não aplicada — aguarda decisão
+- [ ] Aplicar v3 hoje às 19:00 Bruxelas — aguarda "aplicar" do Eduardo
+- [ ] Após aplicar: cron EXECUTE + extensão manual; tempo do próprio gatilho (≤1 s/100, ≤20 ms/1); lista completa de testes; comparar com a linha de base TESTE-ANTES
+- [ ] Depois: timeline UI + filtros kind='queue' no mesmo publish
