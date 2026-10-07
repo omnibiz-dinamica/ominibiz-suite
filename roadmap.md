@@ -59,3 +59,5 @@
 - [x] Aplicar uma regra global de inatividade, independente da empresa.
 - [x] Ocultar inativos no servidor em todas as listas de nova seleção identificadas.
 - [x] Validar visualmente em empresas distintas e confirmar regressões.
+
+- [ ] Timeline de atividade: reemitir migração com 7 ajustes (proteção gatilhos, ISO UTC, permissões, kind=queue, eventos agregados, prosecdef, reversão) — aguarda aprovação
