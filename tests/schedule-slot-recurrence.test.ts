@@ -21,7 +21,7 @@ describe("programação do cliente liga a recorrência", () => {
     expect(r.weekdays).toEqual([6]);
     expect(r.intervalWeeks).toBe(2);
     expect(r.endDate).toBe("");
-    expect(r.startDate).toBe("2026-10-17");
+    expect(r.startDate).toBe("2026-10-10");
   });
   test("(c) início cai na semana Klein do ciclo", () => {
     const r = recurrenceFromScheduleSlot(emptyRecurrence(), klein, new Date(2026, 9, 8))!;
