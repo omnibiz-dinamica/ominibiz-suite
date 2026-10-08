@@ -134,3 +134,26 @@ export const enCommon: Record<string, string> = {
   "Reportar problema": "Report a problem",
   Idioma: "Language",
 };
+
+export const enLanding: Record<string, string> = {
+  Tema: "Theme",
+  "Planejamento de Trabalho": "Work Planning",
+  "Crie, atribua e acompanhe tarefas com status operacional claro.": "Create, assign and track tasks with clear operational status.",
+  "Início e conclusão por evento, sem loops e sem polling.": "Start and finish by event, with no loops and no polling.",
+  "Notificações em Tempo Real": "Real-Time Notifications",
+  "Deep links e ações diretas, sem fricção.": "Deep links and direct actions, without friction.",
+  "Hierarquia Multiempresa": "Multi-Company Hierarchy",
+  "Super Admin, Gestor e Funcionário com isolamento total.": "Super Admin, Manager and Employee with full isolation.",
+  "Regras no Backend": "Server-Side Rules",
+  "Lógica centralizada. A interface nunca decide o que importa.": "Centralized logic. The interface never decides what matters.",
+  "Pronto para IA": "AI-Ready",
+  "Estrutura preparada para assistente operacional e automações.": "Built for an operations assistant and automations.",
+  "Operação inteligente para empresas modernas": "Smart operations for modern businesses",
+  "A operação da sua empresa,": "Your company's operations,",
+  centralizada: "centralized",
+  "OmniBiz ajuda empresas de limpeza, restaurantes, delivery e outros segmentos a centralizar rotinas, acompanhar equipes e reduzir falhas operacionais com automações controladas.":
+    "OmniBiz helps cleaning companies, restaurants, delivery and other businesses centralize routines, follow their teams and reduce operational failures with controlled automations.",
+  "Acessar plataforma": "Access platform",
+  "Plataforma por convite — fale com nossa equipe para provisionar sua empresa.": "Invitation-only platform — contact our team to set up your company.",
+  "Plataforma SaaS multiempresa": "Multi-company SaaS platform",
+};
