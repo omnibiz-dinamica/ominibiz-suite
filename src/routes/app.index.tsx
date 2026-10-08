@@ -49,6 +49,7 @@ function ManagerDashboard() {
   const { user, isManager, isSuperAdmin, currentCompanyId, initialized } = useAuth();
   const today = useOperationalDay();
   const { t } = useT();
+  const tr = t;
 
   const {
     data: tasks,
@@ -225,7 +226,7 @@ function ManagerDashboard() {
                 >
                   <span className="min-w-0 truncate text-sm">{t.title}</span>
                   <span className="shrink-0 text-xs text-muted-foreground">
-                    {t.scheduled_for ? formatWallTime(t.scheduled_for) : t("Sem horário")}
+                    {t.scheduled_for ? formatWallTime(t.scheduled_for) : tr("Sem horário")}
                   </span>
                 </Link>
               </li>
