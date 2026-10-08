@@ -7,6 +7,7 @@ import { ClipboardList, CheckCircle2, Clock, AlertTriangle, Building2, Ban, User
 import { Button } from "@/components/ui/button";
 import { EmployeeDashboard } from "@/components/dashboards/EmployeeDashboard";
 import { SuperAdminDashboard } from "@/components/dashboards/SuperAdminDashboard";
+import { ActivityTimeline } from "@/components/dashboards/ActivityTimeline";
 import {
   classifyDashboardTask,
   countDashboardTasks,
@@ -235,6 +236,8 @@ function ManagerDashboard() {
           )}
         </ul>
       </div>
+
+      {isManager && currentCompanyId && <ActivityTimeline companyId={currentCompanyId} />}
     </div>
   );
 }
