@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Zip, ZipPassThrough } from "fflate";
-import { attachmentArchiveName, expenseMonthBounds, safeExpenseAttachmentName } from "@/lib/expense-attachments";
+import { attachmentArchiveName, safeExpenseAttachmentName, type ExpenseSelectionFilters } from "@/lib/expense-attachments";
 
 type ExpenseAttachmentRow = {
   id: string;
@@ -13,6 +13,7 @@ type ExpenseAttachmentRow = {
   attachment_size: number | null;
 };
 
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_FILES = 100;
 const MAX_TOTAL_BYTES = 200 * 1024 * 1024;
@@ -37,14 +38,23 @@ export const Route = createFileRoute("/api/expenses/attachments")({
         if (!authHeader?.startsWith("Bearer ")) return json({ error: "Não autorizado." }, 401);
         const url = new URL(request.url);
         const companyId = url.searchParams.get("companyId") ?? "";
-        const month = url.searchParams.get("month") ?? "";
         const format = url.searchParams.get("format") === "zip" ? "zip" : "manifest";
+        const statusParam = url.searchParams.get("status");
         const paymentParam = url.searchParams.get("payment");
-        const payment = paymentParam === "paga" || paymentParam === "aguardando_pagamento" ? paymentParam : "all";
         const userIdParam = url.searchParams.get("userId");
+        const start = url.searchParams.get("start") ?? "";
+        const end = url.searchParams.get("end") ?? "";
+        const filters: ExpenseSelectionFilters = {
+          status: statusParam === "pendente" || statusParam === "aprovada" || statusParam === "rejeitada" ? statusParam : "all",
+          payment: paymentParam === "paga" || paymentParam === "aguardando_pagamento" ? paymentParam : "all",
+          userId: userIdParam ?? "all",
+          dateBy: url.searchParams.get("dateBy") === "created_at" ? "created_at" : "expense_date",
+          start,
+          end,
+        };
         if (userIdParam && !UUID_PATTERN.test(userIdParam)) return json({ error: "Colaborador inválido." }, 400);
-        const bounds = expenseMonthBounds(month);
-        if (!UUID_PATTERN.test(companyId) || !bounds) return json({ error: "Período inválido." }, 400);
+        if ((start && !DATE_PATTERN.test(start)) || (end && !DATE_PATTERN.test(end))) return json({ error: "Período inválido." }, 400);
+        if (!UUID_PATTERN.test(companyId)) return json({ error: "Empresa inválida." }, 400);
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const token = authHeader.slice("Bearer ".length).trim();
@@ -62,27 +72,38 @@ export const Route = createFileRoute("/api/expenses/attachments")({
         );
         if (!allowed) return json({ error: "Sem permissão para consultar estes comprovantes." }, 403);
 
+        // Mesma seleção do Histórico (estado, pagamento, colaborador, datas); sem regra escondida.
         let query = (supabaseAdmin as any)
           .from("employee_expenses")
           .select("id,expense_date,user_id,amount,reason,attachment_path,attachment_mime,attachment_size")
           .eq("company_id", companyId)
-          // Regra fixa: só despesas aprovadas entram no pacote, independentemente do pedido.
-          .eq("status", "aprovada")
-          .gte("expense_date", bounds.start)
-          .lt("expense_date", bounds.end)
           .not("attachment_path", "is", null);
-        if (userIdParam) query = query.eq("user_id", userIdParam);
-        if (payment === "paga") query = query.eq("payment_status", "paga");
+        if (filters.status !== "all") query = query.eq("status", filters.status);
+        if (filters.userId !== "all") query = query.eq("user_id", filters.userId);
+        if (filters.payment === "paga") query = query.eq("payment_status", "paga");
         // Aprovadas ainda sem estado de pagamento contam como "aguarda pagamento".
-        if (payment === "aguardando_pagamento") query = query.or("payment_status.is.null,payment_status.neq.paga");
+        if (filters.payment === "aguardando_pagamento") {
+          query = query.eq("status", "aprovada").or("payment_status.is.null,payment_status.neq.paga");
+        }
+        if (filters.dateBy === "expense_date") {
+          if (start) query = query.gte("expense_date", start);
+          if (end) query = query.lte("expense_date", end);
+        } else {
+          if (start) query = query.gte("created_at", `${start}T00:00:00Z`);
+          if (end) {
+            const next = new Date(`${end}T00:00:00Z`);
+            next.setUTCDate(next.getUTCDate() + 1);
+            query = query.lt("created_at", next.toISOString());
+          }
+        }
         const { data, error } = await query
           .order("expense_date", { ascending: true })
           .limit(MAX_FILES + 1);
         if (error) return json({ error: "Não foi possível consultar os comprovantes." }, 500);
         const rows = (data ?? []) as ExpenseAttachmentRow[];
-        if (rows.length > MAX_FILES) return json({ error: `O mês excede o limite de ${MAX_FILES} comprovantes.` }, 413);
+        if (rows.length > MAX_FILES) return json({ error: `A seleção excede o limite de ${MAX_FILES} comprovantes. Reduza o período.` }, 413);
         const totalBytes = rows.reduce((sum, row) => sum + (row.attachment_size ?? 0), 0);
-        if (totalBytes > MAX_TOTAL_BYTES) return json({ error: "O mês excede o limite de 200 MB para processamento imediato." }, 413);
+        if (totalBytes > MAX_TOTAL_BYTES) return json({ error: "A seleção excede o limite de 200 MB para processamento imediato." }, 413);
 
         const userIds = [...new Set(rows.map((row) => row.user_id))];
         const { data: profiles } = userIds.length
@@ -152,7 +173,7 @@ export const Route = createFileRoute("/api/expenses/attachments")({
         return new Response(stream, {
           headers: {
             "Cache-Control": "private, no-store",
-            "Content-Disposition": `attachment; filename="${attachmentArchiveName(month, payment)}"`,
+            "Content-Disposition": `attachment; filename="${attachmentArchiveName(filters, filters.userId !== "all" ? names.get(filters.userId) : null)}"`,
             "Content-Type": "application/zip",
           },
         });

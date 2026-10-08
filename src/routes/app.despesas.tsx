@@ -11,18 +11,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { EmployeePicker } from "@/components/common/EmployeePicker";
 import { toast } from "sonner";
 import { exportToExcel, exportToPdf, type ExportColumn } from "@/lib/exports";
-import { CreditCard, Check, X as XIcon, Upload, Camera, Download, Plus, Trash2, FileSpreadsheet, FileText, Printer, Package } from "lucide-react";
+import { CreditCard, Check, X as XIcon, Upload, Camera, Download, Plus, Trash2, FileSpreadsheet, FileText, Package } from "lucide-react";
 import {
-  buildExpenseAttachmentsPdf,
-  openExpenseAttachmentsPrint,
-  ATTACHMENT_PAYMENT_LABEL,
   attachmentArchiveName,
   describeExpenseFilters,
-  selectAttachmentExpenses,
-  summarizeAttachmentExpenses,
-  type AttachmentPaymentFilter,
-  type ExpenseAttachmentManifestItem,
+  expenseFilterParams,
+  filterExpenses,
+  monthShortcut,
+  summarizeExpenseSelection,
+  type ExpenseSelectionFilters,
 } from "@/lib/expense-attachments";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/app/despesas")({ component: DespesasPage });
 
@@ -442,31 +444,29 @@ function DespesasPage() {
   const [filterDateBy, setFilterDateBy] = useState<"expense_date" | "created_at">("expense_date");
   const [filterStartDate, setFilterStartDate] = useState("");
   const [filterEndDate, setFilterEndDate] = useState("");
-  const [attachmentMonth, setAttachmentMonth] = useState(new Date().toISOString().slice(0, 7));
-  const [attachmentAction, setAttachmentAction] = useState<"print" | "zip" | null>(null);
-  const [attachmentPayment, setAttachmentPayment] = useState<AttachmentPaymentFilter>("all");
+  const [attachmentAction, setAttachmentAction] = useState<"zip" | null>(null);
   const [attachmentResult, setAttachmentResult] = useState<string | null>(null);
-  const attachmentRows = selectAttachmentExpenses(rows, {
-    month: attachmentMonth,
-    payment: attachmentPayment,
+  const [confirmDownload, setConfirmDownload] = useState(false);
+  // Seleção única: lista, Excel, PDF e comprovantes usam exatamente estes filtros.
+  const selection: ExpenseSelectionFilters = {
+    status: filterStatus,
+    payment: filterPayment,
     userId: filterUser,
-  });
-  const attachmentSummary = summarizeAttachmentExpenses(attachmentRows, {
-    month: attachmentMonth,
-    payment: attachmentPayment,
+    dateBy: filterDateBy,
+    start: filterStartDate,
+    end: filterEndDate,
+  };
+  const filtered = filterExpenses(rows, selection);
+  const selectionSummary = summarizeExpenseSelection(filtered);
+  const activeFiltersText = describeExpenseFilters({
+    statusLabel: filterStatus !== "all" ? STATUS_LABEL[filterStatus] : null,
+    paymentLabel: filterPayment !== "all" ? PAYMENT_LABEL[filterPayment] : null,
     employeeName: filterUser !== "all" ? (names[filterUser] ?? "Colaborador") : null,
+    dateBy: filterDateBy,
+    start: filterStartDate,
+    end: filterEndDate,
   });
-
-  const filtered = rows.filter((r) => {
-    if (filterStatus !== "all" && r.status !== filterStatus) return false;
-    if (filterPayment !== "all" && r.payment_status !== filterPayment) return false;
-    if (filterUser !== "all" && r.user_id !== filterUser) return false;
-    const comparableDate =
-      filterDateBy === "expense_date" ? r.expense_date : new Date(r.created_at).toISOString().slice(0, 10);
-    if (filterStartDate && comparableDate < filterStartDate) return false;
-    if (filterEndDate && comparableDate > filterEndDate) return false;
-    return true;
-  });
+  useEffect(() => setAttachmentResult(null), [filterStatus, filterPayment, filterUser, filterDateBy, filterStartDate, filterEndDate]);
   const pending = filtered.filter((r) => r.status === "pendente");
   const decided = filtered.filter((r) => r.status !== "pendente");
 
@@ -491,14 +491,7 @@ function DespesasPage() {
       { header: "Observações", accessor: (r) => r.notes ?? "", width: 170 },
     ];
     // O arquivo sai com exatamente as linhas e os filtros da tela.
-    const subtitle = describeExpenseFilters({
-      statusLabel: filterStatus !== "all" ? STATUS_LABEL[filterStatus] : null,
-      paymentLabel: filterPayment !== "all" ? PAYMENT_LABEL[filterPayment] : null,
-      employeeName: filterUser !== "all" ? (names[filterUser] ?? "Colaborador") : null,
-      dateBy: filterDateBy,
-      start: filterStartDate,
-      end: filterEndDate,
-    });
+    const subtitle = activeFiltersText;
     const meta = {
       fileName: `despesas-${new Date().toISOString().slice(0, 10)}`,
       title: "Despesas",
@@ -520,9 +513,9 @@ function DespesasPage() {
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData.session?.access_token;
     if (!token) throw new Error("Sessão expirada. Entre novamente.");
-    const params = new URLSearchParams({ companyId: currentCompanyId, month: attachmentMonth, format });
-    if (attachmentPayment !== "all") params.set("payment", attachmentPayment);
-    if (filterUser !== "all") params.set("userId", filterUser);
+    const params = expenseFilterParams(selection);
+    params.set("companyId", currentCompanyId);
+    params.set("format", format);
     const response = await fetch(`/api/expenses/attachments?${params.toString()}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -533,23 +526,9 @@ function DespesasPage() {
     return response;
   };
 
-  const printAttachments = async () => {
-    setAttachmentAction("print");
-    setAttachmentResult(null);
-    try {
-      const response = await fetchAttachmentReport("manifest");
-      const payload = await response.json() as { items: ExpenseAttachmentManifestItem[] };
-      if (payload.items.length === 0) {
-        toast.info("Nenhum comprovante para estes filtros");
-        return;
-      }
-      openExpenseAttachmentsPrint(await buildExpenseAttachmentsPdf(payload.items));
-      setAttachmentResult(`${payload.items.length} comprovante(s) enviados para impressão.`);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Falha ao imprimir comprovantes.");
-    } finally {
-      setAttachmentAction(null);
-    }
+  const requestDownload = () => {
+    if (selectionSummary.nonApprovedWithFile > 0) setConfirmDownload(true);
+    else void downloadAttachments();
   };
 
   const downloadAttachments = async () => {
@@ -561,7 +540,7 @@ function DespesasPage() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      const fileName = attachmentArchiveName(attachmentMonth, attachmentPayment);
+      const fileName = attachmentArchiveName(selection, filterUser !== "all" ? names[filterUser] : null);
       link.download = fileName;
       link.click();
       setAttachmentResult(`Arquivo ${fileName} baixado.`);
@@ -810,11 +789,26 @@ function DespesasPage() {
                 onChange={(e) => setFilterEndDate(e.target.value)}
               />
             </div>
-            <div className="flex items-end">
+            <div className="flex flex-wrap items-end gap-1">
+              {(["current", "previous"] as const).map((k) => (
+                <Button
+                  key={k}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const r = monthShortcut(k);
+                    setFilterStartDate(r.start);
+                    setFilterEndDate(r.end);
+                  }}
+                >
+                  {k === "current" ? "Este mês" : "Mês anterior"}
+                </Button>
+              ))}
               <Button
                 type="button"
                 variant="ghost"
-                className="w-full"
+                size="sm"
                 onClick={() => {
                   setFilterStartDate("");
                   setFilterEndDate("");
@@ -827,64 +821,60 @@ function DespesasPage() {
         )}
         {isManager && (
           <div className="mb-4 space-y-2 border-t border-border pt-4" data-testid="expense-attachments-block">
-            <div className="flex flex-wrap items-end gap-2">
-              <div className="min-w-[180px] flex-1 sm:flex-none">
-                <Label htmlFor="expense-attachment-month" className="text-xs">Mês dos comprovantes</Label>
-                <Input
-                  id="expense-attachment-month"
-                  type="month"
-                  value={attachmentMonth}
-                  onChange={(event) => { setAttachmentMonth(event.target.value); setAttachmentResult(null); }}
-                />
-              </div>
-              <div className="min-w-[180px] flex-1 sm:flex-none">
-                <Label className="text-xs">Pagamento</Label>
-                <Select
-                  value={attachmentPayment}
-                  onValueChange={(v) => { setAttachmentPayment(v as AttachmentPaymentFilter); setAttachmentResult(null); }}
-                >
-                  <SelectTrigger aria-label="Pagamento dos comprovantes"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {(["aguardando_pagamento", "paga", "all"] as const).map((k) => (
-                      <SelectItem key={k} value={k}>{ATTACHMENT_PAYMENT_LABEL[k]}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full sm:w-auto"
-                disabled={!attachmentMonth || attachmentAction !== null || isLoading || attachmentSummary.count === 0}
-                onClick={() => void printAttachments()}
-              >
-                <Printer className="h-4 w-4" /> {attachmentAction === "print" ? "A preparar…" : "Imprimir comprovantes"}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full sm:w-auto"
-                disabled={!attachmentMonth || attachmentAction !== null || isLoading || attachmentSummary.count === 0}
-                onClick={() => void downloadAttachments()}
-              >
-                <Package className="h-4 w-4" /> {attachmentAction === "zip" ? "A preparar…" : "Baixar comprovantes do mês"}
-              </Button>
-            </div>
-            <div className="text-xs" data-testid="expense-attachments-summary" aria-live="polite">
+            <div className="text-xs" data-testid="expense-selection-summary" aria-live="polite">
               {isLoading ? (
                 <span className="text-muted-foreground">Carregando…</span>
-              ) : attachmentSummary.count === 0 ? (
-                <span className="text-muted-foreground">Nenhum comprovante para estes filtros</span>
               ) : (
-                <span className="font-medium">{attachmentSummary.text}</span>
+                <>
+                  <div className="font-medium">
+                    {selectionSummary.count} {selectionSummary.count === 1 ? "despesa" : "despesas"} · {selectionSummary.totalText}
+                    {selectionSummary.statusText ? ` · ${selectionSummary.statusText}` : ""}
+                  </div>
+                  <div className="text-muted-foreground">
+                    {selectionSummary.withFile} com comprovante anexado
+                    {selectionSummary.missing > 0 && (
+                      <span className="text-warning"> · {selectionSummary.missing} sem comprovante (fora do pacote)</span>
+                    )}
+                  </div>
+                  <div className="text-muted-foreground">{activeFiltersText}</div>
+                </>
               )}
-              {!isLoading && attachmentSummary.missing > 0 && (
-                <span className="ml-1 text-warning">
-                  · {attachmentSummary.missing} aprovada(s) sem comprovante anexado (fora do pacote)
-                </span>
-              )}
-              {attachmentResult && <div className="mt-1 text-success">{attachmentResult}</div>}
             </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full sm:w-auto"
+                disabled={attachmentAction !== null || isLoading || selectionSummary.withFile === 0}
+                onClick={requestDownload}
+              >
+                <Package className="h-4 w-4" /> {attachmentAction === "zip" ? "A preparar…" : "Baixar comprovantes"}
+              </Button>
+              {!isLoading && selectionSummary.withFile === 0 && (
+                <span className="text-xs text-muted-foreground">Nenhum comprovante para estes filtros</span>
+              )}
+              {!isLoading && selectionSummary.nonApproved > 0 && selectionSummary.withFile > 0 && (
+                <span className="text-xs text-warning">A seleção inclui despesas pendentes ou rejeitadas.</span>
+              )}
+            </div>
+            {attachmentResult && <div className="text-xs text-success">{attachmentResult}</div>}
+            <AlertDialog open={confirmDownload} onOpenChange={setConfirmDownload}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Incluir despesas não aprovadas?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    A seleção inclui {selectionSummary.byStatus.pendente ?? 0} pendente(s) e {selectionSummary.byStatus.rejeitada ?? 0} rejeitada(s).
+                    Os comprovantes destas despesas também entram no pacote. Deseja continuar?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => { setConfirmDownload(false); void downloadAttachments(); }}>
+                    Baixar mesmo assim
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         )}
         {isLoading ? (
