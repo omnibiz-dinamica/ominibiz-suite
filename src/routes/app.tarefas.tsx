@@ -138,7 +138,9 @@ import { RefuseTaskDialog, type RefusalSubmitPayload } from "@/components/tasks/
 
 import { EmployeeMultiPicker } from "@/components/common/EmployeePicker";
 import { MultiClientSelect } from "@/components/common/MultiClientSelect";
-import { filterCalendarData, tasksForCalendarDay } from "@/lib/tasks/calendar-filter";
+import { filterCalendarData, taskCalendarDateKey, tasksForCalendarDay } from "@/lib/tasks/calendar-filter";
+import { useT } from "@/i18n";
+import { SearchX } from "lucide-react";
 import { compareTasksForList, sortTasksForList } from "@/lib/tasks/list-order";
 import { matchesDashboardBucket, taskOperationalDay } from "@/lib/tasks/dashboard-counters";
 import {
@@ -1372,7 +1374,13 @@ function TasksPage() {
         </section>
       )}
 
-      {!isLoading && filteredTasks.length === 0 && (
+      {!isLoading && filteredTasks.length === 0 && selectedClientIds.length > 0 && (
+        <ClientFilterEmptyState
+          withOtherFilters={!!search.status || selectedEmployeeIds.length > 0}
+          onClear={() => setClientFilter(undefined)}
+        />
+      )}
+      {!isLoading && filteredTasks.length === 0 && selectedClientIds.length === 0 && (
         <div className="rounded-2xl border border-border bg-card px-5 py-12 text-center text-sm text-muted-foreground">
           {view === "archived"
             ? "Nenhuma tarefa arquivada."
@@ -1421,6 +1429,9 @@ function TasksPage() {
           members={members ?? []}
           clients={clientsList ?? []}
           groupBy={calendarGroup}
+          clientFilterActive={selectedClientIds.length > 0}
+          otherFiltersActive={!!search.status || selectedEmployeeIds.length > 0}
+          onClearClientFilter={() => setClientFilter(undefined)}
           seedAssigneeIds={
             calendarGroup === "assignee"
               ? selectedEmployeeIds.length > 0
@@ -1541,6 +1552,9 @@ function TaskPlanningCalendar({
   clients,
   groupBy,
   seedAssigneeIds,
+  clientFilterActive = false,
+  otherFiltersActive = false,
+  onClearClientFilter,
   ...handlers
 }: RowHandlers & {
   tasks: TaskRow[];
@@ -1550,6 +1564,10 @@ function TaskPlanningCalendar({
   groupBy: "assignee" | "client" | "all";
   /** Colaboradores que devem aparecer mesmo sem tarefas no período. */
   seedAssigneeIds?: string[];
+  /** Com filtro de cliente: só aparecem grupos com tarefas no período exibido. */
+  clientFilterActive?: boolean;
+  otherFiltersActive?: boolean;
+  onClearClientFilter?: () => void;
 
 }) {
   const [mode, setMode] = useState<CalendarMode>("week");
@@ -1608,10 +1626,22 @@ function TaskPlanningCalendar({
     [cursor],
   );
 
+  // Intervalo visível do período (dia, semana, grelha do mês ou ano).
+  const [rangeStart, rangeEnd] = (() => {
+    if (mode === "day") return [dateKey(cursor), dateKey(cursor)];
+    if (mode === "week") return [dateKey(weekDays[0]), dateKey(weekDays[6])];
+    if (mode === "month") return [dateKey(monthDays[0]), dateKey(monthDays[41])];
+    return [`${cursor.getFullYear()}-01-01`, `${cursor.getFullYear()}-12-31`];
+  })();
+  const inRange = (task: TaskRow) => {
+    const k = taskCalendarDateKey(task);
+    return !!k && k >= rangeStart && k <= rangeEnd;
+  };
+
   const groups = new Map<string, TaskRow[]>();
   // Na vista por colaborador, toda a equipa aparece — quem não tem tarefas no
   // período fica com o bloco vazio, sem desaparecer da lista.
-  if (groupBy === "assignee") {
+  if (groupBy === "assignee" && !clientFilterActive) {
     for (const id of seedAssigneeIds ?? []) if (!groups.has(id)) groups.set(id, []);
   }
 
@@ -1626,9 +1656,13 @@ function TaskPlanningCalendar({
     list.push(task);
     groups.set(key, list);
   }
-  for (const vacation of vacations) {
+  for (const vacation of clientFilterActive ? [] : vacations) {
     const key = groupBy === "all" ? "__all__" : groupBy === "assignee" ? vacation.user_id : "__no_client__";
     if (!groups.has(key)) groups.set(key, []);
+  }
+  // Filtro de cliente: esconder grupos sem tarefas no período exibido.
+  if (clientFilterActive) {
+    for (const [key, list] of groups) if (!list.some(inRange)) groups.delete(key);
   }
   const groupEntries = Array.from(groups.entries()).sort(([a], [b]) => {
     const labelA =
@@ -1675,6 +1709,9 @@ function TaskPlanningCalendar({
         </div>
       </div>
 
+      {clientFilterActive && groupEntries.length === 0 && (
+        <ClientFilterEmptyState withOtherFilters={otherFiltersActive} onClear={onClearClientFilter} />
+      )}
       {groupEntries.map(([key, groupTasks]) => {
         const groupVacations =
           groupBy === "all"
@@ -4047,6 +4084,27 @@ function CompletionNoteBlock({
         <span className="font-medium">Observação:</span> {note.reason}
       </div>
       <div className="mt-1 text-muted-foreground">Concluída em: {formatLocalTime(timestamp)}</div>
+    </div>
+  );
+}
+
+/** Estado vazio do filtro de cliente (Lista e Calendário). */
+function ClientFilterEmptyState({ withOtherFilters, onClear }: { withOtherFilters: boolean; onClear?: () => void }) {
+  const { t } = useT();
+  return (
+    <div className="flex flex-col items-center gap-2 rounded-2xl border border-border bg-card px-5 py-10 text-center">
+      <SearchX className="h-8 w-8 text-muted-foreground" aria-hidden />
+      <p className="max-w-md text-sm font-medium">
+        {withOtherFilters
+          ? t("Nenhuma tarefa encontrada para os clientes selecionados com os filtros selecionados neste período.")
+          : t("Nenhuma tarefa encontrada para os clientes selecionados neste período.")}
+      </p>
+      <p className="max-w-md text-xs text-muted-foreground">{t("Tente outro período ou limpe o filtro de cliente.")}</p>
+      {onClear && (
+        <Button type="button" variant="outline" className="mt-2 min-h-11" onClick={onClear}>
+          {t("Limpar filtro de cliente")}
+        </Button>
+      )}
     </div>
   );
 }
