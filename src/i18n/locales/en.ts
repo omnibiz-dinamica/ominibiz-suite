@@ -171,3 +171,9 @@ export const enTasks: Record<string, string> = {
   "Filtrar por cliente": "Filter by client",
   "Remover {{name}}": "Remove {{name}}",
 };
+Object.assign(enTasks, {
+  "Nenhuma tarefa encontrada para os clientes selecionados neste período.": "No tasks found for the selected clients in this period.",
+  "Nenhuma tarefa encontrada para os clientes selecionados com os filtros selecionados neste período.": "No tasks found for the selected clients with the selected filters in this period.",
+  "Tente outro período ou limpe o filtro de cliente.": "Try another period or clear the client filter.",
+  "Limpar filtro de cliente": "Clear client filter",
+});
