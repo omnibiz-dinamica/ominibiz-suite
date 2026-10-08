@@ -48,3 +48,28 @@ export function resolveNotificationActions({
     restore: canManage && state === "arquivada",
   };
 }
+
+type OpenableNotification = {
+  event: string;
+  task_id?: string | null;
+  metadata?: unknown;
+};
+
+/** Link interno gravado no metadata para eventos que navegam por link (ex.: punch_regularized). */
+export function notificationOpenLink(n: OpenableNotification): string | null {
+  if (n.event !== "punch_regularized") return null;
+  const meta = (n.metadata ?? {}) as Record<string, unknown>;
+  const link = typeof meta.link === "string" ? meta.link.trim() : "";
+  if (!link.startsWith("/app/") || link.startsWith("//")) return null;
+  return link;
+}
+
+export function canOpenNotification(n: OpenableNotification, hasSupportTicket: boolean): boolean {
+  return (
+    n.event === "punch_regularized" ||
+    !!n.task_id ||
+    hasSupportTicket ||
+    n.event.startsWith("vacation_") ||
+    n.event.startsWith("expense_")
+  );
+}
