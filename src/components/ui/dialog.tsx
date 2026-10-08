@@ -37,9 +37,13 @@ const MODAL_SIZE: Record<ModalSize, string> = {
   xl: "sm:max-w-[min(1200px,94vw)]",
 };
 
-/** Shared shell: full-screen on mobile, centered card from `sm` upwards. */
+/**
+ * Shared shell: full-screen on mobile, centered card from `sm` upwards.
+ * `overflow: clip` (not just hidden): a hidden box can still be scrolled by
+ * scrollIntoView/focus, which pushed the footer up and left a blank area below it.
+ */
 export const modalShell = cn(
-  "fixed z-50 flex flex-col overflow-hidden bg-background text-foreground shadow-2xl outline-none",
+  "fixed z-50 flex flex-col overflow-hidden [overflow:clip] bg-background text-foreground shadow-2xl outline-none",
   // mobile: full screen
   "inset-0 h-[100dvh] max-h-[100dvh] w-screen max-w-none rounded-none border-0",
   // >= sm: centered, bounded card

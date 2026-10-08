@@ -3114,7 +3114,14 @@ function TaskForm({
     recurrenceStartTouchedRef.current = true;
     setRecurrence(next);
     // Abre o bloco de recorrência para conferência e rola até ele.
-    setTimeout(() => recurrenceBlockRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+    setTimeout(() => {
+      // Rola SÓ o corpo do modal (nunca o shell/rodapé).
+      const block = recurrenceBlockRef.current;
+      const body = block?.closest<HTMLElement>("[data-modal-body]");
+      if (!block || !body) return;
+      const top = block.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop - 8;
+      body.scrollTo({ top, behavior: "smooth" });
+    }, 50);
     if (!touchedDates) {
       setStartDate(next.startDate);
       setEndDate(next.startDate);
@@ -3219,7 +3226,7 @@ function TaskForm({
 
   return (
     <>
-    <ModalBody className="space-y-4">
+    <ModalBody className="space-y-4" data-modal-body>
     <form
       id={formId}
       className="space-y-4"
