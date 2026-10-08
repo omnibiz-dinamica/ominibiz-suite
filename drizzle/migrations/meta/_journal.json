@@ -43,6 +43,13 @@
       "when": 1791469634789,
       "tag": "0005_sup253_sup66_sup224_punch_notify_group_edit",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791469655346,
+      "tag": "0006_task_audit_events_group_events",
+      "breakpoints": true
     }
   ]
 }
