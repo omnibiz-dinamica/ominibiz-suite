@@ -1,6 +1,6 @@
 import i18n from "i18next";
 import { initReactI18next, useTranslation } from "react-i18next";
-import { enCommon, enDashboard, enLogin, enNavigation } from "./locales/en";
+import { enCommon, enDashboard, enLanding, enLogin, enNavigation } from "./locales/en";
 
 export type AppLanguage = "pt-BR" | "en";
 export const DEFAULT_LANGUAGE: AppLanguage = "pt-BR";
@@ -13,7 +13,7 @@ export const LANGUAGE_STORAGE_KEY = "omnibiz:language";
 const identity = (dict: Record<string, string>) =>
   Object.fromEntries(Object.keys(dict).map((k) => [k, k]));
 
-export const enModules = { navigation: enNavigation, login: enLogin, dashboard: enDashboard, common: enCommon };
+export const enModules = { navigation: enNavigation, login: enLogin, dashboard: enDashboard, common: enCommon, landing: enLanding };
 export const ptModules = Object.fromEntries(
   Object.entries(enModules).map(([m, d]) => [m, identity(d)]),
 ) as Record<keyof typeof enModules, Record<string, string>>;
