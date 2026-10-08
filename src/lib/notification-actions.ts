@@ -55,21 +55,53 @@ type OpenableNotification = {
   metadata?: unknown;
 };
 
-/** Link interno gravado no metadata para eventos que navegam por link (ex.: punch_regularized). */
-export function notificationOpenLink(n: OpenableNotification): string | null {
-  if (n.event !== "punch_regularized") return null;
-  const meta = (n.metadata ?? {}) as Record<string, unknown>;
-  const link = typeof meta.link === "string" ? meta.link.trim() : "";
-  if (!link.startsWith("/app/") || link.startsWith("//")) return null;
+const LINK_EVENTS = new Set(["punch_regularized", "punch_adjusted"]);
+
+function safeInternalPath(value: unknown): string | null {
+  const link = typeof value === "string" ? value.trim() : "";
+  if (!link.startsWith("/app/") || link.startsWith("//") || link.includes("://")) return null;
   return link;
 }
 
-export function canOpenNotification(n: OpenableNotification, hasSupportTicket: boolean): boolean {
-  return (
-    n.event === "punch_regularized" ||
-    !!n.task_id ||
-    hasSupportTicket ||
-    n.event.startsWith("vacation_") ||
-    n.event.startsWith("expense_")
-  );
+/** Link interno gravado no metadata para eventos que navegam por link. */
+export function notificationOpenLink(n: OpenableNotification): string | null {
+  if (!LINK_EVENTS.has(n.event)) return null;
+  const meta = (n.metadata ?? {}) as Record<string, unknown>;
+  return safeInternalPath(meta.link);
+}
+
+export type NotificationDestination =
+  | { kind: "path"; to: string }
+  | { kind: "ticket"; id: string }
+  | { kind: "task"; taskId: string };
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * SUP-147/150: destino do botão "Abrir". Usa o link gravado; se não houver,
+ * deriva do metadata/task_id (só rotas internas). null => sem botão "Abrir".
+ */
+export function resolveNotificationDestination(
+  n: OpenableNotification,
+  supportTicketId: string | null,
+): NotificationDestination | null {
+  const meta = (n.metadata ?? {}) as Record<string, unknown>;
+  if (LINK_EVENTS.has(n.event)) {
+    const link = notificationOpenLink(n);
+    return { kind: "path", to: link ?? "/app/ponto" };
+  }
+  if (n.event.startsWith("vacation_")) return { kind: "path", to: "/app/ferias" };
+  if (n.event.startsWith("expense_")) return { kind: "path", to: "/app/despesas" };
+  if (supportTicketId) return { kind: "ticket", id: supportTicketId };
+  const taskId =
+    n.task_id ?? (typeof meta.task_id === "string" && UUID.test(meta.task_id) ? meta.task_id : null);
+  if (taskId) return { kind: "task", taskId };
+  const link = safeInternalPath(meta.link) ?? safeInternalPath(meta.target_url);
+  if (link) return { kind: "path", to: link };
+  return null;
+}
+
+export function canOpenNotification(n: OpenableNotification, supportTicketId: string | null | boolean): boolean {
+  const id = typeof supportTicketId === "string" ? supportTicketId : supportTicketId ? "ticket" : null;
+  return resolveNotificationDestination(n, id) !== null;
 }
