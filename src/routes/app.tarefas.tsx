@@ -2882,6 +2882,7 @@ function TaskForm({
   onDone: () => void;
   documentsSlot?: ReactNode;
 }) {
+  const { t } = useT();
   const [title, setTitle] = useState(initial?.title ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [assignees, setAssignees] = useState<string[]>(initial?.assigned_to ? [initial.assigned_to] : []);
