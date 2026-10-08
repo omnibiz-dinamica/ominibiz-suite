@@ -878,22 +878,6 @@ function DespesasPage() {
           </div>
         )}
         {isLoading ? (
-                <span className="text-muted-foreground">Carregando…</span>
-              ) : attachmentSummary.count === 0 ? (
-                <span className="text-muted-foreground">Nenhum comprovante para estes filtros</span>
-              ) : (
-                <span className="font-medium">{attachmentSummary.text}</span>
-              )}
-              {!isLoading && attachmentSummary.missing > 0 && (
-                <span className="ml-1 text-warning">
-                  · {attachmentSummary.missing} aprovada(s) sem comprovante anexado (fora do pacote)
-                </span>
-              )}
-              {attachmentResult && <div className="mt-1 text-success">{attachmentResult}</div>}
-            </div>
-          </div>
-        )}
-        {isLoading ? (
           <p className="text-sm text-muted-foreground">Carregando…</p>
         ) : decided.length === 0 && pending.length === 0 ? (
           <p className="text-sm text-muted-foreground">Sem despesas registadas.</p>
