@@ -7,6 +7,7 @@ import { ClipboardList, CheckCircle2, Clock, AlertTriangle, Building2, Ban, User
 import { Button } from "@/components/ui/button";
 import { EmployeeDashboard } from "@/components/dashboards/EmployeeDashboard";
 import { SuperAdminDashboard } from "@/components/dashboards/SuperAdminDashboard";
+import { useT } from "@/i18n";
 import { ActivityTimeline } from "@/components/dashboards/ActivityTimeline";
 import {
   classifyDashboardTask,
@@ -47,6 +48,8 @@ function useOperationalDay() {
 function ManagerDashboard() {
   const { user, isManager, isSuperAdmin, currentCompanyId, initialized } = useAuth();
   const today = useOperationalDay();
+  const { t } = useT();
+  const tr = t;
 
   const {
     data: tasks,
@@ -120,12 +123,12 @@ function ManagerDashboard() {
   );
 
   const cards = [
-    { label: "Pendentes", value: counts.pendente, icon: ClipboardList, tone: "text-info", status: "pendente" as const },
-    { label: "Em andamento", value: counts.em_andamento, icon: Clock, tone: "text-primary", status: "em_andamento" as const },
-    { label: "Concluídas", value: counts.concluido, icon: CheckCircle2, tone: "text-success", status: "concluido" as const },
-    { label: "Atrasadas", value: counts.atrasada, icon: AlertTriangle, tone: "text-destructive", status: "atrasadas" as const },
-    { label: "Ausentes", value: counts.ausente, icon: UserX, tone: "text-warning", status: "ausente" as const },
-    { label: "Canceladas/Recusadas", value: counts.cancelada + counts.recusada, icon: Ban, tone: "text-muted-foreground", status: "canceladas" as const },
+    { label: t("Pendentes"), value: counts.pendente, icon: ClipboardList, tone: "text-info", status: "pendente" as const },
+    { label: t("Em andamento"), value: counts.em_andamento, icon: Clock, tone: "text-primary", status: "em_andamento" as const },
+    { label: t("Concluídas"), value: counts.concluido, icon: CheckCircle2, tone: "text-success", status: "concluido" as const },
+    { label: t("Atrasadas"), value: counts.atrasada, icon: AlertTriangle, tone: "text-destructive", status: "atrasadas" as const },
+    { label: t("Ausentes"), value: counts.ausente, icon: UserX, tone: "text-warning", status: "ausente" as const },
+    { label: t("Canceladas/Recusadas"), value: counts.cancelada + counts.recusada, icon: Ban, tone: "text-muted-foreground", status: "canceladas" as const },
   ];
 
   return (
@@ -136,24 +139,23 @@ function ManagerDashboard() {
             <div className="flex items-center gap-3">
               <Building2 className="h-5 w-5" />
               <div>
-                <div className="font-medium">Nenhuma empresa operacional selecionada</div>
+                <div className="font-medium">{t("Nenhuma empresa operacional selecionada")}</div>
                 <div className="text-sm opacity-90">
-                  Crie ou selecione uma empresa para liberar Usuários, Clientes, Tarefas e Folha de
-                  Ponto.
+                  {t("Crie ou selecione uma empresa para liberar Usuários, Clientes, Tarefas e Folha de Ponto.")}
                 </div>
               </div>
             </div>
             <Button asChild variant="outline">
-              <Link to="/app/admin">Ir para Super Admin</Link>
+              <Link to="/app/admin">{t("Ir para Super Admin")}</Link>
             </Button>
           </div>
         </div>
       )}
 
       <div>
-        <h1 className="font-display text-3xl font-semibold tracking-tight">Visão geral</h1>
+        <h1 className="font-display text-3xl font-semibold tracking-tight">{t("Visão geral")}</h1>
         <p className="mt-1 text-muted-foreground">
-          {isManager ? "Operação da sua empresa hoje" : "Suas tarefas de hoje"} ·{" "}
+          {isManager ? t("Operação da sua empresa hoje") : t("Suas tarefas de hoje")} ·{" "}
           {formatWallDate(`${today}T00:00:00.000Z`)}
         </p>
       </div>
@@ -162,10 +164,10 @@ function ManagerDashboard() {
         <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="text-sm text-destructive">
-              Não foi possível carregar as tarefas de hoje. {(error as Error)?.message}
+              {t("Não foi possível carregar as tarefas de hoje.")} {(error as Error)?.message}
             </div>
             <Button variant="outline" size="sm" onClick={() => void refetch()}>
-              Tentar novamente
+              {t("Tentar novamente")}
             </Button>
           </div>
         </div>
@@ -177,7 +179,7 @@ function ManagerDashboard() {
             key={c.label}
             to="/app/tarefas"
             search={{ status: c.status, date: today }}
-            aria-label={`Ver tarefas de hoje — ${c.label}`}
+            aria-label={`${t("Ver tarefas de hoje")} — ${c.label}`}
             className="group rounded-2xl border border-border bg-card p-5 text-left transition hover:border-primary/50 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <div className="flex items-center justify-between">
@@ -189,11 +191,11 @@ function ManagerDashboard() {
             ) : c.status === "canceladas" ? (
               <div className="mt-3 flex flex-wrap items-baseline gap-2 font-display text-2xl font-semibold group-hover:text-primary">
                 <span>
-                  {counts.cancelada} <span className="text-sm font-normal text-muted-foreground">Canceladas</span>
+                  {counts.cancelada} <span className="text-sm font-normal text-muted-foreground">{t("Canceladas")}</span>
                 </span>
                 <span className="text-muted-foreground">|</span>
                 <span>
-                  {counts.recusada} <span className="text-sm font-normal text-muted-foreground">Recusadas</span>
+                  {counts.recusada} <span className="text-sm font-normal text-muted-foreground">{t("Recusadas")}</span>
                 </span>
               </div>
             ) : (
@@ -205,14 +207,14 @@ function ManagerDashboard() {
 
       <div className="rounded-2xl border border-border bg-card p-6">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="font-display text-lg font-semibold">Tarefas de hoje</h2>
+          <h2 className="font-display text-lg font-semibold">{t("Tarefas de hoje")}</h2>
           <Button asChild size="sm" variant="ghost">
-            <Link to="/app/tarefas">Ver todas</Link>
+            <Link to="/app/tarefas">{t("Ver todas")}</Link>
           </Button>
         </div>
         <ul className="mt-4 divide-y divide-border">
           {isLoading && (
-            <li className="py-8 text-center text-sm text-muted-foreground">Carregando tarefas de hoje...</li>
+            <li className="py-8 text-center text-sm text-muted-foreground">{t("Carregando tarefas de hoje...")}</li>
           )}
           {!isLoading &&
             upcoming.map((t) => (
@@ -224,14 +226,14 @@ function ManagerDashboard() {
                 >
                   <span className="min-w-0 truncate text-sm">{t.title}</span>
                   <span className="shrink-0 text-xs text-muted-foreground">
-                    {t.scheduled_for ? formatWallTime(t.scheduled_for) : "Sem horário"}
+                    {t.scheduled_for ? formatWallTime(t.scheduled_for) : tr("Sem horário")}
                   </span>
                 </Link>
               </li>
             ))}
           {!isLoading && !isError && upcoming.length === 0 && (
             <li className="py-8 text-center text-sm text-muted-foreground">
-              Nenhuma tarefa em aberto para hoje.
+              {t("Nenhuma tarefa em aberto para hoje.")}
             </li>
           )}
         </ul>

@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/lib/theme";
 import { AuthProvider } from "@/lib/auth";
+import "@/i18n";
+import { LanguageRestorer } from "@/components/LanguageSwitcher";
 
 import appCss from "../styles.css?url";
 
@@ -89,6 +91,7 @@ function RootComponent() {
     <QueryClientProvider client={qc}>
       <ThemeProvider>
         <AuthProvider>
+          <LanguageRestorer />
           <Outlet />
           <Toaster richColors position="top-right" />
         </AuthProvider>

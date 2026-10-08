@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n";
 
 type Tab = "gestao" | "execucao";
 type EventRow = {
@@ -18,12 +19,12 @@ type EventRow = {
 const PAGE = 30;
 
 /** created_at é um instante real (timestamptz): mostra-se na hora local do aparelho, no formato HH:mm da tela de Tarefas. */
-function formatEventTime(iso: string) {
+function formatEventTime(iso: string, locale: string) {
   const d = new Date(iso);
   const today = new Date();
   const sameDay = d.toDateString() === today.toDateString();
-  const time = d.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
-  return sameDay ? time : `${d.toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit" })} ${time}`;
+  const time = d.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+  return sameDay ? time : `${d.toLocaleDateString(locale, { day: "2-digit", month: "2-digit" })} ${time}`;
 }
 
 function minutesSince(iso: string, now: number) {
@@ -32,6 +33,7 @@ function minutesSince(iso: string, now: number) {
 
 export function ActivityTimeline({ companyId }: { companyId: string }) {
   const [tab, setTab] = useState<Tab>("gestao");
+  const { t: tr, lang } = useT();
   const [now, setNow] = useState(() => Date.now());
   const qc = useQueryClient();
 
@@ -103,7 +105,7 @@ export function ActivityTimeline({ companyId }: { companyId: string }) {
     <div className="rounded-2xl border border-border bg-card p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
-          <Activity className="h-4 w-4 text-primary" /> Atividade recente
+          <Activity className="h-4 w-4 text-primary" /> {tr("Atividade recente")}
         </h2>
         <div className="inline-flex rounded-lg border border-border p-0.5" role="tablist">
           {(["gestao", "execucao"] as const).map((t) => (
@@ -117,7 +119,7 @@ export function ActivityTimeline({ companyId }: { companyId: string }) {
                 tab === t ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
               )}
             >
-              {t === "gestao" ? "Gestão" : "Execução"}
+              {t === "gestao" ? tr("Gestão") : tr("Execução")}
             </button>
           ))}
         </div>
@@ -125,7 +127,7 @@ export function ActivityTimeline({ companyId }: { companyId: string }) {
 
       {busy.length > 0 && (
         <div className="mt-4 rounded-xl border border-primary/30 bg-primary/5 p-3">
-          <div className="mb-2 text-xs font-medium uppercase tracking-wide text-primary">Em atendimento agora</div>
+          <div className="mb-2 text-xs font-medium uppercase tracking-wide text-primary">{tr("Em atendimento agora")}</div>
           <ul className="space-y-1">
             {busy.map((b) => (
               <li key={`${b.entity_type}:${b.entity_id}`} className="flex items-center gap-2 text-sm">
@@ -134,7 +136,7 @@ export function ActivityTimeline({ companyId }: { companyId: string }) {
                   <span className="font-medium">{b.holder_name}</span> · {b.label}
                 </span>
                 <span className="ml-auto shrink-0 text-xs text-muted-foreground">
-                  há {minutesSince(b.claimed_at, now)} min
+                  {tr("há {{n}} min", { n: minutesSince(b.claimed_at, now) })}
                 </span>
               </li>
             ))}
@@ -144,25 +146,25 @@ export function ActivityTimeline({ companyId }: { companyId: string }) {
 
       <ul className="mt-4 divide-y divide-border">
         {events.isLoading && (
-          <li className="py-8 text-center text-sm text-muted-foreground">Carregando atividade...</li>
+          <li className="py-8 text-center text-sm text-muted-foreground">{tr("Carregando atividade...")}</li>
         )}
         {events.isError && (
           <li className="py-8 text-center text-sm text-destructive">
-            Não foi possível carregar a atividade.{" "}
+            {tr("Não foi possível carregar a atividade.")}{" "}
             <button className="underline" onClick={() => void events.refetch()}>
-              Tentar novamente
+              {tr("Tentar novamente")}
             </button>
           </li>
         )}
         {!events.isLoading && !events.isError && rows.length === 0 && (
-          <li className="py-8 text-center text-sm text-muted-foreground">Ainda não há atividade registada.</li>
+          <li className="py-8 text-center text-sm text-muted-foreground">{tr("Ainda não há atividade registada.")}</li>
         )}
         {rows.map((e) => (
           <li key={e.id} className="flex gap-3 py-3">
-            <span className="w-20 shrink-0 text-xs tabular-nums text-muted-foreground">{formatEventTime(e.created_at)}</span>
+            <span className="w-20 shrink-0 text-xs tabular-nums text-muted-foreground">{formatEventTime(e.created_at, lang === "en" ? "en-GB" : "pt-PT")}</span>
             <span className="min-w-0 text-sm">
               {e.actor_name && e.source === "user" && <span className="font-medium">{e.actor_name} · </span>}
-              {e.source !== "user" && <span className="font-medium text-muted-foreground">Sistema · </span>}
+              {e.source !== "user" && <span className="font-medium text-muted-foreground">{tr("Sistema")} · </span>}
               {e.summary}
             </span>
           </li>
@@ -173,7 +175,7 @@ export function ActivityTimeline({ companyId }: { companyId: string }) {
         <div className="mt-3 text-center">
           <Button variant="ghost" size="sm" onClick={() => void events.fetchNextPage()} disabled={events.isFetchingNextPage}>
             {events.isFetchingNextPage && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Carregar mais
+            {tr("Carregar mais")}
           </Button>
         </div>
       )}
