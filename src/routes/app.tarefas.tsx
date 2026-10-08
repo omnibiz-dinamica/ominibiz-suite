@@ -3362,7 +3362,7 @@ function TaskForm({
           !useContractedSchedule &&
           manualDurationMinutes > LONG_STANDALONE_TASK_MINUTES &&
           !confirmedConflictsRef.current &&
-          !window.confirm("Esta tarefa dura mais de 24 horas. Confirmar?")
+          !window.confirm(tt("Esta tarefa dura mais de 24 horas. Confirmar?"))
         ) {
           submittingRef.current = false;
           setLoading(false);
