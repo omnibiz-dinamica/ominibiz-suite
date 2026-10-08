@@ -28,3 +28,17 @@ export function recurrenceFromScheduleSlot(
 export function disableAutoRecurrence(prev: RecurrenceFormValue, autoEnabled: boolean): RecurrenceFormValue {
   return autoEnabled ? { ...prev, enabled: false } : prev;
 }
+
+const WEEKDAY_SHORT_PT = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+
+/** Linha-resumo da programação escolhida (ex.: "Quinzenal · Sábado · 10:00–13:00 · Klein · sem data final"). */
+export function scheduleSlotSummary(
+  slot: ClientScheduleSlot,
+  t: (key: string) => string = (k) => k,
+): string {
+  const cycle = slot.cycleLengthWeeks && slot.cycleLengthWeeks > 1 ? slot.cycleLengthWeeks : 1;
+  const freq = cycle === 2 ? t("Quinzenal") : cycle > 2 ? `${t("A cada")} ${cycle} ${t("semanas")}` : t("Semanal");
+  const days = [...slot.weekdays].sort((a, b) => a - b).map((d) => t(WEEKDAY_SHORT_PT[d] ?? "")).join(", ");
+  const time = slot.startTime && slot.endTime ? `${slot.startTime}–${slot.endTime}` : slot.startTime ?? t("sem horário definido");
+  return [freq, days, time, slot.label?.trim() || null, t("sem data final")].filter(Boolean).join(" · ");
+}
