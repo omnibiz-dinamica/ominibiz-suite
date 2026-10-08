@@ -205,6 +205,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
         .from("vacation_manager_queue")
         .select("*", { count: "exact", head: true })
         .eq("company_id", currentCompanyId)
+        .eq("kind", "queue")
         .neq("state", "resolved");
       if (vacationError) throw vacationError;
       return (count ?? 0) + (vacationCount ?? 0);

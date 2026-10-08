@@ -415,6 +415,7 @@ function NotificationsPage() {
         .from("vacation_manager_queue")
         .select("id,vacation_request_id,company_id,state,claimed_by,claimed_at,created_at")
         .eq("company_id", currentCompanyId)
+        .eq("kind", "queue")
         .neq("state", "resolved")
         .order("created_at", { ascending: false });
       if (queueError) throw queueError;
