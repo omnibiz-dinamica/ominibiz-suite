@@ -108,3 +108,87 @@ export function openExpenseAttachmentsPrint(bytes: Uint8Array) {
   preview.addEventListener("load", () => preview.print(), { once: true });
   setTimeout(() => URL.revokeObjectURL(url), 120_000);
 }
+/* ---------- Filtros dos comprovantes e do histórico ---------- */
+
+export type AttachmentPaymentFilter = "all" | "aguardando_pagamento" | "paga";
+
+export const ATTACHMENT_PAYMENT_LABEL: Record<AttachmentPaymentFilter, string> = {
+  all: "Todas as aprovadas",
+  aguardando_pagamento: "Aguarda pagamento",
+  paga: "Paga",
+};
+
+export type AttachmentCandidate = {
+  status: string;
+  payment_status: string | null;
+  expense_date: string;
+  user_id: string;
+  amount: number;
+  attachment_path: string | null;
+};
+
+/** Só APROVADAS do mês; "Aguarda pagamento" inclui aprovadas sem estado de pagamento. */
+export function selectAttachmentExpenses<T extends AttachmentCandidate>(
+  rows: T[],
+  opts: { month: string; payment: AttachmentPaymentFilter; userId: string | "all" },
+): T[] {
+  const bounds = expenseMonthBounds(opts.month);
+  if (!bounds) return [];
+  return rows.filter((r) => {
+    if (r.status !== "aprovada") return false;
+    if (r.expense_date < bounds.start || r.expense_date >= bounds.end) return false;
+    if (opts.userId !== "all" && r.user_id !== opts.userId) return false;
+    const paid = r.payment_status === "paga";
+    if (opts.payment === "paga" && !paid) return false;
+    if (opts.payment === "aguardando_pagamento" && paid) return false;
+    return true;
+  });
+}
+
+export function monthLabelPt(month: string): string {
+  const bounds = expenseMonthBounds(month);
+  if (!bounds) return month;
+  return new Date(`${bounds.start}T12:00:00`).toLocaleDateString("pt-PT", { month: "long", year: "numeric" });
+}
+
+export function summarizeAttachmentExpenses(
+  rows: AttachmentCandidate[],
+  opts: { month: string; payment: AttachmentPaymentFilter; employeeName?: string | null },
+) {
+  const withFile = rows.filter((r) => Boolean(r.attachment_path));
+  const total = withFile.reduce((sum, r) => sum + Number(r.amount), 0);
+  const missing = rows.length - withFile.length;
+  const totalText = total.toLocaleString("pt-PT", { style: "currency", currency: "EUR" });
+  const parts = [
+    `${withFile.length} ${withFile.length === 1 ? "comprovante" : "comprovantes"}`,
+    totalText,
+    ATTACHMENT_PAYMENT_LABEL[opts.payment],
+    opts.employeeName ?? null,
+    monthLabelPt(opts.month),
+  ].filter(Boolean);
+  return { count: withFile.length, total, missing, text: parts.join(" · ") };
+}
+
+export function attachmentArchiveName(month: string, payment: AttachmentPaymentFilter): string {
+  const slug = payment === "all" ? "todas-aprovadas" : payment === "paga" ? "paga" : "aguarda-pagamento";
+  return `comprovantes-${month}-${slug}.zip`;
+}
+
+/** Cabeçalho do Excel/PDF com TODOS os filtros ativos (inclusive "Todos"). */
+export function describeExpenseFilters(f: {
+  statusLabel: string | null;
+  paymentLabel: string | null;
+  employeeName: string | null;
+  dateBy: "expense_date" | "created_at";
+  start: string;
+  end: string;
+}): string {
+  const fmt = (d: string) => d.split("-").reverse().join("/");
+  const range = f.start || f.end ? `${f.start ? fmt(f.start) : "…"}–${f.end ? fmt(f.end) : "…"}` : "Todo o período";
+  return [
+    `Estado: ${f.statusLabel ?? "Todos"}`,
+    `Pagamento: ${f.paymentLabel ?? "Todos"}`,
+    `Colaborador: ${f.employeeName ?? "Todos"}`,
+    `${f.dateBy === "expense_date" ? "Data da despesa" : "Data de envio"}: ${range}`,
+  ].join(" · ");
+}
