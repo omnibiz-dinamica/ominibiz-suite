@@ -6138,6 +6138,15 @@ export type Database = {
         Args: { _task_id: string }
         Returns: Database["public"]["Enums"]["punch_mode"]
       }
+      task_group_edit_occurrence: {
+        Args: {
+          _apply_schedule_to_group?: boolean
+          _assignees: string[]
+          _payload: Json
+          _task_id: string
+        }
+        Returns: Json
+      }
       task_group_progress: { Args: { _task_id: string }; Returns: Json }
       task_mark_absent: {
         Args: { _justified?: boolean; _reason: string; _task_id: string }
@@ -7235,6 +7244,7 @@ export type Database = {
         | "timesheet_manager_closed"
         | "timesheet_sent_to_accounting"
         | "vacation_awaiting_approval"
+        | "punch_adjusted"
       notification_priority: "baixa" | "media" | "alta" | "urgente"
       notification_state:
         | "nova"
@@ -7563,6 +7573,7 @@ export const Constants = {
         "timesheet_manager_closed",
         "timesheet_sent_to_accounting",
         "vacation_awaiting_approval",
+        "punch_adjusted",
       ],
       notification_priority: ["baixa", "media", "alta", "urgente"],
       notification_state: [

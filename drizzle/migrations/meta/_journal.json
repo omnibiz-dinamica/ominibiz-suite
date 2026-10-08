@@ -36,6 +36,13 @@
       "when": 1791442543945,
       "tag": "0004_timeline_atividade_v3",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791469634789,
+      "tag": "0005_sup253_sup66_sup224_punch_notify_group_edit",
+      "breakpoints": true
     }
   ]
 }
