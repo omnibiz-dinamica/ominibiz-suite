@@ -157,3 +157,17 @@ export const enLanding: Record<string, string> = {
   "Plataforma por convite — fale com nossa equipe para provisionar sua empresa.": "Invitation-only platform — contact our team to set up your company.",
   "Plataforma SaaS multiempresa": "Multi-company SaaS platform",
 };
+
+export const enTasks: Record<string, string> = {
+  "Todos os clientes": "All clients",
+  "{{n}} clientes": "{{n}} clients",
+  "Carregando clientes...": "Loading clients...",
+  "Não foi possível carregar os clientes.": "Could not load clients.",
+  "Nenhum cliente encontrado": "No clients found",
+  "Buscar cliente…": "Search client…",
+  "Buscar cliente": "Search client",
+  "Selecionar todos os resultados": "Select all results",
+  "Limpar seleção": "Clear selection",
+  "Filtrar por cliente": "Filter by client",
+  "Remover {{name}}": "Remove {{name}}",
+};
