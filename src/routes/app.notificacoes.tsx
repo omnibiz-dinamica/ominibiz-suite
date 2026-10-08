@@ -31,7 +31,12 @@ import {
 import { transitionTask } from "@/lib/tasks";
 import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
 import { invalidateNotificationsCache } from "@/lib/cache/notifications";
-import { canManageNotification, resolveNotificationActions } from "@/lib/notification-actions";
+import {
+  canManageNotification,
+  canOpenNotification,
+  notificationOpenLink,
+  resolveNotificationActions,
+} from "@/lib/notification-actions";
 import { taskRejectionNotificationDetails } from "@/lib/task-refusal-view";
 import { taskCancellationNotificationDetails } from "@/lib/task-cancellation-notification";
 import {
@@ -584,7 +589,11 @@ function NotificationsPage() {
 
   const openNotification = async (n: NotificationRow) => {
     if (!n.read_at) markRead.mutate(n.id);
-    if (n.event.startsWith("vacation_")) {
+    if ((n.event as string) === "punch_regularized") {
+      const link = notificationOpenLink(n) ?? "/app/ponto";
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      nav({ to: link as any });
+    } else if (n.event.startsWith("vacation_")) {
       nav({ to: "/app/ferias" });
     } else if (n.event.startsWith("expense_")) {
       nav({ to: "/app/despesas" });
@@ -725,11 +734,7 @@ function NotificationsPage() {
             const isAuthReq = n.event === "task_authorization_requested" && canManage;
             const actions = resolveNotificationActions({
               canManage,
-              canOpen:
-                !!n.task_id ||
-                !!supportTicketId(n) ||
-                n.event.startsWith("vacation_") ||
-                n.event.startsWith("expense_"),
+              canOpen: canOpenNotification(n, !!supportTicketId(n)),
               state,
             });
             const refusal = taskRejectionNotificationDetails(n.event, n.metadata);
