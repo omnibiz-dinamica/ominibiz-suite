@@ -1,3 +1,4 @@
+import { recurrenceFromScheduleSlot, disableAutoRecurrence } from "@/lib/tasks/schedule-recurrence";
 import { firstNameOf } from "@/lib/person-name";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -3099,6 +3100,23 @@ function TaskForm({
     if (!silent) setScheduleHint(`Horário sugerido pela programação do cliente: ${describeSlot(slot)}.`);
   };
 
+  /** True quando a recorrência foi ligada pela escolha de uma programação. */
+  const autoRecurrenceRef = useRef(false);
+  /** Escolha explícita de programação (só criação): liga a recorrência do cadastro. */
+  const applySlotRecurrence = (slot: ClientScheduleSlot) => {
+    if (initial) return;
+    const next = recurrenceFromScheduleSlot(recurrence, slot);
+    if (!next) return;
+    autoRecurrenceRef.current = true;
+    // A data de início da série segue o ciclo da programação, não a data da tarefa.
+    recurrenceStartTouchedRef.current = true;
+    setRecurrence(next);
+    if (!touchedDates) {
+      setStartDate(next.startDate);
+      setEndDate(next.startDate);
+    }
+  };
+
   const suggestFromSchedule = (slots: ClientScheduleSlot[], dateKey: string) => {
     setSchedulePrompt([]);
     if (initial || touchedTimes || slots.length === 0) return;
@@ -3155,6 +3173,12 @@ function TaskForm({
   };
 
   const applyClient = async (cid: string) => {
+    if (!initial && autoRecurrenceRef.current && cid !== clientId) {
+      // Não herdar a recorrência ligada pela programação do cliente anterior.
+      setRecurrence((prev) => disableAutoRecurrence(prev, true));
+      recurrenceStartTouchedRef.current = false;
+      autoRecurrenceRef.current = false;
+    }
     setClientId(cid);
     setTeamPrompt(null);
     if (initial || !cid) return;
@@ -3724,10 +3748,18 @@ function TaskForm({
                 if (value === "__free__") {
                   setSelectedScheduleId(null);
                   setScheduleHint(null);
+                  if (!initial) {
+                    setRecurrence((prev) => disableAutoRecurrence(prev, autoRecurrenceRef.current));
+                    if (autoRecurrenceRef.current) recurrenceStartTouchedRef.current = false;
+                    autoRecurrenceRef.current = false;
+                  }
                   return;
                 }
                 const slot = namedSchedules.find((s) => s.id === value);
-                if (slot) applySlot(slot);
+                if (slot) {
+                  applySlot(slot);
+                  if (!initial) applySlotRecurrence(slot);
+                }
               }}
             >
               <SelectTrigger>
