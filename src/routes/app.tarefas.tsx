@@ -137,6 +137,7 @@ import { RefuseTaskDialog, type RefusalSubmitPayload } from "@/components/tasks/
 
 
 import { EmployeeMultiPicker } from "@/components/common/EmployeePicker";
+import { MultiClientSelect } from "@/components/common/MultiClientSelect";
 import { filterCalendarData, tasksForCalendarDay } from "@/lib/tasks/calendar-filter";
 import { compareTasksForList, sortTasksForList } from "@/lib/tasks/list-order";
 import { matchesDashboardBucket, taskOperationalDay } from "@/lib/tasks/dashboard-counters";
@@ -256,6 +257,11 @@ function TasksPage() {
   const selectedEmployeeIds = useMemo(
     () => (search.employee ? search.employee.split(",").filter(Boolean) : []),
     [search.employee],
+  );
+  // Filtro de vários clientes: IDs separados por vírgula na URL (?client=a,b).
+  const selectedClientIds = useMemo(
+    () => (search.client ? search.client.split(",").filter(Boolean) : []),
+    [search.client],
   );
 
   useEffect(() => {
@@ -390,7 +396,7 @@ function TasksPage() {
     enabled: !!currentCompanyId,
   });
 
-  const { data: clientsList } = useQuery({
+  const { data: clientsList, isLoading: clientsLoading, isError: clientsError, refetch: refetchClients } = useQuery({
     queryKey: ["clients-min", currentCompanyId],
     queryFn: async () => {
       if (!currentCompanyId) return [] as ClientOption[];
@@ -399,7 +405,7 @@ function TasksPage() {
         .eq("company_id", currentCompanyId)
         .eq("status", "ativo")
         .order("name", { ascending: true });
-      if (error) return [] as ClientOption[];
+      if (error) throw error;
       return (data ?? []) as unknown as ClientOption[];
     },
     enabled: !!currentCompanyId,
@@ -834,10 +840,11 @@ function TasksPage() {
   const filteredTasks = useMemo(() => {
     const all = tasks ?? [];
     const selectedEmployees = new Set(selectedEmployeeIds);
+    const selectedClients = new Set(selectedClientIds);
     return all.filter((t) => {
       if (search.task && t.id !== search.task) return false;
       if (selectedEmployees.size > 0 && (!t.assigned_to || !selectedEmployees.has(t.assigned_to))) return false;
-      if (search.client && t.client_id !== search.client) return false;
+      if (selectedClients.size > 0 && (!t.client_id || !selectedClients.has(t.client_id))) return false;
       // Dia operacional (agendamento / ocorrência / prazo), nunca created_at.
       if (search.date && taskOperationalDay(t) !== search.date) return false;
       if (!search.status) return true;
@@ -850,7 +857,7 @@ function TasksPage() {
       if (search.status === "concluido") return matchesDashboardBucket(t, "concluido");
       return t.status === search.status;
     });
-  }, [tasks, search.status, search.employee, search.client, search.task, search.date, selectedEmployeeIds]);
+  }, [tasks, search.status, search.employee, search.client, search.task, search.date, selectedEmployeeIds, selectedClientIds]);
 
   const filteredCalendarData = useMemo(
     () => filterCalendarData(filteredTasks, approvedVacations ?? [], selectedEmployeeIds),
@@ -891,9 +898,9 @@ function TasksPage() {
       replace: true,
     });
   };
-  const setClientFilter = (next: string | undefined) => {
+  const setClientFilter = (next: string[] | undefined) => {
     void navigate({
-      search: (prev: TasksSearch) => ({ ...prev, client: next }),
+      search: (prev: TasksSearch) => ({ ...prev, client: next?.length ? next.join(",") : undefined }),
       replace: true,
     });
   };
@@ -1284,22 +1291,14 @@ function TasksPage() {
               placeholder="Todos os funcionários"
               ariaLabel="Filtrar por funcionário"
             />
-            <Select
-              value={search.client ?? "all"}
-              onValueChange={(id) => setClientFilter(id === "all" ? undefined : id)}
-            >
-              <SelectTrigger aria-label="Filtrar por cliente">
-                <SelectValue placeholder="Todos os clientes" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os clientes</SelectItem>
-                {(clientsList ?? []).map((client) => (
-                  <SelectItem key={client.id} value={client.id}>
-                    {client.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <MultiClientSelect
+              clients={clientsList ?? []}
+              values={selectedClientIds}
+              onValuesChange={setClientFilter}
+              loading={clientsLoading}
+              error={clientsError}
+              onRetry={() => void refetchClients()}
+            />
             {selectedEmployeeIds.length > 0 && (
               <button
                 type="button"
