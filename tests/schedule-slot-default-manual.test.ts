@@ -24,7 +24,7 @@ describe("programação começa em Livre / Manual", () => {
     expect(scheduleSlotSummary(klein)).toBe("Quinzenal · Sábado · 10:00–13:00 · Klein · sem data final");
     expect(form).toContain("if (value.enabled) setOpen(true);");
     expect(form).toContain("Confira a recorrência antes de criar a tarefa");
-    expect(page).toContain("body.scrollTo({ top, behavior: "smooth" })");
+    expect(page).toContain('body.scrollTo({ top, behavior: "smooth" })');
   });
   test("(c) Livre / Manual desliga só o automático", () => {
     const on = { ...recurrenceFromScheduleSlot(emptyRecurrence(), klein)!, scheduledTime: "09:00" };
