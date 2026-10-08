@@ -151,6 +151,7 @@ import {
   formatWallTime,
   formatLocalTime,
 } from "@/lib/wall-clock";
+import { dailyShiftDurationMinutes, LONG_STANDALONE_TASK_MINUTES } from "@/lib/tasks/daily-shift-duration";
 
 // Filtros aceitos via search-params. `atrasadas` e `canceladas` são filtros
 // derivados e compartilham as regras canônicas do dashboard.
@@ -3308,6 +3309,21 @@ function TaskForm({
           : [];
         const manualDurationMinutes =
           startISO && endISO ? Math.max(0, Math.round((new Date(endISO).getTime() - new Date(startISO).getTime()) / 60000)) : 0;
+        // Série: duração = SOMENTE o turno diário (hora início → hora fim,
+        // +24 h se passar da meia-noite), nunca a amplitude das datas; máx. 1440.
+        const seriesShiftMinutes = startTime && endTime ? dailyShiftDurationMinutes(startTime, endTime) : 0;
+        // Tarefa avulsa com mais de 24 h: confirmação simples, sem bloquear.
+        if (
+          !recurrence.enabled &&
+          !useContractedSchedule &&
+          manualDurationMinutes > LONG_STANDALONE_TASK_MINUTES &&
+          !confirmedConflictsRef.current &&
+          !window.confirm("Esta tarefa dura mais de 24 horas. Confirmar?")
+        ) {
+          submittingRef.current = false;
+          setLoading(false);
+          return;
+        }
         const taskTimesFor = (index: number) => {
           if (!useContractedSchedule) {
             return { scheduled_for: startISO, scheduled_end: endISO, due_at: dueISO };
@@ -3347,7 +3363,7 @@ function TaskForm({
                   if (!startTime) return [];
                   const minutes = useContractedSchedule
                     ? selectedDistributedMinutes[index] ?? selectedDistributedMinutes[0] ?? 0
-                    : manualDurationMinutes;
+                    : seriesShiftMinutes;
                   const end = addWallMinutes(dateKey, startTime, minutes);
                   if (!end) return [];
                   const proposedStart = wallDateTimeToISO(dateKey, startTime);
@@ -3434,8 +3450,7 @@ function TaskForm({
           // Em recorrências a "data fim" é o fim da série, não do turno:
           // a duração é só a do turno diário (hora fim − hora início,
           // com passagem de meia-noite), nunca a amplitude entre as datas.
-          const derivedDuration =
-            manualDurationMinutes > 1440 ? manualDurationMinutes % 1440 : manualDurationMinutes;
+          const derivedDuration = seriesShiftMinutes;
           // Uma série (task_recurrence) por funcionário selecionado.
           // ADR-041: inserção individual + idempotência. Se o banco recusar por
           // série ativa equivalente (RECURRENCE_DUPLICATE_ACTIVE), tratamos como
@@ -4000,7 +4015,11 @@ function TaskForm({
                         Tarefa existente: <span className="font-medium text-foreground">{conflict.conflicting_client_name || conflict.conflicting_title}</span>
                       </p>
                       <p className="text-muted-foreground">
-                        {formatWallDate(conflict.conflicting_start)} · {formatWallTime(conflict.conflicting_start)} → {formatWallTime(conflict.conflicting_end)}
+                        {formatWallDate(conflict.conflicting_start)} · {formatWallTime(conflict.conflicting_start)} →{" "}
+                        {formatWallDate(conflict.conflicting_end) !== formatWallDate(conflict.conflicting_start)
+                          ? `${formatWallDate(conflict.conflicting_end)} · `
+                          : ""}
+                        {formatWallTime(conflict.conflicting_end)}
                       </p>
                       <p className="text-muted-foreground">
                         Nova tarefa: {formatWallDate(conflict.proposed_start)} · {formatWallTime(conflict.proposed_start)} → {formatWallTime(conflict.proposed_end)}
