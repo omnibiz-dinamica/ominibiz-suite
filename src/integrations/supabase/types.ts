@@ -14,6 +14,62 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_events: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_name: string | null
+          actor_role: string | null
+          changes: Json
+          company_id: string
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          source: string
+          summary: string
+          tab: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_name?: string | null
+          actor_role?: string | null
+          changes?: Json
+          company_id: string
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          source?: string
+          summary: string
+          tab: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_name?: string | null
+          actor_role?: string | null
+          changes?: Json
+          company_id?: string
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          source?: string
+          summary?: string
+          tab?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_preview_logs: {
         Row: {
           admin_id: string
@@ -3887,33 +3943,48 @@ export type Database = {
           claimed_by: string | null
           company_id: string
           created_at: string
+          entity_id: string | null
+          entity_type: string
+          expires_at: string | null
           id: string
+          kind: string
+          last_activity_at: string | null
           resolved_at: string | null
           state: Database["public"]["Enums"]["vacation_manager_queue_state"]
           updated_at: string
-          vacation_request_id: string
+          vacation_request_id: string | null
         }
         Insert: {
           claimed_at?: string | null
           claimed_by?: string | null
           company_id: string
           created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          expires_at?: string | null
           id?: string
+          kind?: string
+          last_activity_at?: string | null
           resolved_at?: string | null
           state?: Database["public"]["Enums"]["vacation_manager_queue_state"]
           updated_at?: string
-          vacation_request_id: string
+          vacation_request_id?: string | null
         }
         Update: {
           claimed_at?: string | null
           claimed_by?: string | null
           company_id?: string
           created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          expires_at?: string | null
           id?: string
+          kind?: string
+          last_activity_at?: string | null
           resolved_at?: string | null
           state?: Database["public"]["Enums"]["vacation_manager_queue_state"]
           updated_at?: string
-          vacation_request_id?: string
+          vacation_request_id?: string | null
         }
         Relationships: [
           {
@@ -4209,6 +4280,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _activity_emit: {
+        Args: {
+          _action: string
+          _actor: string
+          _changes?: Json
+          _company: string
+          _entity_id: string
+          _entity_type: string
+          _source?: string
+          _summary: string
+          _tab: string
+        }
+        Returns: undefined
+      }
+      _activity_iso: { Args: { _ts: string }; Returns: string }
+      _activity_name: { Args: { _uid: string }; Returns: string }
+      _activity_role: {
+        Args: { _company: string; _uid: string }
+        Returns: string
+      }
       _notify: {
         Args: {
           _body: string
@@ -4283,6 +4374,14 @@ export type Database = {
           scenario: string
           status: string
         }[]
+      }
+      _work_item_can_manage: {
+        Args: { _company: string; _uid: string }
+        Returns: boolean
+      }
+      _work_item_context: {
+        Args: { _entity_id: string; _entity_type: string }
+        Returns: Record<string, unknown>
       }
       accept_invite: { Args: { _token: string }; Returns: string }
       admin_create_company_with_invite: {
@@ -5402,6 +5501,14 @@ export type Database = {
         Returns: number
       }
       recurrence_materialize: {
+        Args: {
+          _company_id?: string
+          _days_ahead?: number
+          _recurrence_id?: string
+        }
+        Returns: number
+      }
+      recurrence_materialize_core: {
         Args: {
           _company_id?: string
           _days_ahead?: number
@@ -6905,11 +7012,16 @@ export type Database = {
           claimed_by: string | null
           company_id: string
           created_at: string
+          entity_id: string | null
+          entity_type: string
+          expires_at: string | null
           id: string
+          kind: string
+          last_activity_at: string | null
           resolved_at: string | null
           state: Database["public"]["Enums"]["vacation_manager_queue_state"]
           updated_at: string
-          vacation_request_id: string
+          vacation_request_id: string | null
         }
         SetofOptions: {
           from: "*"
@@ -6996,6 +7108,32 @@ export type Database = {
         Returns: undefined
       }
       whatsapp_requeue: { Args: { _id: string }; Returns: undefined }
+      work_item_claim: {
+        Args: { _entity_id: string; _entity_type: string; _force?: boolean }
+        Returns: Json
+      }
+      work_item_in_progress: {
+        Args: { _company_id: string }
+        Returns: {
+          claimed_at: string
+          entity_id: string
+          entity_type: string
+          expires_at: string
+          holder_id: string
+          holder_name: string
+          label: string
+          last_activity_at: string
+        }[]
+      }
+      work_item_release: {
+        Args: { _entity_id: string; _entity_type: string; _reason?: string }
+        Returns: boolean
+      }
+      work_item_reservation_ttl: { Args: never; Returns: string }
+      work_item_touch: {
+        Args: { _entity_id: string; _entity_type: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role:
