@@ -886,6 +886,7 @@ function DespesasPage() {
               {attachmentResult && <div className="mt-1 text-success">{attachmentResult}</div>}
             </div>
           </div>
+        )}
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Carregando…</p>
         ) : decided.length === 0 && pending.length === 0 ? (
