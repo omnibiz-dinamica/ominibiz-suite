@@ -1,3 +1,4 @@
+import { recurrenceFromScheduleSlot, disableAutoRecurrence } from "@/lib/tasks/schedule-recurrence";
 import { firstNameOf } from "@/lib/person-name";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
