@@ -589,7 +589,7 @@ function NotificationsPage() {
 
   const openNotification = async (n: NotificationRow) => {
     if (!n.read_at) markRead.mutate(n.id);
-    if (n.event === "punch_regularized") {
+    if ((n.event as string) === "punch_regularized") {
       const link = notificationOpenLink(n) ?? "/app/ponto";
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       nav({ to: link as any });
