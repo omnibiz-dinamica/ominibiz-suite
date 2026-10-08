@@ -1,0 +1,2 @@
+ALTER TABLE public.task_audit_events DROP CONSTRAINT task_audit_events_event_check;
+ALTER TABLE public.task_audit_events ADD CONSTRAINT task_audit_events_event_check CHECK (event = ANY (ARRAY['created','cancel','archive','unarchive','absence','delete','series_end','completion_note','no_start_reason','group_assignee_replaced','group_assignee_removed','group_assignee_added','group_schedule_synced']::text[]));

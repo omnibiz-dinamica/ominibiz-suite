@@ -159,6 +159,14 @@ export const enLanding: Record<string, string> = {
 };
 
 export const enTasks: Record<string, string> = {
+  "Novo horário da tarefa de grupo": "New schedule for the group task",
+  "Aplicar o novo horário aos {{count}} colegas desta mesma ocorrência?":
+    "Apply the new schedule to the {{count}} colleagues of this same occurrence?",
+  "Só a minha": "Only mine",
+  "Sim, a todos": "Yes, to everyone",
+  "Esta alteração afeta {{count}} colaboradores desta ocorrência. Confirmar?":
+    "This change affects {{count}} employees in this occurrence. Confirm?",
+  "Esta tarefa dura mais de 24 horas. Confirmar?": "This task lasts more than 24 hours. Confirm?",
   "Todos os clientes": "All clients",
   "{{n}} clientes": "{{n}} clients",
   "Carregando clientes...": "Loading clients...",

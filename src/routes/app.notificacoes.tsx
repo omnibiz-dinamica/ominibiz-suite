@@ -34,7 +34,7 @@ import { invalidateNotificationsCache } from "@/lib/cache/notifications";
 import {
   canManageNotification,
   canOpenNotification,
-  notificationOpenLink,
+  resolveNotificationDestination,
   resolveNotificationActions,
 } from "@/lib/notification-actions";
 import { taskRejectionNotificationDetails } from "@/lib/task-refusal-view";
@@ -589,20 +589,17 @@ function NotificationsPage() {
 
   const openNotification = async (n: NotificationRow) => {
     if (!n.read_at) markRead.mutate(n.id);
-    if ((n.event as string) === "punch_regularized") {
-      const link = notificationOpenLink(n) ?? "/app/ponto";
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      nav({ to: link as any });
-    } else if (n.event.startsWith("vacation_")) {
-      nav({ to: "/app/ferias" });
-    } else if (n.event.startsWith("expense_")) {
-      nav({ to: "/app/despesas" });
-    } else if (supportTicketId(n)) {
-      nav({ to: "/app/suporte/$id", params: { id: supportTicketId(n)! } });
-    } else if (n.task_id) {
-      nav({ to: "/app/tarefas", search: { task: n.task_id } });
+    const dest = resolveNotificationDestination(n, supportTicketId(n));
+    if (!dest) return;
+    if (dest.kind === "ticket") {
+      nav({ to: "/app/suporte/$id", params: { id: dest.id } });
+    } else if (dest.kind === "task") {
+      nav({ to: "/app/tarefas", search: { task: dest.taskId } });
     } else {
-      nav({ to: "/app/tarefas" });
+      const url = new URL(dest.to, "http://internal");
+      const search = Object.fromEntries(url.searchParams.entries());
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      nav({ to: url.pathname as any, search: (Object.keys(search).length ? search : undefined) as any });
     }
   };
 
@@ -734,7 +731,7 @@ function NotificationsPage() {
             const isAuthReq = n.event === "task_authorization_requested" && canManage;
             const actions = resolveNotificationActions({
               canManage,
-              canOpen: canOpenNotification(n, !!supportTicketId(n)),
+              canOpen: canOpenNotification(n, supportTicketId(n)),
               state,
             });
             const refusal = taskRejectionNotificationDetails(n.event, n.metadata);

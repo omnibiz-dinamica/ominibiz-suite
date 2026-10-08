@@ -3,6 +3,14 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import i18n from "@/i18n";
+import {
+  diffGroupAssignees,
+  needsGroupAssigneeConfirmation,
+  shouldAskGroupScheduleScope,
+} from "@/lib/tasks/group-edit";
+
+const tt = (key: string, opts?: Record<string, unknown>) => i18n.t(key, { defaultValue: key, ...opts }) as string;
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -2877,6 +2885,42 @@ function TaskForm({
   const [description, setDescription] = useState(initial?.description ?? "");
   const [assignees, setAssignees] = useState<string[]>(initial?.assigned_to ? [initial.assigned_to] : []);
   const assignedTo = assignees[0] ?? "";
+  // SUP-66: na edição, carrega todos os responsáveis do grupo DESTA ocorrência.
+  const [groupAssignees, setGroupAssignees] = useState<string[]>(
+    initial?.assigned_to ? [initial.assigned_to] : [],
+  );
+  const [groupSchedulePrompt, setGroupSchedulePrompt] = useState<{
+    count: number;
+    resolve: (choice: "all" | "mine" | null) => void;
+  } | null>(null);
+  const initialGroupId = (initial as { task_group_id?: string | null } | undefined)?.task_group_id ?? null;
+  useEffect(() => {
+    if (!initial?.id || !initialGroupId) return;
+    let cancelled = false;
+    void (async () => {
+      let q = supabase
+        .from("tasks")
+        .select("id, assigned_to, recurrence_date")
+        .eq("company_id", companyId)
+        .eq("task_group_id", initialGroupId)
+        .is("deleted_at", null)
+        .is("archived_at", null)
+        .neq("status", "cancelado");
+      q = initial.recurrence_date ? q.eq("recurrence_date", initial.recurrence_date) : q.is("recurrence_date", null);
+      const { data } = await q;
+      if (cancelled || !data) return;
+      const ids = [
+        ...new Set(
+          [initial.assigned_to, ...data.map((r) => r.assigned_to)].filter((v): v is string => !!v),
+        ),
+      ];
+      setGroupAssignees(ids);
+      setAssignees(ids);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [initial?.id, initialGroupId, initial?.recurrence_date, initial?.assigned_to, companyId]);
   const toggleAssignee = (id: string) => {
     setTouchedAssignees(true);
     setAssignees((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -3318,7 +3362,7 @@ function TaskForm({
           !useContractedSchedule &&
           manualDurationMinutes > LONG_STANDALONE_TASK_MINUTES &&
           !confirmedConflictsRef.current &&
-          !window.confirm("Esta tarefa dura mais de 24 horas. Confirmar?")
+          !window.confirm(tt("Esta tarefa dura mais de 24 horas. Confirmar?"))
         ) {
           submittingRef.current = false;
           setLoading(false);
@@ -3422,27 +3466,48 @@ function TaskForm({
         // (estado, ponto, recusa e conclusão próprios); o grupo só correlaciona.
         const groupId = selectedAssignees.length > 1 ? crypto.randomUUID() : null;
         if (initial) {
-          // Edição: a tarefa original fica com o primeiro responsável; cada
-          // responsável acrescentado recebe a sua própria tarefa no mesmo grupo.
-          const extras = selectedAssignees.slice(1);
-          const existingGroup = (initial as { task_group_id?: string | null }).task_group_id ?? null;
-          const editGroupId = extras.length > 0 ? existingGroup ?? crypto.randomUUID() : existingGroup;
-          ({ error } = await supabase
-            .from("tasks")
-            .update({ ...payload, task_group_id: editGroupId })
-            .eq("id", initial.id));
-          if (!error && extras.length > 0) {
-            const inserted = await supabase.from("tasks").insert(
-              extras.map((memberId) => ({
-                ...payload,
-                assigned_to: memberId,
-                company_id: companyId,
-                created_by: userId,
-                task_group_id: editGroupId,
-              })),
+          // SUP-66 / SUP-224: edição atómica da ocorrência (grupo incluído) via RPC.
+          // Nunca altera a série; quem já iniciou é preservado pelo backend.
+          if (needsGroupAssigneeConfirmation(groupAssignees, selectedAssignees)) {
+            const diff = diffGroupAssignees(groupAssignees, selectedAssignees);
+            const ok = window.confirm(
+              tt("Esta alteração afeta {{count}} colaboradores desta ocorrência. Confirmar?", {
+                count: diff.affected,
+              }),
             );
-            error = inserted.error;
+            if (!ok) return;
           }
+          const colleagues = groupAssignees.filter((id) => id !== initial.assigned_to).length;
+          let applyToGroup = false;
+          if (
+            shouldAskGroupScheduleScope({
+              colleagues,
+              oldStart: initial.scheduled_for,
+              oldEnd: initial.scheduled_end,
+              newStart: startISO,
+              newEnd: endISO,
+            })
+          ) {
+            const choice = await new Promise<"all" | "mine" | null>((resolve) =>
+              setGroupSchedulePrompt({ count: colleagues, resolve }),
+            );
+            if (!choice) return;
+            applyToGroup = choice === "all";
+          }
+          // Mantém o responsável da linha clicada em primeiro, se continuar selecionado.
+          const orderedAssignees = selectedAssignees.includes(initial.assigned_to ?? "")
+            ? [initial.assigned_to as string, ...selectedAssignees.filter((id) => id !== initial.assigned_to)]
+            : selectedAssignees;
+          const { assigned_to: _ignored, ...rpcPayload } = payload;
+          void _ignored;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const res = await (supabase.rpc as any)("task_group_edit_occurrence", {
+            _task_id: initial.id,
+            _payload: rpcPayload,
+            _assignees: orderedAssignees,
+            _apply_schedule_to_group: applyToGroup,
+          });
+          error = res.error;
         } else if (recurrence.enabled) {
           // Horario e duracao da recorrencia sao derivados do topo do formulario.
           // Sem horario, a recorrencia fica por dia; nunca materializa 00:00.
@@ -3979,6 +4044,48 @@ function TaskForm({
         {loading ? "Salvando..." : initial ? "Salvar alterações" : "Criar tarefa"}
       </Button>
     </ModalFooter>
+    <AlertDialog
+      open={!!groupSchedulePrompt}
+      onOpenChange={(open) => {
+        if (!open && groupSchedulePrompt) {
+          groupSchedulePrompt.resolve(null);
+          setGroupSchedulePrompt(null);
+        }
+      }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{tt("Novo horário da tarefa de grupo")}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {tt("Aplicar o novo horário aos {{count}} colegas desta mesma ocorrência?", {
+              count: groupSchedulePrompt?.count ?? 0,
+            })}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{tt("Cancelar")}</AlertDialogCancel>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              groupSchedulePrompt?.resolve("mine");
+              setGroupSchedulePrompt(null);
+            }}
+          >
+            {tt("Só a minha")}
+          </Button>
+          <Button
+            type="button"
+            onClick={() => {
+              groupSchedulePrompt?.resolve("all");
+              setGroupSchedulePrompt(null);
+            }}
+          >
+            {tt("Sim, a todos")}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     <AlertDialog
       open={scheduleConflicts.length > 0}
       onOpenChange={(open) => {
