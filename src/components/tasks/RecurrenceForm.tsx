@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useT } from "@/i18n";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -67,7 +68,10 @@ export function RecurrenceForm({
   value,
   onChange,
   timingMode,
+  summary,
 }: {
+  /** Linha-resumo quando a recorrência veio de uma programação do cliente. */
+  summary?: string | null;
   value: RecurrenceFormValue;
   onChange: (v: RecurrenceFormValue) => void;
   /**
@@ -82,7 +86,12 @@ export function RecurrenceForm({
   const set = <K extends keyof RecurrenceFormValue>(k: K, v: RecurrenceFormValue[K]) =>
     onChange({ ...value, [k]: v });
 
+  const { t } = useT();
   const [open, setOpen] = useState(value.enabled);
+  // Ligada de fora (programação do cliente): o bloco abre para conferência.
+  useEffect(() => {
+    if (value.enabled) setOpen(true);
+  }, [value.enabled]);
   // "2x/3x por semana" são weekly com um número exato de dias: a escolha do
   // gestor fica em estado local porque o par persistido não a distingue.
   const [weeklyChoice, setWeeklyChoice] = useState<"weekly_2x" | "weekly_3x" | null>(null);
@@ -144,6 +153,12 @@ export function RecurrenceForm({
 
       {open && value.enabled && (
         <div className="space-y-3 border-t border-border pt-3">
+          {summary && (
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-2.5" data-testid="recurrence-summary">
+              <div className="text-sm font-medium">{summary}</div>
+              <div className="text-[11px] text-muted-foreground">{t("Confira a recorrência antes de criar a tarefa")}</div>
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label>Frequência</Label>
             <Select

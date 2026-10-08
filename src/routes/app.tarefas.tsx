@@ -1,4 +1,4 @@
-import { recurrenceFromScheduleSlot, disableAutoRecurrence } from "@/lib/tasks/schedule-recurrence";
+import { recurrenceFromScheduleSlot, disableAutoRecurrence, scheduleSlotSummary } from "@/lib/tasks/schedule-recurrence";
 import { firstNameOf } from "@/lib/person-name";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -2882,6 +2882,7 @@ function TaskForm({
   onDone: () => void;
   documentsSlot?: ReactNode;
 }) {
+  const { t } = useT();
   const [title, setTitle] = useState(initial?.title ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [assignees, setAssignees] = useState<string[]>(initial?.assigned_to ? [initial.assigned_to] : []);
@@ -3102,6 +3103,7 @@ function TaskForm({
 
   /** True quando a recorrência foi ligada pela escolha de uma programação. */
   const autoRecurrenceRef = useRef(false);
+  const recurrenceBlockRef = useRef<HTMLDivElement>(null);
   /** Escolha explícita de programação (só criação): liga a recorrência do cadastro. */
   const applySlotRecurrence = (slot: ClientScheduleSlot) => {
     if (initial) return;
@@ -3111,6 +3113,8 @@ function TaskForm({
     // A data de início da série segue o ciclo da programação, não a data da tarefa.
     recurrenceStartTouchedRef.current = true;
     setRecurrence(next);
+    // Abre o bloco de recorrência para conferência e rola até ele.
+    setTimeout(() => recurrenceBlockRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
     if (!touchedDates) {
       setStartDate(next.startDate);
       setEndDate(next.startDate);
@@ -3164,7 +3168,10 @@ function TaskForm({
       setClientSchedule(slots);
       setSelectedScheduleId(null);
       setScheduleHint(null);
-      suggestFromSchedule(slots, startDate);
+      // Clientes com programações nomeadas começam SEMPRE em "Livre / Manual":
+      // nada é preenchido até o gestor escolher no seletor.
+      const hasNamed = slots.some((s) => Boolean(s.label) && s.id.startsWith("client-habitual:"));
+      if (!hasNamed) suggestFromSchedule(slots, startDate);
     } catch {
       // Cliente sem programação legível não pode bloquear a criação da tarefa.
       setClientSchedule([]);
@@ -4059,11 +4066,14 @@ function TaskForm({
         </div>
       </div>
       {!initial && (
-        <RecurrenceForm
-          value={recurrence}
-          onChange={handleRecurrenceChange}
-          timingMode={timingMode}
-        />
+        <div ref={recurrenceBlockRef} data-testid="recurrence-block">
+          <RecurrenceForm
+            value={recurrence}
+            onChange={handleRecurrenceChange}
+            timingMode={timingMode}
+            summary={!initial && recurrence.enabled && selectedSchedule?.label ? scheduleSlotSummary(selectedSchedule, t) : null}
+          />
+        </div>
       )}
     </form>
     {documentsSlot && <div className="border-t border-border pt-4">{documentsSlot}</div>}
