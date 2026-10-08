@@ -29,6 +29,8 @@ import {
 } from "@/lib/locale";
 import { resolveAvailableNavigation, type NavGroup } from "@/lib/navigation";
 import { getAppVersion } from "@/lib/app-version";
+import { useT } from "@/i18n";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { latestChangeId } from "@/lib/change-log";
 
 function detectBrowser(): { name: string; version: string } {
@@ -96,6 +98,7 @@ const MOBILE_QUERY = "(max-width: 767px)";
 export function AppLayout({ children }: { children?: ReactNode }) {
   const { user, isManager, isSuperAdmin, currentCompanyId, signOut, effectiveRole, switchCompany, initialized } = useAuth();
   const { theme, toggle } = useTheme();
+  const { t } = useT();
   const nav = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
@@ -365,7 +368,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
             </div>
             <span className="font-display text-lg font-semibold tracking-tight">OmniBiz</span>
           </Link>
-          <button className="md:hidden" onClick={() => setOpen(false)} aria-label="Fechar menu">
+          <button className="md:hidden" onClick={() => setOpen(false)} aria-label={t("Fechar menu")}>
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -380,7 +383,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
                   roleBadge.tone,
                 )}
               >
-                <Shield className="h-3 w-3" /> {roleBadge.label}
+                <Shield className="h-3 w-3" /> {t(roleBadge.label)}
               </span>
             )}
             {superAdminOperating && activeCompany?.name && (
@@ -428,7 +431,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
                       )}
                       aria-expanded={!isCollapsed}
                     >
-                      <span>{group.label}</span>
+                      <span>{t(group.label)}</span>
                       <ChevronDown
                         className={cn("h-3 w-3 transition-transform", isCollapsed ? "-rotate-90" : "rotate-0")}
                       />
@@ -451,10 +454,10 @@ export function AppLayout({ children }: { children?: ReactNode }) {
                                 )}
                               >
                                 <Icon className="h-4 w-4 shrink-0" />
-                                <span className="flex-1 truncate">{it.label}</span>
+                                <span className="flex-1 truncate">{t(it.label)}</span>
                                 {it.soon && (
                                   <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">
-                                    em breve
+                                    {t("em breve")}
                                   </span>
                                 )}
                                 {!it.soon && it.badge ? (
@@ -516,11 +519,11 @@ export function AppLayout({ children }: { children?: ReactNode }) {
               onClick={async () => {
                 await switchCompany(null);
                 qc.invalidateQueries();
-                toast.success("Saiu do modo operacional");
+                toast.success(t("Saiu do modo operacional"));
                 nav({ to: "/app/admin" });
               }}
             >
-              <Repeat className="mr-2 h-4 w-4" /> Trocar empresa
+              <Repeat className="mr-2 h-4 w-4" /> {t("Trocar empresa")}
             </Button>
           )}
           <Button
@@ -532,7 +535,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
               nav({ to: "/login" });
             }}
           >
-            <LogOut className="mr-2 h-4 w-4" /> Sair
+            <LogOut className="mr-2 h-4 w-4" /> {t("Sair")}
           </Button>
         </div>
       </aside>
@@ -541,7 +544,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
       {open && isMobile && (
         <button
           type="button"
-          aria-label="Fechar menu"
+          aria-label={t("Fechar menu")}
           className="fixed inset-0 z-30 bg-black/40 backdrop-blur-sm md:hidden"
           onClick={() => setOpen(false)}
         />
@@ -553,7 +556,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
           <button
             className="md:hidden"
             onClick={() => setOpen(true)}
-            aria-label="Abrir menu"
+            aria-label={t("Abrir menu")}
             disabled={!breakpointReady}
           >
             <Menu className="h-5 w-5" />
@@ -563,7 +566,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
               <div className="flex min-w-0 flex-wrap items-center gap-1.5 rounded-lg border border-destructive/30 bg-destructive/10 px-2 py-1.5 text-[11px] font-medium text-destructive sm:gap-2 sm:px-3 sm:text-xs">
                 <Shield className="h-3.5 w-3.5" />
                 <span className="min-w-0 flex-1 truncate">
-                  MODO SUPER ADMIN — Empresa ativa: <strong>{activeCompany?.name ?? "..."}</strong>
+                  {t("MODO SUPER ADMIN — Empresa ativa:")} <strong>{activeCompany?.name ?? "..."}</strong>
                   <span className="ml-1.5 font-mono text-[10px] opacity-80">commit {visibleCommit}</span>
                 </span>
                 <Button
@@ -573,16 +576,17 @@ export function AppLayout({ children }: { children?: ReactNode }) {
                   onClick={async () => {
                     await switchCompany(null);
                     qc.invalidateQueries();
-                    toast.success("Saiu do modo operacional");
+                    toast.success(t("Saiu do modo operacional"));
                     nav({ to: "/app/admin" });
                   }}
                 >
-                  Sair da empresa
+                  {t("Sair da empresa")}
                 </Button>
               </div>
             )}
           </div>
-          <Button variant="ghost" size="icon" onClick={toggle} aria-label="Alternar tema">
+          <LanguageSwitcher />
+          <Button variant="ghost" size="icon" onClick={toggle} aria-label={t("Alternar tema")}>
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
           {effectiveRole !== "employee" && effectiveRole !== null && (
@@ -592,9 +596,9 @@ export function AppLayout({ children }: { children?: ReactNode }) {
               className="hidden sm:inline-flex"
               onClick={() => setReportDialogOpen(true)}
               disabled={!currentCompanyId}
-              title={!currentCompanyId ? "Selecione uma empresa antes de reportar" : "Reportar problema nesta tela"}
+              title={!currentCompanyId ? t("Selecione uma empresa antes de reportar") : t("Reportar problema nesta tela")}
             >
-              <LifeBuoy className="mr-1.5 h-4 w-4" /> Reportar problema
+              <LifeBuoy className="mr-1.5 h-4 w-4" /> {t("Reportar problema")}
             </Button>
           )}
         </header>
