@@ -15,6 +15,12 @@ import { CreditCard, Check, X as XIcon, Upload, Camera, Download, Plus, Trash2, 
 import {
   buildExpenseAttachmentsPdf,
   openExpenseAttachmentsPrint,
+  ATTACHMENT_PAYMENT_LABEL,
+  attachmentArchiveName,
+  describeExpenseFilters,
+  selectAttachmentExpenses,
+  summarizeAttachmentExpenses,
+  type AttachmentPaymentFilter,
   type ExpenseAttachmentManifestItem,
 } from "@/lib/expense-attachments";
 
@@ -438,6 +444,18 @@ function DespesasPage() {
   const [filterEndDate, setFilterEndDate] = useState("");
   const [attachmentMonth, setAttachmentMonth] = useState(new Date().toISOString().slice(0, 7));
   const [attachmentAction, setAttachmentAction] = useState<"print" | "zip" | null>(null);
+  const [attachmentPayment, setAttachmentPayment] = useState<AttachmentPaymentFilter>("all");
+  const [attachmentResult, setAttachmentResult] = useState<string | null>(null);
+  const attachmentRows = selectAttachmentExpenses(rows, {
+    month: attachmentMonth,
+    payment: attachmentPayment,
+    userId: filterUser,
+  });
+  const attachmentSummary = summarizeAttachmentExpenses(attachmentRows, {
+    month: attachmentMonth,
+    payment: attachmentPayment,
+    employeeName: filterUser !== "all" ? (names[filterUser] ?? "Colaborador") : null,
+  });
 
   const filtered = rows.filter((r) => {
     if (filterStatus !== "all" && r.status !== filterStatus) return false;
@@ -472,20 +490,21 @@ function DespesasPage() {
       { header: "Pago em", accessor: (r) => fmtDateTime(r.paid_at), width: 92 },
       { header: "Observações", accessor: (r) => r.notes ?? "", width: 170 },
     ];
-    const subtitleParts = [
-      filterDateBy === "expense_date" ? "Período por data da despesa" : "Período por data de envio",
-      filterStartDate ? `De ${fmtDate(filterStartDate)}` : null,
-      filterEndDate ? `Até ${fmtDate(filterEndDate)}` : null,
-      filterStatus !== "all" ? `Estado: ${STATUS_LABEL[filterStatus]}` : null,
-      filterPayment !== "all" ? `Pagamento: ${PAYMENT_LABEL[filterPayment]}` : null,
-      filterUser !== "all" ? `Colaborador: ${names[filterUser] ?? "Colaborador"}` : null,
-    ].filter(Boolean);
+    // O arquivo sai com exatamente as linhas e os filtros da tela.
+    const subtitle = describeExpenseFilters({
+      statusLabel: filterStatus !== "all" ? STATUS_LABEL[filterStatus] : null,
+      paymentLabel: filterPayment !== "all" ? PAYMENT_LABEL[filterPayment] : null,
+      employeeName: filterUser !== "all" ? (names[filterUser] ?? "Colaborador") : null,
+      dateBy: filterDateBy,
+      start: filterStartDate,
+      end: filterEndDate,
+    });
     const meta = {
       fileName: `despesas-${new Date().toISOString().slice(0, 10)}`,
       title: "Despesas",
       companyName: companyMeta?.name ?? null,
       primaryColor: companyMeta?.primary_color ?? null,
-      subtitle: subtitleParts.join(" · ") || null,
+      subtitle,
     };
     if (kind === "xlsx") exportToExcel(filtered, columns, meta);
     else exportToPdf(filtered, columns, meta);
@@ -502,6 +521,8 @@ function DespesasPage() {
     const token = sessionData.session?.access_token;
     if (!token) throw new Error("Sessão expirada. Entre novamente.");
     const params = new URLSearchParams({ companyId: currentCompanyId, month: attachmentMonth, format });
+    if (attachmentPayment !== "all") params.set("payment", attachmentPayment);
+    if (filterUser !== "all") params.set("userId", filterUser);
     const response = await fetch(`/api/expenses/attachments?${params.toString()}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -514,14 +535,16 @@ function DespesasPage() {
 
   const printAttachments = async () => {
     setAttachmentAction("print");
+    setAttachmentResult(null);
     try {
       const response = await fetchAttachmentReport("manifest");
       const payload = await response.json() as { items: ExpenseAttachmentManifestItem[] };
       if (payload.items.length === 0) {
-        toast.info("Não há comprovantes de despesas aprovadas no mês selecionado.");
+        toast.info("Nenhum comprovante para estes filtros");
         return;
       }
       openExpenseAttachmentsPrint(await buildExpenseAttachmentsPdf(payload.items));
+      setAttachmentResult(`${payload.items.length} comprovante(s) enviados para impressão.`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Falha ao imprimir comprovantes.");
     } finally {
@@ -531,14 +554,17 @@ function DespesasPage() {
 
   const downloadAttachments = async () => {
     setAttachmentAction("zip");
+    setAttachmentResult(null);
     try {
       const response = await fetchAttachmentReport("zip");
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `comprovantes-despesas-${attachmentMonth}.zip`;
+      const fileName = attachmentArchiveName(attachmentMonth, attachmentPayment);
+      link.download = fileName;
       link.click();
+      setAttachmentResult(`Arquivo ${fileName} baixado.`);
       setTimeout(() => URL.revokeObjectURL(url), 4000);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Falha ao baixar comprovantes.");
@@ -800,32 +826,65 @@ function DespesasPage() {
           </div>
         )}
         {isManager && (
-          <div className="mb-4 flex flex-wrap items-end gap-2 border-t border-border pt-4">
-            <div className="min-w-[180px]">
-              <Label htmlFor="expense-attachment-month" className="text-xs">Mês dos comprovantes</Label>
-              <Input
-                id="expense-attachment-month"
-                type="month"
-                value={attachmentMonth}
-                onChange={(event) => setAttachmentMonth(event.target.value)}
-              />
+          <div className="mb-4 space-y-2 border-t border-border pt-4" data-testid="expense-attachments-block">
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="min-w-[180px] flex-1 sm:flex-none">
+                <Label htmlFor="expense-attachment-month" className="text-xs">Mês dos comprovantes</Label>
+                <Input
+                  id="expense-attachment-month"
+                  type="month"
+                  value={attachmentMonth}
+                  onChange={(event) => { setAttachmentMonth(event.target.value); setAttachmentResult(null); }}
+                />
+              </div>
+              <div className="min-w-[180px] flex-1 sm:flex-none">
+                <Label className="text-xs">Pagamento</Label>
+                <Select
+                  value={attachmentPayment}
+                  onValueChange={(v) => { setAttachmentPayment(v as AttachmentPaymentFilter); setAttachmentResult(null); }}
+                >
+                  <SelectTrigger aria-label="Pagamento dos comprovantes"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(["aguardando_pagamento", "paga", "all"] as const).map((k) => (
+                      <SelectItem key={k} value={k}>{ATTACHMENT_PAYMENT_LABEL[k]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full sm:w-auto"
+                disabled={!attachmentMonth || attachmentAction !== null || isLoading || attachmentSummary.count === 0}
+                onClick={() => void printAttachments()}
+              >
+                <Printer className="h-4 w-4" /> {attachmentAction === "print" ? "A preparar…" : "Imprimir comprovantes"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full sm:w-auto"
+                disabled={!attachmentMonth || attachmentAction !== null || isLoading || attachmentSummary.count === 0}
+                onClick={() => void downloadAttachments()}
+              >
+                <Package className="h-4 w-4" /> {attachmentAction === "zip" ? "A preparar…" : "Baixar comprovantes do mês"}
+              </Button>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={!attachmentMonth || attachmentAction !== null}
-              onClick={() => void printAttachments()}
-            >
-              <Printer className="h-4 w-4" /> Imprimir comprovantes
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={!attachmentMonth || attachmentAction !== null}
-              onClick={() => void downloadAttachments()}
-            >
-              <Package className="h-4 w-4" /> Baixar comprovantes do mês
-            </Button>
+            <div className="text-xs" data-testid="expense-attachments-summary" aria-live="polite">
+              {isLoading ? (
+                <span className="text-muted-foreground">Carregando…</span>
+              ) : attachmentSummary.count === 0 ? (
+                <span className="text-muted-foreground">Nenhum comprovante para estes filtros</span>
+              ) : (
+                <span className="font-medium">{attachmentSummary.text}</span>
+              )}
+              {!isLoading && attachmentSummary.missing > 0 && (
+                <span className="ml-1 text-warning">
+                  · {attachmentSummary.missing} aprovada(s) sem comprovante anexado (fora do pacote)
+                </span>
+              )}
+              {attachmentResult && <div className="mt-1 text-success">{attachmentResult}</div>}
+            </div>
           </div>
         )}
         {isLoading ? (

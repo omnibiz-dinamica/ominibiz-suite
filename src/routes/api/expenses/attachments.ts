@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Zip, ZipPassThrough } from "fflate";
-import { expenseMonthBounds, safeExpenseAttachmentName } from "@/lib/expense-attachments";
+import { attachmentArchiveName, expenseMonthBounds, safeExpenseAttachmentName } from "@/lib/expense-attachments";
 
 type ExpenseAttachmentRow = {
   id: string;
@@ -39,6 +39,10 @@ export const Route = createFileRoute("/api/expenses/attachments")({
         const companyId = url.searchParams.get("companyId") ?? "";
         const month = url.searchParams.get("month") ?? "";
         const format = url.searchParams.get("format") === "zip" ? "zip" : "manifest";
+        const paymentParam = url.searchParams.get("payment");
+        const payment = paymentParam === "paga" || paymentParam === "aguardando_pagamento" ? paymentParam : "all";
+        const userIdParam = url.searchParams.get("userId");
+        if (userIdParam && !UUID_PATTERN.test(userIdParam)) return json({ error: "Colaborador inválido." }, 400);
         const bounds = expenseMonthBounds(month);
         if (!UUID_PATTERN.test(companyId) || !bounds) return json({ error: "Período inválido." }, 400);
 
@@ -58,7 +62,7 @@ export const Route = createFileRoute("/api/expenses/attachments")({
         );
         if (!allowed) return json({ error: "Sem permissão para consultar estes comprovantes." }, 403);
 
-        const { data, error } = await (supabaseAdmin as any)
+        let query = (supabaseAdmin as any)
           .from("employee_expenses")
           .select("id,expense_date,user_id,amount,reason,attachment_path,attachment_mime,attachment_size")
           .eq("company_id", companyId)
@@ -66,7 +70,12 @@ export const Route = createFileRoute("/api/expenses/attachments")({
           .eq("status", "aprovada")
           .gte("expense_date", bounds.start)
           .lt("expense_date", bounds.end)
-          .not("attachment_path", "is", null)
+          .not("attachment_path", "is", null);
+        if (userIdParam) query = query.eq("user_id", userIdParam);
+        if (payment === "paga") query = query.eq("payment_status", "paga");
+        // Aprovadas ainda sem estado de pagamento contam como "aguarda pagamento".
+        if (payment === "aguardando_pagamento") query = query.or("payment_status.is.null,payment_status.neq.paga");
+        const { data, error } = await query
           .order("expense_date", { ascending: true })
           .limit(MAX_FILES + 1);
         if (error) return json({ error: "Não foi possível consultar os comprovantes." }, 500);
@@ -143,7 +152,7 @@ export const Route = createFileRoute("/api/expenses/attachments")({
         return new Response(stream, {
           headers: {
             "Cache-Control": "private, no-store",
-            "Content-Disposition": `attachment; filename="comprovantes-despesas-${month}.zip"`,
+            "Content-Disposition": `attachment; filename="${attachmentArchiveName(month, payment)}"`,
             "Content-Type": "application/zip",
           },
         });
