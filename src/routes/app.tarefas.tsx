@@ -898,6 +898,15 @@ function TasksPage() {
       replace: true,
     });
   };
+  // Troca de empresa ativa: descarta a seleção de clientes da empresa anterior.
+  const lastCompanyRef = useRef(currentCompanyId);
+  useEffect(() => {
+    if (lastCompanyRef.current === currentCompanyId) return;
+    lastCompanyRef.current = currentCompanyId;
+    if (search.client) {
+      void navigate({ search: (prev: TasksSearch) => ({ ...prev, client: undefined }), replace: true });
+    }
+  }, [currentCompanyId, search.client, navigate]);
   const setClientFilter = (next: string[] | undefined) => {
     void navigate({
       search: (prev: TasksSearch) => ({ ...prev, client: next?.length ? next.join(",") : undefined }),
