@@ -39,10 +39,7 @@ import {
 } from "@/lib/notification-actions";
 import { taskRejectionNotificationDetails } from "@/lib/task-refusal-view";
 import { taskCancellationNotificationDetails } from "@/lib/task-cancellation-notification";
-import {
-  ticketNotificationDisplay,
-  type TicketNotificationIdentity,
-} from "@/lib/support/ticket-notification";
+import { ticketNotificationDisplay, type TicketNotificationIdentity } from "@/lib/support/ticket-notification";
 
 type NotificationEvent =
   | "task_created"
@@ -161,16 +158,11 @@ function completionNotificationDetails(row: NotificationRow): CompletionNotifica
 
 /** Completa notificacoes antigas que foram criadas antes do payload de cancelamento.
  *  A busca e em lote e respeita os filtros de empresa da consulta principal. */
-async function enrichLegacyCancellationNotifications(
-  rows: NotificationRow[],
-): Promise<NotificationRow[]> {
+async function enrichLegacyCancellationNotifications(rows: NotificationRow[]): Promise<NotificationRow[]> {
   const taskIds = [
     ...new Set(
       rows
-        .filter(
-          (row) =>
-            row.event === "task_cancelled" && row.task_id && !row.metadata?.cancelled_by_name,
-        )
+        .filter((row) => row.event === "task_cancelled" && row.task_id && !row.metadata?.cancelled_by_name)
         .map((row) => row.task_id as string),
     ),
   ];
@@ -182,27 +174,19 @@ async function enrichLegacyCancellationNotifications(
     .in("id", taskIds);
   if (taskError) return rows;
 
-  const taskById = new Map(
-    ((taskData ?? []) as unknown as CancellationTaskContext[]).map((task) => [task.id, task]),
-  );
+  const taskById = new Map(((taskData ?? []) as unknown as CancellationTaskContext[]).map((task) => [task.id, task]));
   const actorIds = [
-    ...new Set(
-      [...taskById.values()].map((task) => task.cancelled_by).filter((id): id is string => !!id),
-    ),
+    ...new Set([...taskById.values()].map((task) => task.cancelled_by).filter((id): id is string => !!id)),
   ];
   const { data: actorData } = actorIds.length
     ? await supabase.from("profiles").select("id,full_name").in("id", actorIds)
     : { data: [] as { id: string; full_name: string | null }[] };
   const actorById = new Map(
-    ((actorData ?? []) as { id: string; full_name: string | null }[]).map((actor) => [
-      actor.id,
-      actor.full_name,
-    ]),
+    ((actorData ?? []) as { id: string; full_name: string | null }[]).map((actor) => [actor.id, actor.full_name]),
   );
 
   return rows.map((row) => {
-    if (row.event !== "task_cancelled" || !row.task_id || row.metadata?.cancelled_by_name)
-      return row;
+    if (row.event !== "task_cancelled" || !row.task_id || row.metadata?.cancelled_by_name) return row;
     const task = taskById.get(row.task_id);
     if (!task) return row;
     const actorName = task.cancelled_by ? actorById.get(task.cancelled_by) : null;
@@ -240,10 +224,7 @@ async function enrichTicketNotifications(
   const ticketIds = [...new Set(rows.map(supportTicketId).filter((id): id is string => !!id))];
   if (ticketIds.length === 0) return rows;
 
-  let ticketQuery = supabase
-    .from("support_tickets")
-    .select("id,ticket_number,requester_user_id")
-    .in("id", ticketIds);
+  let ticketQuery = supabase.from("support_tickets").select("id,ticket_number,requester_user_id").in("id", ticketIds);
   if (companyId) ticketQuery = ticketQuery.eq("company_id", companyId);
   const { data: ticketData } = await ticketQuery;
   const tickets = (ticketData ?? []) as SupportTicketContext[];
@@ -269,12 +250,9 @@ async function enrichTicketNotifications(
     const messageId = typeof row.metadata?.message_id === "string" ? row.metadata.message_id : null;
     const message = messageId
       ? messageById.get(messageId)
-      : messages
-          .filter((item) => item.ticket_id === ticketId && item.created_at <= row.created_at)
-          .at(-1);
+      : messages.filter((item) => item.ticket_id === ticketId && item.created_at <= row.created_at).at(-1);
     const resolvedActorId =
-      actorId ??
-      (row.event === "ticket_created" ? ticket?.requester_user_id : message?.author_user_id);
+      actorId ?? (row.event === "ticket_created" ? ticket?.requester_user_id : message?.author_user_id);
     if (resolvedActorId) actorIds.add(resolvedActorId);
   }
 
@@ -285,10 +263,7 @@ async function enrichTicketNotifications(
         .in("id", [...actorIds])
     : { data: [] as { id: string; full_name: string | null }[] };
   const actorById = new Map(
-    ((actorData ?? []) as { id: string; full_name: string | null }[]).map((actor) => [
-      actor.id,
-      actor,
-    ]),
+    ((actorData ?? []) as { id: string; full_name: string | null }[]).map((actor) => [actor.id, actor]),
   );
 
   return rows.map((row) => {
@@ -299,12 +274,9 @@ async function enrichTicketNotifications(
     const messageId = typeof row.metadata?.message_id === "string" ? row.metadata.message_id : null;
     const message = messageId
       ? messageById.get(messageId)
-      : messages
-          .filter((item) => item.ticket_id === ticketId && item.created_at <= row.created_at)
-          .at(-1);
+      : messages.filter((item) => item.ticket_id === ticketId && item.created_at <= row.created_at).at(-1);
     const resolvedActorId =
-      actorId ??
-      (row.event === "ticket_created" ? ticket?.requester_user_id : message?.author_user_id);
+      actorId ?? (row.event === "ticket_created" ? ticket?.requester_user_id : message?.author_user_id);
     const actor = resolvedActorId ? actorById.get(resolvedActorId) : undefined;
     const identity: TicketNotificationIdentity = {
       fullName: actor?.full_name,
@@ -429,7 +401,10 @@ function NotificationsPage() {
       const { data: requests, error: requestError } = await supabase
         .from("vacation_requests")
         .select("id,user_id,start_date,end_date")
-        .in("id", queue.map((item) => item.vacation_request_id));
+        .in(
+          "id",
+          queue.map((item) => item.vacation_request_id),
+        );
       if (requestError) throw requestError;
       const requestMap = new Map((requests ?? []).map((request) => [request.id, request]));
       const employeeIds = [...new Set((requests ?? []).map((request) => request.user_id))];
@@ -441,12 +416,14 @@ function NotificationsPage() {
       return queue.flatMap((item) => {
         const request = requestMap.get(item.vacation_request_id);
         if (!request) return [];
-        return [{
-          ...item,
-          employeeName: names.get(request.user_id) ?? "Colaborador",
-          startDate: request.start_date,
-          endDate: request.end_date,
-        }];
+        return [
+          {
+            ...item,
+            employeeName: names.get(request.user_id) ?? "Colaborador",
+            startDate: request.start_date,
+            endDate: request.end_date,
+          },
+        ];
       });
     },
   });
@@ -461,9 +438,7 @@ function NotificationsPage() {
       if (currentCompanyId) query.eq("company_id", currentCompanyId);
       const { data, error } = await query.order("created_at", { ascending: false }).limit(200);
       if (error) throw error;
-      const rows = await enrichLegacyCancellationNotifications(
-        (data ?? []) as unknown as NotificationRow[],
-      );
+      const rows = await enrichLegacyCancellationNotifications((data ?? []) as unknown as NotificationRow[]);
       return enrichTicketNotifications(rows, currentCompanyId);
     },
     enabled: !!user,
@@ -519,12 +494,7 @@ function NotificationsPage() {
 
   /** ADR-043 — muda o estado de gestão da notificação. */
   const setState = useMutation({
-    mutationFn: async (vars: {
-      ids: string[];
-      state: NotificationState;
-      forwardedTo?: string;
-      note?: string;
-    }) => {
+    mutationFn: async (vars: { ids: string[]; state: NotificationState; forwardedTo?: string; note?: string }) => {
       const { error } = await supabase.rpc(
         "notification_set_state" as never,
         {
@@ -545,16 +515,28 @@ function NotificationsPage() {
       );
     },
     onError: (e: Error) =>
-      toast.error(
-        e.message === "FORWARD_DESTINATION_REQUIRED"
-          ? "Indique para quem está a encaminhar."
-          : e.message,
-      ),
+      toast.error(e.message === "FORWARD_DESTINATION_REQUIRED" ? "Indique para quem está a encaminhar." : e.message),
+  });
+
+  const resolveGroup = useMutation({
+    mutationFn: async (notificationId: string) => {
+      const { data, error } = await supabase.rpc(
+        "notification_resolve_group" as never,
+        { _notification_id: notificationId } as never,
+      );
+      if (error) throw error;
+      return Number(data ?? 0);
+    },
+    onSuccess: (count) => {
+      invalidateNotificationsCache(qc);
+      toast.success(count > 1 ? "Resolvida para toda a equipa de gestão" : "Notificação resolvida");
+    },
+    onError: (e: Error) =>
+      toast.error(e.message.includes("NOT_AUTHORIZED") ? "Sem permissão para resolver esta notificação." : e.message),
   });
 
   const transition = useMutation({
-    mutationFn: ({ id, action }: { id: string; action: "autorizar" | "cancelar" }) =>
-      transitionTask(id, action),
+    mutationFn: ({ id, action }: { id: string; action: "autorizar" | "cancelar" }) => transitionTask(id, action),
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
       invalidateNotificationsCache(qc);
@@ -567,9 +549,7 @@ function NotificationsPage() {
   const counts = useMemo(() => {
     const map = {} as Record<TabKey, number>;
     for (const t of TABS) {
-      map[t.key] = t.states
-        ? rows.filter((n) => t.states!.includes(n.state ?? "nova")).length
-        : rows.length;
+      map[t.key] = t.states ? rows.filter((n) => t.states!.includes(n.state ?? "nova")).length : rows.length;
     }
     return map;
   }, [rows]);
@@ -653,12 +633,7 @@ function NotificationsPage() {
       {/* Filtros de estado (ADR-043) */}
       <div className="flex flex-wrap gap-2">
         {TABS.map((t) => (
-          <Button
-            key={t.key}
-            size="sm"
-            variant={tab === t.key ? "default" : "outline"}
-            onClick={() => setTab(t.key)}
-          >
+          <Button key={t.key} size="sm" variant={tab === t.key ? "default" : "outline"} onClick={() => setTab(t.key)}>
             {t.label}
             <span className="ml-1.5 text-xs opacity-70">{counts[t.key] ?? 0}</span>
           </Button>
@@ -686,12 +661,17 @@ function NotificationsPage() {
                     </div>
                     <p className="mt-1 font-medium">{item.employeeName}</p>
                     <p className="text-sm text-muted-foreground">
-                      {new Date(`${item.startDate}T00:00:00`).toLocaleDateString("pt-PT")} a {new Date(`${item.endDate}T00:00:00`).toLocaleDateString("pt-PT")}
+                      {new Date(`${item.startDate}T00:00:00`).toLocaleDateString("pt-PT")} a{" "}
+                      {new Date(`${item.endDate}T00:00:00`).toLocaleDateString("pt-PT")}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {!mine && (
-                      <Button size="sm" disabled={claimVacation.isPending} onClick={() => claimVacation.mutate(item.id)}>
+                      <Button
+                        size="sm"
+                        disabled={claimVacation.isPending}
+                        onClick={() => claimVacation.mutate(item.id)}
+                      >
                         <Timer className="mr-1.5 h-4 w-4" /> Tratar
                       </Button>
                     )}
@@ -707,9 +687,7 @@ function NotificationsPage() {
       )}
 
       {isLoading || vacationQueueLoading ? (
-        <div className="rounded-lg border border-border p-8 text-center text-sm text-muted-foreground">
-          Carregando…
-        </div>
+        <div className="rounded-lg border border-border p-8 text-center text-sm text-muted-foreground">Carregando…</div>
       ) : visible.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-12 text-center">
           <Bell className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
@@ -769,16 +747,13 @@ function NotificationsPage() {
                       </span>
                       <span
                         className={
-                          "rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide " +
-                          STATE_TONE[state]
+                          "rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide " + STATE_TONE[state]
                         }
                       >
                         {STATE_LABEL[state]}
                         {state === "encaminhada" && n.forwarded_to ? ` · ${n.forwarded_to}` : ""}
                       </span>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(n.created_at).toLocaleString()}
-                      </span>
+                      <span className="text-xs text-muted-foreground">{new Date(n.created_at).toLocaleString()}</span>
                     </div>
                     <p className="mt-1 font-medium">{ticketDisplay?.title ?? n.title}</p>
                     {refusal ? (
@@ -819,8 +794,7 @@ function NotificationsPage() {
                     ) : cancellation ? (
                       <div className="mt-2 space-y-1 border-l-2 border-destructive/30 pl-3 text-sm">
                         <p>
-                          <span className="font-medium">Quem cancelou:</span>{" "}
-                          {cancellation.actorName}
+                          <span className="font-medium">Quem cancelou:</span> {cancellation.actorName}
                           {cancellation.actorRole ? ` (${cancellation.actorRole})` : ""}
                         </p>
                         {cancellation.taskTitle && (
@@ -834,13 +808,11 @@ function NotificationsPage() {
                           </p>
                         )}
                         <p>
-                          <span className="font-medium">Motivo:</span>{" "}
-                          {cancellation.reason ?? "Motivo não informado"}
+                          <span className="font-medium">Motivo:</span> {cancellation.reason ?? "Motivo não informado"}
                         </p>
                         {cancellation.cancelledAt && (
                           <p className="text-xs text-muted-foreground">
-                            Cancelada em:{" "}
-                            {new Date(cancellation.cancelledAt).toLocaleString("pt-PT")}
+                            Cancelada em: {new Date(cancellation.cancelledAt).toLocaleString("pt-PT")}
                           </p>
                         )}
                         {cancellation.requestedDate && (
@@ -867,13 +839,19 @@ function NotificationsPage() {
                           TAREFA CONCLUÍDA COM OBSERVAÇÃO
                         </p>
                         {completion.actorName && (
-                          <p><span className="font-medium">Quem concluiu:</span> {completion.actorName}</p>
+                          <p>
+                            <span className="font-medium">Quem concluiu:</span> {completion.actorName}
+                          </p>
                         )}
                         {completion.taskTitle && (
-                          <p><span className="font-medium">Tarefa:</span> {completion.taskTitle}</p>
+                          <p>
+                            <span className="font-medium">Tarefa:</span> {completion.taskTitle}
+                          </p>
                         )}
                         {completion.clientName && (
-                          <p><span className="font-medium">Cliente:</span> {completion.clientName}</p>
+                          <p>
+                            <span className="font-medium">Cliente:</span> {completion.clientName}
+                          </p>
                         )}
                         <p className="whitespace-pre-wrap break-words">
                           <span className="font-medium">Observação:</span> {completion.note}
@@ -886,20 +864,12 @@ function NotificationsPage() {
                       </div>
                     ) : ticketDisplay ? (
                       ticketDisplay.body && (
-                        <p className="mt-0.5 break-words text-sm text-muted-foreground">
-                          {ticketDisplay.body}
-                        </p>
+                        <p className="mt-0.5 break-words text-sm text-muted-foreground">{ticketDisplay.body}</p>
                       )
                     ) : (
-                      n.body && (
-                        <p className="mt-0.5 break-words text-sm text-muted-foreground">{n.body}</p>
-                      )
+                      n.body && <p className="mt-0.5 break-words text-sm text-muted-foreground">{n.body}</p>
                     )}
-                    {n.state_note && (
-                      <p className="mt-1 text-xs italic text-muted-foreground">
-                        Nota: {n.state_note}
-                      </p>
-                    )}
+                    {n.state_note && <p className="mt-1 text-xs italic text-muted-foreground">Nota: {n.state_note}</p>}
                   </div>
                 </div>
 
@@ -940,12 +910,7 @@ function NotificationsPage() {
                     </Button>
                   )}
                   {actions.forward && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={setState.isPending}
-                      onClick={() => openForward(n)}
-                    >
+                    <Button size="sm" variant="ghost" disabled={setState.isPending} onClick={() => openForward(n)}>
                       <Send className="mr-1.5 h-4 w-4" /> Encaminhar
                     </Button>
                   )}
@@ -954,7 +919,7 @@ function NotificationsPage() {
                       size="sm"
                       variant="ghost"
                       disabled={setState.isPending}
-                      onClick={() => setState.mutate({ ids: [n.id], state: "resolvida" })}
+                      onClick={() => resolveGroup.mutate(n.id)}
                     >
                       <CheckCircle2 className="mr-1.5 h-4 w-4" /> Resolvida
                     </Button>
@@ -990,8 +955,7 @@ function NotificationsPage() {
           <DialogHeader>
             <DialogTitle>Encaminhar notificação</DialogTitle>
             <DialogDescription>
-              Registe para quem enviou este assunto. A notificação fica em “Em tratamento” até ser
-              resolvida.
+              Registe para quem enviou este assunto. A notificação fica em “Em tratamento” até ser resolvida.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -1005,13 +969,7 @@ function NotificationsPage() {
               />
               <div className="flex flex-wrap gap-1.5">
                 {FORWARD_SUGGESTIONS.map((s) => (
-                  <Button
-                    key={s}
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setForwardTo(s)}
-                  >
+                  <Button key={s} type="button" size="sm" variant="outline" onClick={() => setForwardTo(s)}>
                     {s}
                   </Button>
                 ))}
