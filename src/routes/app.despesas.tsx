@@ -11,7 +11,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { EmployeePicker } from "@/components/common/EmployeePicker";
 import { toast } from "sonner";
 import { exportToExcel, exportToPdf, type ExportColumn } from "@/lib/exports";
-import { CreditCard, Check, X as XIcon, Upload, Camera, Download, Plus, Trash2, FileSpreadsheet, FileText, Package } from "lucide-react";
+import {
+  CreditCard,
+  Check,
+  X as XIcon,
+  Upload,
+  Camera,
+  Download,
+  Plus,
+  Trash2,
+  FileSpreadsheet,
+  FileText,
+  Package,
+} from "lucide-react";
 import {
   attachmentArchiveName,
   describeExpenseFilters,
@@ -22,8 +34,14 @@ import {
   type ExpenseSelectionFilters,
 } from "@/lib/expense-attachments";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
-  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/app/despesas")({ component: DespesasPage });
@@ -192,17 +210,28 @@ function DespesasPage() {
   });
 
   const userIds = useMemo(() => Array.from(new Set(rows.map((r) => r.user_id))), [rows]);
-  const { data: names = {} } = useQuery({
-    queryKey: ["exp-names", userIds.join(",")],
+  const { data: userProfiles = {} } = useQuery({
+    queryKey: ["exp-profiles", userIds.join(",")],
     enabled: userIds.length > 0,
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("id, full_name").in("id", userIds);
-      return Object.fromEntries((data ?? []).map((p: any) => [p.id, p.full_name ?? "Colaborador"])) as Record<
-        string,
-        string
-      >;
+      const { data } = await supabase.from("profiles").select("id, full_name, job_title").in("id", userIds);
+      return Object.fromEntries(
+        (data ?? []).map((p: any) => [
+          p.id,
+          {
+            name: p.full_name ?? "Colaborador",
+            jobTitle: p.job_title?.trim() || "—",
+          },
+        ]),
+      ) as Record<string, { name: string; jobTitle: string }>;
     },
   });
+
+  // Mantém retrocompatibilidade de nomes simples
+  const names = useMemo(
+    () => Object.fromEntries(Object.entries(userProfiles).map(([id, p]) => [id, p.name])) as Record<string, string>,
+    [userProfiles],
+  );
 
   const { data: companyMeta } = useQuery({
     queryKey: ["company-meta-expenses", currentCompanyId],
@@ -227,9 +256,7 @@ function DespesasPage() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const pickerDraftRef = useRef<ExpenseDraft | null>(null);
   const [draftReady, setDraftReady] = useState(false);
-  const draftStorageKey = user?.id && currentCompanyId
-    ? `omnibiz:expense-draft:${currentCompanyId}:${user.id}`
-    : null;
+  const draftStorageKey = user?.id && currentCompanyId ? `omnibiz:expense-draft:${currentCompanyId}:${user.id}` : null;
   const attachmentDraftKey = draftStorageKey ? `${draftStorageKey}:attachment` : null;
 
   // A câmera do Android pode suspender ou recriar a página por pressão de
@@ -330,21 +357,24 @@ function DespesasPage() {
     toast.success("Comprovante anexado. Envie a despesa para guardar.");
   };
 
-
   const create = useMutation({
     mutationFn: async () => {
       if (!currentCompanyId || !user?.id) throw new Error("Empresa não selecionada");
       const value = Number(amount.replace(",", "."));
       if (!Number.isFinite(value) || value < 0) throw new Error("Valor inválido");
       if (!reason.trim()) throw new Error("Indique o motivo");
-      const { data: expense, error } = await (supabase as any).from("employee_expenses").insert({
-        company_id: currentCompanyId,
-        user_id: user.id,
-        expense_date: expenseDate,
-        amount: value,
-        reason: reason.trim(),
-        notes: notes.trim() || null,
-      }).select("id").single();
+      const { data: expense, error } = await (supabase as any)
+        .from("employee_expenses")
+        .insert({
+          company_id: currentCompanyId,
+          user_id: user.id,
+          expense_date: expenseDate,
+          amount: value,
+          reason: reason.trim(),
+          notes: notes.trim() || null,
+        })
+        .select("id")
+        .single();
       if (error) throw error;
       if (!file) return;
 
@@ -444,6 +474,7 @@ function DespesasPage() {
   const [filterDateBy, setFilterDateBy] = useState<"expense_date" | "created_at">("expense_date");
   const [filterStartDate, setFilterStartDate] = useState("");
   const [filterEndDate, setFilterEndDate] = useState("");
+  const [sortBy, setSortBy] = useState<"date_desc" | "name_asc">("date_desc");
   const [attachmentAction, setAttachmentAction] = useState<"zip" | null>(null);
   const [attachmentResult, setAttachmentResult] = useState<string | null>(null);
   const [confirmDownload, setConfirmDownload] = useState(false);
@@ -456,7 +487,19 @@ function DespesasPage() {
     start: filterStartDate,
     end: filterEndDate,
   };
-  const filtered = filterExpenses(rows, selection);
+  const filteredBase = filterExpenses(rows, selection);
+
+  // Ordenação selecionada: "Mais recentes" mantém a ordem atual; "Nome (A-Z)" ordena por colaborador.
+  const filtered = useMemo(() => {
+    if (sortBy !== "name_asc") return filteredBase;
+    return [...filteredBase].sort((a, b) => {
+      const nameA = (userProfiles[a.user_id]?.name ?? "").toLowerCase();
+      const nameB = (userProfiles[b.user_id]?.name ?? "").toLowerCase();
+      const comp = nameA.localeCompare(nameB, "pt", { sensitivity: "base" });
+      if (comp !== 0) return comp;
+      return b.expense_date.localeCompare(a.expense_date);
+    });
+  }, [filteredBase, sortBy, userProfiles]);
   const selectionSummary = summarizeExpenseSelection(filtered);
   const activeFiltersText = describeExpenseFilters({
     statusLabel: filterStatus !== "all" ? STATUS_LABEL[filterStatus] : null,
@@ -466,7 +509,21 @@ function DespesasPage() {
     start: filterStartDate,
     end: filterEndDate,
   });
-  useEffect(() => setAttachmentResult(null), [filterStatus, filterPayment, filterUser, filterDateBy, filterStartDate, filterEndDate]);
+  // Redefine todos os filtros e a ordenação ao estado inicial.
+  const handleClearAllFilters = () => {
+    setFilterStatus("all");
+    setFilterPayment("all");
+    setFilterUser("all");
+    setFilterDateBy("expense_date");
+    setFilterStartDate("");
+    setFilterEndDate("");
+    setSortBy("date_desc");
+  };
+
+  useEffect(
+    () => setAttachmentResult(null),
+    [filterStatus, filterPayment, filterUser, filterDateBy, filterStartDate, filterEndDate, sortBy],
+  );
   const pending = filtered.filter((r) => r.status === "pendente");
   const decided = filtered.filter((r) => r.status !== "pendente");
 
@@ -476,7 +533,8 @@ function DespesasPage() {
       return;
     }
     const columns: ExportColumn<ExpenseRow>[] = [
-      { header: "Colaborador", accessor: (r) => names[r.user_id] ?? "Colaborador", width: 120 },
+      { header: "Colaborador", accessor: (r) => userProfiles[r.user_id]?.name ?? "Colaborador", width: 120 },
+      { header: "Função / Cargo", accessor: (r) => userProfiles[r.user_id]?.jobTitle ?? "—", width: 110 },
       { header: "Data despesa", accessor: (r) => fmtDate(r.expense_date), width: 72 },
       { header: "Data envio", accessor: (r) => fmtDateTime(r.created_at), width: 92 },
       { header: "Valor", accessor: (r) => fmtEur(r.amount), width: 64 },
@@ -520,7 +578,7 @@ function DespesasPage() {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!response.ok) {
-      const payload = await response.json().catch(() => null) as { error?: string } | null;
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
       throw new Error(payload?.error ?? "Não foi possível preparar os comprovantes.");
     }
     return response;
@@ -675,7 +733,6 @@ function DespesasPage() {
               {file ? "Comprovante pronto. Clique em Enviar despesa para guardar." : ""}
             </span>
           </div>
-
         </div>
         <div className="mt-3 flex justify-end">
           <Button type="button" onClick={() => create.mutate()} disabled={create.isPending}>
@@ -751,6 +808,15 @@ function DespesasPage() {
                 />
               </div>
             )}
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+              <SelectTrigger className="w-[180px]" aria-label="Ordenar relatório">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date_desc">Ordenar: Mais recentes</SelectItem>
+                <SelectItem value="name_asc">Ordenar: Nome (A-Z)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
         {isManager && (
@@ -809,12 +875,10 @@ function DespesasPage() {
                 type="button"
                 variant="ghost"
                 size="sm"
-                onClick={() => {
-                  setFilterStartDate("");
-                  setFilterEndDate("");
-                }}
+                onClick={handleClearAllFilters}
+                title="Limpa colaborador, estado, pagamento, datas e ordenação"
               >
-                Limpar datas
+                Limpar filtros
               </Button>
             </div>
           </div>
@@ -827,13 +891,17 @@ function DespesasPage() {
               ) : (
                 <>
                   <div className="font-medium">
-                    {selectionSummary.count} {selectionSummary.count === 1 ? "despesa" : "despesas"} · {selectionSummary.totalText}
+                    {selectionSummary.count} {selectionSummary.count === 1 ? "despesa" : "despesas"} ·{" "}
+                    {selectionSummary.totalText}
                     {selectionSummary.statusText ? ` · ${selectionSummary.statusText}` : ""}
                   </div>
                   <div className="text-muted-foreground">
                     {selectionSummary.withFile} com comprovante anexado
                     {selectionSummary.missing > 0 && (
-                      <span className="text-warning"> · {selectionSummary.missing} sem comprovante (fora do pacote)</span>
+                      <span className="text-warning">
+                        {" "}
+                        · {selectionSummary.missing} sem comprovante (fora do pacote)
+                      </span>
                     )}
                   </div>
                   <div className="text-muted-foreground">{activeFiltersText}</div>
@@ -863,13 +931,19 @@ function DespesasPage() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Incluir despesas não aprovadas?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    A seleção inclui {selectionSummary.byStatus.pendente ?? 0} pendente(s) e {selectionSummary.byStatus.rejeitada ?? 0} rejeitada(s).
-                    Os comprovantes destas despesas também entram no pacote. Deseja continuar?
+                    A seleção inclui {selectionSummary.byStatus.pendente ?? 0} pendente(s) e{" "}
+                    {selectionSummary.byStatus.rejeitada ?? 0} rejeitada(s). Os comprovantes destas despesas também
+                    entram no pacote. Deseja continuar?
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => { setConfirmDownload(false); void downloadAttachments(); }}>
+                  <AlertDialogAction
+                    onClick={() => {
+                      setConfirmDownload(false);
+                      void downloadAttachments();
+                    }}
+                  >
                     Baixar mesmo assim
                   </AlertDialogAction>
                 </AlertDialogFooter>
