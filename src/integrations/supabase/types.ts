@@ -1526,10 +1526,14 @@ export type Database = {
           created_at: string
           event: Database["public"]["Enums"]["notification_event"]
           forwarded_to: string | null
+          group_key: string | null
           id: string
           metadata: Json
           priority: Database["public"]["Enums"]["notification_priority"]
           read_at: string | null
+          resolution_source: string | null
+          resolved_at: string | null
+          resolved_by: string | null
           state: Database["public"]["Enums"]["notification_state"]
           state_changed_at: string | null
           state_changed_by: string | null
@@ -1544,10 +1548,14 @@ export type Database = {
           created_at?: string
           event: Database["public"]["Enums"]["notification_event"]
           forwarded_to?: string | null
+          group_key?: string | null
           id?: string
           metadata?: Json
           priority?: Database["public"]["Enums"]["notification_priority"]
           read_at?: string | null
+          resolution_source?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
           state?: Database["public"]["Enums"]["notification_state"]
           state_changed_at?: string | null
           state_changed_by?: string | null
@@ -1562,10 +1570,14 @@ export type Database = {
           created_at?: string
           event?: Database["public"]["Enums"]["notification_event"]
           forwarded_to?: string | null
+          group_key?: string | null
           id?: string
           metadata?: Json
           priority?: Database["public"]["Enums"]["notification_priority"]
           read_at?: string | null
+          resolution_source?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
           state?: Database["public"]["Enums"]["notification_state"]
           state_changed_at?: string | null
           state_changed_by?: string | null
@@ -1580,6 +1592,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -4836,6 +4855,10 @@ export type Database = {
       }
       notification_mark_read: {
         Args: { _all?: boolean; _id?: string }
+        Returns: number
+      }
+      notification_resolve_group: {
+        Args: { _note?: string; _notification_id: string }
         Returns: number
       }
       notification_set_state: {
