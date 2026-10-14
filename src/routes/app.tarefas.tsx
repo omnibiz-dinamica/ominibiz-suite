@@ -1,4 +1,8 @@
-import { recurrenceFromScheduleSlot, disableAutoRecurrence, scheduleSlotSummary } from "@/lib/tasks/schedule-recurrence";
+import {
+  recurrenceFromScheduleSlot,
+  disableAutoRecurrence,
+  scheduleSlotSummary,
+} from "@/lib/tasks/schedule-recurrence";
 import { firstNameOf } from "@/lib/person-name";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -18,14 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogTrigger,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTrigger, ModalHeader, ModalBody, ModalFooter } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -131,10 +128,7 @@ import { localDateToDateKey, normalizeCustomRecurrenceDates } from "@/lib/tasks/
 import { CancelTaskDialog } from "@/components/tasks/CancelTaskDialog";
 import { DeleteRecurrenceDialog } from "@/components/tasks/DeleteRecurrenceDialog";
 import { MarkAbsentDialog } from "@/components/tasks/MarkAbsentDialog";
-import {
-  OpenPunchRecoveryDialog,
-  type RecoveryEntry,
-} from "@/components/ponto/OpenPunchRecoveryDialog";
+import { OpenPunchRecoveryDialog, type RecoveryEntry } from "@/components/ponto/OpenPunchRecoveryDialog";
 import { fetchOpenEntries, fetchOpenEntrySelf } from "@/lib/punch/recovery";
 import {
   currentTaskCancellation,
@@ -143,7 +137,6 @@ import {
   type TaskRefusalRecord,
 } from "@/lib/task-refusal-view";
 import { RefuseTaskDialog, type RefusalSubmitPayload } from "@/components/tasks/RefuseTaskDialog";
-
 
 import { EmployeeMultiPicker } from "@/components/common/EmployeePicker";
 import { MultiClientSelect } from "@/components/common/MultiClientSelect";
@@ -349,7 +342,9 @@ function TasksPage() {
       if (!currentCompanyId || taskIds.length === 0) return [];
       const { data, error } = await supabase
         .from("time_entries")
-        .select("id,company_id,task_id,user_id,started_at,paused_at,resumed_at,ended_at,effective_minutes,notes,created_at,updated_at")
+        .select(
+          "id,company_id,task_id,user_id,started_at,paused_at,resumed_at,ended_at,effective_minutes,notes,created_at,updated_at",
+        )
         .eq("company_id", currentCompanyId)
         .in("task_id", taskIds)
         .order("started_at", { ascending: false });
@@ -408,7 +403,12 @@ function TasksPage() {
     enabled: !!currentCompanyId,
   });
 
-  const { data: clientsList, isLoading: clientsLoading, isError: clientsError, refetch: refetchClients } = useQuery({
+  const {
+    data: clientsList,
+    isLoading: clientsLoading,
+    isError: clientsError,
+    refetch: refetchClients,
+  } = useQuery({
     queryKey: ["clients-min", currentCompanyId],
     queryFn: async () => {
       if (!currentCompanyId) return [] as ClientOption[];
@@ -608,7 +608,15 @@ function TasksPage() {
   }, [user?.id, qc]);
 
   const transition = useMutation({
-    mutationFn: ({ id, action, reason, requestedDate, requestedTime, needsReassignment, suggestedEmployeeName }: {
+    mutationFn: ({
+      id,
+      action,
+      reason,
+      requestedDate,
+      requestedTime,
+      needsReassignment,
+      suggestedEmployeeName,
+    }: {
       id: string;
       action: TaskAction;
       reason?: string;
@@ -702,7 +710,6 @@ function TasksPage() {
     refetchOnWindowFocus: false,
   });
 
-
   const archiveMut = useMutation({
     mutationFn: ({ id, archive }: { id: string; archive: boolean }) => archiveTask(id, archive),
     onSuccess: (_d, vars) => {
@@ -761,7 +768,7 @@ function TasksPage() {
       const endTime = formatWallTime(task.scheduled_end);
       const scheduledFor = startTime ? wallDateTimeToISO(dateKey, startTime) : null;
       const endDateKey = isOvernightTimeRange(startTime, endTime)
-        ? addWallMinutes(dateKey, "00:00", 24 * 60)?.date ?? dateKey
+        ? (addWallMinutes(dateKey, "00:00", 24 * 60)?.date ?? dateKey)
         : dateKey;
       const scheduledEnd = endTime ? wallDateTimeToISO(endDateKey, endTime) : null;
       const dueAt = scheduledEnd ?? wallDateToEndOfDayISO(dateKey);
@@ -862,14 +869,24 @@ function TasksPage() {
       if (!search.status) return true;
       // Mesma classificação exclusiva usada pelos cartões do Dashboard.
       if (search.status === "atrasadas") return matchesDashboardBucket(t, "atrasada");
-      if (search.status === "canceladas") return matchesDashboardBucket(t, "cancelada") || matchesDashboardBucket(t, "recusada");
+      if (search.status === "canceladas")
+        return matchesDashboardBucket(t, "cancelada") || matchesDashboardBucket(t, "recusada");
       if (search.status === "recusadas") return matchesDashboardBucket(t, "recusada");
       if (search.status === "pendente") return matchesDashboardBucket(t, "pendente");
       if (search.status === "em_andamento") return matchesDashboardBucket(t, "em_andamento");
       if (search.status === "concluido") return matchesDashboardBucket(t, "concluido");
       return t.status === search.status;
     });
-  }, [tasks, search.status, search.employee, search.client, search.task, search.date, selectedEmployeeIds, selectedClientIds]);
+  }, [
+    tasks,
+    search.status,
+    search.employee,
+    search.client,
+    search.task,
+    search.date,
+    selectedEmployeeIds,
+    selectedClientIds,
+  ]);
 
   const filteredCalendarData = useMemo(
     () => filterCalendarData(filteredTasks, approvedVacations ?? [], selectedEmployeeIds),
@@ -896,7 +913,6 @@ function TasksPage() {
 
   // Contador de recusas pendentes de decisão do gestor (SUP-2026-000077).
   const refusedCount = useMemo(() => (tasks ?? []).filter((t) => isRefused(t)).length, [tasks]);
-
 
   const setStatusFilter = (next: StatusFilter | undefined) => {
     void navigate({
@@ -934,7 +950,9 @@ function TasksPage() {
           <button
             type="button"
             className="font-medium text-primary underline underline-offset-2"
-            onClick={() => void navigate({ search: (prev: TasksSearch) => ({ ...prev, task: undefined }), replace: true })}
+            onClick={() =>
+              void navigate({ search: (prev: TasksSearch) => ({ ...prev, task: undefined }), replace: true })
+            }
           >
             Limpar tarefa aberta pela notificação
           </button>
@@ -977,7 +995,11 @@ function TasksPage() {
                 </Button>
               </DialogTrigger>
               <DialogContent size="lg">
-                <ModalHeader icon={ListTodo} title="Nova tarefa" description="Crie uma tarefa e atribua a um colaborador." />
+                <ModalHeader
+                  icon={ListTodo}
+                  title="Nova tarefa"
+                  description="Crie uma tarefa e atribua a um colaborador."
+                />
                 <TaskForm
                   formId="task-form-create"
                   members={activeMembers ?? []}
@@ -1035,7 +1057,12 @@ function TasksPage() {
       <EditRecurrenceDialog
         recurrence={seriesRow}
         task={editingSeries}
-        members={[...(activeMembers ?? []), ...(members ?? []).filter((m) => m.id === editingSeries?.assigned_to && !(activeMembers ?? []).some((a) => a.id === m.id)).map((m) => ({ ...m, is_active: false }))]}
+        members={[
+          ...(activeMembers ?? []),
+          ...(members ?? [])
+            .filter((m) => m.id === editingSeries?.assigned_to && !(activeMembers ?? []).some((a) => a.id === m.id))
+            .map((m) => ({ ...m, is_active: false })),
+        ]}
         open={!!editingSeries && !!seriesRow}
         onOpenChange={(v) => !v && setEditingSeries(null)}
         onDone={() => {
@@ -1072,8 +1099,8 @@ function TasksPage() {
             </AlertDialogDescription>
             {(deletingDocsCount ?? 0) > 0 && (
               <p className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
-                Atenção: esta tarefa tem {deletingDocsCount}{" "}
-                {deletingDocsCount === 1 ? "anexo" : "anexos"}. Ao confirmar, a tarefa e os anexos serão excluídos.
+                Atenção: esta tarefa tem {deletingDocsCount} {deletingDocsCount === 1 ? "anexo" : "anexos"}. Ao
+                confirmar, a tarefa e os anexos serão excluídos.
               </p>
             )}
           </AlertDialogHeader>
@@ -1093,10 +1120,15 @@ function TasksPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={!!bulkAction} onOpenChange={(open) => !open && !bulkActionMut.isPending && setBulkAction(null)}>
+      <AlertDialog
+        open={!!bulkAction}
+        onOpenChange={(open) => !open && !bulkActionMut.isPending && setBulkAction(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{bulkAction === "archive" ? "Arquivar tarefas selecionadas?" : "Excluir tarefas selecionadas?"}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {bulkAction === "archive" ? "Arquivar tarefas selecionadas?" : "Excluir tarefas selecionadas?"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
               {bulkAction === "archive"
                 ? `${bulkArchiveTasks.length} tarefa(s) única(s) serão arquivadas. Recorrências não participam desta ação.`
@@ -1106,7 +1138,10 @@ function TasksPage() {
           <AlertDialogFooter>
             <AlertDialogCancel disabled={bulkActionMut.isPending}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              disabled={bulkActionMut.isPending || (bulkAction === "archive" ? bulkArchiveTasks.length === 0 : bulkDeleteTasks.length === 0)}
+              disabled={
+                bulkActionMut.isPending ||
+                (bulkAction === "archive" ? bulkArchiveTasks.length === 0 : bulkDeleteTasks.length === 0)
+              }
               onClick={(event) => {
                 event.preventDefault();
                 if (bulkAction === "archive") bulkActionMut.mutate({ action: "archive", tasks: bulkArchiveTasks });
@@ -1121,14 +1156,35 @@ function TasksPage() {
 
       <Dialog open={!!noStartTarget} onOpenChange={(open) => !open && !noStartMut.isPending && setNoStartTarget(null)}>
         <DialogContent size="sm">
-          <ModalHeader icon={FileText} title="Motivo de não ter iniciado" description="Registe uma justificativa operacional sem criar ponto ou horário fictício." />
+          <ModalHeader
+            icon={FileText}
+            title="Motivo de não ter iniciado"
+            description="Registe uma justificativa operacional sem criar ponto ou horário fictício."
+          />
           <ModalBody>
             <Label htmlFor="no-start-reason">Motivo</Label>
-            <Textarea id="no-start-reason" value={noStartReason} onChange={(event) => setNoStartReason(event.target.value)} placeholder="Ex.: Estava sem internet." className="mt-2 min-h-28" />
+            <Textarea
+              id="no-start-reason"
+              value={noStartReason}
+              onChange={(event) => setNoStartReason(event.target.value)}
+              placeholder="Ex.: Estava sem internet."
+              className="mt-2 min-h-28"
+            />
           </ModalBody>
           <ModalFooter>
-            <Button type="button" variant="outline" onClick={() => setNoStartTarget(null)} disabled={noStartMut.isPending}>Cancelar</Button>
-            <Button type="button" onClick={() => noStartTarget && noStartMut.mutate({ taskId: noStartTarget.id, reason: noStartReason })} disabled={noStartMut.isPending || !noStartReason.trim()}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setNoStartTarget(null)}
+              disabled={noStartMut.isPending}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={() => noStartTarget && noStartMut.mutate({ taskId: noStartTarget.id, reason: noStartReason })}
+              disabled={noStartMut.isPending || !noStartReason.trim()}
+            >
               {noStartMut.isPending ? "Salvando..." : "Salvar motivo"}
             </Button>
           </ModalFooter>
@@ -1189,7 +1245,11 @@ function TasksPage() {
         }}
       >
         <DialogContent size="sm">
-          <ModalHeader icon={Check} title="Concluir tarefa" description="Registre uma observação opcional sobre a conclusão." />
+          <ModalHeader
+            icon={Check}
+            title="Concluir tarefa"
+            description="Registre uma observação opcional sobre a conclusão."
+          />
           <ModalBody>
             <form
               id="task-completion-form"
@@ -1217,7 +1277,12 @@ function TasksPage() {
             </form>
           </ModalBody>
           <ModalFooter>
-            <Button type="button" variant="outline" disabled={completeTask.isPending} onClick={() => setCompleting(null)}>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={completeTask.isPending}
+              onClick={() => setCompleting(null)}
+            >
               Cancelar
             </Button>
             <Button type="submit" form="task-completion-form" disabled={completeTask.isPending}>
@@ -1227,8 +1292,6 @@ function TasksPage() {
           </ModalFooter>
         </DialogContent>
       </Dialog>
-
-
 
       <RefuseTaskDialog
         task={refusing}
@@ -1424,7 +1487,9 @@ function TasksPage() {
           groupMemberNames={groupMemberNames}
           selectedTaskIds={new Set(selectedTaskIds)}
           taskPunches={taskPunchByTask}
-          onToggleTaskSelection={(id) => setSelectedTaskIds((current) => current.includes(id) ? current.filter((x) => x !== id) : [...current, id])}
+          onToggleTaskSelection={(id) =>
+            setSelectedTaskIds((current) => (current.includes(id) ? current.filter((x) => x !== id) : [...current, id]))
+          }
           onNoStartReason={setNoStartTarget}
         />
       )}
@@ -1433,44 +1498,48 @@ function TasksPage() {
         (filteredCalendarData.tasks.length > 0 || filteredCalendarData.vacations.length > 0) &&
         isManager &&
         taskView === "calendar" && (
-        <TaskPlanningCalendar
-          tasks={filteredCalendarData.tasks}
-          vacations={filteredCalendarData.vacations}
-          members={members ?? []}
-          clients={clientsList ?? []}
-          groupBy={calendarGroup}
-          clientFilterActive={selectedClientIds.length > 0}
-          otherFiltersActive={!!search.status || selectedEmployeeIds.length > 0}
-          onClearClientFilter={() => setClientFilter(undefined)}
-          seedAssigneeIds={
-            calendarGroup === "assignee"
-              ? selectedEmployeeIds.length > 0
-                ? selectedEmployeeIds
-                : (activeMembers ?? []).map((m) => m.id)
-              : []
-          }
+          <TaskPlanningCalendar
+            tasks={filteredCalendarData.tasks}
+            vacations={filteredCalendarData.vacations}
+            members={members ?? []}
+            clients={clientsList ?? []}
+            groupBy={calendarGroup}
+            clientFilterActive={selectedClientIds.length > 0}
+            otherFiltersActive={!!search.status || selectedEmployeeIds.length > 0}
+            onClearClientFilter={() => setClientFilter(undefined)}
+            seedAssigneeIds={
+              calendarGroup === "assignee"
+                ? selectedEmployeeIds.length > 0
+                  ? selectedEmployeeIds
+                  : (activeMembers ?? []).map((m) => m.id)
+                : []
+            }
 
-          userId={user!.id}
-          isManager={isManager}
-          onEdit={setEditing}
-          onEditSeries={setEditingSeries}
-          onReassign={setReassigning}
-          onDelete={handleDeleteRequest}
-          onTransition={handleTransition}
-          onArchive={(id, archive) => archiveMut.mutate({ id, archive })}
-           onMoveDate={(id, dateKey) => moveTaskDate.mutate({ id, dateKey })}
-           transitionPending={transition.isPending}
-           archivePending={archiveMut.isPending}
-           completionNotes={completionNoteByTask}
-           refusalsByTask={refusalsByTask}
-           memberNames={memberNames}
-           groupMemberNames={groupMemberNames}
-          selectedTaskIds={new Set(selectedTaskIds)}
-          taskPunches={taskPunchByTask}
-           onToggleTaskSelection={(id) => setSelectedTaskIds((current) => current.includes(id) ? current.filter((x) => x !== id) : [...current, id])}
-           onNoStartReason={setNoStartTarget}
-         />
-      )}
+            userId={user!.id}
+            isManager={isManager}
+            onEdit={setEditing}
+            onEditSeries={setEditingSeries}
+            onReassign={setReassigning}
+            onDelete={handleDeleteRequest}
+            onTransition={handleTransition}
+            onArchive={(id, archive) => archiveMut.mutate({ id, archive })}
+            onMoveDate={(id, dateKey) => moveTaskDate.mutate({ id, dateKey })}
+            transitionPending={transition.isPending}
+            archivePending={archiveMut.isPending}
+            completionNotes={completionNoteByTask}
+            refusalsByTask={refusalsByTask}
+            memberNames={memberNames}
+            groupMemberNames={groupMemberNames}
+            selectedTaskIds={new Set(selectedTaskIds)}
+            taskPunches={taskPunchByTask}
+            onToggleTaskSelection={(id) =>
+              setSelectedTaskIds((current) =>
+                current.includes(id) ? current.filter((x) => x !== id) : [...current, id],
+              )
+            }
+            onNoStartReason={setNoStartTarget}
+          />
+        )}
 
       {!isManager && !isLoading && (
         <div className="flex flex-wrap items-center gap-1 rounded-2xl border border-border bg-card px-3 py-2">
@@ -1483,33 +1552,37 @@ function TasksPage() {
         (filteredCalendarData.tasks.length > 0 || filteredCalendarData.vacations.length > 0) &&
         !isManager &&
         taskView === "calendar" && (
-        <TaskPlanningCalendar
-          tasks={filteredCalendarData.tasks}
-          vacations={filteredCalendarData.vacations}
-          members={members ?? []}
-          clients={clientsList ?? []}
-          groupBy="all"
-          userId={user!.id}
-          isManager={false}
-          onEdit={() => {}}
-          onEditSeries={setEditingSeries}
-          onReassign={setReassigning}
-          onDelete={handleDeleteRequest}
-          onTransition={handleTransition}
-          onArchive={(id, archive) => archiveMut.mutate({ id, archive })}
-          onMoveDate={(id, dateKey) => moveTaskDate.mutate({ id, dateKey })}
-          transitionPending={transition.isPending}
-          archivePending={archiveMut.isPending}
-          completionNotes={completionNoteByTask}
-          refusalsByTask={refusalsByTask}
-          memberNames={memberNames}
-          groupMemberNames={groupMemberNames}
-           selectedTaskIds={new Set(selectedTaskIds)}
-           taskPunches={taskPunchByTask}
-          onToggleTaskSelection={(id) => setSelectedTaskIds((current) => current.includes(id) ? current.filter((x) => x !== id) : [...current, id])}
-          onNoStartReason={setNoStartTarget}
-        />
-      )}
+          <TaskPlanningCalendar
+            tasks={filteredCalendarData.tasks}
+            vacations={filteredCalendarData.vacations}
+            members={members ?? []}
+            clients={clientsList ?? []}
+            groupBy="all"
+            userId={user!.id}
+            isManager={false}
+            onEdit={() => {}}
+            onEditSeries={setEditingSeries}
+            onReassign={setReassigning}
+            onDelete={handleDeleteRequest}
+            onTransition={handleTransition}
+            onArchive={(id, archive) => archiveMut.mutate({ id, archive })}
+            onMoveDate={(id, dateKey) => moveTaskDate.mutate({ id, dateKey })}
+            transitionPending={transition.isPending}
+            archivePending={archiveMut.isPending}
+            completionNotes={completionNoteByTask}
+            refusalsByTask={refusalsByTask}
+            memberNames={memberNames}
+            groupMemberNames={groupMemberNames}
+            selectedTaskIds={new Set(selectedTaskIds)}
+            taskPunches={taskPunchByTask}
+            onToggleTaskSelection={(id) =>
+              setSelectedTaskIds((current) =>
+                current.includes(id) ? current.filter((x) => x !== id) : [...current, id],
+              )
+            }
+            onNoStartReason={setNoStartTarget}
+          />
+        )}
     </div>
   );
 }
@@ -1578,7 +1651,6 @@ function TaskPlanningCalendar({
   clientFilterActive?: boolean;
   otherFiltersActive?: boolean;
   onClearClientFilter?: () => void;
-
 }) {
   const [mode, setMode] = useState<CalendarMode>("week");
   const [cursor, setCursor] = useState(() => new Date());
@@ -1853,7 +1925,8 @@ function TaskPlanningCalendar({
                     return wallISOToDateInput(source).slice(0, 7) === monthKey;
                   });
                   const monthVacations = groupVacations.filter(
-                    (vacation) => vacation.start_date.slice(0, 7) <= monthKey && vacation.end_date.slice(0, 7) >= monthKey,
+                    (vacation) =>
+                      vacation.start_date.slice(0, 7) <= monthKey && vacation.end_date.slice(0, 7) >= monthKey,
                   );
                   return (
                     <div key={month.getMonth()} className="min-h-36 rounded-lg border border-border bg-background p-3">
@@ -1861,7 +1934,9 @@ function TaskPlanningCalendar({
                         <h3 className="text-sm font-semibold capitalize">
                           {month.toLocaleDateString("pt-PT", { month: "long" })}
                         </h3>
-                        <span className="text-xs text-muted-foreground">{monthTasks.length + monthVacations.length}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {monthTasks.length + monthVacations.length}
+                        </span>
                       </div>
                       <ul className="space-y-1">
                         {monthTasks.slice(0, 5).map((task) => (
@@ -1969,15 +2044,7 @@ function ScheduleNameBadge({ name }: { name?: string | null }) {
   );
 }
 
-function MiniTaskChip({
-  task,
-  startedAt,
-  onClick,
-}: {
-  task: TaskRow;
-  startedAt?: string;
-  onClick: () => void;
-}) {
+function MiniTaskChip({ task, startedAt, onClick }: { task: TaskRow; startedAt?: string; onClick: () => void }) {
   const start = formatWallTime(task.scheduled_for);
   const lateMinutes = startedLateMinutes(task, startedAt);
   return (
@@ -1986,7 +2053,11 @@ function MiniTaskChip({
       draggable={false}
       onClick={onClick}
       className="block w-full truncate rounded-md bg-primary/10 px-2 py-1 text-left text-[11px] font-medium text-primary hover:bg-primary/15"
-      title={lateMinutes != null ? `${task.title} · Início com atraso · ${formatStartedLateMinutes(lateMinutes)}` : task.title}
+      title={
+        lateMinutes != null
+          ? `${task.title} · Início com atraso · ${formatStartedLateMinutes(lateMinutes)}`
+          : task.title
+      }
     >
       {start ? `${start} ` : ""}
       {task.schedule_name ? `[${task.schedule_name}] ` : ""}
@@ -2012,7 +2083,9 @@ function CalendarVacationCard({ vacation }: { vacation: ApprovedVacation }) {
   return (
     <li className="space-y-1 border-l-2 border-emerald-500 bg-emerald-50/70 px-3 py-3 text-emerald-800">
       <div className="text-sm font-semibold">Férias</div>
-      <div className="text-xs">{start} → {end}</div>
+      <div className="text-xs">
+        {start} → {end}
+      </div>
       <span className="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide">
         Aprovadas
       </span>
@@ -2209,26 +2282,26 @@ function CalendarTaskCard({
             />
           )}
           <div className="min-w-0">
-          <div className="break-words text-sm font-medium leading-snug">{task.title}</div>
-          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
-            {start || end ? (
-              <span className="font-mono">
-                {start || "--:--"} → {end || "--:--"}
+            <div className="break-words text-sm font-medium leading-snug">{task.title}</div>
+            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+              {start || end ? (
+                <span className="font-mono">
+                  {start || "--:--"} → {end || "--:--"}
+                </span>
+              ) : dateOnly ? (
+                <span>{dateOnly} · Sem horario definido</span>
+              ) : (
+                <span className="italic">Sem horário definido</span>
+              )}
+              <ScheduleNameBadge name={task.schedule_name} />
+              {taskPunch && <PauseSummary entry={taskPunch} />}
+              <span
+                className={`inline-flex items-center rounded-full px-1.5 py-px text-[9px] font-medium ${operationalStatus === "atrasada" ? "bg-destructive/15 text-destructive" : STATUS_TONE[operationalStatus]}`}
+              >
+                {operationalStatus === "atrasada" ? "Atrasada" : STATUS_LABELS[operationalStatus]}
               </span>
-            ) : dateOnly ? (
-              <span>{dateOnly} · Sem horario definido</span>
-            ) : (
-              <span className="italic">Sem horário definido</span>
-            )}
-            <ScheduleNameBadge name={task.schedule_name} />
-            {taskPunch && <PauseSummary entry={taskPunch} />}
-            <span
-              className={`inline-flex items-center rounded-full px-1.5 py-px text-[9px] font-medium ${operationalStatus === "atrasada" ? "bg-destructive/15 text-destructive" : STATUS_TONE[operationalStatus]}`}
-            >
-              {operationalStatus === "atrasada" ? "Atrasada" : STATUS_LABELS[operationalStatus]}
-            </span>
+            </div>
           </div>
-        </div>
         </div>
         {isManager && (
           <Button
@@ -2259,9 +2332,7 @@ function CalendarTaskCard({
             title="Tarefa criada em equipe: cada responsável tem a sua própria tarefa, com ponto e conclusão independentes."
           >
             <Users className="h-3 w-3" />
-            <span className="truncate">
-              {groupMemberNames?.get(task.task_group_id) ?? "Em equipe"}
-            </span>
+            <span className="truncate">{groupMemberNames?.get(task.task_group_id) ?? "Em equipe"}</span>
           </span>
         )}
         {task.recurrence_id && (
@@ -2288,14 +2359,14 @@ function CalendarTaskCard({
               {refusal.requestedTime ? ` · ${refusal.requestedTime}` : ""}
             </div>
           )}
-          {refusal.needsReassignment != null && (
-            <div>Reatribuição: {refusal.needsReassignment ? "Sim" : "Não"}</div>
-          )}
+          {refusal.needsReassignment != null && <div>Reatribuição: {refusal.needsReassignment ? "Sim" : "Não"}</div>}
           {(refusal.suggestedEmployeeName || refusal.suggestedEmployeeId) && (
             <div>
               Sugestão (informativa):{" "}
               {refusal.suggestedEmployeeName ??
-                (refusal.suggestedEmployeeId ? memberNames.get(refusal.suggestedEmployeeId) ?? "Sem responsável" : "Sem responsável")}
+                (refusal.suggestedEmployeeId
+                  ? (memberNames.get(refusal.suggestedEmployeeId) ?? "Sem responsável")
+                  : "Sem responsável")}
             </div>
           )}
         </div>
@@ -2324,7 +2395,9 @@ function CalendarTaskCard({
             <div>
               Sugestão (informativa):{" "}
               {cancellation.suggestedEmployeeName ??
-                (cancellation.suggestedEmployeeId ? memberNames.get(cancellation.suggestedEmployeeId) ?? "Sem responsável" : "Sem responsável")}
+                (cancellation.suggestedEmployeeId
+                  ? (memberNames.get(cancellation.suggestedEmployeeId) ?? "Sem responsável")
+                  : "Sem responsável")}
             </div>
           )}
         </div>
@@ -2340,49 +2413,56 @@ function CalendarTaskCard({
       )}
       <TaskRefusalHistory records={refusalHistory} memberNames={memberNames} compact />
 
-
-      {(isManager ? actionsOpen : actions.length > 0 || (onNoStartReason && (task.status === "pendente" || task.status === "autorizado") && late)) && (
-      <div className="flex flex-wrap justify-end gap-1">
-        {isManager && (
-          <>
-            <Button size="sm" variant="outline" title="Editar tarefa" onClick={() => onEdit(task)}>
-              <Pencil className="h-3 w-3" />
-              <span className="ml-1">Editar</span>
-            </Button>
-            {task.recurrence_id && (
-              <Button size="sm" variant="ghost" title="Editar série" onClick={() => onEditSeries(task)}>
-                <Repeat className="h-3 w-3" />
+      {(isManager
+        ? actionsOpen
+        : actions.length > 0 ||
+          (onNoStartReason && (task.status === "pendente" || task.status === "autorizado") && late)) && (
+        <div className="flex flex-wrap justify-end gap-1">
+          {isManager && (
+            <>
+              <Button size="sm" variant="outline" title="Editar tarefa" onClick={() => onEdit(task)}>
+                <Pencil className="h-3 w-3" />
+                <span className="ml-1">Editar</span>
               </Button>
-            )}
-            <Button size="sm" variant="ghost" title="Reatribuir" onClick={() => onReassign(task)}>
-              <UserCog className="h-3 w-3" />
-            </Button>
+              {task.recurrence_id && (
+                <Button size="sm" variant="ghost" title="Editar série" onClick={() => onEditSeries(task)}>
+                  <Repeat className="h-3 w-3" />
+                </Button>
+              )}
+              <Button size="sm" variant="ghost" title="Reatribuir" onClick={() => onReassign(task)}>
+                <UserCog className="h-3 w-3" />
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                title="Excluir tarefa"
+                className="text-destructive hover:text-destructive"
+                onClick={() => onDelete(task)}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </>
+          )}
+          {onNoStartReason && (task.status === "pendente" || task.status === "autorizado") && late && (
             <Button
               size="sm"
               variant="ghost"
-              title="Excluir tarefa"
-              className="text-destructive hover:text-destructive"
-              onClick={() => onDelete(task)}
+              title="Registar motivo de não ter iniciado"
+              onClick={() => onNoStartReason(task)}
             >
-              <Trash2 className="h-3 w-3" />
+              <FileText className="h-3 w-3" />
+              <span className="ml-1 hidden sm:inline">Motivo</span>
             </Button>
-          </>
-        )}
-        {onNoStartReason && (task.status === "pendente" || task.status === "autorizado") && late && (
-          <Button size="sm" variant="ghost" title="Registar motivo de não ter iniciado" onClick={() => onNoStartReason(task)}>
-            <FileText className="h-3 w-3" />
-            <span className="ml-1 hidden sm:inline">Motivo</span>
-          </Button>
-        )}
-        {actions.map((action) => (
-          <ActionButton
-            key={action}
-            action={action}
-            disabled={transitionPending}
-            onClick={() => onTransition(task, action)}
-          />
-        ))}
-      </div>
+          )}
+          {actions.map((action) => (
+            <ActionButton
+              key={action}
+              action={action}
+              disabled={transitionPending}
+              onClick={() => onTransition(task, action)}
+            />
+          ))}
+        </div>
       )}
     </li>
   );
@@ -2462,7 +2542,9 @@ function GroupedTaskList({
 
   const groups = new Map<string, TaskRow[]>();
   for (const t of tasks) {
-    const k = (groupBy === "client" ? t.client_id : t.assigned_to) ?? (groupBy === "client" ? "__no_client__" : "__unassigned__");
+    const k =
+      (groupBy === "client" ? t.client_id : t.assigned_to) ??
+      (groupBy === "client" ? "__no_client__" : "__unassigned__");
     const arr = groups.get(k) ?? [];
     arr.push(t);
     groups.set(k, arr);
@@ -2591,144 +2673,148 @@ function TaskRowItem({
           />
         )}
         <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-medium">{t.title}</span>
-          <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${operationalStatus === "atrasada" ? "bg-destructive/15 text-destructive" : STATUS_TONE[operationalStatus]}`}>
-            {operationalStatus === "atrasada" ? "Atrasada" : STATUS_LABELS[operationalStatus]}
-          </span>
-          {lateStartMinutes != null ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-destructive">
-              <Clock className="h-3 w-3" /> Início com atraso · {formatStartedLateMinutes(lateStartMinutes)}
-            </span>
-          ) : late && operationalStatus !== "atrasada" ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-destructive">
-              <Clock className="h-3 w-3" /> atrasado
-            </span>
-          ) : null}
-          {t.recurrence_id && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-medium">{t.title}</span>
             <span
-              className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
-              title={AUTO_RECURRENCE_BADGE_TITLE}
+              className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${operationalStatus === "atrasada" ? "bg-destructive/15 text-destructive" : STATUS_TONE[operationalStatus]}`}
             >
-              <Repeat className="h-3 w-3" /> {AUTO_RECURRENCE_BADGE_LABEL}
+              {operationalStatus === "atrasada" ? "Atrasada" : STATUS_LABELS[operationalStatus]}
             </span>
-          )}
-          <ScheduleNameBadge name={t.schedule_name} />
-        </div>
-        {refusal && (
-          <div className="mt-2 space-y-0.5 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs">
-            <div className="font-semibold uppercase tracking-wide text-destructive">Recusada pelo funcionário</div>
-            <div className="whitespace-pre-wrap break-words">
-              Funcionário: {memberNames.get(refusal.employeeId) ?? "Funcionário"}
-            </div>
-            <div className="whitespace-pre-wrap break-words">Motivo: {refusal.reason ?? "Motivo não registrado"}</div>
-            {refusal.refusedAt && (
-              <div className="text-muted-foreground">Recusada em: {formatLocalTime(refusal.refusedAt)}</div>
-            )}
-            {refusal.requestedDate && (
-              <div>
-                Nova data desejada: {formatWallDate(refusal.requestedDate)}
-                {refusal.requestedTime ? ` · ${refusal.requestedTime}` : ""}
-              </div>
-            )}
-            {refusal.needsReassignment != null && (
-              <div>Reatribuição necessária: {refusal.needsReassignment ? "Sim" : "Não"}</div>
-            )}
-            {(refusal.suggestedEmployeeName || refusal.suggestedEmployeeId) && (
-              <div>
-                Funcionário sugerido (informativo):{" "}
-                {refusal.suggestedEmployeeName ??
-                  (refusal.suggestedEmployeeId ? memberNames.get(refusal.suggestedEmployeeId) ?? "Sem responsável" : "Sem responsável")}
-              </div>
-            )}
-            {isManager && (
-              <button
-                type="button"
-                className="mt-1 font-medium text-primary underline underline-offset-2"
-                onClick={() => onReassign(t)}
+            {lateStartMinutes != null ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-destructive">
+                <Clock className="h-3 w-3" /> Início com atraso · {formatStartedLateMinutes(lateStartMinutes)}
+              </span>
+            ) : late && operationalStatus !== "atrasada" ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-destructive">
+                <Clock className="h-3 w-3" /> atrasado
+              </span>
+            ) : null}
+            {t.recurrence_id && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+                title={AUTO_RECURRENCE_BADGE_TITLE}
               >
-                Reatribuir tarefa
-              </button>
+                <Repeat className="h-3 w-3" /> {AUTO_RECURRENCE_BADGE_LABEL}
+              </span>
             )}
+            <ScheduleNameBadge name={t.schedule_name} />
           </div>
-        )}
-        {cancellation && (
-          <div className="mt-2 space-y-0.5 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs">
-            <div className="font-semibold uppercase tracking-wide text-destructive">
-              {cancellation.byEmployee ? "Cancelada pelo funcionário" : "Tarefa cancelada"}
-            </div>
-            <div className="whitespace-pre-wrap break-words">
-              Motivo: {cancellation.reason ?? "Motivo não registrado"}
-            </div>
-            {cancellation.cancelledAt && (
-              <div className="text-muted-foreground">Cancelada em: {formatLocalTime(cancellation.cancelledAt)}</div>
-            )}
-            {cancellation.requestedDate && (
-              <div>
-                Nova data desejada: {formatWallDate(cancellation.requestedDate)}
-                {cancellation.requestedTime ? ` · ${cancellation.requestedTime}` : ""}
+          {refusal && (
+            <div className="mt-2 space-y-0.5 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs">
+              <div className="font-semibold uppercase tracking-wide text-destructive">Recusada pelo funcionário</div>
+              <div className="whitespace-pre-wrap break-words">
+                Funcionário: {memberNames.get(refusal.employeeId) ?? "Funcionário"}
               </div>
-            )}
-            {cancellation.needsReassignment != null && (
-              <div>Reatribuição necessária: {cancellation.needsReassignment ? "Sim" : "Não"}</div>
-            )}
-            {(cancellation.suggestedEmployeeName || cancellation.suggestedEmployeeId) && (
-              <div>
-                Funcionário sugerido (informativo):{" "}
-                {cancellation.suggestedEmployeeName ??
-                  (cancellation.suggestedEmployeeId ? memberNames.get(cancellation.suggestedEmployeeId) ?? "Sem responsável" : "Sem responsável")}
-              </div>
-            )}
-          </div>
-        )}
-        <TaskRefusalHistory records={refusalHistory} memberNames={memberNames} />
-        {operationalStatus === "ausente" && (
-          <div className="mt-2 space-y-0.5 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs">
-            <div className="font-semibold uppercase tracking-wide text-destructive">
-              {t.absence_source === "employee"
-                ? "Falta registada pelo funcionário"
-                : t.absence_source === "manual"
-                  ? "Falta registada pelo gestor"
-                  : "Ausência automática"}
+              <div className="whitespace-pre-wrap break-words">Motivo: {refusal.reason ?? "Motivo não registrado"}</div>
+              {refusal.refusedAt && (
+                <div className="text-muted-foreground">Recusada em: {formatLocalTime(refusal.refusedAt)}</div>
+              )}
+              {refusal.requestedDate && (
+                <div>
+                  Nova data desejada: {formatWallDate(refusal.requestedDate)}
+                  {refusal.requestedTime ? ` · ${refusal.requestedTime}` : ""}
+                </div>
+              )}
+              {refusal.needsReassignment != null && (
+                <div>Reatribuição necessária: {refusal.needsReassignment ? "Sim" : "Não"}</div>
+              )}
+              {(refusal.suggestedEmployeeName || refusal.suggestedEmployeeId) && (
+                <div>
+                  Funcionário sugerido (informativo):{" "}
+                  {refusal.suggestedEmployeeName ??
+                    (refusal.suggestedEmployeeId
+                      ? (memberNames.get(refusal.suggestedEmployeeId) ?? "Sem responsável")
+                      : "Sem responsável")}
+                </div>
+              )}
+              {isManager && (
+                <button
+                  type="button"
+                  className="mt-1 font-medium text-primary underline underline-offset-2"
+                  onClick={() => onReassign(t)}
+                >
+                  Reatribuir tarefa
+                </button>
+              )}
             </div>
-            {t.absence_reason ? (
-              <div>
-                Motivo: {t.absence_reason}
-                {t.absence_justified != null && (t.absence_justified ? " · justificada" : " · injustificada")}
-              </div>
-            ) : (
-              <div className="text-muted-foreground">Falta ainda sem motivo registado.</div>
-            )}
-            {t.marked_absent_at && (
-              <div className="text-muted-foreground">Marcada em: {formatLocalTime(t.marked_absent_at)}</div>
-            )}
-          </div>
-        )}
-
-
-
-        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-          {date && <span>{date}</span>}
-          {start || end ? (
-            <span className="font-mono">
-              {start || "--:--"} → {end || "--:--"}
-            </span>
-          ) : (
-            !t.scheduled_for && <span className="italic">Sem horário definido</span>
           )}
-          {updated && <span>Atualizado: {updated}</span>}
-          {taskPunch && <PauseSummary entry={taskPunch} />}
+          {cancellation && (
+            <div className="mt-2 space-y-0.5 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs">
+              <div className="font-semibold uppercase tracking-wide text-destructive">
+                {cancellation.byEmployee ? "Cancelada pelo funcionário" : "Tarefa cancelada"}
+              </div>
+              <div className="whitespace-pre-wrap break-words">
+                Motivo: {cancellation.reason ?? "Motivo não registrado"}
+              </div>
+              {cancellation.cancelledAt && (
+                <div className="text-muted-foreground">Cancelada em: {formatLocalTime(cancellation.cancelledAt)}</div>
+              )}
+              {cancellation.requestedDate && (
+                <div>
+                  Nova data desejada: {formatWallDate(cancellation.requestedDate)}
+                  {cancellation.requestedTime ? ` · ${cancellation.requestedTime}` : ""}
+                </div>
+              )}
+              {cancellation.needsReassignment != null && (
+                <div>Reatribuição necessária: {cancellation.needsReassignment ? "Sim" : "Não"}</div>
+              )}
+              {(cancellation.suggestedEmployeeName || cancellation.suggestedEmployeeId) && (
+                <div>
+                  Funcionário sugerido (informativo):{" "}
+                  {cancellation.suggestedEmployeeName ??
+                    (cancellation.suggestedEmployeeId
+                      ? (memberNames.get(cancellation.suggestedEmployeeId) ?? "Sem responsável")
+                      : "Sem responsável")}
+                </div>
+              )}
+            </div>
+          )}
+          <TaskRefusalHistory records={refusalHistory} memberNames={memberNames} />
+          {operationalStatus === "ausente" && (
+            <div className="mt-2 space-y-0.5 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs">
+              <div className="font-semibold uppercase tracking-wide text-destructive">
+                {t.absence_source === "employee"
+                  ? "Falta registada pelo funcionário"
+                  : t.absence_source === "manual"
+                    ? "Falta registada pelo gestor"
+                    : "Ausência automática"}
+              </div>
+              {t.absence_reason ? (
+                <div>
+                  Motivo: {t.absence_reason}
+                  {t.absence_justified != null && (t.absence_justified ? " · justificada" : " · injustificada")}
+                </div>
+              ) : (
+                <div className="text-muted-foreground">Falta ainda sem motivo registado.</div>
+              )}
+              {t.marked_absent_at && (
+                <div className="text-muted-foreground">Marcada em: {formatLocalTime(t.marked_absent_at)}</div>
+              )}
+            </div>
+          )}
+
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+            {date && <span>{date}</span>}
+            {start || end ? (
+              <span className="font-mono">
+                {start || "--:--"} → {end || "--:--"}
+              </span>
+            ) : (
+              !t.scheduled_for && <span className="italic">Sem horário definido</span>
+            )}
+            {updated && <span>Atualizado: {updated}</span>}
+            {taskPunch && <PauseSummary entry={taskPunch} />}
+          </div>
+          {t.description && <div className="mt-1 line-clamp-1 text-xs text-muted-foreground">{t.description}</div>}
+          {completionNote && (
+            <CompletionNoteBlock
+              note={completionNote}
+              memberNames={memberNames}
+              assignedTo={t.assigned_to}
+              completedAt={t.completed_at}
+            />
+          )}
         </div>
-        {t.description && <div className="mt-1 line-clamp-1 text-xs text-muted-foreground">{t.description}</div>}
-        {completionNote && (
-          <CompletionNoteBlock
-            note={completionNote}
-            memberNames={memberNames}
-            assignedTo={t.assigned_to}
-            completedAt={t.completed_at}
-          />
-        )}
-      </div>
       </div>
       <div className="flex flex-wrap justify-end gap-2">
         {isManager && (
@@ -2795,7 +2881,12 @@ function TaskRowItem({
           </Button>
         )}
         {onNoStartReason && (t.status === "pendente" || t.status === "autorizado") && late && (
-          <Button size="sm" variant="ghost" title="Registar motivo de não ter iniciado" onClick={() => onNoStartReason(t)}>
+          <Button
+            size="sm"
+            variant="ghost"
+            title="Registar motivo de não ter iniciado"
+            onClick={() => onNoStartReason(t)}
+          >
             <FileText className="h-3 w-3" />
             <span className="ml-1 hidden sm:inline">Motivo</span>
           </Button>
@@ -2803,7 +2894,6 @@ function TaskRowItem({
         {actions.map((a) => (
           <ActionButton key={a} action={a} disabled={transitionPending} onClick={() => onTransition(t, a)} />
         ))}
-
       </div>
     </li>
   );
@@ -2888,9 +2978,7 @@ function TaskForm({
   const [assignees, setAssignees] = useState<string[]>(initial?.assigned_to ? [initial.assigned_to] : []);
   const assignedTo = assignees[0] ?? "";
   // SUP-66: na edição, carrega todos os responsáveis do grupo DESTA ocorrência.
-  const [groupAssignees, setGroupAssignees] = useState<string[]>(
-    initial?.assigned_to ? [initial.assigned_to] : [],
-  );
+  const [groupAssignees, setGroupAssignees] = useState<string[]>(initial?.assigned_to ? [initial.assigned_to] : []);
   const [groupSchedulePrompt, setGroupSchedulePrompt] = useState<{
     count: number;
     resolve: (choice: "all" | "mine" | null) => void;
@@ -2912,9 +3000,7 @@ function TaskForm({
       const { data } = await q;
       if (cancelled || !data) return;
       const ids = [
-        ...new Set(
-          [initial.assigned_to, ...data.map((r) => r.assigned_to)].filter((v): v is string => !!v),
-        ),
+        ...new Set([initial.assigned_to, ...data.map((r) => r.assigned_to)].filter((v): v is string => !!v)),
       ];
       setGroupAssignees(ids);
       setAssignees(ids);
@@ -2937,7 +3023,10 @@ function TaskForm({
     const base = !q.trim()
       ? members
       : members.filter((m) => {
-          const name = (m.full_name ?? "").toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          const name = (m.full_name ?? "")
+            .toLocaleLowerCase("pt-BR")
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "");
           const email = (m.email ?? "").toLocaleLowerCase("pt-BR");
           return name.includes(q) || email.includes(q);
         });
@@ -2958,13 +3047,14 @@ function TaskForm({
   const [clientQuery, setClientQuery] = useState("");
   const filteredClients = useMemo(() => {
     const norm = (value: string) =>
-      value.toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      value
+        .toLocaleLowerCase("pt-BR")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
     const q = norm(clientQuery.trim());
     if (!q) return clients;
     const tokens = q.split(/\s+/).filter(Boolean);
-    return clients.filter(
-      (c) => c.id === clientId || tokens.every((token) => norm(c.name ?? "").includes(token)),
-    );
+    return clients.filter((c) => c.id === clientId || tokens.every((token) => norm(c.name ?? "").includes(token)));
   }, [clients, clientQuery, clientId]);
   const [priority, setPriority] = useState<"baixa" | "media" | "alta" | "urgente">(initial?.priority ?? "media");
   const [startDate, setStartDate] = useState<string>(
@@ -3054,9 +3144,7 @@ function TaskForm({
     // início da série enquanto o gestor não editar o campo; recorrências
     // customizadas continuam sendo definidas pelo calendário de datas.
     setRecurrence((current) =>
-      current.frequency === "custom" || current.startDate === startDate
-        ? current
-        : { ...current, startDate },
+      current.frequency === "custom" || current.startDate === startDate ? current : { ...current, startDate },
     );
   }, [initial, startDate]);
 
@@ -3076,7 +3164,6 @@ function TaskForm({
   // A hora de fim é OPCIONAL e pertence exclusivamente ao gestor/super admin.
   // O sistema nunca preenche nem deriva esse campo: se o gestor não digitar,
   // a tarefa é gravada sem hora de fim (scheduled_end = null).
-
 
   /**
    * 12092026-001c — a data de fim acompanha o intervalo em wall clock:
@@ -3149,7 +3236,6 @@ function TaskForm({
     }
   };
 
-
   const fetchClientTeam = async (cid: string): Promise<string[]> => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase.rpc as any)("client_default_assignees", { _client_id: cid });
@@ -3157,9 +3243,13 @@ function TaskForm({
     const rows = (data ?? []) as { user_id: string; is_active: boolean; assignment_type?: string | null }[];
     // Só colaboradores ativos e que ainda pertencem à empresa (lista `members`).
     const memberIds = new Set(members.map((m) => m.id));
-    return [...new Set(rows
-      .filter((r) => r.is_active && memberIds.has(r.user_id) && clientTeamType(r) === "habitual")
-      .map((r) => r.user_id))];
+    return [
+      ...new Set(
+        rows
+          .filter((r) => r.is_active && memberIds.has(r.user_id) && clientTeamType(r) === "habitual")
+          .map((r) => r.user_id),
+      ),
+    ];
   };
 
   const loadClientSchedule = async (cid: string) => {
@@ -3223,1009 +3313,1059 @@ function TaskForm({
     setTeamPrompt({ clientName, team });
   };
 
-
   return (
     <>
-    <ModalBody className="space-y-4" data-modal-body>
-    <form
-      id={formId}
-      className="space-y-4"
-      onSubmit={async (e) => {
-        e.preventDefault();
-        // A trava precisa ser síncrona e o ciclo completo precisa liberar o estado,
-        // inclusive quando uma chamada ao Supabase rejeita.
-        if (submittingRef.current) return;
-        submittingRef.current = true;
-        setLoading(true);
-        try {
-        // Regra operacional: pelo menos um responsável. A equipe do cliente é
-        // sugestão, então a validação olha só o que está selecionado agora.
-        if (assignees.length === 0) {
-          toast.error("Selecione pelo menos um funcionário para esta tarefa.");
-          document.getElementById("task-assignee-search")?.focus();
-          return;
-        }
-        if (!initial && recurrence.enabled && recurrence.frequency === "custom") {
-          const selectedDates = normalizeCustomRecurrenceDates(recurrence.selectedDates);
-          if (selectedDates.length === 0) {
-            toast.error("Selecione pelo menos uma data no calendário da recorrência.");
-            return;
-          }
-        }
-        // Datas são obrigatórias; horas são opcionais e não criam horário falso.
-        const datePattern = /^\d{4}-\d{2}-\d{2}$/;
-        if (!startDate || !datePattern.test(startDate)) {
-          toast.error("Data de início obrigatória.");
-          return;
-        }
-        if (!endDate || !datePattern.test(endDate)) {
-          toast.error("Data de fim obrigatória.");
-          return;
-        }
-        // A série usa a data digitada no formulário de recorrência; a data
-        // principal da tarefa é apenas o valor sugerido inicialmente.
-        const recurrenceStartDate = recurrence.enabled
-          ? recurrence.startDate || startDate
-          : startDate;
-        const recurrenceEndDate = recurrence.enabled ? recurrence.endDate || null : null;
-        if (recurrence.enabled && (!recurrenceStartDate || !datePattern.test(recurrenceStartDate))) {
-          toast.error("Data de início da recorrência inválida.");
-          return;
-        }
-        if (recurrence.enabled && recurrenceEndDate && (!datePattern.test(recurrenceEndDate) || recurrenceEndDate < recurrenceStartDate)) {
-          toast.error("A data final da recorrência deve ser igual ou posterior à data inicial.");
-          return;
-        }
-        const startISO = startTime ? wallDateTimeToISO(startDate, startTime) : null;
-        const resolvedEndDate = resolveWallEndDate(startDate, startTime, endTime, endDate);
-        const endISO = endTime ? wallDateTimeToISO(resolvedEndDate, endTime) : null;
-        const dueISO = endISO ?? wallDateToEndOfDayISO(endDate);
-        const selectedAssignees = [...new Set(assignees)];
-        const selectedDistributedMinutes = distributeContractedMinutes(contractedMinutes, selectedAssignees.length);
-        if (selectedAssignees.length === 0) {
-          toast.error("Selecione pelo menos um funcionário para esta tarefa.");
-          return;
-        }
-        if (!dueISO) {
-          toast.error("Data de fim inválida.");
-          return;
-        }
-        if (startTime && !startISO) {
-          toast.error("Hora de início inválida.");
-          return;
-        }
-        if (endTime && !endISO) {
-          toast.error("Horário de fim inválido.");
-          return;
-        }
-        if (endDate < startDate) {
-          toast.error("A data de fim deve ser igual ou posterior à data de início.");
-          return;
-        }
-        {
-          const spanDays = Math.round(
-            (Date.parse(`${endDate}T00:00:00Z`) - Date.parse(`${startDate}T00:00:00Z`)) / 86_400_000,
-          );
-          if (spanDays > 2) {
-            const ok = window.confirm(
-              `Atenção: a data de fim está ${spanDays} dias depois da data de início.\n\n` +
-                "A data de fim é o fim do turno de trabalho (normalmente o mesmo dia ou o dia seguinte). " +
-                "Para repetir a tarefa em vários dias, use a opção de recorrência.\n\n" +
-                "Deseja manter mesmo assim?",
-            );
-            if (!ok) return;
-          }
-        }
-        if (startISO && endISO && endISO < startISO) {
-          toast.error("O horário de fim deve ser posterior ao de início.");
-          return;
-        }
-        // Conflito com férias aprovadas dos funcionários no período.
-        {
-          const rangeStart = recurrence.enabled ? recurrenceStartDate : startDate;
-          const rangeEnd = recurrence.enabled ? recurrenceEndDate || endDate : endDate;
-          const { data: vacations } = await supabase
-            .from("vacation_requests")
-            .select("start_date, end_date, user_id")
-            .eq("company_id", companyId)
-            .in("user_id", selectedAssignees)
-            .eq("status", "aprovado")
-            .lte("start_date", rangeEnd)
-            .gte("end_date", rangeStart);
-          if (vacations && vacations.length > 0) {
-            const periods = vacations
-              .map((v) => {
-                const name = members.find((m) => m.id === v.user_id)?.full_name ?? "Funcionário";
-                return `${name}: ${v.start_date} → ${v.end_date}`;
-              })
-              .join(", ");
-            const ok = window.confirm(
-              `Há férias aprovadas no período (${periods}). Deseja continuar mesmo assim?`,
-            );
-            if (!ok) return;
-          }
-        }
-        // Título derivado do cliente quando não preenchido manualmente.
-        const clientName = clients.find((c) => c.id === clientId)?.name ?? "";
-        const finalTitle = title.trim() || clientName.trim() || description.trim().slice(0, 80) || "Tarefa";
-        const payload = {
-          title: finalTitle,
-          description: description.trim() || null,
-          assigned_to: assignedTo,
-          client_id: clientId || null,
-          priority,
-          // Wall-clock: preservar o horário exato cadastrado, sem fuso.
-          scheduled_for: startISO,
-          scheduled_end: endISO,
-          due_at: dueISO,
-          recurrence_date: startDate,
-          absence_grace_minutes: graceMinutes,
-          punch_mode_override: punchMode || null,
-          // Etiqueta da programação do cliente escolhida pelo gestor.
-          schedule_name: scheduleName,
-        };
-        // A distribuição da carga contratada só pode recalcular uma hora de fim
-        // que o gestor JÁ registou. Sem hora de fim digitada, nada é derivado.
-        const useContractedSchedule =
-          contractedMinutes != null && !manualEndOverride && startDate !== "" && startTime !== "" && endTime !== "";
-
-        const scheduleRulesByEmployee = selectedSchedule?.cycleLengthWeeks && selectedSchedule.cycleLengthWeeks > 1
-          ? selectedAssignees.map((_, employeeIndex) => clientSchedule
-              .filter((slot) =>
-                slot.id.startsWith(`client-habitual:${clientId}:`) &&
-                slot.cycleLengthWeeks === selectedSchedule.cycleLengthWeeks &&
-                slot.cycleAnchorDate === selectedSchedule.cycleAnchorDate,
-              )
-              .map((slot) => ({
-                weekdays: slot.weekdays,
-                schedule_name: slot.label ?? null,
-                start_time: slot.startTime,
-                duration_minutes: distributeContractedMinutes(
-                  slot.contractedMinutes ?? slot.durationMinutes,
-                  selectedAssignees.length,
-                )[employeeIndex] ?? slot.contractedMinutes ?? slot.durationMinutes,
-                cycle_length_weeks: slot.cycleLengthWeeks,
-                cycle_position: slot.cyclePosition,
-                cycle_anchor_date: slot.cycleAnchorDate,
-              })))
-          : [];
-        const manualDurationMinutes =
-          startISO && endISO ? Math.max(0, Math.round((new Date(endISO).getTime() - new Date(startISO).getTime()) / 60000)) : 0;
-        // Série: duração = SOMENTE o turno diário (hora início → hora fim,
-        // +24 h se passar da meia-noite), nunca a amplitude das datas; máx. 1440.
-        const seriesShiftMinutes = startTime && endTime ? dailyShiftDurationMinutes(startTime, endTime) : 0;
-        // Tarefa avulsa com mais de 24 h: confirmação simples, sem bloquear.
-        if (
-          !recurrence.enabled &&
-          !useContractedSchedule &&
-          manualDurationMinutes > LONG_STANDALONE_TASK_MINUTES &&
-          !confirmedConflictsRef.current &&
-          !window.confirm(tt("Esta tarefa dura mais de 24 horas. Confirmar?"))
-        ) {
-          submittingRef.current = false;
-          setLoading(false);
-          return;
-        }
-        const taskTimesFor = (index: number) => {
-          if (!useContractedSchedule) {
-            return { scheduled_for: startISO, scheduled_end: endISO, due_at: dueISO };
-          }
-          const minutes = selectedDistributedMinutes[index] ?? selectedDistributedMinutes[0] ?? 0;
-          const end = addWallMinutes(startDate, startTime, minutes);
-          if (!end) return { scheduled_for: startISO, scheduled_end: endISO, due_at: dueISO };
-          const scheduledEnd = wallDateTimeToISO(end.date, end.time);
-          return { scheduled_for: startISO, scheduled_end: scheduledEnd, due_at: scheduledEnd ?? dueISO };
-        };
-
-        // SUP-2026-000140 — consulta definitiva imediatamente antes da gravação.
-        // Para recorrências, cada data é enviada como uma proposta separada;
-        // assim overnight e conflitos pontuais não viram um bloqueio da série.
-        if (!confirmedConflictsRef.current) {
-          const recurrenceDates = recurrence.enabled
-            ? recurrence.frequency === "custom"
-              ? normalizeCustomRecurrenceDates(recurrence.selectedDates)
-              : previewRecurrenceDates(
-                  {
-                    frequency: recurrence.frequency,
-                    intervalWeeks: recurrence.intervalWeeks,
-                    weekdays: recurrence.weekdays,
-                    monthlyRule:
-                      recurrence.monthPosition != null
-                        ? { position: recurrence.monthPosition, weekday: recurrence.monthWeekday }
-                        : { day_of_month: recurrence.dayOfMonth },
-                    startDate: recurrenceStartDate,
-                    endDate: recurrenceEndDate,
-                  },
-                  400,
-                ).map(localDateToDateKey)
-            : [startDate];
-          const proposals = recurrence.enabled
-            ? recurrenceDates.flatMap((dateKey) =>
-                selectedAssignees.flatMap((memberId, index) => {
-                  if (!startTime) return [];
-                  const minutes = useContractedSchedule
-                    ? selectedDistributedMinutes[index] ?? selectedDistributedMinutes[0] ?? 0
-                    : seriesShiftMinutes;
-                  const end = addWallMinutes(dateKey, startTime, minutes);
-                  if (!end) return [];
-                  const proposedStart = wallDateTimeToISO(dateKey, startTime);
-                  const proposedEnd = wallDateTimeToISO(end.date, end.time);
-                  return proposedStart && proposedEnd
-                    ? [{ assignee_id: memberId, start_at: proposedStart, end_at: proposedEnd }]
-                    : [];
-                }),
-              )
-            : selectedAssignees.flatMap((memberId, index) => {
-                const times = taskTimesFor(index);
-                return times.scheduled_for && times.scheduled_end
-                  ? [{ assignee_id: memberId, start_at: times.scheduled_for, end_at: times.scheduled_end }]
-                  : [];
-              });
-          try {
-            const conflicts = await checkTaskScheduleConflicts(companyId, proposals, initial?.id);
-            if (conflicts.length > 0) {
-              setScheduleConflicts(conflicts);
-              submittingRef.current = false;
-              setLoading(false);
-              return;
-            }
-          } catch (conflictError) {
-            const technicalError = conflictError as {
-              code?: string;
-              message?: string;
-              details?: string;
-              hint?: string;
-            };
-            const diagnostic = [
-              technicalError.code ? `Código: ${technicalError.code}` : null,
-              technicalError.message ?? "Falha desconhecida na consulta de sobreposição.",
-              technicalError.details ? `Detalhes: ${technicalError.details}` : null,
-              technicalError.hint ? `Orientação: ${technicalError.hint}` : null,
-            ]
-              .filter(Boolean)
-              .join("\n");
-            console.error("[task-schedule-conflicts] failed", {
-              code: technicalError.code,
-              message: technicalError.message,
-              details: technicalError.details,
-              hint: technicalError.hint,
-              error: conflictError,
-            });
-            submittingRef.current = false;
-            setLoading(false);
-            setScheduleCheckError(diagnostic);
-            return;
-          }
-        }
-        confirmedConflictsRef.current = false;
-        let error: { message: string } | null = null;
-        const createdTaskIds: string[] = [...createdTaskIdsRef.current];
-        // Fase B: lote multi-responsável. Cada responsável mantém a SUA tarefa
-        // (estado, ponto, recusa e conclusão próprios); o grupo só correlaciona.
-        const groupId = selectedAssignees.length > 1 ? crypto.randomUUID() : null;
-        if (initial) {
-          // SUP-66 / SUP-224: edição atómica da ocorrência (grupo incluído) via RPC.
-          // Nunca altera a série; quem já iniciou é preservado pelo backend.
-          if (needsGroupAssigneeConfirmation(groupAssignees, selectedAssignees)) {
-            const diff = diffGroupAssignees(groupAssignees, selectedAssignees);
-            const ok = window.confirm(
-              tt("Esta alteração afeta {{count}} colaboradores desta ocorrência. Confirmar?", {
-                count: diff.affected,
-              }),
-            );
-            if (!ok) return;
-          }
-          const colleagues = groupAssignees.filter((id) => id !== initial.assigned_to).length;
-          let applyToGroup = false;
-          if (
-            shouldAskGroupScheduleScope({
-              colleagues,
-              oldStart: initial.scheduled_for,
-              oldEnd: initial.scheduled_end,
-              newStart: startISO,
-              newEnd: endISO,
-            })
-          ) {
-            const choice = await new Promise<"all" | "mine" | null>((resolve) =>
-              setGroupSchedulePrompt({ count: colleagues, resolve }),
-            );
-            if (!choice) return;
-            applyToGroup = choice === "all";
-          }
-          // Mantém o responsável da linha clicada em primeiro, se continuar selecionado.
-          const orderedAssignees = selectedAssignees.includes(initial.assigned_to ?? "")
-            ? [initial.assigned_to as string, ...selectedAssignees.filter((id) => id !== initial.assigned_to)]
-            : selectedAssignees;
-          const { assigned_to: _ignored, ...rpcPayload } = payload;
-          void _ignored;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const res = await (supabase.rpc as any)("task_group_edit_occurrence", {
-            _task_id: initial.id,
-            _payload: rpcPayload,
-            _assignees: orderedAssignees,
-            _apply_schedule_to_group: applyToGroup,
-          });
-          error = res.error;
-        } else if (recurrence.enabled) {
-          // Horario e duracao da recorrencia sao derivados do topo do formulario.
-          // Sem horario, a recorrencia fica por dia; nunca materializa 00:00.
-          const derivedTime = startTime ? `${startTime}:00` : null;
-          // Em recorrências a "data fim" é o fim da série, não do turno:
-          // a duração é só a do turno diário (hora fim − hora início,
-          // com passagem de meia-noite), nunca a amplitude entre as datas.
-          const derivedDuration = seriesShiftMinutes;
-          // Uma série (task_recurrence) por funcionário selecionado.
-          // ADR-041: inserção individual + idempotência. Se o banco recusar por
-          // série ativa equivalente (RECURRENCE_DUPLICATE_ACTIVE), tratamos como
-          // "já existe" — nunca criamos um clone e nunca abortamos os restantes.
-          let duplicates = 0;
-          let created = 0;
-          const createdRecurrenceIds: string[] = [];
-          for (const [index, memberId] of selectedAssignees.entries()) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const ins = await (supabase.from("task_recurrences" as any) as any).insert({
-              company_id: companyId,
-              created_by: userId,
-              title: payload.title,
-              description: payload.description,
-              assigned_to: memberId,
-              client_id: payload.client_id,
-              priority: payload.priority,
-              absence_grace_minutes: payload.absence_grace_minutes,
-              punch_mode_override: payload.punch_mode_override,
-              frequency: recurrence.frequency,
-              // RRULE FREQ=WEEKLY;INTERVAL=n — 2 = "semana sim, semana não" (âncora = start_date).
-              interval_weeks: recurrence.frequency === "weekly" ? Math.max(1, recurrence.intervalWeeks || 1) : 1,
-              weekdays: recurrence.frequency === "weekly" ? recurrence.weekdays : [],
-              // Mensal: dia fixo do mês (legado) OU posição no mês (BYSETPOS/BYDAY).
-              monthly_rule:
-                recurrence.frequency === "monthly"
-                  ? recurrence.monthPosition != null
-                    ? { position: recurrence.monthPosition, weekday: recurrence.monthWeekday }
-                    : { day_of_month: recurrence.dayOfMonth }
-                  : {},
-              start_date: recurrenceStartDate,
-              end_date: recurrenceEndDate,
-              selected_dates:
-                recurrence.frequency === "custom"
-                  ? normalizeCustomRecurrenceDates(recurrence.selectedDates)
-                  : [],
-              scheduled_time: derivedTime,
-              duration_minutes: useContractedSchedule
-                ? selectedDistributedMinutes[index] ?? selectedDistributedMinutes[0] ?? derivedDuration
-                : derivedDuration,
-              schedule_rules: scheduleRulesByEmployee[index] ?? [],
-              schedule_name: payload.schedule_name,
-              task_group_id: groupId,
-            }).select("id");
-            if (ins.error) {
-              if (String(ins.error.message ?? "").includes("RECURRENCE_DUPLICATE_ACTIVE")) {
-                duplicates += 1;
-                continue;
-              }
-              error = ins.error;
-              break;
-            }
-            created += 1;
-            for (const row of (ins.data ?? []) as { id: string }[]) createdRecurrenceIds.push(row.id);
-          }
-          if (!error) {
-            if (createdRecurrenceIds.length > 0) {
-              // A geração roda POR SÉRIE recém-criada. Varrer todas as séries da
-              // empresa estourava o statement_timeout em bases grandes e a série
-              // nova nunca gerava ocorrência. A janela de pré-geração é de
-              // 12 meses (séries sem data final continuam sem data final) e o
-              // índice único (série + data) mantém a idempotência.
-              const horizon = 365;
-              const failed: string[] = [];
-              for (const recurrenceId of createdRecurrenceIds) {
-                try {
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  const { error: materializeError } = await (supabase.rpc as any)("recurrence_materialize", {
-                    _days_ahead: horizon,
-                    _company_id: companyId,
-                    _recurrence_id: recurrenceId,
-                  });
-                  if (materializeError) failed.push(materializeError.message ?? "erro desconhecido");
-                } catch (materializeFailure) {
-                  failed.push((materializeFailure as Error).message ?? "erro desconhecido");
-                }
-              }
-              if (failed.length > 0) {
-                // Falha de geração é erro real: nunca prometemos geração futura.
-                toast.error(
-                  `Recorrência salva, mas as ocorrências não foram geradas (${failed.length} de ${createdRecurrenceIds.length}): ${failed[0]}. Use "Gerar próximos 12 meses" em Recorrências.`,
-                );
-              }
-            }
-            if (duplicates > 0) {
-              toast.info(
-                created > 0
-                  ? `${duplicates} recorrência(s) já existiam e não foram duplicadas.`
-                  : "Esta recorrência já existe e não foi duplicada.",
-              );
-            }
-          }
-        } else if (createdTaskIds.length === 0) {
-          // Uma tarefa por funcionário selecionado (tasks.assigned_to segue único).
-          const inserted = await supabase
-            .from("tasks")
-            .insert(
-              selectedAssignees.map((memberId, index) => ({
-                ...payload,
-                assigned_to: memberId,
-                company_id: companyId,
-                created_by: userId,
-                task_group_id: groupId,
-                ...taskTimesFor(index),
-              })),
-            )
-            .select("id")
-          ;
-          error = inserted.error;
-          for (const row of inserted.data ?? []) createdTaskIds.push(row.id);
-          if (!error) createdTaskIdsRef.current = [...createdTaskIds];
-        }
-
-        if (error) {
-          submittingRef.current = false;
-          setLoading(false);
-          toast.error(error.message);
-          return;
-        }
-        if (!initial && createdTaskIds.length > 0 && pendingDocs.length > 0) {
-          try {
-            const uploadedForAllTasks: TaskDocument[] = [];
+      <ModalBody className="space-y-4" data-modal-body>
+        <form
+          id={formId}
+          className="space-y-4"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            // A trava precisa ser síncrona e o ciclo completo precisa liberar o estado,
+            // inclusive quando uma chamada ao Supabase rejeita.
+            if (submittingRef.current) return;
+            submittingRef.current = true;
+            setLoading(true);
             try {
-              for (const taskId of createdTaskIds) {
-                uploadedForAllTasks.push(...(await uploadTaskDocuments({
-                  taskId,
-                  companyId,
-                  files: pendingDocs,
-                  uploadedBy: userId,
-                })));
+              // Regra operacional: pelo menos um responsável. A equipe do cliente é
+              // sugestão, então a validação olha só o que está selecionado agora.
+              if (assignees.length === 0) {
+                toast.error("Selecione pelo menos um funcionário para esta tarefa.");
+                document.getElementById("task-assignee-search")?.focus();
+                return;
               }
-            } catch (uploadError) {
-              await removeTaskDocuments(uploadedForAllTasks);
-              throw uploadError;
-            }
-          } catch (e) {
-            submittingRef.current = false;
-            setLoading(false);
-            toast.error((e as Error).message);
-            return;
-          }
-        }
-        submittingRef.current = false;
-        setLoading(false);
-        toast.success(
-          initial ? "Tarefa atualizada" : selectedAssignees.length > 1 ? `${selectedAssignees.length} tarefas criadas` : "Tarefa criada",
-        );
-        onDone();
-        } catch (submitError) {
-          console.error("[task-create] failed", submitError);
-          toast.error(taskSaveErrorMessage(submitError));
-        } finally {
-          submittingRef.current = false;
-          setLoading(false);
-        }
-      }}
-    >
-      <div className="space-y-1.5">
-        <Label>Cliente</Label>
-        <Select
-          value={clientId}
-          onValueChange={(v) => void applyClient(v)}
-          onOpenChange={(open) => {
-            if (!open) setClientQuery("");
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione o cliente" />
-          </SelectTrigger>
-          <SelectContent>
-            <div className="sticky top-0 z-10 border-b border-border bg-popover p-2">
-              <div className="relative">
-                <Search
-                  className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                  aria-hidden
-                />
-                <Input
-                  value={clientQuery}
-                  onChange={(e) => setClientQuery(e.target.value)}
-                  onKeyDown={(e) => e.stopPropagation()}
-                  placeholder="Buscar cliente..."
-                  className="h-9 pl-8"
-                  aria-label="Buscar cliente"
-                />
-              </div>
-            </div>
-            {filteredClients.length === 0 ? (
-              <div className="px-3 py-6 text-center text-sm text-muted-foreground">
-                Nenhum cliente encontrado
-              </div>
-            ) : (
-              filteredClients.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))
-            )}
-          </SelectContent>
-        </Select>
-        {!initial && namedSchedules.length > 0 && (
-          <div className="space-y-1" data-testid="client-schedule-picker">
-            <Label>Programação do cliente</Label>
-            <Select
-              value={selectedScheduleId ?? "__free__"}
-              onValueChange={(value) => {
-                if (value === "__free__") {
-                  setSelectedScheduleId(null);
-                  setScheduleHint(null);
-                  if (!initial) {
-                    setRecurrence((prev) => disableAutoRecurrence(prev, autoRecurrenceRef.current));
-                    if (autoRecurrenceRef.current) recurrenceStartTouchedRef.current = false;
-                    autoRecurrenceRef.current = false;
-                  }
+              if (!initial && recurrence.enabled && recurrence.frequency === "custom") {
+                const selectedDates = normalizeCustomRecurrenceDates(recurrence.selectedDates);
+                if (selectedDates.length === 0) {
+                  toast.error("Selecione pelo menos uma data no calendário da recorrência.");
                   return;
                 }
-                const slot = namedSchedules.find((s) => s.id === value);
-                if (slot) {
-                  applySlot(slot);
-                  if (!initial) applySlotRecurrence(slot);
+              }
+              // Datas são obrigatórias; horas são opcionais e não criam horário falso.
+              const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+              if (!startDate || !datePattern.test(startDate)) {
+                toast.error("Data de início obrigatória.");
+                return;
+              }
+              if (!endDate || !datePattern.test(endDate)) {
+                toast.error("Data de fim obrigatória.");
+                return;
+              }
+              // A série usa a data digitada no formulário de recorrência; a data
+              // principal da tarefa é apenas o valor sugerido inicialmente.
+              const recurrenceStartDate = recurrence.enabled ? recurrence.startDate || startDate : startDate;
+              const recurrenceEndDate = recurrence.enabled ? recurrence.endDate || null : null;
+              if (recurrence.enabled && (!recurrenceStartDate || !datePattern.test(recurrenceStartDate))) {
+                toast.error("Data de início da recorrência inválida.");
+                return;
+              }
+              if (
+                recurrence.enabled &&
+                recurrenceEndDate &&
+                (!datePattern.test(recurrenceEndDate) || recurrenceEndDate < recurrenceStartDate)
+              ) {
+                toast.error("A data final da recorrência deve ser igual ou posterior à data inicial.");
+                return;
+              }
+              const startISO = startTime ? wallDateTimeToISO(startDate, startTime) : null;
+              const resolvedEndDate = resolveWallEndDate(startDate, startTime, endTime, endDate);
+              const endISO = endTime ? wallDateTimeToISO(resolvedEndDate, endTime) : null;
+              const dueISO = endISO ?? wallDateToEndOfDayISO(endDate);
+              const selectedAssignees = [...new Set(assignees)];
+              const selectedDistributedMinutes = distributeContractedMinutes(
+                contractedMinutes,
+                selectedAssignees.length,
+              );
+              if (selectedAssignees.length === 0) {
+                toast.error("Selecione pelo menos um funcionário para esta tarefa.");
+                return;
+              }
+              if (!dueISO) {
+                toast.error("Data de fim inválida.");
+                return;
+              }
+              if (startTime && !startISO) {
+                toast.error("Hora de início inválida.");
+                return;
+              }
+              if (endTime && !endISO) {
+                toast.error("Horário de fim inválido.");
+                return;
+              }
+              if (endDate < startDate) {
+                toast.error("A data de fim deve ser igual ou posterior à data de início.");
+                return;
+              }
+              {
+                const spanDays = Math.round(
+                  (Date.parse(`${endDate}T00:00:00Z`) - Date.parse(`${startDate}T00:00:00Z`)) / 86_400_000,
+                );
+                if (spanDays > 2) {
+                  const ok = window.confirm(
+                    `Atenção: a data de fim está ${spanDays} dias depois da data de início.\n\n` +
+                      "A data de fim é o fim do turno de trabalho (normalmente o mesmo dia ou o dia seguinte). " +
+                      "Para repetir a tarefa em vários dias, use a opção de recorrência.\n\n" +
+                      "Deseja manter mesmo assim?",
+                  );
+                  if (!ok) return;
                 }
+              }
+              if (startISO && endISO && endISO < startISO) {
+                toast.error("O horário de fim deve ser posterior ao de início.");
+                return;
+              }
+              // Conflito com férias aprovadas dos funcionários no período.
+              {
+                const rangeStart = recurrence.enabled ? recurrenceStartDate : startDate;
+                const rangeEnd = recurrence.enabled ? recurrenceEndDate || endDate : endDate;
+                const { data: vacations } = await supabase
+                  .from("vacation_requests")
+                  .select("start_date, end_date, user_id")
+                  .eq("company_id", companyId)
+                  .in("user_id", selectedAssignees)
+                  .eq("status", "aprovado")
+                  .lte("start_date", rangeEnd)
+                  .gte("end_date", rangeStart);
+                if (vacations && vacations.length > 0) {
+                  const periods = vacations
+                    .map((v) => {
+                      const name = members.find((m) => m.id === v.user_id)?.full_name ?? "Funcionário";
+                      return `${name}: ${v.start_date} → ${v.end_date}`;
+                    })
+                    .join(", ");
+                  const ok = window.confirm(
+                    `Há férias aprovadas no período (${periods}). Deseja continuar mesmo assim?`,
+                  );
+                  if (!ok) return;
+                }
+              }
+              // Título derivado do cliente quando não preenchido manualmente.
+              const clientName = clients.find((c) => c.id === clientId)?.name ?? "";
+              const finalTitle = title.trim() || clientName.trim() || description.trim().slice(0, 80) || "Tarefa";
+              const payload = {
+                title: finalTitle,
+                description: description.trim() || null,
+                assigned_to: assignedTo,
+                client_id: clientId || null,
+                priority,
+                // Wall-clock: preservar o horário exato cadastrado, sem fuso.
+                scheduled_for: startISO,
+                scheduled_end: endISO,
+                due_at: dueISO,
+                recurrence_date: startDate,
+                absence_grace_minutes: graceMinutes,
+                punch_mode_override: punchMode || null,
+                // Etiqueta da programação do cliente escolhida pelo gestor.
+                schedule_name: scheduleName,
+              };
+              // A distribuição da carga contratada só pode recalcular uma hora de fim
+              // que o gestor JÁ registou. Sem hora de fim digitada, nada é derivado.
+              const useContractedSchedule =
+                contractedMinutes != null &&
+                !manualEndOverride &&
+                startDate !== "" &&
+                startTime !== "" &&
+                endTime !== "";
+
+              const scheduleRulesByEmployee =
+                selectedSchedule?.cycleLengthWeeks && selectedSchedule.cycleLengthWeeks > 1
+                  ? selectedAssignees.map((_, employeeIndex) =>
+                      clientSchedule
+                        .filter(
+                          (slot) =>
+                            slot.id.startsWith(`client-habitual:${clientId}:`) &&
+                            slot.cycleLengthWeeks === selectedSchedule.cycleLengthWeeks &&
+                            slot.cycleAnchorDate === selectedSchedule.cycleAnchorDate,
+                        )
+                        .map((slot) => ({
+                          weekdays: slot.weekdays,
+                          schedule_name: slot.label ?? null,
+                          start_time: slot.startTime,
+                          duration_minutes:
+                            distributeContractedMinutes(
+                              slot.contractedMinutes ?? slot.durationMinutes,
+                              selectedAssignees.length,
+                            )[employeeIndex] ??
+                            slot.contractedMinutes ??
+                            slot.durationMinutes,
+                          cycle_length_weeks: slot.cycleLengthWeeks,
+                          cycle_position: slot.cyclePosition,
+                          cycle_anchor_date: slot.cycleAnchorDate,
+                        })),
+                    )
+                  : [];
+              const manualDurationMinutes =
+                startISO && endISO
+                  ? Math.max(0, Math.round((new Date(endISO).getTime() - new Date(startISO).getTime()) / 60000))
+                  : 0;
+              // Série: duração = SOMENTE o turno diário (hora início → hora fim,
+              // +24 h se passar da meia-noite), nunca a amplitude das datas; máx. 1440.
+              const seriesShiftMinutes = startTime && endTime ? dailyShiftDurationMinutes(startTime, endTime) : 0;
+              // Tarefa avulsa com mais de 24 h: confirmação simples, sem bloquear.
+              if (
+                !recurrence.enabled &&
+                !useContractedSchedule &&
+                manualDurationMinutes > LONG_STANDALONE_TASK_MINUTES &&
+                !confirmedConflictsRef.current &&
+                !window.confirm(tt("Esta tarefa dura mais de 24 horas. Confirmar?"))
+              ) {
+                submittingRef.current = false;
+                setLoading(false);
+                return;
+              }
+              const taskTimesFor = (index: number) => {
+                if (!useContractedSchedule) {
+                  return { scheduled_for: startISO, scheduled_end: endISO, due_at: dueISO };
+                }
+                const minutes = selectedDistributedMinutes[index] ?? selectedDistributedMinutes[0] ?? 0;
+                const end = addWallMinutes(startDate, startTime, minutes);
+                if (!end) return { scheduled_for: startISO, scheduled_end: endISO, due_at: dueISO };
+                const scheduledEnd = wallDateTimeToISO(end.date, end.time);
+                return { scheduled_for: startISO, scheduled_end: scheduledEnd, due_at: scheduledEnd ?? dueISO };
+              };
+
+              // SUP-2026-000140 — consulta definitiva imediatamente antes da gravação.
+              // Para recorrências, cada data é enviada como uma proposta separada;
+              // assim overnight e conflitos pontuais não viram um bloqueio da série.
+              if (!confirmedConflictsRef.current) {
+                const recurrenceDates = recurrence.enabled
+                  ? recurrence.frequency === "custom"
+                    ? normalizeCustomRecurrenceDates(recurrence.selectedDates)
+                    : previewRecurrenceDates(
+                        {
+                          frequency: recurrence.frequency,
+                          intervalWeeks: recurrence.intervalWeeks,
+                          weekdays: recurrence.weekdays,
+                          monthlyRule:
+                            recurrence.monthPosition != null
+                              ? { position: recurrence.monthPosition, weekday: recurrence.monthWeekday }
+                              : { day_of_month: recurrence.dayOfMonth },
+                          startDate: recurrenceStartDate,
+                          endDate: recurrenceEndDate,
+                        },
+                        400,
+                      ).map(localDateToDateKey)
+                  : [startDate];
+                const proposals = recurrence.enabled
+                  ? recurrenceDates.flatMap((dateKey) =>
+                      selectedAssignees.flatMap((memberId, index) => {
+                        if (!startTime) return [];
+                        const minutes = useContractedSchedule
+                          ? (selectedDistributedMinutes[index] ?? selectedDistributedMinutes[0] ?? 0)
+                          : seriesShiftMinutes;
+                        const end = addWallMinutes(dateKey, startTime, minutes);
+                        if (!end) return [];
+                        const proposedStart = wallDateTimeToISO(dateKey, startTime);
+                        const proposedEnd = wallDateTimeToISO(end.date, end.time);
+                        return proposedStart && proposedEnd
+                          ? [{ assignee_id: memberId, start_at: proposedStart, end_at: proposedEnd }]
+                          : [];
+                      }),
+                    )
+                  : selectedAssignees.flatMap((memberId, index) => {
+                      const times = taskTimesFor(index);
+                      return times.scheduled_for && times.scheduled_end
+                        ? [{ assignee_id: memberId, start_at: times.scheduled_for, end_at: times.scheduled_end }]
+                        : [];
+                    });
+                try {
+                  const conflicts = await checkTaskScheduleConflicts(companyId, proposals, initial?.id);
+                  if (conflicts.length > 0) {
+                    setScheduleConflicts(conflicts);
+                    submittingRef.current = false;
+                    setLoading(false);
+                    return;
+                  }
+                } catch (conflictError) {
+                  const technicalError = conflictError as {
+                    code?: string;
+                    message?: string;
+                    details?: string;
+                    hint?: string;
+                  };
+                  const rawMsg = String(technicalError?.message ?? conflictError ?? "");
+                  const isNetworkError =
+                    rawMsg.includes("Failed to fetch") ||
+                    rawMsg.includes("NetworkError") ||
+                    rawMsg.includes("Load failed") ||
+                    (typeof navigator !== "undefined" && !navigator.onLine);
+                  if (isNetworkError) {
+                    submittingRef.current = false;
+                    setLoading(false);
+                    toast.error(
+                      "Falha de conexão ao verificar a agenda. Nada foi alterado. Verifique a internet e tente salvar novamente.",
+                    );
+                    return;
+                  }
+                  const diagnostic = [
+                    technicalError.code ? `Código: ${technicalError.code}` : null,
+                    technicalError.message ?? "Falha desconhecida na consulta de sobreposição.",
+                    technicalError.details ? `Detalhes: ${technicalError.details}` : null,
+                    technicalError.hint ? `Orientação: ${technicalError.hint}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join("\n");
+                  console.error("[task-schedule-conflicts] failed", {
+                    code: technicalError.code,
+                    message: technicalError.message,
+                    details: technicalError.details,
+                    hint: technicalError.hint,
+                    error: conflictError,
+                  });
+                  submittingRef.current = false;
+                  setLoading(false);
+                  setScheduleCheckError(diagnostic);
+                  return;
+                }
+              }
+              confirmedConflictsRef.current = false;
+              let error: { message: string } | null = null;
+              const createdTaskIds: string[] = [...createdTaskIdsRef.current];
+              // Fase B: lote multi-responsável. Cada responsável mantém a SUA tarefa
+              // (estado, ponto, recusa e conclusão próprios); o grupo só correlaciona.
+              const groupId = selectedAssignees.length > 1 ? crypto.randomUUID() : null;
+              if (initial) {
+                // SUP-66 / SUP-224: edição atómica da ocorrência (grupo incluído) via RPC.
+                // Nunca altera a série; quem já iniciou é preservado pelo backend.
+                if (needsGroupAssigneeConfirmation(groupAssignees, selectedAssignees)) {
+                  const diff = diffGroupAssignees(groupAssignees, selectedAssignees);
+                  const ok = window.confirm(
+                    tt("Esta alteração afeta {{count}} colaboradores desta ocorrência. Confirmar?", {
+                      count: diff.affected,
+                    }),
+                  );
+                  if (!ok) return;
+                }
+                const colleagues = groupAssignees.filter((id) => id !== initial.assigned_to).length;
+                let applyToGroup = false;
+                if (
+                  shouldAskGroupScheduleScope({
+                    colleagues,
+                    oldStart: initial.scheduled_for,
+                    oldEnd: initial.scheduled_end,
+                    newStart: startISO,
+                    newEnd: endISO,
+                  })
+                ) {
+                  const choice = await new Promise<"all" | "mine" | null>((resolve) =>
+                    setGroupSchedulePrompt({ count: colleagues, resolve }),
+                  );
+                  if (!choice) return;
+                  applyToGroup = choice === "all";
+                }
+                // Mantém o responsável da linha clicada em primeiro, se continuar selecionado.
+                const orderedAssignees = selectedAssignees.includes(initial.assigned_to ?? "")
+                  ? [initial.assigned_to as string, ...selectedAssignees.filter((id) => id !== initial.assigned_to)]
+                  : selectedAssignees;
+                const { assigned_to: _ignored, ...rpcPayload } = payload;
+                void _ignored;
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const res = await (supabase.rpc as any)("task_group_edit_occurrence", {
+                  _task_id: initial.id,
+                  _payload: rpcPayload,
+                  _assignees: orderedAssignees,
+                  _apply_schedule_to_group: applyToGroup,
+                });
+                error = res.error;
+              } else if (recurrence.enabled) {
+                // Horario e duracao da recorrencia sao derivados do topo do formulario.
+                // Sem horario, a recorrencia fica por dia; nunca materializa 00:00.
+                const derivedTime = startTime ? `${startTime}:00` : null;
+                // Em recorrências a "data fim" é o fim da série, não do turno:
+                // a duração é só a do turno diário (hora fim − hora início,
+                // com passagem de meia-noite), nunca a amplitude entre as datas.
+                const derivedDuration = seriesShiftMinutes;
+                // Uma série (task_recurrence) por funcionário selecionado.
+                // ADR-041: inserção individual + idempotência. Se o banco recusar por
+                // série ativa equivalente (RECURRENCE_DUPLICATE_ACTIVE), tratamos como
+                // "já existe" — nunca criamos um clone e nunca abortamos os restantes.
+                let duplicates = 0;
+                let created = 0;
+                const createdRecurrenceIds: string[] = [];
+                for (const [index, memberId] of selectedAssignees.entries()) {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const ins = await (supabase.from("task_recurrences" as any) as any)
+                    .insert({
+                      company_id: companyId,
+                      created_by: userId,
+                      title: payload.title,
+                      description: payload.description,
+                      assigned_to: memberId,
+                      client_id: payload.client_id,
+                      priority: payload.priority,
+                      absence_grace_minutes: payload.absence_grace_minutes,
+                      punch_mode_override: payload.punch_mode_override,
+                      frequency: recurrence.frequency,
+                      // RRULE FREQ=WEEKLY;INTERVAL=n — 2 = "semana sim, semana não" (âncora = start_date).
+                      interval_weeks:
+                        recurrence.frequency === "weekly" ? Math.max(1, recurrence.intervalWeeks || 1) : 1,
+                      weekdays: recurrence.frequency === "weekly" ? recurrence.weekdays : [],
+                      // Mensal: dia fixo do mês (legado) OU posição no mês (BYSETPOS/BYDAY).
+                      monthly_rule:
+                        recurrence.frequency === "monthly"
+                          ? recurrence.monthPosition != null
+                            ? { position: recurrence.monthPosition, weekday: recurrence.monthWeekday }
+                            : { day_of_month: recurrence.dayOfMonth }
+                          : {},
+                      start_date: recurrenceStartDate,
+                      end_date: recurrenceEndDate,
+                      selected_dates:
+                        recurrence.frequency === "custom"
+                          ? normalizeCustomRecurrenceDates(recurrence.selectedDates)
+                          : [],
+                      scheduled_time: derivedTime,
+                      duration_minutes: useContractedSchedule
+                        ? (selectedDistributedMinutes[index] ?? selectedDistributedMinutes[0] ?? derivedDuration)
+                        : derivedDuration,
+                      schedule_rules: scheduleRulesByEmployee[index] ?? [],
+                      schedule_name: payload.schedule_name,
+                      task_group_id: groupId,
+                    })
+                    .select("id");
+                  if (ins.error) {
+                    if (String(ins.error.message ?? "").includes("RECURRENCE_DUPLICATE_ACTIVE")) {
+                      duplicates += 1;
+                      continue;
+                    }
+                    error = ins.error;
+                    break;
+                  }
+                  created += 1;
+                  for (const row of (ins.data ?? []) as { id: string }[]) createdRecurrenceIds.push(row.id);
+                }
+                if (!error) {
+                  if (createdRecurrenceIds.length > 0) {
+                    // A geração roda POR SÉRIE recém-criada. Varrer todas as séries da
+                    // empresa estourava o statement_timeout em bases grandes e a série
+                    // nova nunca gerava ocorrência. A janela de pré-geração é de
+                    // 12 meses (séries sem data final continuam sem data final) e o
+                    // índice único (série + data) mantém a idempotência.
+                    const horizon = 365;
+                    const failed: string[] = [];
+                    for (const recurrenceId of createdRecurrenceIds) {
+                      try {
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const { error: materializeError } = await (supabase.rpc as any)("recurrence_materialize", {
+                          _days_ahead: horizon,
+                          _company_id: companyId,
+                          _recurrence_id: recurrenceId,
+                        });
+                        if (materializeError) failed.push(materializeError.message ?? "erro desconhecido");
+                      } catch (materializeFailure) {
+                        failed.push((materializeFailure as Error).message ?? "erro desconhecido");
+                      }
+                    }
+                    if (failed.length > 0) {
+                      // Falha de geração é erro real: nunca prometemos geração futura.
+                      toast.error(
+                        `Recorrência salva, mas as ocorrências não foram geradas (${failed.length} de ${createdRecurrenceIds.length}): ${failed[0]}. Use "Gerar próximos 12 meses" em Recorrências.`,
+                      );
+                    }
+                  }
+                  if (duplicates > 0) {
+                    toast.info(
+                      created > 0
+                        ? `${duplicates} recorrência(s) já existiam e não foram duplicadas.`
+                        : "Esta recorrência já existe e não foi duplicada.",
+                    );
+                  }
+                }
+              } else if (createdTaskIds.length === 0) {
+                // Uma tarefa por funcionário selecionado (tasks.assigned_to segue único).
+                const inserted = await supabase
+                  .from("tasks")
+                  .insert(
+                    selectedAssignees.map((memberId, index) => ({
+                      ...payload,
+                      assigned_to: memberId,
+                      company_id: companyId,
+                      created_by: userId,
+                      task_group_id: groupId,
+                      ...taskTimesFor(index),
+                    })),
+                  )
+                  .select("id");
+                error = inserted.error;
+                for (const row of inserted.data ?? []) createdTaskIds.push(row.id);
+                if (!error) createdTaskIdsRef.current = [...createdTaskIds];
+              }
+
+              if (error) {
+                submittingRef.current = false;
+                setLoading(false);
+                toast.error(error.message);
+                return;
+              }
+              if (!initial && createdTaskIds.length > 0 && pendingDocs.length > 0) {
+                try {
+                  const uploadedForAllTasks: TaskDocument[] = [];
+                  try {
+                    for (const taskId of createdTaskIds) {
+                      uploadedForAllTasks.push(
+                        ...(await uploadTaskDocuments({
+                          taskId,
+                          companyId,
+                          files: pendingDocs,
+                          uploadedBy: userId,
+                        })),
+                      );
+                    }
+                  } catch (uploadError) {
+                    await removeTaskDocuments(uploadedForAllTasks);
+                    throw uploadError;
+                  }
+                } catch (e) {
+                  submittingRef.current = false;
+                  setLoading(false);
+                  toast.error((e as Error).message);
+                  return;
+                }
+              }
+              submittingRef.current = false;
+              setLoading(false);
+              toast.success(
+                initial
+                  ? "Tarefa atualizada"
+                  : selectedAssignees.length > 1
+                    ? `${selectedAssignees.length} tarefas criadas`
+                    : "Tarefa criada",
+              );
+              onDone();
+            } catch (submitError) {
+              console.error("[task-create] failed", submitError);
+              toast.error(taskSaveErrorMessage(submitError));
+            } finally {
+              submittingRef.current = false;
+              setLoading(false);
+            }
+          }}
+        >
+          <div className="space-y-1.5">
+            <Label>Cliente</Label>
+            <Select
+              value={clientId}
+              onValueChange={(v) => void applyClient(v)}
+              onOpenChange={(open) => {
+                if (!open) setClientQuery("");
               }}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Livre / Manual" />
+                <SelectValue placeholder="Selecione o cliente" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__free__">Livre / Manual</SelectItem>
-                {namedSchedules.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.label}
-                  </SelectItem>
-                ))}
+                <div className="sticky top-0 z-10 border-b border-border bg-popover p-2">
+                  <div className="relative">
+                    <Search
+                      className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                      aria-hidden
+                    />
+                    <Input
+                      value={clientQuery}
+                      onChange={(e) => setClientQuery(e.target.value)}
+                      onKeyDown={(e) => e.stopPropagation()}
+                      placeholder="Buscar cliente..."
+                      className="h-9 pl-8"
+                      aria-label="Buscar cliente"
+                    />
+                  </div>
+                </div>
+                {filteredClients.length === 0 ? (
+                  <div className="px-3 py-6 text-center text-sm text-muted-foreground">Nenhum cliente encontrado</div>
+                ) : (
+                  filteredClients.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">
-              O nome escolhido aparece como etiqueta nas tarefas e no calendário.
-            </p>
-          </div>
-        )}
-        {!initial && (clientSchedule.length > 0 || contractedMinutes != null) && (
-          <div className="rounded-lg border border-border bg-muted/40 p-3 text-xs">
-            <p className="font-medium text-foreground">Configuração do cliente</p>
-            {clientSchedule.length > 0 && (
-              <ul className="mt-1 space-y-0.5 text-muted-foreground">
-                {clientSchedule.map((s) => (
-                  <li key={s.id}>{describeSlot(s)}</li>
-                ))}
-              </ul>
-            )}
-            {contractedMinutes != null && (
-              <p className="mt-1 text-muted-foreground">
-                Carga total contratada: <span className="font-medium text-foreground">{formatContractedMinutes(contractedMinutes)}</span>
-              </p>
-            )}
-            {distributedMinutes.length > 0 && (
-              <p className="mt-1 text-muted-foreground">
-                {assignees.length} {assignees.length === 1 ? "funcionário" : "funcionários"} selecionado(s)
-                {" → "}
-                <span className="font-medium text-foreground">{formatContractedMinutes(distributedMinutes[0])} por funcionário</span>
-                {" (o total do serviço não muda ao remover ou acrescentar funcionários)"}
-              </p>
-            )}
-            {contractedMinutes != null && assignees.length === 0 && (
-              <p className="mt-1 text-muted-foreground">Selecione pelo menos um funcionário para calcular a duração individual.</p>
-            )}
-            {schedulePrompt.length > 1 && (
-              <div className="mt-2 space-y-1.5">
-                <p className="text-foreground">Este cliente possui mais de uma programação para este dia.</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {schedulePrompt.map((s) => (
-                    <Button key={s.id} type="button" size="sm" variant="outline" onClick={() => applySlot(s)}>
-                      {s.title}: {s.startTime ?? "flexível"}
-                      {s.endTime ? `–${s.endTime}` : ""}
-                    </Button>
-                  ))}
-                </div>
+            {!initial && namedSchedules.length > 0 && (
+              <div className="space-y-1" data-testid="client-schedule-picker">
+                <Label>Programação do cliente</Label>
+                <Select
+                  value={selectedScheduleId ?? "__free__"}
+                  onValueChange={(value) => {
+                    if (value === "__free__") {
+                      setSelectedScheduleId(null);
+                      setScheduleHint(null);
+                      if (!initial) {
+                        setRecurrence((prev) => disableAutoRecurrence(prev, autoRecurrenceRef.current));
+                        if (autoRecurrenceRef.current) recurrenceStartTouchedRef.current = false;
+                        autoRecurrenceRef.current = false;
+                      }
+                      return;
+                    }
+                    const slot = namedSchedules.find((s) => s.id === value);
+                    if (slot) {
+                      applySlot(slot);
+                      if (!initial) applySlotRecurrence(slot);
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Livre / Manual" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__free__">Livre / Manual</SelectItem>
+                    {namedSchedules.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  O nome escolhido aparece como etiqueta nas tarefas e no calendário.
+                </p>
               </div>
             )}
-            {scheduleHint && <p className="mt-1 text-muted-foreground">{scheduleHint}</p>}
-          </div>
-        )}
-        {teamPrompt && (
-
-          <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs">
-            <p className="font-medium">
-              Você já escolheu responsáveis. Usar a equipe padrão de {teamPrompt.clientName} (
-              {teamPrompt.team.length}) ou manter a sua seleção?
-            </p>
-            <div className="mt-2 flex gap-2">
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => {
-                  setAssignees(teamPrompt.team);
-                  setTouchedAssignees(false);
-                  setTeamHint("Equipe padrão do novo cliente aplicada.");
-                  setTeamPrompt(null);
-                }}
-              >
-                Usar equipe do cliente
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setTeamHint("Seleção manual mantida.");
-                  setTeamPrompt(null);
-                }}
-              >
-                Manter seleção atual
-              </Button>
-            </div>
-          </div>
-        )}
-        {!teamPrompt && teamHint && <p className="text-xs text-muted-foreground">{teamHint}</p>}
-      </div>
-
-      <div className="space-y-1.5">
-        <Label>Descrição</Label>
-        <Textarea maxLength={1000} value={description} onChange={(e) => setDescription(e.target.value)} />
-      </div>
-      {!initial && (
-        <div className="space-y-2 rounded-lg border border-border bg-muted/20 p-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <Label htmlFor="task-docs-create">Documentos da tarefa</Label>
-              <p className="text-xs text-muted-foreground">PDF, JPG ou PNG ate 10 MB.</p>
-            </div>
-            <Button type="button" variant="outline" size="sm" asChild>
-              <label htmlFor="task-docs-create" className="cursor-pointer">
-                <Upload className="mr-1 h-3.5 w-3.5" />
-                Anexar
-              </label>
-            </Button>
-          </div>
-          <Input
-            id="task-docs-create"
-            type="file"
-            accept={TASK_DOCUMENT_ACCEPT}
-            multiple
-            className="hidden"
-            onChange={(e) => {
-              setPendingDocs((current) => mergeTaskFiles(current, Array.from(e.target.files ?? [])));
-              e.target.value = "";
-            }}
-          />
-          {pendingDocs.length > 0 && (
-            <ul className="space-y-1">
-              {pendingDocs.map((file) => (
-                <li
-                  key={`${file.name}-${file.lastModified}`}
-                  className="flex items-center gap-2 text-xs text-muted-foreground"
-                >
-                  <FileText className="h-3.5 w-3.5" />
-                  <span className="min-w-0 flex-1 truncate">{file.name}</span>
-                  <span className="shrink-0">{formatTaskFileSize(file.size)}</span>
+            {!initial && (clientSchedule.length > 0 || contractedMinutes != null) && (
+              <div className="rounded-lg border border-border bg-muted/40 p-3 text-xs">
+                <p className="font-medium text-foreground">Configuração do cliente</p>
+                {clientSchedule.length > 0 && (
+                  <ul className="mt-1 space-y-0.5 text-muted-foreground">
+                    {clientSchedule.map((s) => (
+                      <li key={s.id}>{describeSlot(s)}</li>
+                    ))}
+                  </ul>
+                )}
+                {contractedMinutes != null && (
+                  <p className="mt-1 text-muted-foreground">
+                    Carga total contratada:{" "}
+                    <span className="font-medium text-foreground">{formatContractedMinutes(contractedMinutes)}</span>
+                  </p>
+                )}
+                {distributedMinutes.length > 0 && (
+                  <p className="mt-1 text-muted-foreground">
+                    {assignees.length} {assignees.length === 1 ? "funcionário" : "funcionários"} selecionado(s)
+                    {" → "}
+                    <span className="font-medium text-foreground">
+                      {formatContractedMinutes(distributedMinutes[0])} por funcionário
+                    </span>
+                    {" (o total do serviço não muda ao remover ou acrescentar funcionários)"}
+                  </p>
+                )}
+                {contractedMinutes != null && assignees.length === 0 && (
+                  <p className="mt-1 text-muted-foreground">
+                    Selecione pelo menos um funcionário para calcular a duração individual.
+                  </p>
+                )}
+                {schedulePrompt.length > 1 && (
+                  <div className="mt-2 space-y-1.5">
+                    <p className="text-foreground">Este cliente possui mais de uma programação para este dia.</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {schedulePrompt.map((s) => (
+                        <Button key={s.id} type="button" size="sm" variant="outline" onClick={() => applySlot(s)}>
+                          {s.title}: {s.startTime ?? "flexível"}
+                          {s.endTime ? `–${s.endTime}` : ""}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {scheduleHint && <p className="mt-1 text-muted-foreground">{scheduleHint}</p>}
+              </div>
+            )}
+            {teamPrompt && (
+              <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs">
+                <p className="font-medium">
+                  Você já escolheu responsáveis. Usar a equipe padrão de {teamPrompt.clientName} (
+                  {teamPrompt.team.length}) ou manter a sua seleção?
+                </p>
+                <div className="mt-2 flex gap-2">
                   <Button
                     type="button"
                     size="sm"
-                    variant="ghost"
-                    className="h-7 px-2"
-                    title={`Remover ${file.name}`}
-                    onClick={() => setPendingDocs((current) => current.filter((item) => item !== file))}
+                    onClick={() => {
+                      setAssignees(teamPrompt.team);
+                      setTouchedAssignees(false);
+                      setTeamHint("Equipe padrão do novo cliente aplicada.");
+                      setTeamPrompt(null);
+                    }}
                   >
-                    <X className="h-3.5 w-3.5" />
+                    Usar equipe do cliente
                   </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-          <p className="text-xs text-muted-foreground">
-            {pendingDocs.length === 0
-              ? "Nenhum ficheiro selecionado."
-              : `${pendingDocs.length} ${pendingDocs.length === 1 ? "ficheiro selecionado" : "ficheiros selecionados"}.`}
-          </p>
-        </div>
-      )}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5 col-span-2">
-          <Label>Atribuir a</Label>
-          {(
-            <>
-              <Label htmlFor="task-assignee-search">Nome do funcionário</Label>
-              <div className="relative">
-                <Search
-                  className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                  aria-hidden
-                />
-                <Input
-                  id="task-assignee-search"
-                  value={assigneeQuery}
-                  onChange={(e) => setAssigneeQuery(e.target.value)}
-                  placeholder="Pesquisar funcionário"
-                  aria-label="Pesquisar funcionário"
-                  className="h-9 pl-8"
-                />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setTeamHint("Seleção manual mantida.");
+                      setTeamPrompt(null);
+                    }}
+                  >
+                    Manter seleção atual
+                  </Button>
+                </div>
               </div>
-              <div className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-border p-2">
-                {members.length === 0 && (
-                  <p className="px-1 py-2 text-xs text-muted-foreground">Nenhum funcionário disponível.</p>
-                )}
-                {filteredAssignees.length === 0 && members.length > 0 && (
-                  <p className="px-1 py-2 text-xs text-muted-foreground">Nenhum funcionário encontrado.</p>
-                )}
-                {filteredAssignees.map((m) => {
-                  const checked = assignees.includes(m.id);
-                  return (
-                    <label
-                      key={m.id}
-                      className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent"
+            )}
+            {!teamPrompt && teamHint && <p className="text-xs text-muted-foreground">{teamHint}</p>}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Descrição</Label>
+            <Textarea maxLength={1000} value={description} onChange={(e) => setDescription(e.target.value)} />
+          </div>
+          {!initial && (
+            <div className="space-y-2 rounded-lg border border-border bg-muted/20 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <Label htmlFor="task-docs-create">Documentos da tarefa</Label>
+                  <p className="text-xs text-muted-foreground">PDF, JPG ou PNG ate 10 MB.</p>
+                </div>
+                <Button type="button" variant="outline" size="sm" asChild>
+                  <label htmlFor="task-docs-create" className="cursor-pointer">
+                    <Upload className="mr-1 h-3.5 w-3.5" />
+                    Anexar
+                  </label>
+                </Button>
+              </div>
+              <Input
+                id="task-docs-create"
+                type="file"
+                accept={TASK_DOCUMENT_ACCEPT}
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  setPendingDocs((current) => mergeTaskFiles(current, Array.from(e.target.files ?? [])));
+                  e.target.value = "";
+                }}
+              />
+              {pendingDocs.length > 0 && (
+                <ul className="space-y-1">
+                  {pendingDocs.map((file) => (
+                    <li
+                      key={`${file.name}-${file.lastModified}`}
+                      className="flex items-center gap-2 text-xs text-muted-foreground"
                     >
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 accent-primary"
-                        checked={checked}
-                        onChange={() => toggleAssignee(m.id)}
-                      />
-                      <span className="truncate" title={taskMemberName(members, m.id, "Funcionário")}>
-                        {taskMemberName(members, m.id, "Funcionário")}
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
+                      <FileText className="h-3.5 w-3.5" />
+                      <span className="min-w-0 flex-1 truncate">{file.name}</span>
+                      <span className="shrink-0">{formatTaskFileSize(file.size)}</span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2"
+                        title={`Remover ${file.name}`}
+                        onClick={() => setPendingDocs((current) => current.filter((item) => item !== file))}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
               <p className="text-xs text-muted-foreground">
-                Os funcionários do cadastro do cliente vêm apenas como sugestão: pode remover, trocar ou
-                acrescentar livremente sem alterar o cadastro do cliente. Cada responsável recebe a sua própria
-                tarefa, com estado, ponto, recusa e conclusão independentes — a ação de um não altera a do outro.
-
-
+                {pendingDocs.length === 0
+                  ? "Nenhum ficheiro selecionado."
+                  : `${pendingDocs.length} ${pendingDocs.length === 1 ? "ficheiro selecionado" : "ficheiros selecionados"}.`}
               </p>
-            </>
+            </div>
           )}
-        </div>
-        <div className="space-y-1.5">
-          <Label>Data início</Label>
-          <Input
-            type="date"
-            value={startDate}
-            onChange={(e) => {
-              const next = e.target.value;
-              setTouchedDates(true);
-              setStartDate(next);
-              suggestFromSchedule(clientSchedule, next);
-            }}
-            required
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label>
-            Hora início <span className="text-xs text-muted-foreground">(opcional)</span>
-          </Label>
-          <Input
-            type="time"
-            value={startTime}
-            onChange={(e) => {
-              setTouchedTimes(true);
-              setSchedulePrompt([]);
-              setStartTime(e.target.value);
-            }}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Data fim</Label>
-          <Input
-            type="date"
-            value={endDate}
-            onChange={(e) => {
-              setTouchedDates(true);
-              setEndDate(e.target.value);
-            }}
-            required
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label>
-            Hora fim <span className="text-xs text-muted-foreground">(opcional)</span>
-          </Label>
-          <Input
-            type="time"
-            value={endTime}
-            onChange={(e) => {
-              setManualEndOverride(true);
-              setTouchedTimes(true);
-              setSchedulePrompt([]);
-              setEndTime(e.target.value);
-            }}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Tolerância de ausência (min)</Label>
-          <Input
-            type="number"
-            min={0}
-            max={1440}
-            value={graceMinutes}
-            onChange={(e) => setGraceMinutes(Number(e.target.value) || 0)}
-          />
-        </div>
-        <div className="space-y-1.5 col-span-2">
-          <Label>Modo de folha de ponto</Label>
-          <Select
-            value={punchMode || "default"}
-            onValueChange={(v) => setPunchMode(v === "default" ? "" : (v as PunchMode))}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="default">Padrão da empresa</SelectItem>
-              <SelectItem value="automatico">{PUNCH_MODE_LABELS.automatico}</SelectItem>
-              <SelectItem value="manual">{PUNCH_MODE_LABELS.manual}</SelectItem>
-              <SelectItem value="ambos">{PUNCH_MODE_LABELS.ambos}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      {!initial && (
-        <div ref={recurrenceBlockRef} data-testid="recurrence-block">
-          <RecurrenceForm
-            value={recurrence}
-            onChange={handleRecurrenceChange}
-            timingMode={timingMode}
-            summary={!initial && recurrence.enabled && selectedSchedule?.label ? scheduleSlotSummary(selectedSchedule, t) : null}
-          />
-        </div>
-      )}
-    </form>
-    {documentsSlot && <div className="border-t border-border pt-4">{documentsSlot}</div>}
-    </ModalBody>
-    <ModalFooter>
-      <Button type="button" variant="outline" disabled={loading} onClick={onCancel}>
-        Cancelar
-      </Button>
-      <Button type="submit" form={formId} disabled={loading}>
-        {loading ? "Salvando..." : initial ? "Salvar alterações" : "Criar tarefa"}
-      </Button>
-    </ModalFooter>
-    <AlertDialog
-      open={!!groupSchedulePrompt}
-      onOpenChange={(open) => {
-        if (!open && groupSchedulePrompt) {
-          groupSchedulePrompt.resolve(null);
-          setGroupSchedulePrompt(null);
-        }
-      }}
-    >
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{tt("Novo horário da tarefa de grupo")}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {tt("Aplicar o novo horário aos {{count}} colegas desta mesma ocorrência?", {
-              count: groupSchedulePrompt?.count ?? 0,
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5 col-span-2">
+              <Label>Atribuir a</Label>
+              {
+                <>
+                  <Label htmlFor="task-assignee-search">Nome do funcionário</Label>
+                  <div className="relative">
+                    <Search
+                      className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                      aria-hidden
+                    />
+                    <Input
+                      id="task-assignee-search"
+                      value={assigneeQuery}
+                      onChange={(e) => setAssigneeQuery(e.target.value)}
+                      placeholder="Pesquisar funcionário"
+                      aria-label="Pesquisar funcionário"
+                      className="h-9 pl-8"
+                    />
+                  </div>
+                  <div className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-border p-2">
+                    {members.length === 0 && (
+                      <p className="px-1 py-2 text-xs text-muted-foreground">Nenhum funcionário disponível.</p>
+                    )}
+                    {filteredAssignees.length === 0 && members.length > 0 && (
+                      <p className="px-1 py-2 text-xs text-muted-foreground">Nenhum funcionário encontrado.</p>
+                    )}
+                    {filteredAssignees.map((m) => {
+                      const checked = assignees.includes(m.id);
+                      return (
+                        <label
+                          key={m.id}
+                          className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent"
+                        >
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 accent-primary"
+                            checked={checked}
+                            onChange={() => toggleAssignee(m.id)}
+                          />
+                          <span className="truncate" title={taskMemberName(members, m.id, "Funcionário")}>
+                            {taskMemberName(members, m.id, "Funcionário")}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Os funcionários do cadastro do cliente vêm apenas como sugestão: pode remover, trocar ou acrescentar
+                    livremente sem alterar o cadastro do cliente. Cada responsável recebe a sua própria tarefa, com
+                    estado, ponto, recusa e conclusão independentes — a ação de um não altera a do outro.
+                  </p>
+                </>
+              }
+            </div>
+            <div className="space-y-1.5">
+              <Label>Data início</Label>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setTouchedDates(true);
+                  setStartDate(next);
+                  suggestFromSchedule(clientSchedule, next);
+                }}
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>
+                Hora início <span className="text-xs text-muted-foreground">(opcional)</span>
+              </Label>
+              <Input
+                type="time"
+                value={startTime}
+                onChange={(e) => {
+                  setTouchedTimes(true);
+                  setSchedulePrompt([]);
+                  setStartTime(e.target.value);
+                }}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Data fim</Label>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => {
+                  setTouchedDates(true);
+                  setEndDate(e.target.value);
+                }}
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>
+                Hora fim <span className="text-xs text-muted-foreground">(opcional)</span>
+              </Label>
+              <Input
+                type="time"
+                value={endTime}
+                onChange={(e) => {
+                  setManualEndOverride(true);
+                  setTouchedTimes(true);
+                  setSchedulePrompt([]);
+                  setEndTime(e.target.value);
+                }}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Tolerância de ausência (min)</Label>
+              <Input
+                type="number"
+                min={0}
+                max={1440}
+                value={graceMinutes}
+                onChange={(e) => setGraceMinutes(Number(e.target.value) || 0)}
+              />
+            </div>
+            <div className="space-y-1.5 col-span-2">
+              <Label>Modo de folha de ponto</Label>
+              <Select
+                value={punchMode || "default"}
+                onValueChange={(v) => setPunchMode(v === "default" ? "" : (v as PunchMode))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Padrão da empresa</SelectItem>
+                  <SelectItem value="automatico">{PUNCH_MODE_LABELS.automatico}</SelectItem>
+                  <SelectItem value="manual">{PUNCH_MODE_LABELS.manual}</SelectItem>
+                  <SelectItem value="ambos">{PUNCH_MODE_LABELS.ambos}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          {!initial && (
+            <div ref={recurrenceBlockRef} data-testid="recurrence-block">
+              <RecurrenceForm
+                value={recurrence}
+                onChange={handleRecurrenceChange}
+                timingMode={timingMode}
+                summary={
+                  !initial && recurrence.enabled && selectedSchedule?.label
+                    ? scheduleSlotSummary(selectedSchedule, t)
+                    : null
+                }
+              />
+            </div>
+          )}
+        </form>
+        {documentsSlot && <div className="border-t border-border pt-4">{documentsSlot}</div>}
+      </ModalBody>
+      <ModalFooter>
+        <Button type="button" variant="outline" disabled={loading} onClick={onCancel}>
+          Cancelar
+        </Button>
+        <Button type="submit" form={formId} disabled={loading}>
+          {loading ? "Salvando..." : initial ? "Salvar alterações" : "Criar tarefa"}
+        </Button>
+      </ModalFooter>
+      <AlertDialog
+        open={!!groupSchedulePrompt}
+        onOpenChange={(open) => {
+          if (!open && groupSchedulePrompt) {
+            groupSchedulePrompt.resolve(null);
+            setGroupSchedulePrompt(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{tt("Novo horário da tarefa de grupo")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {tt("Aplicar o novo horário aos {{count}} colegas desta mesma ocorrência?", {
+                count: groupSchedulePrompt?.count ?? 0,
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{tt("Cancelar")}</AlertDialogCancel>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                groupSchedulePrompt?.resolve("mine");
+                setGroupSchedulePrompt(null);
+              }}
+            >
+              {tt("Só a minha")}
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                groupSchedulePrompt?.resolve("all");
+                setGroupSchedulePrompt(null);
+              }}
+            >
+              {tt("Sim, a todos")}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog
+        open={scheduleConflicts.length > 0}
+        onOpenChange={(open) => {
+          if (!open) {
+            setScheduleConflicts([]);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-warning-foreground">
+              <AlertTriangle className="h-5 w-5" /> Atenção: sobreposição de tarefas
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Uma ou mais pessoas selecionadas já possuem tarefas neste período. A criação continua disponível.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="max-h-72 space-y-3 overflow-y-auto rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+            {assignees.map((assigneeId) => {
+              const employeeConflicts = scheduleConflicts.filter((conflict) => conflict.assignee_id === assigneeId);
+              const member = members.find((m) => m.id === assigneeId);
+              const employee = member?.full_name?.trim() || member?.email?.trim() || "Funcionário";
+              return (
+                <div key={assigneeId} className="space-y-2 rounded-md border border-border/70 bg-background/70 p-3">
+                  <p className="font-semibold text-foreground">
+                    {employeeConflicts.length > 0 ? "⚠" : "✓"} {employee}
+                  </p>
+                  {employeeConflicts.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Disponível neste horário</p>
+                  ) : (
+                    employeeConflicts.map((conflict, index) => (
+                      <div
+                        key={`${conflict.conflicting_task_id}-${conflict.proposed_start}-${index}`}
+                        className="space-y-1"
+                      >
+                        <p className="text-muted-foreground">
+                          Tarefa existente:{" "}
+                          <span className="font-medium text-foreground">
+                            {conflict.conflicting_client_name || conflict.conflicting_title}
+                          </span>
+                        </p>
+                        <p className="text-muted-foreground">
+                          {formatWallDate(conflict.conflicting_start)} · {formatWallTime(conflict.conflicting_start)} →{" "}
+                          {formatWallDate(conflict.conflicting_end) !== formatWallDate(conflict.conflicting_start)
+                            ? `${formatWallDate(conflict.conflicting_end)} · `
+                            : ""}
+                          {formatWallTime(conflict.conflicting_end)}
+                        </p>
+                        <p className="text-muted-foreground">
+                          Nova tarefa: {formatWallDate(conflict.proposed_start)} ·{" "}
+                          {formatWallTime(conflict.proposed_start)} → {formatWallTime(conflict.proposed_end)}
+                        </p>
+                        <p className="font-medium text-warning-foreground">
+                          Conflito: {formatWallTime(conflict.overlap_start)} → {formatWallTime(conflict.overlap_end)}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              );
             })}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>{tt("Cancelar")}</AlertDialogCancel>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              groupSchedulePrompt?.resolve("mine");
-              setGroupSchedulePrompt(null);
-            }}
-          >
-            {tt("Só a minha")}
-          </Button>
-          <Button
-            type="button"
-            onClick={() => {
-              groupSchedulePrompt?.resolve("all");
-              setGroupSchedulePrompt(null);
-            }}
-          >
-            {tt("Sim, a todos")}
-          </Button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-    <AlertDialog
-      open={scheduleConflicts.length > 0}
-      onOpenChange={(open) => {
-        if (!open) {
-          setScheduleConflicts([]);
-        }
-      }}
-    >
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2 text-warning-foreground">
-            <AlertTriangle className="h-5 w-5" /> Atenção: sobreposição de tarefas
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            Uma ou mais pessoas selecionadas já possuem tarefas neste período. A criação continua disponível.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <div className="max-h-72 space-y-3 overflow-y-auto rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
-          {assignees.map((assigneeId) => {
-            const employeeConflicts = scheduleConflicts.filter((conflict) => conflict.assignee_id === assigneeId);
-            const member = members.find((m) => m.id === assigneeId);
-            const employee = member?.full_name?.trim() || member?.email?.trim() || "Funcionário";
-            return (
-              <div key={assigneeId} className="space-y-2 rounded-md border border-border/70 bg-background/70 p-3">
-                <p className="font-semibold text-foreground">
-                  {employeeConflicts.length > 0 ? "⚠" : "✓"} {employee}
-                </p>
-                {employeeConflicts.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Disponível neste horário</p>
-                ) : (
-                  employeeConflicts.map((conflict, index) => (
-                    <div key={`${conflict.conflicting_task_id}-${conflict.proposed_start}-${index}`} className="space-y-1">
-                      <p className="text-muted-foreground">
-                        Tarefa existente: <span className="font-medium text-foreground">{conflict.conflicting_client_name || conflict.conflicting_title}</span>
-                      </p>
-                      <p className="text-muted-foreground">
-                        {formatWallDate(conflict.conflicting_start)} · {formatWallTime(conflict.conflicting_start)} →{" "}
-                        {formatWallDate(conflict.conflicting_end) !== formatWallDate(conflict.conflicting_start)
-                          ? `${formatWallDate(conflict.conflicting_end)} · `
-                          : ""}
-                        {formatWallTime(conflict.conflicting_end)}
-                      </p>
-                      <p className="text-muted-foreground">
-                        Nova tarefa: {formatWallDate(conflict.proposed_start)} · {formatWallTime(conflict.proposed_start)} → {formatWallTime(conflict.proposed_end)}
-                      </p>
-                      <p className="font-medium text-warning-foreground">
-                        Conflito: {formatWallTime(conflict.overlap_start)} → {formatWallTime(conflict.overlap_end)}
-                      </p>
-                    </div>
-                  ))
-                )}
-              </div>
-            );
-          })}
-        </div>
-        <AlertDialogFooter>
-          <AlertDialogCancel onClick={() => setScheduleConflicts([])}>Voltar e ajustar</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={(event) => {
-              event.preventDefault();
-              confirmedConflictsRef.current = true;
-              setScheduleConflicts([]);
-              (document.getElementById(formId) as HTMLFormElement | null)?.requestSubmit();
-            }}
-          >
-            Criar mesmo assim
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-    <AlertDialog
-      open={scheduleCheckError !== null}
-      onOpenChange={(open) => {
-        if (!open) setScheduleCheckError(null);
-      }}
-    >
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Falha técnica na verificação</AlertDialogTitle>
-          <AlertDialogDescription>
-            A tarefa não foi criada. Corrija a configuração do banco e tente novamente.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded-md border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">
-          {scheduleCheckError}
-        </pre>
-        <AlertDialogFooter>
-          <AlertDialogAction onClick={() => setScheduleCheckError(null)}>Voltar ao formulário</AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setScheduleConflicts([])}>Voltar e ajustar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault();
+                confirmedConflictsRef.current = true;
+                setScheduleConflicts([]);
+                (document.getElementById(formId) as HTMLFormElement | null)?.requestSubmit();
+              }}
+            >
+              Criar mesmo assim
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog
+        open={scheduleCheckError !== null}
+        onOpenChange={(open) => {
+          if (!open) setScheduleCheckError(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Falha técnica na verificação</AlertDialogTitle>
+            <AlertDialogDescription>
+              A tarefa não foi criada. Corrija a configuração do banco e tente novamente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded-md border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">
+            {scheduleCheckError}
+          </pre>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setScheduleCheckError(null)}>Voltar ao formulário</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
@@ -4248,7 +4388,9 @@ function CompletionNoteBlock({
   const timestamp = completedAt ?? note.created_at;
 
   return (
-    <div className={`${compact ? "mt-2 px-2 py-1.5 text-[11px]" : "mt-2 px-3 py-2 text-xs"} rounded-md border border-success/30 bg-success/10`}>
+    <div
+      className={`${compact ? "mt-2 px-2 py-1.5 text-[11px]" : "mt-2 px-3 py-2 text-xs"} rounded-md border border-success/30 bg-success/10`}
+    >
       <div className="font-semibold uppercase tracking-wide text-success-foreground">
         {byEmployee ? "Concluída pelo funcionário" : "Observação da conclusão"}
       </div>
