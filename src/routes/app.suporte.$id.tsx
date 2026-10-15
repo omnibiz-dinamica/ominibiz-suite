@@ -41,14 +41,12 @@ import {
   isClosedTicketStatus,
   ARCHIVABLE_STATUSES,
   AWAITING_VALIDATION_STATUSES,
-
   type SupportTicketPriority,
   type SupportTicketStatus,
 } from "@/lib/support/constants";
 import {
   claimTicket,
   postMessage,
-  
   reopenTicketWithMessage,
   signedAttachmentUrl,
   updatePriority,
@@ -64,11 +62,7 @@ import {
 } from "@/lib/support/destinations";
 import { invalidateSupportTicket } from "@/lib/cache/support";
 import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
-import {
-  canArchiveTicketNow,
-  canClaimTicket,
-  canCloseTicketNow,
-} from "@/lib/support/close-permission";
+import { canArchiveTicketNow, canClaimTicket, canCloseTicketNow } from "@/lib/support/close-permission";
 
 export const Route = createFileRoute("/app/suporte/$id")({
   component: () => (
@@ -217,7 +211,6 @@ function SupportDetailPage() {
     replyRef.current?.focus();
   };
 
-
   const ticketQ = useQuery<TicketDetail | null>({
     queryKey: ["support-ticket", id],
     queryFn: async () => {
@@ -245,7 +238,6 @@ function SupportDetailPage() {
     onError: (err: unknown) =>
       toast.error("Falha ao reencaminhar: " + (err instanceof Error ? err.message : String(err))),
   });
-
 
   const messagesQ = useQuery<MessageRow[]>({
     queryKey: ["support-ticket-messages", id],
@@ -309,10 +301,7 @@ function SupportDetailPage() {
       isSuperAdmin,
       isCompanyManager:
         !!ticket &&
-        roles.some(
-          (r) =>
-            (r.role === "manager" || r.role === "owner") && r.company_id === ticket.company_id,
-        ),
+        roles.some((r) => (r.role === "manager" || r.role === "owner") && r.company_id === ticket.company_id),
       isRequester: !!ticket && !!user && ticket.requester_user_id === user.id,
       destinationCode: ticket?.destination_code ?? null,
       status: ticket?.status ?? "",
@@ -320,9 +309,7 @@ function SupportDetailPage() {
     [isSuperAdmin, roles, ticket, user],
   );
   const canCloseTicket = ticket ? canCloseTicketNow(closeCtx) : false;
-  const canArchiveTicket = ticket
-    ? canArchiveTicketNow({ ...closeCtx, archivedAt: ticket.archived_at })
-    : false;
+  const canArchiveTicket = ticket ? canArchiveTicketNow({ ...closeCtx, archivedAt: ticket.archived_at }) : false;
   const canClaim = ticket
     ? canClaimTicket({
         isSuperAdmin,
@@ -342,15 +329,19 @@ function SupportDetailPage() {
     () => destinations.find((d) => d.code === (ticket?.destination_code ?? "")) ?? null,
     [destinations, ticket?.destination_code],
   );
+  /**
+   * Secretária da MESMA empresa atende a fila da Secretaria (espelha o 1.º ramo de
+   * support_has_destination_access: target_role = secretary). Só Status/Prioridade;
+   * Assumir e Arquivar continuam com as regras de gestor/super admin.
+   */
+  const isCompanySecretary =
+    !!ticket && roles.some((r) => r.role === "secretary" && r.company_id === ticket.company_id);
   const canServeTicket =
-    !!ticket && !ticketDestination?.is_technical && closeCtx.isCompanyManager;
+    !!ticket &&
+    !ticketDestination?.is_technical &&
+    (closeCtx.isCompanyManager || (isCompanySecretary && ticket.destination_code === "secretary"));
   /** Estados permitidos aos papéis de fila pela RPC update_support_ticket_status. */
-  const QUEUE_STATUS_LIST: SupportTicketStatus[] = [
-    "aberto",
-    "em_analise",
-    "aguardando_cliente",
-    "resolvido",
-  ];
+  const QUEUE_STATUS_LIST: SupportTicketStatus[] = ["aberto", "em_analise", "aguardando_cliente", "resolvido"];
 
   /** Papéis da empresa (para saber se o solicitante é Funcionário e listar funcionários ativos). */
   const rolesQ = useQuery<{ user_id: string; role: string }[]>({
@@ -471,7 +462,6 @@ function SupportDetailPage() {
     onError: (e) => toast.error("Erro: " + (e as Error).message),
   });
 
-
   const uploadMut = useMutation({
     mutationFn: async (file: File) => {
       const t = ticketQ.data;
@@ -555,7 +545,6 @@ function SupportDetailPage() {
   const isArchived = !!t.archived_at;
   const awaitingValidation = !isSuperAdmin && AWAITING_VALIDATION_STATUSES.includes(t.status);
 
-
   // Timeline unificada: eventos + mensagens (mensagens internas apenas para SA).
   const timeline = [
     ...events.map((e) => ({
@@ -604,10 +593,7 @@ function SupportDetailPage() {
             <span className="text-muted-foreground">
               {TICKET_TYPE_LABEL[t.type as keyof typeof TICKET_TYPE_LABEL] ?? t.type}
             </span>
-            <span
-              className="rounded bg-primary/10 px-1.5 py-0.5 text-primary"
-              title="Fila de destino do ticket"
-            >
+            <span className="rounded bg-primary/10 px-1.5 py-0.5 text-primary" title="Fila de destino do ticket">
               {(DESTINATION_EMOJI[t.destination_code ?? ""] ?? "→") + " "}
               {destinationLabel(t.destination_code, destinations)}
             </span>
@@ -975,12 +961,7 @@ function SupportDetailPage() {
 
         {/* Parte 3A — assumir o ticket define o responsável e assume o aviso da fila. */}
         {canClaim && (
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => claimMut.mutate()}
-            disabled={claimMut.isPending}
-          >
+          <Button variant="outline" className="w-full" onClick={() => claimMut.mutate()} disabled={claimMut.isPending}>
             {claimMut.isPending ? (
               <Loader2 className="mr-1 h-4 w-4 animate-spin" />
             ) : (
@@ -992,8 +973,8 @@ function SupportDetailPage() {
 
         {isArchived && (
           <p className="rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
-            Ticket arquivado em {new Date(t.archived_at as string).toLocaleString("pt-PT")}. O status
-            continua «{TICKET_STATUS_LABEL[t.status] ?? t.status}».
+            Ticket arquivado em {new Date(t.archived_at as string).toLocaleString("pt-PT")}. O status continua «
+            {TICKET_STATUS_LABEL[t.status] ?? t.status}».
           </p>
         )}
 
@@ -1033,7 +1014,6 @@ function SupportDetailPage() {
         )}
       </aside>
 
-
       <ReopenTicketDialog
         open={reopenOpen}
         onOpenChange={setReopenOpen}
@@ -1052,7 +1032,6 @@ function SupportDetailPage() {
         ticket={{ id: t.id, ticket_number: t.ticket_number, title: t.title, status: t.status }}
         onDone={() => invalidateSupportTicket(qc, id)}
       />
-
     </div>
   );
 }
