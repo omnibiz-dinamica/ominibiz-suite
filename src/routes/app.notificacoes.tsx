@@ -480,6 +480,19 @@ function NotificationsPage() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  // Atualização imediata da lista e do sino; o refetch do servidor confirma em seguida.
+  const notificationsKey = ["notifications", user?.id, currentCompanyId];
+  const patchNotificationRow = (id: string, patch: (row: NotificationRow) => NotificationRow) =>
+    qc.setQueryData<NotificationRow[]>(notificationsKey, (old) =>
+      old ? old.map((row) => (row.id === id ? patch(row) : row)) : old,
+    );
+  const decrementUnreadBadge = () =>
+    qc.setQueriesData<number>({ queryKey: ["notifications-unread-count"] }, (old) =>
+      typeof old === "number" ? Math.max(0, old - 1) : old,
+    );
+  const isActiveUnread = (row?: NotificationRow) =>
+    !!row && !row.read_at && row.state !== "resolvida" && row.state !== "arquivada";
+
   const markRead = useMutation({
     mutationFn: async (id: string | null) => {
       const { error } = await supabase.rpc(
@@ -488,8 +501,19 @@ function NotificationsPage() {
       );
       if (error) throw error;
     },
+    onMutate: async (id: string | null) => {
+      if (!id) return;
+      await qc.cancelQueries({ queryKey: notificationsKey });
+      const target = qc.getQueryData<NotificationRow[]>(notificationsKey)?.find((row) => row.id === id);
+      if (!target || target.read_at) return;
+      patchNotificationRow(id, (row) => ({ ...row, read_at: new Date().toISOString() }));
+      if (isActiveUnread(target)) decrementUnreadBadge();
+    },
     onSuccess: () => invalidateNotificationsCache(qc),
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => {
+      invalidateNotificationsCache(qc);
+      toast.error(e.message);
+    },
   });
 
   /** ADR-043 — muda o estado de gestão da notificação. */
@@ -527,12 +551,24 @@ function NotificationsPage() {
       if (error) throw error;
       return Number(data ?? 0);
     },
+    onMutate: async (notificationId: string) => {
+      await qc.cancelQueries({ queryKey: notificationsKey });
+      const target = qc.getQueryData<NotificationRow[]>(notificationsKey)?.find((row) => row.id === notificationId);
+      patchNotificationRow(notificationId, (row) => ({
+        ...row,
+        state: "resolvida",
+        read_at: row.read_at ?? new Date().toISOString(),
+      }));
+      if (isActiveUnread(target)) decrementUnreadBadge();
+    },
     onSuccess: (count) => {
       invalidateNotificationsCache(qc);
       toast.success(count > 1 ? "Resolvida para toda a equipa de gestão" : "Notificação resolvida");
     },
-    onError: (e: Error) =>
-      toast.error(e.message.includes("NOT_AUTHORIZED") ? "Sem permissão para resolver esta notificação." : e.message),
+    onError: (e: Error) => {
+      invalidateNotificationsCache(qc);
+      toast.error(e.message.includes("NOT_AUTHORIZED") ? "Sem permissão para resolver esta notificação." : e.message);
+    },
   });
 
   const transition = useMutation({
@@ -549,7 +585,13 @@ function NotificationsPage() {
   const counts = useMemo(() => {
     const map = {} as Record<TabKey, number>;
     for (const t of TABS) {
-      map[t.key] = t.states ? rows.filter((n) => t.states!.includes(n.state ?? "nova")).length : rows.length;
+      // Caixa de entrada mostra só as NÃO LIDAS; as outras abas mantêm a contagem por estado.
+      map[t.key] =
+        t.key === "ativas"
+          ? rows.filter((n) => (n.state ?? "nova") === "nova" && !n.read_at).length
+          : t.states
+            ? rows.filter((n) => t.states!.includes(n.state ?? "nova")).length
+            : rows.length;
     }
     return map;
   }, [rows]);
@@ -722,6 +764,11 @@ function NotificationsPage() {
             return (
               <li
                 key={n.id}
+                onClick={(e) => {
+                  // Clicar no cartão marca como lida (botões e links mantêm a sua própria ação).
+                  if (n.read_at || (e.target as HTMLElement).closest("button, a, input, textarea, select")) return;
+                  markRead.mutate(n.id);
+                }}
                 className={
                   "flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between " +
                   (n.read_at ? "bg-background" : "bg-accent/30")
@@ -918,7 +965,7 @@ function NotificationsPage() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      disabled={setState.isPending}
+                      disabled={resolveGroup.isPending || setState.isPending}
                       onClick={() => resolveGroup.mutate(n.id)}
                     >
                       <CheckCircle2 className="mr-1.5 h-4 w-4" /> Resolvida
