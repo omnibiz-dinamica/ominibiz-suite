@@ -6,19 +6,12 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-import {
-  currentTaskCancellation,
-  currentTaskRefusal,
-  formatRequestedTime,
-} from "../src/lib/task-refusal-view.ts";
+import { currentTaskCancellation, currentTaskRefusal, formatRequestedTime } from "../src/lib/task-refusal-view.ts";
 
 const tasksLib = readFileSync(new URL("../src/lib/tasks.ts", import.meta.url), "utf8");
 const tasksPage = readFileSync(new URL("../src/routes/app.tarefas.tsx", import.meta.url), "utf8");
 const punchPage = readFileSync(new URL("../src/routes/app.ponto.tsx", import.meta.url), "utf8");
-const refuseDialog = readFileSync(
-  new URL("../src/components/tasks/RefuseTaskDialog.tsx", import.meta.url),
-  "utf8",
-);
+const refuseDialog = readFileSync(new URL("../src/components/tasks/RefuseTaskDialog.tsx", import.meta.url), "utf8");
 
 test("only managers may cancel; the assignee may only refuse", () => {
   assert.match(tasksLib, /export function canCancelTask\([\s\S]{0,220}return ctx\.isManager;/);
@@ -35,7 +28,10 @@ test("soft-deleted tasks never reach the operational lists", () => {
 test("the refusal dialog treats date/time and suggestion as a request only", () => {
   assert.match(refuseDialog, /a tarefa não é movida nem reagendada automaticamente/);
   assert.match(refuseDialog, /Só o gestor pode reatribuir a tarefa/);
-  assert.match(refuseDialog, /suggestedEmployeeName:\s*isScheduleChange && needsReassignment/);
+  assert.match(refuseDialog, /suggestedEmployeeName:\s*isReassign/);
+  // SUP-170 — "Atribuir a outro colega" é uma opção própria, com nome obrigatório e sem exigir data.
+  assert.match(refuseDialog, /isReassign && suggested\.trim\(\)\.length < 2/);
+  assert.match(refuseDialog, /Nome do colega sugerido \*/);
 });
 
 test("requested time and suggested employee are surfaced from the task snapshot", () => {
