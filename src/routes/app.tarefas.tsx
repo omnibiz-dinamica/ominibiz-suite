@@ -496,6 +496,34 @@ function TasksPage() {
    * responsáveis do grupo, em vez de apenas "em equipe". Este é o único lugar
    * que continua abreviado, por ser um selo compacto dentro do cartão.
    */
+  // Funcionário só lê a própria linha da tarefa (RLS). Os colegas do mesmo grupo vêm de uma
+  // RPC somente leitura que confirma que o usuário pertence ao grupo e à mesma empresa.
+  const myTaskGroupIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of tasks ?? []) {
+      const gid = (t as { task_group_id?: string | null }).task_group_id;
+      if (gid) set.add(gid);
+    }
+    return Array.from(set).sort();
+  }, [tasks]);
+  const { data: groupColleagues } = useQuery({
+    queryKey: ["my-task-group-colleagues", user?.id, currentCompanyId, myTaskGroupIds.join(",")],
+    enabled: !!user && !isManager && myTaskGroupIds.length > 0,
+    staleTime: 60_000,
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.rpc as any)("my_task_group_colleagues", {
+        _group_ids: myTaskGroupIds,
+      });
+      if (error) {
+        // Sem a RPC (ou em erro) o selo mantém o comportamento anterior.
+        console.warn("[my-task-group-colleagues] indisponível:", error.message);
+        return [];
+      }
+      return (data ?? []) as { task_group_id: string; user_id: string; full_name: string | null }[];
+    },
+  });
+
   const groupMemberNames = useMemo(() => {
     const byGroup = new Map<string, string[]>();
     for (const task of tasks ?? []) {
@@ -510,8 +538,22 @@ function TasksPage() {
     for (const [groupId, names] of byGroup) {
       labels.set(groupId, names.sort((a, b) => a.localeCompare(b, "pt-BR")).join(", "));
     }
+    // Funcionário: mostra quem MAIS está na mesma tarefa em equipe ("Com: Ana, Bruno").
+    if (!isManager && groupColleagues?.length) {
+      const others = new Map<string, string[]>();
+      for (const row of groupColleagues) {
+        if (!row.task_group_id || !row.user_id || row.user_id === user?.id) continue;
+        const name = firstNameOf(row.full_name) || taskMemberFirstName(members ?? [], row.user_id);
+        const list = others.get(row.task_group_id) ?? [];
+        if (!list.includes(name)) list.push(name);
+        others.set(row.task_group_id, list);
+      }
+      for (const [groupId, names] of others) {
+        labels.set(groupId, `Com: ${names.sort((a, b) => a.localeCompare(b, "pt-BR")).join(", ")}`);
+      }
+    }
     return labels as ReadonlyMap<string, string>;
-  }, [tasks, members]);
+  }, [tasks, members, isManager, groupColleagues, user?.id]);
 
   /**
    * SUP-2026-000074 — pontos ainda em aberto (esquecimento de saída).
