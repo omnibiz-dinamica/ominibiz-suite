@@ -534,23 +534,20 @@ function TasksPage() {
       if (!list.includes(name)) list.push(name);
       byGroup.set(groupId, list);
     }
+    // Funcionário: soma os colegas da mesma tarefa em equipe (RPC só devolve grupos em que
+    // ele próprio está), para o selo mostrar todos os responsáveis, tal como o gestor vê.
+    if (!isManager && groupColleagues?.length) {
+      for (const row of groupColleagues) {
+        if (!row.task_group_id || !row.user_id) continue;
+        const name = firstNameOf(row.full_name) || taskMemberFirstName(members ?? [], row.user_id);
+        const list = byGroup.get(row.task_group_id) ?? [];
+        if (!list.includes(name)) list.push(name);
+        byGroup.set(row.task_group_id, list);
+      }
+    }
     const labels = new Map<string, string>();
     for (const [groupId, names] of byGroup) {
       labels.set(groupId, names.sort((a, b) => a.localeCompare(b, "pt-BR")).join(", "));
-    }
-    // Funcionário: mostra quem MAIS está na mesma tarefa em equipe ("Com: Ana, Bruno").
-    if (!isManager && groupColleagues?.length) {
-      const others = new Map<string, string[]>();
-      for (const row of groupColleagues) {
-        if (!row.task_group_id || !row.user_id || row.user_id === user?.id) continue;
-        const name = firstNameOf(row.full_name) || taskMemberFirstName(members ?? [], row.user_id);
-        const list = others.get(row.task_group_id) ?? [];
-        if (!list.includes(name)) list.push(name);
-        others.set(row.task_group_id, list);
-      }
-      for (const [groupId, names] of others) {
-        labels.set(groupId, `Com: ${names.sort((a, b) => a.localeCompare(b, "pt-BR")).join(", ")}`);
-      }
     }
     return labels as ReadonlyMap<string, string>;
   }, [tasks, members, isManager, groupColleagues, user?.id]);
@@ -2681,6 +2678,7 @@ function TaskRowItem({
   completionNotes,
   refusalsByTask,
   memberNames,
+  groupMemberNames,
   selectedTaskIds,
   onToggleTaskSelection,
   onNoStartReason,
@@ -2737,6 +2735,15 @@ function TaskRowItem({
                 title={AUTO_RECURRENCE_BADGE_TITLE}
               >
                 <Repeat className="h-3 w-3" /> {AUTO_RECURRENCE_BADGE_LABEL}
+              </span>
+            )}
+            {t.task_group_id && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+                title="Tarefa criada em equipe: cada responsável tem a sua própria tarefa, com ponto e conclusão independentes."
+              >
+                <Users className="h-3 w-3" />
+                <span className="truncate">{groupMemberNames?.get(t.task_group_id) ?? "Em equipe"}</span>
               </span>
             )}
             <ScheduleNameBadge name={t.schedule_name} />
