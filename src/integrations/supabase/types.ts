@@ -4853,6 +4853,14 @@ export type Database = {
         Args: { _message: string; _ticket_id: string }
         Returns: undefined
       }
+      my_task_group_colleagues: {
+        Args: { _group_ids: string[] }
+        Returns: {
+          full_name: string
+          task_group_id: string
+          user_id: string
+        }[]
+      }
       notification_mark_read: {
         Args: { _all?: boolean; _id?: string }
         Returns: number
