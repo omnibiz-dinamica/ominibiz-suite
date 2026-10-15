@@ -3,8 +3,8 @@
  *
  * O funcionário NUNCA cancela uma tarefa: recusa com motivo canónico.
  * "Alterar data / hora" é apenas uma SOLICITAÇÃO — não move a ocorrência nem
- * altera a série. "Necessita reatribuição" é informativo e pode indicar um
- * colega sugerido; a reatribuição continua sendo uma decisão do gestor.
+ * altera a série. "Atribuir a outro colega" (SUP-170) é uma opção própria com o
+ * nome do colega escrito livremente; a reatribuição continua a ser decisão do gestor.
  */
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, ModalBody, ModalFooter, ModalHeader, ModalSection } from "@/components/ui/dialog";
@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { XCircle } from "lucide-react";
 import { toast } from "sonner";
-import { REFUSAL_REASONS, SCHEDULE_CHANGE_REASON, type TaskRow } from "@/lib/tasks";
+import { REASSIGN_REASON, REFUSAL_REASONS, SCHEDULE_CHANGE_REASON, type TaskRow } from "@/lib/tasks";
 
 export type RefusalSubmitPayload = {
   reason: string;
@@ -59,12 +59,17 @@ export function RefuseTaskDialog({
 
   const isScheduleChange = reasonType === SCHEDULE_CHANGE_REASON;
   const isOther = reasonType === "Outro";
-  const reason = isOther ? freeText.trim() : reasonType;
+  const isReassign = reasonType === REASSIGN_REASON;
+  const reason = isOther ? freeText.trim() : isReassign ? `${REASSIGN_REASON}: ${suggested.trim()}` : reasonType;
 
   const submit = () => {
     if (!task) return;
     if (isOther && reason.length < 3) {
       toast.error("Descreva o motivo da recusa.");
+      return;
+    }
+    if (isReassign && suggested.trim().length < 2) {
+      toast.error("Indique o nome do colega sugerido.");
       return;
     }
     if (isScheduleChange && !requestedDate) {
@@ -76,7 +81,11 @@ export function RefuseTaskDialog({
       requestedDate: isScheduleChange ? requestedDate : undefined,
       requestedTime: isScheduleChange ? requestedTime || null : null,
       needsReassignment: isScheduleChange ? needsReassignment : undefined,
-      suggestedEmployeeName: isScheduleChange && needsReassignment ? suggested.trim() || null : null,
+      suggestedEmployeeName: isReassign
+        ? suggested.trim() || null
+        : isScheduleChange && needsReassignment
+          ? suggested.trim() || null
+          : null,
     });
   };
 
@@ -120,6 +129,22 @@ export function RefuseTaskDialog({
             </div>
           )}
 
+          {isReassign && (
+            <div className="space-y-1.5">
+              <Label htmlFor="task-refusal-colleague">Nome do colega sugerido *</Label>
+              <Input
+                id="task-refusal-colleague"
+                type="text"
+                value={suggested}
+                onChange={(event) => setSuggested(event.target.value)}
+                placeholder="Escreva o nome do colega"
+              />
+              <p className="text-xs text-muted-foreground">
+                A sugestão é informativa. Só o gestor pode reatribuir a tarefa.
+              </p>
+            </div>
+          )}
+
           {isScheduleChange && (
             <div className="space-y-3 rounded-md border border-primary/30 bg-primary/5 p-3">
               <p className="text-xs text-muted-foreground">
@@ -146,30 +171,6 @@ export function RefuseTaskDialog({
                   />
                 </div>
               </div>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={needsReassignment}
-                  onChange={(event) => setNeedsReassignment(event.target.checked)}
-                  className="h-4 w-4 rounded border-border"
-                />
-                Necessita reatribuição para outro funcionário
-              </label>
-              {needsReassignment && (
-                <div className="space-y-1.5">
-                  <Label htmlFor="task-refusal-suggested">Funcionário sugerido (opcional)</Label>
-                  <Input
-                    id="task-refusal-suggested"
-                    type="text"
-                    value={suggested}
-                    onChange={(event) => setSuggested(event.target.value)}
-                    placeholder="Digite o nome do funcionário"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    A sugestão é informativa. Só o gestor pode reatribuir a tarefa.
-                  </p>
-                </div>
-              )}
             </div>
           )}
         </ModalBody>
