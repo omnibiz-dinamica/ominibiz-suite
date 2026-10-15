@@ -60,9 +60,7 @@ export function isAutoRecurrenceOccurrence(task: { recurrence_id: string | null 
 
 /** Título da notificação de nova tarefa — espelha a trigger tasks_notify_insert. */
 export function newTaskNotificationTitle(recurrenceId: string | null): string {
-  return recurrenceId == null
-    ? "Nova tarefa atribuída"
-    : "Tarefa gerada automaticamente pela recorrência";
+  return recurrenceId == null ? "Nova tarefa atribuída" : "Tarefa gerada automaticamente pela recorrência";
 }
 
 export interface TaskRow {
@@ -237,12 +235,7 @@ export const FREQUENCY_LABELS: Record<RecurrenceFrequency, string> = {
  *  • weekly_2x / weekly_3x = weekly + exatamente 2 ou 3 dias da semana.
  *  • monthly_pos = monthly + monthly_rule { position, weekday }.
  */
-export type RecurrenceUiFrequency =
-  | RecurrenceFrequency
-  | "biweekly"
-  | "monthly_pos"
-  | "weekly_2x"
-  | "weekly_3x";
+export type RecurrenceUiFrequency = RecurrenceFrequency | "biweekly" | "monthly_pos" | "weekly_2x" | "weekly_3x";
 
 export const UI_FREQUENCY_LABELS: Record<RecurrenceUiFrequency, string> = {
   daily: "Diariamente",
@@ -297,7 +290,6 @@ export function uiFrequencyToStored(f: RecurrenceUiFrequency): {
   return { frequency: f, intervalWeeks: 1 };
 }
 
-
 /** Converte o par persistido na opção exibida ao Gestor. */
 export function storedToUiFrequency(
   frequency: RecurrenceFrequency,
@@ -349,11 +341,14 @@ export function previewRecurrenceDates(input: RecurrencePreviewInput, count = 5)
   const out: Date[] = [];
   const cursor = new Date(start);
   for (let i = 0; i < 800 && out.length < count; i++) {
-    if (!isDateKeyWithinInclusiveRange(
-      `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}-${String(cursor.getDate()).padStart(2, "0")}`,
-      input.startDate,
-      input.endDate,
-    )) break;
+    if (
+      !isDateKeyWithinInclusiveRange(
+        `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}-${String(cursor.getDate()).padStart(2, "0")}`,
+        input.startDate,
+        input.endDate,
+      )
+    )
+      break;
     const dow = cursor.getDay();
     let match = false;
     if (input.frequency === "daily") {
@@ -395,7 +390,10 @@ export function describeRecurrence(input: RecurrencePreviewInput): string {
       ? `Toda semana: ${input.weekdays.map((d) => WEEKDAY_FULL[d]).join(", ")}.`
       : "Selecione os dias da semana.";
   if (ui === "biweekly")
-    return `A cada 2 semanas: ${(input.weekdays.length ? input.weekdays : [toDate(input.startDate || new Date().toISOString().slice(0, 10)).getDay()])
+    return `A cada 2 semanas: ${(input.weekdays.length
+      ? input.weekdays
+      : [toDate(input.startDate || new Date().toISOString().slice(0, 10)).getDay()]
+    )
       .map((d) => WEEKDAY_FULL[d])
       .join(", ")} (semana sim, semana não).`;
   if (ui === "monthly_pos")
@@ -471,7 +469,6 @@ export async function reassignFromRefusal(taskId: string, newUser: string): Prom
   if (error) throw error;
   return data as TaskRow;
 }
-
 
 export type EditableSeriesPayload = Partial<{
   title: string;
@@ -632,11 +629,7 @@ export function availableActions(
   // Uma ausencia automatica antiga pode estar persistida antes do prazo. Nesse
   // caso, trata-se como pendente/atrasada ate a migration normalizar a linha.
   const actionableStatus: TaskStatus | "atrasada" =
-    operationalStatus === "atrasada"
-      ? task.status === "autorizado"
-        ? "autorizado"
-        : "pendente"
-      : operationalStatus;
+    operationalStatus === "atrasada" ? (task.status === "autorizado" ? "autorizado" : "pendente") : operationalStatus;
   if (TERMINAL_STATUSES.includes(actionableStatus as TaskStatus)) return out;
 
   if (actionableStatus === "pendente" && ctx.isManager) out.push("autorizar");
@@ -662,7 +655,6 @@ export function availableActions(
   return out;
 }
 
-
 /**
  * ADR-044 — Registo formal de falta (SUP-2026-000073).
  *
@@ -685,10 +677,7 @@ export function canMarkAbsent(
 ): boolean {
   if (!t.assigned_to) return false;
   if (!ctx.isManager && t.assigned_to !== ctx.userId) return false;
-  return (
-    (t.status === "pendente" || t.status === "autorizado") &&
-    canBecomeAbsent(t)
-  );
+  return (t.status === "pendente" || t.status === "autorizado") && canBecomeAbsent(t);
 }
 
 export async function markTaskAbsent(taskId: string, reason: string, justified: boolean): Promise<TaskRow> {
@@ -710,7 +699,6 @@ export const ACTION_LABELS: Record<TaskAction, string> = {
   cancelar: "Cancelar",
   marcar_ausente: "Marcar falta",
 };
-
 
 /**
  * Executa uma transição via RPC central. Toda regra de negócio
@@ -805,11 +793,7 @@ export function canArchive(t: Pick<TaskRow, "status" | "archived_at">): boolean 
  * conjunto canónico de motivos; o que muda é apenas quem executa a ação.
  * "Alteração de programação" aparece como "Alterar data / hora" na interface.
  */
-export const CANCEL_REASONS = [
-  "Cliente cancelou",
-  "Alteração de programação",
-  "Outro",
-] as const;
+export const CANCEL_REASONS = ["Cliente cancelou", "Alteração de programação", "Outro"] as const;
 
 /**
  * ADR-062 — Motivos canónicos da recusa do funcionário. O valor gravado é o
@@ -819,10 +803,13 @@ export const CANCEL_REASONS = [
 export const REFUSAL_REASONS = [
   { value: "Cliente cancelou", label: "Cliente cancelou" },
   { value: "Alteração de programação", label: "Alterar data / hora" },
+  { value: "Atribuir a outro colega", label: "Atribuir a outro colega" },
   { value: "Outro", label: "Outro" },
 ] as const;
 
 export const SCHEDULE_CHANGE_REASON = "Alteração de programação";
+/** SUP-170 — sugestão de colega como opção própria de recusa (nome livre; só o gestor reatribui). */
+export const REASSIGN_REASON = "Atribuir a outro colega";
 
 export async function cancelTask(taskId: string, reason: string): Promise<TaskRow> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -867,10 +854,7 @@ export function canCancelTask(
 }
 
 /** O responsável recusa a própria tarefa enquanto ela não foi iniciada. */
-export function canRefuseTask(
-  t: Pick<TaskRow, "status" | "assigned_to">,
-  ctx: { userId: string },
-): boolean {
+export function canRefuseTask(t: Pick<TaskRow, "status" | "assigned_to">, ctx: { userId: string }): boolean {
   if (t.assigned_to !== ctx.userId) return false;
   return t.status === "pendente" || t.status === "autorizado";
 }
@@ -889,7 +873,6 @@ export function canArchiveBy(
   if (!canArchive(t)) return false;
   return ctx.isManager || t.assigned_to === ctx.userId;
 }
-
 
 /**
  * Processa ausências por evento (chamado no carregamento da tela
