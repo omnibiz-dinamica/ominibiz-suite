@@ -210,7 +210,8 @@ async function enrichLegacyCancellationNotifications(rows: NotificationRow[]): P
 }
 
 function supportTicketId(row: NotificationRow): string | null {
-  if (row.event !== "ticket_created" && row.event !== "ticket_message_added") return null;
+  // Todos os eventos de ticket (criado, mensagem, atualizado, reaberto, status, resolvido) abrem o ticket.
+  if (!row.event.startsWith("ticket_")) return null;
   const metadataId = row.metadata?.ticket_id;
   return typeof metadataId === "string" && metadataId.trim() ? metadataId : row.task_id;
 }
@@ -712,12 +713,19 @@ function NotificationsPage() {
                       <Button
                         size="sm"
                         disabled={claimVacation.isPending}
-                        onClick={() => claimVacation.mutate(item.id)}
+                        onClick={() => {
+                          claimVacation.mutate(item.id);
+                          nav({ to: "/app/ferias", search: { vacation: item.vacation_request_id } });
+                        }}
                       >
                         <Timer className="mr-1.5 h-4 w-4" /> Tratar
                       </Button>
                     )}
-                    <Button size="sm" variant="ghost" onClick={() => nav({ to: "/app/ferias" })}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => nav({ to: "/app/ferias", search: { vacation: item.vacation_request_id } })}
+                    >
                       <ExternalLink className="mr-1.5 h-4 w-4" /> Abrir
                     </Button>
                   </div>
@@ -951,7 +959,11 @@ function NotificationsPage() {
                       size="sm"
                       variant="ghost"
                       disabled={setState.isPending}
-                      onClick={() => setState.mutate({ ids: [n.id], state: "em_tratamento" })}
+                      onClick={() => {
+                        setState.mutate({ ids: [n.id], state: "em_tratamento" });
+                        // Tratar também leva direto ao item (tarefa, férias, despesa, ticket, ponto).
+                        void openNotification(n);
+                      }}
                     >
                       <Timer className="mr-1.5 h-4 w-4" /> Tratar
                     </Button>
