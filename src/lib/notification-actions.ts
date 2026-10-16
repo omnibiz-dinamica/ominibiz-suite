@@ -1,9 +1,4 @@
-export type NotificationManagementState =
-  | "nova"
-  | "em_tratamento"
-  | "encaminhada"
-  | "resolvida"
-  | "arquivada";
+export type NotificationManagementState = "nova" | "em_tratamento" | "encaminhada" | "resolvida" | "arquivada";
 
 export type NotificationActionAvailability = {
   open: boolean;
@@ -71,11 +66,18 @@ export function notificationOpenLink(n: OpenableNotification): string | null {
 }
 
 export type NotificationDestination =
-  | { kind: "path"; to: string }
-  | { kind: "ticket"; id: string }
-  | { kind: "task"; taskId: string };
+  { kind: "path"; to: string } | { kind: "ticket"; id: string } | { kind: "task"; taskId: string };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Monta /app/rota?param=ID&employee=ID só com UUIDs válidos (nunca confia no metadata). */
+function withFocusParams(path: string, key: string, itemId: unknown, userId: unknown): string {
+  const params = new URLSearchParams();
+  if (typeof itemId === "string" && UUID.test(itemId)) params.set(key, itemId);
+  if (typeof userId === "string" && UUID.test(userId)) params.set("employee", userId);
+  const qs = params.toString();
+  return qs ? `${path}?${qs}` : path;
+}
 
 /**
  * SUP-147/150: destino do botão "Abrir". Usa o link gravado; se não houver,
@@ -90,11 +92,15 @@ export function resolveNotificationDestination(
     const link = notificationOpenLink(n);
     return { kind: "path", to: link ?? "/app/ponto" };
   }
-  if (n.event.startsWith("vacation_")) return { kind: "path", to: "/app/ferias" };
-  if (n.event.startsWith("expense_")) return { kind: "path", to: "/app/despesas" };
+  // Férias e despesas: abre a tela já no pedido e no funcionário da notificação.
+  if (n.event.startsWith("vacation_")) {
+    return { kind: "path", to: withFocusParams("/app/ferias", "vacation", meta.vacation_id, meta.user_id) };
+  }
+  if (n.event.startsWith("expense_")) {
+    return { kind: "path", to: withFocusParams("/app/despesas", "expense", meta.expense_id, meta.user_id) };
+  }
   if (supportTicketId) return { kind: "ticket", id: supportTicketId };
-  const taskId =
-    n.task_id ?? (typeof meta.task_id === "string" && UUID.test(meta.task_id) ? meta.task_id : null);
+  const taskId = n.task_id ?? (typeof meta.task_id === "string" && UUID.test(meta.task_id) ? meta.task_id : null);
   if (taskId) return { kind: "task", taskId };
   const link = safeInternalPath(meta.link) ?? safeInternalPath(meta.target_url);
   if (link) return { kind: "path", to: link };
