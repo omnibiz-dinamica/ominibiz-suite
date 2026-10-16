@@ -552,8 +552,11 @@ function DespesasPage() {
       if (el) {
         window.clearInterval(timer);
         el.scrollIntoView({ behavior: "smooth", block: "center" });
-        el.classList.add("ring-2", "ring-primary", "ring-offset-2", "rounded-lg");
-        window.setTimeout(() => el.classList.remove("ring-2", "ring-primary", "ring-offset-2"), 6000);
+        // Foco exato: pisca alguns segundos e fica marcada (contorno + fundo) até sair da tela.
+        el.setAttribute("tabindex", "-1");
+        el.focus({ preventScroll: true });
+        el.classList.add("ring-4", "ring-primary", "ring-offset-2", "rounded-lg", "bg-primary/10", "animate-pulse");
+        window.setTimeout(() => el.classList.remove("animate-pulse"), 4500);
       } else if (tries > 25) {
         window.clearInterval(timer);
       }
