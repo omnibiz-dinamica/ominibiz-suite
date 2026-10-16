@@ -524,6 +524,8 @@ function DespesasPage() {
   const [filterStartDate, setFilterStartDate] = useState("");
   const [filterEndDate, setFilterEndDate] = useState("");
   const [sortBy, setSortBy] = useState<"date_desc" | "name_asc">("date_desc");
+  /** Filtro por Cargo / Função (profiles.job_title, o mesmo da tela Usuários). "all" = todos. */
+  const [filterJob, setFilterJob] = useState<string>("all");
   const [attachmentAction, setAttachmentAction] = useState<"zip" | null>(null);
   const [attachmentResult, setAttachmentResult] = useState<string | null>(null);
   const [confirmDownload, setConfirmDownload] = useState(false);
@@ -536,7 +538,36 @@ function DespesasPage() {
     start: filterStartDate,
     end: filterEndDate,
   };
-  const filteredBase = filterExpenses(rows, selection);
+  /** Normaliza o Cargo / Função para agrupar grafias iguais ("Life Tidy" e " life tidy"). */
+  const expenseJobKey = (value: string | null | undefined) => {
+    const v = (value ?? "").trim().replace(/\s+/g, " ");
+    return v === "—" ? "" : v.toLocaleLowerCase("pt-BR");
+  };
+  const jobOptions = useMemo(() => {
+    const byKey = new Map<string, string>();
+    let hasEmpty = false;
+    for (const p of Object.values(userProfiles)) {
+      const key = expenseJobKey(p.jobTitle);
+      if (!key) hasEmpty = true;
+      else if (!byKey.has(key)) byKey.set(key, p.jobTitle.trim().replace(/\s+/g, " "));
+    }
+    const options = Array.from(byKey, ([key, label]) => ({ key, label })).sort((a, b) =>
+      a.label.localeCompare(b.label, "pt-BR"),
+    );
+    return { options, hasEmpty };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProfiles]);
+  const jobFilterLabel =
+    filterJob === "all"
+      ? null
+      : filterJob === "__sem_cargo__"
+        ? "Sem cargo / função"
+        : (jobOptions.options.find((o) => o.key === filterJob)?.label ?? filterJob);
+  const filteredBase = filterExpenses(rows, selection).filter((r) => {
+    if (filterJob === "all") return true;
+    const key = expenseJobKey(userProfiles[r.user_id]?.jobTitle);
+    return filterJob === "__sem_cargo__" ? !key : key === filterJob;
+  });
 
   // Ordenação selecionada: "Mais recentes" mantém a ordem atual; "Nome (A-Z)" ordena por colaborador.
   const filtered = useMemo(() => {
@@ -567,11 +598,12 @@ function DespesasPage() {
     setFilterStartDate("");
     setFilterEndDate("");
     setSortBy("date_desc");
+    setFilterJob("all");
   };
 
   useEffect(
     () => setAttachmentResult(null),
-    [filterStatus, filterPayment, filterUser, filterDateBy, filterStartDate, filterEndDate, sortBy],
+    [filterStatus, filterPayment, filterUser, filterDateBy, filterStartDate, filterEndDate, sortBy, filterJob],
   );
   const pending = filtered.filter((r) => r.status === "pendente");
   const decided = filtered.filter((r) => r.status !== "pendente");
@@ -598,7 +630,7 @@ function DespesasPage() {
       { header: "Observações", accessor: (r) => r.notes ?? "", width: 170 },
     ];
     // O arquivo sai com exatamente as linhas e os filtros da tela.
-    const subtitle = activeFiltersText;
+    const subtitle = jobFilterLabel ? `${activeFiltersText} · Cargo / Função: ${jobFilterLabel}` : activeFiltersText;
     const meta = {
       fileName: `despesas-${new Date().toISOString().slice(0, 10)}`,
       title: "Despesas",
@@ -857,6 +889,22 @@ function DespesasPage() {
                 />
               </div>
             )}
+            {isManager && (
+              <Select value={filterJob} onValueChange={setFilterJob}>
+                <SelectTrigger className="w-[220px]" aria-label="Filtrar por cargo ou função">
+                  <SelectValue placeholder="Cargo / função" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os cargos / funções</SelectItem>
+                  {jobOptions.options.map((job) => (
+                    <SelectItem key={job.key} value={job.key}>
+                      {job.label}
+                    </SelectItem>
+                  ))}
+                  {jobOptions.hasEmpty && <SelectItem value="__sem_cargo__">Sem cargo / função</SelectItem>}
+                </SelectContent>
+              </Select>
+            )}
             <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
               <SelectTrigger className="w-[180px]" aria-label="Ordenar relatório">
                 <SelectValue />
@@ -953,7 +1001,10 @@ function DespesasPage() {
                       </span>
                     )}
                   </div>
-                  <div className="text-muted-foreground">{activeFiltersText}</div>
+                  <div className="text-muted-foreground">
+                    {activeFiltersText}
+                    {jobFilterLabel ? ` · Cargo / Função: ${jobFilterLabel}` : ""}
+                  </div>
                 </>
               )}
             </div>
@@ -962,7 +1013,14 @@ function DespesasPage() {
                 type="button"
                 variant="outline"
                 className="w-full sm:w-auto"
-                disabled={attachmentAction !== null || isLoading || selectionSummary.withFile === 0}
+                disabled={
+                  attachmentAction !== null || isLoading || selectionSummary.withFile === 0 || filterJob !== "all"
+                }
+                title={
+                  filterJob !== "all"
+                    ? "Para baixar comprovantes, volte o Cargo / Função para Todos (pode filtrar por colaborador)."
+                    : undefined
+                }
                 onClick={requestDownload}
               >
                 <Package className="h-4 w-4" /> {attachmentAction === "zip" ? "A preparar…" : "Baixar comprovantes"}
