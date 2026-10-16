@@ -91,38 +91,41 @@ export function ClientGeoEditor({ value, onChange, defaultRadiusM = 50, showAddr
       <header className="flex items-center justify-between gap-2">
         <div>
           <h3 className="font-display text-base font-semibold">Localização do Trabalho</h3>
-          <p className="text-xs text-muted-foreground">
-            Define o local e o raio para validar o ponto do funcionário.
-          </p>
+          <p className="text-xs text-muted-foreground">Define o local e o raio para validar o ponto do funcionário.</p>
         </div>
       </header>
 
-      {/* Pesquisa */}
-      <div className="space-y-1.5">
-        <Label>Localizar no mapa</Label>
-        <div className="flex gap-2">
-          <Input
-            placeholder="Rua, número, cidade..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                void runSearch();
-              }
-            }}
-            maxLength={250}
-          />
-          <Button type="button" variant="secondary" onClick={runSearch} disabled={searching || !available}>
-            {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-          </Button>
+      {/* Pesquisa: oculta quando o formulário pai já mostra o Endereço do cliente (fonte única da localização) */}
+      {showAddressField && (
+        <div className="space-y-1.5">
+          <Label>Localizar no mapa</Label>
+          <div className="flex gap-2">
+            <Input
+              placeholder="Rua, número, cidade..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void runSearch();
+                }
+              }}
+              maxLength={250}
+            />
+            <Button type="button" variant="secondary" onClick={runSearch} disabled={searching || !available}>
+              {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+            </Button>
+          </div>
+          {!available && (
+            <p className="text-[11px] text-muted-foreground">
+              Mapa indisponível — utilize o preenchimento manual abaixo.
+            </p>
+          )}
         </div>
-        {!available && (
-          <p className="text-[11px] text-muted-foreground">
-            Mapa indisponível — utilize o preenchimento manual abaixo.
-          </p>
-        )}
-      </div>
+      )}
+      {!showAddressField && !available && (
+        <p className="text-[11px] text-muted-foreground">Mapa indisponível — utilize o preenchimento manual abaixo.</p>
+      )}
 
       {/* Mapa (ou fallback manual) */}
       {available ? (
@@ -233,9 +236,7 @@ export function ClientGeoEditor({ value, onChange, defaultRadiusM = 50, showAddr
       {/* Pré-visualização */}
       {hasPoint && (
         <div className="rounded-xl border border-border bg-muted/50 p-3 text-xs">
-          <p className="mb-1 font-semibold uppercase tracking-wide text-muted-foreground">
-            Pré-visualização
-          </p>
+          <p className="mb-1 font-semibold uppercase tracking-wide text-muted-foreground">Pré-visualização</p>
           <dl className="grid grid-cols-2 gap-x-4 gap-y-0.5 font-mono">
             <dt className="text-muted-foreground">Latitude</dt>
             <dd>{value.lat!.toFixed(6)}</dd>
@@ -244,9 +245,7 @@ export function ClientGeoEditor({ value, onChange, defaultRadiusM = 50, showAddr
             <dt className="text-muted-foreground">Raio</dt>
             <dd>{value.radiusM} m</dd>
           </dl>
-          {value.address && (
-            <p className="mt-1 text-muted-foreground">{value.address}</p>
-          )}
+          {value.address && <p className="mt-1 text-muted-foreground">{value.address}</p>}
         </div>
       )}
     </section>
