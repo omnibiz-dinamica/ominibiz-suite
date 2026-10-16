@@ -206,16 +206,23 @@ function TeamPage() {
     [members],
   );
 
-  /** Opções do seletor Cargo / função: papéis do sistema e cargos (job_title) existentes. */
-  const memberRoleOptions = useMemo(() => {
-    const list = members ?? [];
-    const roles = Array.from(new Set(list.map((m) => String(m.role)))).sort((a, b) =>
-      memberRoleLabel(a).localeCompare(memberRoleLabel(b), "pt-BR"),
+  /** Normaliza o Cargo / Função (job_title) para agrupar "Limpeza" e " limpeza " juntos. */
+  const jobKey = (value: string | null | undefined) =>
+    (value ?? "").trim().replace(/\s+/g, " ").toLocaleLowerCase("pt-BR");
+
+  /** Opções do seletor: valores preenchidos no campo Cargo / Função da ficha do usuário. */
+  const memberJobOptions = useMemo(() => {
+    const byKey = new Map<string, string>();
+    for (const m of members ?? []) {
+      const label = m.profile?.job_title?.trim().replace(/\s+/g, " ");
+      if (label && !byKey.has(jobKey(label))) byKey.set(jobKey(label), label);
+    }
+    const hasEmpty = (members ?? []).some((m) => !jobKey(m.profile?.job_title));
+    const options = Array.from(byKey, ([key, label]) => ({ key, label })).sort((a, b) =>
+      a.label.localeCompare(b.label, "pt-BR"),
     );
-    const jobs = Array.from(
-      new Set(list.map((m) => m.profile?.job_title?.trim()).filter((job): job is string => Boolean(job))),
-    ).sort((a, b) => a.localeCompare(b, "pt-BR"));
-    return { roles, jobs };
+    return { options, hasEmpty };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [members]);
 
   /** Lista de usuários com pesquisa, filtro de cargo/função e ordem alfabética. */
@@ -232,8 +239,12 @@ function TeamPage() {
         .replace(/[\u0300-\u036f]/g, "");
     const rows = (members ?? []).filter((m) => {
       if (showInactive ? isEmployeeActive(m.profile) : !isEmployeeActive(m.profile)) return false;
-      if (memberRoleFilter.startsWith("role:") && String(m.role) !== memberRoleFilter.slice(5)) return false;
-      if (memberRoleFilter.startsWith("job:") && (m.profile?.job_title?.trim() ?? "") !== memberRoleFilter.slice(4)) {
+      if (memberRoleFilter === "__sem_cargo__" && jobKey(m.profile?.job_title)) return false;
+      if (
+        memberRoleFilter.startsWith("job:") &&
+        memberRoleFilter !== "__sem_cargo__" &&
+        jobKey(m.profile?.job_title) !== memberRoleFilter.slice(4)
+      ) {
         return false;
       }
       if (!term) return true;
@@ -537,17 +548,13 @@ function TeamPage() {
               <SelectValue placeholder="Cargo / função" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos os cargos e funções</SelectItem>
-              {memberRoleOptions.roles.map((r) => (
-                <SelectItem key={`role:${r}`} value={`role:${r}`}>
-                  Função: {memberRoleLabel(r)}
+              <SelectItem value="all">Todos os cargos / funções</SelectItem>
+              {memberJobOptions.options.map((job) => (
+                <SelectItem key={`job:${job.key}`} value={`job:${job.key}`}>
+                  {job.label}
                 </SelectItem>
               ))}
-              {memberRoleOptions.jobs.map((job) => (
-                <SelectItem key={`job:${job}`} value={`job:${job}`}>
-                  Cargo: {job}
-                </SelectItem>
-              ))}
+              {memberJobOptions.hasEmpty && <SelectItem value="__sem_cargo__">Sem cargo / função</SelectItem>}
             </SelectContent>
           </Select>
         </div>
