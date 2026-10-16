@@ -48,6 +48,7 @@ function EmployeeGeoGuard({ children }: { children: ReactNode }) {
   const mustShareLocation = isEmployee && effectiveRole === "employee";
   const [state, setState] = useState<GeoGateState>("checking");
   const [detail, setDetail] = useState<string | null>(null);
+  const [retryFailed, setRetryFailed] = useState(false);
 
   const requestLocation = useCallback(() => {
     if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
@@ -56,6 +57,7 @@ function EmployeeGeoGuard({ children }: { children: ReactNode }) {
       return;
     }
     setState("checking");
+    setRetryFailed(false);
     navigator.geolocation.getCurrentPosition(
       () => {
         setState("granted");
@@ -65,6 +67,7 @@ function EmployeeGeoGuard({ children }: { children: ReactNode }) {
         if (err.code === err.PERMISSION_DENIED) {
           setState("blocked");
           setDetail(GEO_BLOCKED_DETAIL);
+          setRetryFailed(true);
         } else {
           // Permissão concedida, mas sem posição agora (GPS lento, interior de edifício): não bloqueia.
           setState("granted");
@@ -116,6 +119,34 @@ function EmployeeGeoGuard({ children }: { children: ReactNode }) {
     };
   }, [mustShareLocation, requestLocation]);
 
+  // Depois de ativar a localização nas definições do telemóvel/navegador, ao voltar para o sistema
+  // a permissão é verificada de novo sozinha (sem precisar sair da sessão).
+  useEffect(() => {
+    if (!mustShareLocation || state !== "blocked") return;
+    const recheck = async () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      try {
+        if (typeof navigator !== "undefined" && navigator.permissions?.query) {
+          const s = await navigator.permissions.query({ name: "geolocation" as PermissionName });
+          if (s.state === "granted") {
+            setState("granted");
+            setDetail(null);
+          }
+        }
+      } catch {
+        // Navegador sem Permissions API: o botão "Tentar novamente" continua disponível.
+      }
+    };
+    window.addEventListener("focus", recheck);
+    window.addEventListener("pageshow", recheck);
+    document.addEventListener("visibilitychange", recheck);
+    return () => {
+      window.removeEventListener("focus", recheck);
+      window.removeEventListener("pageshow", recheck);
+      document.removeEventListener("visibilitychange", recheck);
+    };
+  }, [mustShareLocation, state]);
+
   if (!mustShareLocation || state === "granted") return <>{children}</>;
 
   if (state === "checking") {
@@ -138,6 +169,12 @@ function EmployeeGeoGuard({ children }: { children: ReactNode }) {
             Por ordem da Gerência, a localização deve ser permitida para o funcionamento do sistema.
           </p>
           {detail && <p className="text-xs text-muted-foreground">{detail}</p>}
+          {retryFailed && (
+            <p className="text-xs font-medium text-destructive">
+              O navegador ainda informa que a localização está bloqueada. Se já a ativou nas definições, toque em
+              "Recarregar página" (a sua sessão continua iniciada).
+            </p>
+          )}
         </div>
         <div className="space-y-2 rounded-xl border border-border bg-muted/40 p-4 text-left text-xs text-muted-foreground">
           <p className="font-semibold text-foreground">Como ativar:</p>
@@ -158,6 +195,9 @@ function EmployeeGeoGuard({ children }: { children: ReactNode }) {
         <div className="flex flex-col gap-2">
           <Button type="button" className="w-full gap-2" onClick={requestLocation}>
             <RefreshCw className="h-4 w-4" /> Tentar novamente
+          </Button>
+          <Button type="button" variant="outline" className="w-full gap-2" onClick={() => window.location.reload()}>
+            <RefreshCw className="h-4 w-4" /> Recarregar página
           </Button>
           <Button type="button" variant="ghost" className="w-full gap-2" onClick={() => void signOut()}>
             <LogOut className="h-4 w-4" /> Terminar sessão
