@@ -456,19 +456,26 @@ function DespesasPage() {
 
   const remove = useMutation({
     mutationFn: async (row: ExpenseRow) => {
-      if (row.attachment_path) {
-        await supabase.storage.from("employee-expenses").remove([row.attachment_path]);
-      }
-      const { error } = await (supabase as any).from("employee_expenses").delete().eq("id", row.id);
+      // Apaga primeiro a despesa (RLS valida no servidor) e só depois o comprovante,
+      // para nunca perder o ficheiro de uma despesa que não pôde ser apagada.
+      const { data, error } = await (supabase as any).from("employee_expenses").delete().eq("id", row.id).select("id");
       if (error) throw error;
+      if (!data || data.length === 0) throw new Error("Sem permissão para excluir esta despesa");
+      if (row.attachment_path) {
+        const { error: fileError } = await supabase.storage.from("employee-expenses").remove([row.attachment_path]);
+        if (fileError) console.warn("[despesas] comprovante não removido", fileError);
+      }
     },
     onSuccess: () => {
-      toast.success("Removida");
+      setDeleteTarget(null);
+      toast.success("Despesa excluída");
       qc.invalidateQueries({ queryKey: ["expenses"] });
     },
     onError: (e: any) => toast.error(e.message ?? "Falha"),
   });
 
+  /** Despesa a excluir (confirmação antes de apagar). */
+  const [deleteTarget, setDeleteTarget] = useState<ExpenseRow | null>(null);
   /** Gestor ou owner edita qualquer despesa (pendente, aprovada ou rejeitada). Status, aprovador e pagamento mantêm-se; o RLS valida no servidor. */
   const [editingExpense, setEditingExpense] = useState<ExpenseRow | null>(null);
   const [editDate, setEditDate] = useState("");
@@ -1062,8 +1069,17 @@ function DespesasPage() {
                       <Pencil className="h-4 w-4" />
                     </Button>
                   )}
-                  {r.status === "pendente" && r.user_id === user?.id && (
-                    <Button size="icon" variant="ghost" onClick={() => remove.mutate(r)} title="Apagar">
+                  {((r.status === "pendente" && r.user_id === user?.id) ||
+                    (isManager &&
+                      r.status === "aprovada" &&
+                      (r.payment_status ?? "aguardando_pagamento") === "aguardando_pagamento")) && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => setDeleteTarget(r)}
+                      title="Excluir despesa"
+                      aria-label="Excluir despesa"
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   )}
@@ -1135,6 +1151,34 @@ function DespesasPage() {
             <AlertDialogCancel disabled={updateExpense.isPending}>Cancelar</AlertDialogCancel>
             <Button type="button" onClick={() => updateExpense.mutate()} disabled={updateExpense.isPending}>
               {updateExpense.isPending ? "A guardar..." : "Guardar alterações"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open && !remove.isPending) setDeleteTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir despesa?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget
+                ? `${deleteTarget.reason} · ${Number(deleteTarget.amount).toFixed(2).replace(".", ",")} € · ${STATUS_LABEL[deleteTarget.status]}. A despesa e o comprovante serão apagados e não podem ser recuperados.`
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={remove.isPending}>Cancelar</AlertDialogCancel>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={remove.isPending || !deleteTarget}
+              onClick={() => deleteTarget && remove.mutate(deleteTarget)}
+            >
+              {remove.isPending ? "A excluir..." : "Excluir"}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
