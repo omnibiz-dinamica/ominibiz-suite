@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogTrigger, ModalHeader, ModalBody, ModalFooter, ModalSection } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  ModalSection,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   Plus,
@@ -30,9 +38,14 @@ import {
 import { RoleGuard } from "@/components/RoleGuard";
 import { exportToExcel, exportToPdf, type ExportColumn } from "@/lib/exports";
 import { ClientGeoEditor, validateClientGeo, type ClientGeoValue } from "@/components/clientes/ClientGeoEditor";
+import { getMapProvider } from "@/lib/maps";
 import { invalidateClientsCache } from "@/lib/cache/clients";
 import { parseHabitualSchedule, type ClientHabitualSchedule } from "@/lib/tasks/client-schedule";
-import { calculateWallDurationMinutes, formatContractedMinutes, isOvernightTimeRange } from "@/lib/tasks/contracted-hours";
+import {
+  calculateWallDurationMinutes,
+  formatContractedMinutes,
+  isOvernightTimeRange,
+} from "@/lib/tasks/contracted-hours";
 import { describeClientSchedule } from "@/lib/tasks/client-card";
 import { clientTeamType, type ClientTeamType } from "@/lib/tasks/client-team";
 
@@ -92,7 +105,6 @@ function ClientsPage() {
   const [editing, setEditing] = useState<ClientRow | null>(null);
   const [search, setSearch] = useState("");
 
-
   const { data: clients, isLoading } = useQuery({
     queryKey: ["clients", currentCompanyId, isManager, user?.id],
     queryFn: async () => {
@@ -104,6 +116,60 @@ function ClientsPage() {
     },
     enabled: !!user,
   });
+
+  /** Clientes com endereço preenchido mas sem coordenadas (cadastrados antes do mapa ou sem pesquisa). */
+  const pendingGeoClients = useMemo(
+    () => (clients ?? []).filter((c) => !!c.address?.trim() && (c.geo_lat == null || c.geo_lng == null)),
+    [clients],
+  );
+  const [geoBackfilling, setGeoBackfilling] = useState(false);
+  /** Preenche a localização do trabalho a partir do endereço do cliente (só gestor, só clientes sem coordenadas). */
+  const runGeoBackfill = async () => {
+    if (geoBackfilling || pendingGeoClients.length === 0) return;
+    const provider = getMapProvider();
+    if (!provider.isAvailable()) {
+      toast.error("Mapa indisponível neste momento. Tente novamente mais tarde.");
+      return;
+    }
+    setGeoBackfilling(true);
+    let ok = 0;
+    const failed: string[] = [];
+    try {
+      for (const c of pendingGeoClients) {
+        const addr = (c.address ?? "").trim();
+        try {
+          const results = await provider.geocode(addr);
+          const first = results[0];
+          if (!first) {
+            failed.push(c.name);
+            continue;
+          }
+          const { error } = await (supabase.from("clients" as never) as any)
+            .update({
+              geo_lat: first.location.lat,
+              geo_lng: first.location.lng,
+              geo_address: addr,
+              geo_radius_m: c.geo_radius_m ?? 50,
+            })
+            .eq("id", c.id)
+            .is("geo_lat", null);
+          if (error) throw error;
+          ok += 1;
+        } catch (err) {
+          console.warn("[clientes] falha ao geocodificar", c.name, err);
+          failed.push(c.name);
+        }
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+    } finally {
+      setGeoBackfilling(false);
+      invalidateClientsCache(qc);
+    }
+    if (ok > 0) toast.success(`Localização preenchida em ${ok} cliente(s).`);
+    if (failed.length > 0) {
+      toast.warning(`Não foi possível localizar: ${failed.join(", ")}. Verifique o endereço na ficha do cliente.`);
+    }
+  };
 
   const { data: assignees } = useQuery({
     queryKey: ["client-assignees", currentCompanyId],
@@ -186,7 +252,11 @@ function ClientsPage() {
     return acc;
   }, {});
   // Tipo A — equipa do cliente: só ativos, filtrado no servidor.
-  const { data: activeMembers, isLoading: activeMembersLoading, error: activeMembersError } = useQuery({
+  const {
+    data: activeMembers,
+    isLoading: activeMembersLoading,
+    error: activeMembersError,
+  } = useQuery({
     queryKey: ["members-active-clients", currentCompanyId],
     queryFn: async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -208,14 +278,15 @@ function ClientsPage() {
     daily: "Por dia",
   };
 
-
   const buildExportColumns = (): ExportColumn<ClientRow>[] => [
     { header: "Nome", accessor: (c) => c.name, width: 140 },
     {
       header: "Contacto",
       accessor: (c) => {
         const team = assigneesByClient[c.id] ?? [];
-        const primary = team.find((a) => a.is_primary && clientTeamType(a) === "habitual") ?? team.find((a) => clientTeamType(a) === "habitual");
+        const primary =
+          team.find((a) => a.is_primary && clientTeamType(a) === "habitual") ??
+          team.find((a) => clientTeamType(a) === "habitual");
         return primary ? (membersById.get(primary.user_id) ?? "") : "";
       },
       width: 120,
@@ -276,8 +347,6 @@ function ClientsPage() {
     );
   }, [clients, search]);
 
-
-
   const handleExport = (kind: "xlsx" | "pdf") => {
     const list = clients ?? [];
     if (list.length === 0) {
@@ -306,6 +375,20 @@ function ClientsPage() {
         </div>
         {isManager && currentCompanyId && (
           <div className="flex flex-wrap items-center gap-2">
+            {pendingGeoClients.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void runGeoBackfill()}
+                disabled={geoBackfilling}
+                title="Preenche a localização do trabalho a partir do endereço dos clientes que ainda não têm coordenadas"
+              >
+                <MapPin className={`mr-2 h-4 w-4 ${geoBackfilling ? "animate-pulse" : ""}`} />
+                {geoBackfilling
+                  ? "A preencher localizações..."
+                  : `Preencher localizações (${pendingGeoClients.length})`}
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={() => handleExport("xlsx")}>
               <FileSpreadsheet className="mr-2 h-4 w-4" /> Exportar Excel
             </Button>
@@ -332,13 +415,24 @@ function ClientsPage() {
                 <ModalHeader
                   icon={Users}
                   title="Ficha do cliente"
-                  description={editing ? "Atualize os dados do cliente." : "Registe um novo cliente e a sua equipa responsável."}
+                  description={
+                    editing ? "Atualize os dados do cliente." : "Registe um novo cliente e a sua equipa responsável."
+                  }
                 />
                 <ClientForm
                   companyId={currentCompanyId}
                   userId={user!.id}
                   initial={editing}
-                  members={[...(activeMembers ?? []), ...(members ?? []).filter((m) => !(activeMembers ?? []).some((x) => x.id === m.id) && (editing ? (assigneesByClient[editing.id] ?? []) : []).some((x) => x.user_id === m.id)).map((m) => ({ ...m, inactive: true }))]}
+                  members={[
+                    ...(activeMembers ?? []),
+                    ...(members ?? [])
+                      .filter(
+                        (m) =>
+                          !(activeMembers ?? []).some((x) => x.id === m.id) &&
+                          (editing ? (assigneesByClient[editing.id] ?? []) : []).some((x) => x.user_id === m.id),
+                      )
+                      .map((m) => ({ ...m, inactive: true })),
+                  ]}
                   membersLoading={activeMembersLoading}
                   membersError={!!activeMembersError}
                   assignees={editing ? (assigneesByClient[editing.id] ?? []) : []}
@@ -422,7 +516,6 @@ function ClientsPage() {
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {filteredClients.map((c) => {
-
             const team = assigneesByClient[c.id] ?? [];
             return (
               <li key={c.id} className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4">
@@ -471,7 +564,8 @@ function ClientsPage() {
                     </div>
                   ))}
                   <div className="flex items-center gap-1.5">
-                    <Clock className="h-3 w-3" /> Carga contratada: {formatContractedMinutes(c.contracted_minutes) || "Não definida"}
+                    <Clock className="h-3 w-3" /> Carga contratada:{" "}
+                    {formatContractedMinutes(c.contracted_minutes) || "Não definida"}
                   </div>
                   {(c.address || c.geo_address) && (
                     <div className="flex items-center gap-1.5">
@@ -508,7 +602,9 @@ function ClientsPage() {
                         >
                           {a.is_primary && clientTeamType(a) === "habitual" && "★ "}
                           {membersById.get(a.user_id) ?? a.user_id.slice(0, 8)}
-                          <span className="opacity-70">· {clientTeamType(a) === "recurso" ? "recurso" : "habitual"}</span>
+                          <span className="opacity-70">
+                            · {clientTeamType(a) === "recurso" ? "recurso" : "habitual"}
+                          </span>
                         </span>
                       ))}
                     </div>
@@ -525,8 +621,11 @@ function ClientsPage() {
 
 function currencySymbolOf(code: string): string {
   try {
-    return new Intl.NumberFormat("pt-PT", { style: "currency", currency: code, currencyDisplay: "narrowSymbol" })
-      .formatToParts(0).find((p) => p.type === "currency")?.value ?? code;
+    return (
+      new Intl.NumberFormat("pt-PT", { style: "currency", currency: code, currencyDisplay: "narrowSymbol" })
+        .formatToParts(0)
+        .find((p) => p.type === "currency")?.value ?? code
+    );
   } catch {
     return code;
   }
@@ -570,9 +669,7 @@ function ClientForm({
   const [monthlyRate, setMonthlyRate] = useState<string>(
     initial?.monthly_rate != null ? String(initial.monthly_rate) : "",
   );
-  const [dailyRate, setDailyRate] = useState<string>(
-    initial?.daily_rate != null ? String(initial.daily_rate) : "",
-  );
+  const [dailyRate, setDailyRate] = useState<string>(initial?.daily_rate != null ? String(initial.daily_rate) : "");
   const { data: companyCurrency } = useQuery({
     queryKey: ["company-currency", companyId],
     queryFn: async () => {
@@ -599,9 +696,7 @@ function ClientForm({
       minutes: total != null ? String(total % 60) : "",
     };
   };
-  const [schedules, setSchedules] = useState<ScheduleDraft[]>(() =>
-    existingSchedule.map(scheduleDraft),
-  );
+  const [schedules, setSchedules] = useState<ScheduleDraft[]>(() => existingSchedule.map(scheduleDraft));
 
   // Catálogo de frequências partilhado com o modal de tarefas.
   const frequencyOptions = [
@@ -623,8 +718,7 @@ function ClientForm({
         : s.frequency === "cycle"
           ? "cycle"
           : "weekly");
-  const weekdayQuota = (freq: string): number | null =>
-    freq === "weekly_2x" ? 2 : freq === "weekly_3x" ? 3 : null;
+  const weekdayQuota = (freq: string): number | null => (freq === "weekly_2x" ? 2 : freq === "weekly_3x" ? 3 : null);
   const isMonthlyFrequency = (freq: string) => freq === "monthly" || freq === "monthly_pos";
   const applyFrequency = (s: ScheduleDraft, freq: string): ScheduleDraft => {
     const cycleLike = freq === "cycle" || freq === "biweekly";
@@ -633,12 +727,7 @@ function ClientForm({
       ...s,
       uiFrequency: freq,
       frequency: isMonthlyFrequency(freq) ? "monthly" : cycleLike ? "cycle" : "weekly",
-      weekdays:
-        freq === "daily"
-          ? [0, 1, 2, 3, 4, 5, 6]
-          : quota != null
-            ? s.weekdays.slice(0, quota)
-            : s.weekdays,
+      weekdays: freq === "daily" ? [0, 1, 2, 3, 4, 5, 6] : quota != null ? s.weekdays.slice(0, quota) : s.weekdays,
       cycleLengthWeeks: freq === "biweekly" ? 2 : freq === "cycle" ? (s.cycleLengthWeeks ?? 2) : null,
       cyclePosition: cycleLike ? (s.cyclePosition ?? 0) : null,
       cycleAnchorDate: cycleLike ? s.cycleAnchorDate : null,
@@ -647,7 +736,6 @@ function ClientForm({
       monthlyWeekday: freq === "monthly_pos" ? (s.monthlyWeekday ?? s.weekdays[0] ?? 1) : null,
     };
   };
-
 
   const [geo, setGeo] = useState<ClientGeoValue>({
     lat: initial?.geo_lat ?? null,
@@ -662,10 +750,56 @@ function ClientForm({
   );
   const [loading, setLoading] = useState(false);
 
+  /** Último endereço já convertido em coordenadas (evita refazer e sobrescrever o ponto ajustado no mapa). */
+  const lastGeocodedRef = useRef<string | null>(
+    initial?.geo_lat != null && initial?.geo_lng != null
+      ? (initial?.address ?? initial?.geo_address ?? "").trim()
+      : null,
+  );
+  /** Incrementa a cada ajuste manual no mapa: uma geocodificação em curso é descartada. */
+  const manualGeoSeqRef = useRef(0);
+  const [autoGeocoding, setAutoGeocoding] = useState(false);
+
   const updateGeo = (next: ClientGeoValue) => {
+    manualGeoSeqRef.current += 1;
+    lastGeocodedRef.current = address.trim();
     setGeo(next);
     if (next.address !== null && next.address !== address) setAddress(next.address);
   };
+
+  /** Endereço do cliente é a fonte única: preenche latitude e longitude automaticamente. */
+  const geocodeFromAddress = async (raw: string): Promise<{ lat: number; lng: number } | null> => {
+    const addr = raw.trim();
+    if (addr.length < 5 || addr === lastGeocodedRef.current) return null;
+    const provider = getMapProvider();
+    if (!provider.isAvailable()) return null;
+    const seq = manualGeoSeqRef.current;
+    setAutoGeocoding(true);
+    try {
+      const results = await provider.geocode(addr);
+      const first = results[0];
+      if (!first) {
+        toast.warning("Endereço não encontrado no mapa. Corrija o endereço ou marque o ponto no mapa.");
+        return null;
+      }
+      if (seq !== manualGeoSeqRef.current) return null;
+      lastGeocodedRef.current = addr;
+      const point = { lat: first.location.lat, lng: first.location.lng };
+      setGeo((current) => ({ ...current, ...point, address: addr, radiusM: current.radiusM || 50 }));
+      return point;
+    } catch (err) {
+      console.warn("[clientes] geocodificação automática falhou", err);
+      return null;
+    } finally {
+      setAutoGeocoding(false);
+    }
+  };
+
+  useEffect(() => {
+    // Cliente com endereço e sem coordenadas: preenche ao abrir a ficha.
+    if ((geo.lat == null || geo.lng == null) && address.trim()) void geocodeFromAddress(address);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const toggleMember = (id: string, type: ClientTeamType = "habitual") => {
     setSelected((s) => {
@@ -684,16 +818,21 @@ function ClientForm({
   // Pesquisa sem distinção de maiúsculas/acentos; alcança qualquer ativo da empresa.
   const [teamSearch, setTeamSearch] = useState("");
   const normalizeName = (value: string) =>
-    value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    value
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
   const matchesTeamSearch = (member: { id: string; full_name: string | null }) => {
     const query = normalizeName(teamSearch);
     if (!query) return true;
-    return query
-      .split(/\s+/)
-      .every((token) => normalizeName(member.full_name ?? "").includes(token));
+    return query.split(/\s+/).every((token) => normalizeName(member.full_name ?? "").includes(token));
   };
   const sortedMembers = useMemo(
-    () => [...members].sort((a, b) => (a.full_name ?? "").localeCompare(b.full_name ?? "", "pt-BR", { sensitivity: "base" })),
+    () =>
+      [...members].sort((a, b) =>
+        (a.full_name ?? "").localeCompare(b.full_name ?? "", "pt-BR", { sensitivity: "base" }),
+      ),
     [members],
   );
 
@@ -704,653 +843,960 @@ function ClientForm({
 
   return (
     <>
-    <ModalBody>
-    <form
-      id="client-form"
-      className="space-y-4"
-      onSubmit={async (e) => {
-        e.preventDefault();
-        const geoError = validateClientGeo(geo);
-        if (geoError) {
-          toast.error(geoError);
-          return;
-        }
-        try {
-          const parseRate = (s: string): number | null => {
-            const n = Number(s.replace(",", "."));
-            return Number.isFinite(n) && s.trim() !== "" ? n : null;
-          };
-          const parseWhole = (s: string): number | null => {
-            if (s.trim() === "") return 0;
-            const n = Number(s);
-            return Number.isInteger(n) && n >= 0 ? n : null;
-          };
-          const hours = parseWhole(contractedHours);
-          const remainder = parseWhole(contractedRemainder);
-          if (hours == null || remainder == null || remainder > 59) {
-            toast.error("Informe horas e minutos contratados válidos.");
-            return;
-          }
-          const contractedMinutes = hours === 0 && remainder === 0 ? null : hours * 60 + remainder;
-          if (contractedMinutes == null && (contractedHours.trim() !== "" || contractedRemainder.trim() !== "")) {
-            toast.error("As horas totais contratadas devem ser maiores que zero.");
-            return;
-          }
-          // Pacote V2 §6: os três valores do cliente são independentes e opcionais.
-          // Nunca são apagados por causa da forma de cobrança selecionada.
-          const rates = {
-            hourly_rate: parseRate(hourlyRate),
-            fixed_rate: parseRate(fixedRate),
-            monthly_rate: parseRate(monthlyRate),
-            daily_rate: parseRate(dailyRate),
-          };
-          if (scheduleEnabled && schedules.length === 0) {
-            toast.error("Adicione pelo menos uma programação habitual.");
-            return;
-          }
-          const habitualSchedule = scheduleEnabled
-            ? schedules.map((schedule, index) => {
-                const freq = draftFrequency(schedule);
-                const monthly = isMonthlyFrequency(freq);
-                const quota = weekdayQuota(freq);
-                const cycleLike = freq === "cycle" || freq === "biweekly";
-                if (!monthly && schedule.weekdays.length === 0) throw new Error(`Selecione pelo menos um dia na programação ${index + 1}.`);
-                if (quota != null && schedule.weekdays.length !== quota) {
-                  throw new Error(`Selecione exatamente ${quota} dias na programação ${index + 1}.`);
-                }
-                const hasStart = Boolean(schedule.startTime);
-                const hasEnd = Boolean(schedule.endTime);
-                if (schedule.mode === "fixed" && (!hasStart || !hasEnd)) {
-                  throw new Error(`Informe início e fim na programação ${index + 1}, ou escolha horário flexível.`);
-                }
-                if (hasStart !== hasEnd) {
-                  throw new Error(`Informe início e fim juntos na programação ${index + 1}.`);
-                }
-                if (hasStart && hasEnd && calculateWallDurationMinutes(schedule.startTime!, schedule.endTime!) == null) {
-                  throw new Error(`Informe horários diferentes e válidos na programação ${index + 1}.`);
-                }
-                if (cycleLike && !schedule.cycleAnchorDate) {
-                  throw new Error(`Informe o início do ciclo na programação ${index + 1}.`);
-                }
-                const hours = parseWhole(schedule.hours);
-                const minutes = parseWhole(schedule.minutes);
-                if (hours == null || minutes == null || minutes > 59) {
-                  throw new Error(`Carga inválida na programação ${index + 1}.`);
-                }
-                const total = hours === 0 && minutes === 0 ? null : hours * 60 + minutes;
-                if (schedule.hours.trim() !== "" || schedule.minutes.trim() !== "") {
-                  if (total == null) throw new Error(`A carga da programação ${index + 1} deve ser maior que zero.`);
-                }
-                return {
-                  id: schedule.id,
-                  label: schedule.label?.trim() || null,
-                  weekdays: [...schedule.weekdays].sort((a, b) => a - b),
-                  mode: schedule.mode,
-                  start_time: schedule.startTime || null,
-                  end_time: schedule.endTime || null,
-                  ...(total != null ? { contracted_minutes: total } : {}),
-                  ui_frequency: freq,
-                  frequency: monthly ? "monthly" : cycleLike ? "cycle" : "weekly",
-                  ...(cycleLike
-                    ? {
-                        cycle_length_weeks: freq === "biweekly" ? 2 : Math.max(2, schedule.cycleLengthWeeks ?? 2),
-                        cycle_position: Math.max(0, schedule.cyclePosition ?? 0),
-                        cycle_anchor_date: schedule.cycleAnchorDate || null,
-                      }
-                    : {}),
-                  ...(freq === "monthly" ? { monthly_day_of_month: Math.max(1, Math.min(28, schedule.monthlyDayOfMonth ?? 1)) } : {}),
-                  ...(freq === "monthly_pos"
-                    ? {
-                        monthly_position: schedule.monthlyPosition ?? -1,
-                        monthly_weekday: schedule.monthlyWeekday ?? 1,
-                      }
-                    : {}),
-                  active: schedule.active !== false,
-                  sort_order: index,
-                };
-              })
-            : [];
-          // Só o "Ciclo alternado" exige todas as posições preenchidas; o
-          // quinzenal atende numa única semana do ciclo de 2 semanas.
-          const cycleGroups = new Map<string, Set<number>>();
-          for (const schedule of habitualSchedule) {
-            if (schedule.ui_frequency !== "cycle") continue;
-            const key = `${schedule.cycle_anchor_date ?? ""}:${schedule.cycle_length_weeks}`;
-            const positions = cycleGroups.get(key) ?? new Set<number>();
-            positions.add(schedule.cycle_position ?? 0);
-            cycleGroups.set(key, positions);
-          }
-          for (const [key, positions] of cycleGroups) {
-            const length = Number(key.split(":").pop());
-            if (positions.size < length) {
-              throw new Error(`Preencha todas as posições do ciclo alternado (${length} semanas).`);
+      <ModalBody>
+        <form
+          id="client-form"
+          className="space-y-4"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const geoError = validateClientGeo(geo);
+            if (geoError) {
+              toast.error(geoError);
+              return;
             }
-
-          }
-
-          setLoading(true);
-          let clientId = initial?.id;
-          if (initial) {
-            const { error } = await (supabase.from("clients" as never) as any)
-              .update({
-                name: name.trim(),
-                phone: phone.trim() || null,
-                email: email.trim() || null,
-                address: address.trim() || null,
-                notes: notes.trim() || null,
-                schedule_notes: scheduleNotes.trim() || null,
-                instructions: instructions.trim() || null,
-                status,
-                timing_mode: timingMode,
-                billing_mode: billingMode,
-                ...rates,
-                contracted_minutes: contractedMinutes,
-                geo_lat: geo.lat,
-                geo_lng: geo.lng,
-                geo_address: address.trim() || null,
-                geo_radius_m: geo.lat != null ? geo.radiusM : null,
-                habitual_schedule: habitualSchedule,
-              })
-              .eq("id", initial.id);
-            if (error) throw error;
-          } else {
-            const { data, error } = await (supabase.from("clients" as never) as any)
-              .insert({
-                company_id: companyId,
-                name: name.trim(),
-                phone: phone.trim() || null,
-                email: email.trim() || null,
-                address: address.trim() || null,
-                notes: notes.trim() || null,
-                schedule_notes: scheduleNotes.trim() || null,
-                instructions: instructions.trim() || null,
-                status,
-                created_by: userId,
-                timing_mode: timingMode,
-                billing_mode: billingMode,
-                ...rates,
-                contracted_minutes: contractedMinutes,
-                geo_lat: geo.lat,
-                geo_lng: geo.lng,
-                geo_address: address.trim() || null,
-                geo_radius_m: geo.lat != null ? geo.radiusM : null,
-                habitual_schedule: habitualSchedule,
-              })
-              .select("id")
-              .single();
-            if (error) throw error;
-            clientId = (data as { id: string }).id;
-          }
-
-          // Sincroniza vínculos
-          if (clientId) {
-            const effectivePrimary =
-              primary && selected.has(primary) && (assignmentTypes[primary] ?? "habitual") === "habitual"
-                ? primary
-                : "";
-            // 11092026-001c — a equipa responsável é dado operacional: qualquer
-            // falha de gravação tem de chegar ao Gestor, nunca ser ignorada.
-            const guard = (result: { error: { message: string } | null }) => {
-              if (result?.error) throw new Error(`Equipa responsável: ${result.error.message}`);
-            };
-            // Remove os desmarcados
-            const toRemove = assignees.filter((a) => !selected.has(a.user_id));
-            if (toRemove.length > 0) {
-              guard(
-                await (supabase.from("client_assignees" as never) as any).delete().in(
-                  "id",
-                  toRemove.map((a) => a.id),
-                ),
-              );
+            // Endereço é a fonte única: sem coordenadas, geocodifica antes de gravar (não bloqueia se falhar).
+            let geoToSave = geo;
+            if ((geo.lat == null || geo.lng == null) && address.trim()) {
+              const point = await geocodeFromAddress(address);
+              if (point) geoToSave = { ...geo, ...point, radiusM: geo.radiusM || 50 };
             }
-            // Adiciona novos
-            const existing = new Set(assignees.map((a) => a.user_id));
-            const toAdd = [...selected].filter((u) => !existing.has(u));
-            if (toAdd.length > 0) {
-              guard(
-                await (supabase.from("client_assignees" as never) as any).insert(
-                  toAdd.map((u) => ({
+            try {
+              const parseRate = (s: string): number | null => {
+                const n = Number(s.replace(",", "."));
+                return Number.isFinite(n) && s.trim() !== "" ? n : null;
+              };
+              const parseWhole = (s: string): number | null => {
+                if (s.trim() === "") return 0;
+                const n = Number(s);
+                return Number.isInteger(n) && n >= 0 ? n : null;
+              };
+              const hours = parseWhole(contractedHours);
+              const remainder = parseWhole(contractedRemainder);
+              if (hours == null || remainder == null || remainder > 59) {
+                toast.error("Informe horas e minutos contratados válidos.");
+                return;
+              }
+              const contractedMinutes = hours === 0 && remainder === 0 ? null : hours * 60 + remainder;
+              if (contractedMinutes == null && (contractedHours.trim() !== "" || contractedRemainder.trim() !== "")) {
+                toast.error("As horas totais contratadas devem ser maiores que zero.");
+                return;
+              }
+              // Pacote V2 §6: os três valores do cliente são independentes e opcionais.
+              // Nunca são apagados por causa da forma de cobrança selecionada.
+              const rates = {
+                hourly_rate: parseRate(hourlyRate),
+                fixed_rate: parseRate(fixedRate),
+                monthly_rate: parseRate(monthlyRate),
+                daily_rate: parseRate(dailyRate),
+              };
+              if (scheduleEnabled && schedules.length === 0) {
+                toast.error("Adicione pelo menos uma programação habitual.");
+                return;
+              }
+              const habitualSchedule = scheduleEnabled
+                ? schedules.map((schedule, index) => {
+                    const freq = draftFrequency(schedule);
+                    const monthly = isMonthlyFrequency(freq);
+                    const quota = weekdayQuota(freq);
+                    const cycleLike = freq === "cycle" || freq === "biweekly";
+                    if (!monthly && schedule.weekdays.length === 0)
+                      throw new Error(`Selecione pelo menos um dia na programação ${index + 1}.`);
+                    if (quota != null && schedule.weekdays.length !== quota) {
+                      throw new Error(`Selecione exatamente ${quota} dias na programação ${index + 1}.`);
+                    }
+                    const hasStart = Boolean(schedule.startTime);
+                    const hasEnd = Boolean(schedule.endTime);
+                    if (schedule.mode === "fixed" && (!hasStart || !hasEnd)) {
+                      throw new Error(`Informe início e fim na programação ${index + 1}, ou escolha horário flexível.`);
+                    }
+                    if (hasStart !== hasEnd) {
+                      throw new Error(`Informe início e fim juntos na programação ${index + 1}.`);
+                    }
+                    if (
+                      hasStart &&
+                      hasEnd &&
+                      calculateWallDurationMinutes(schedule.startTime!, schedule.endTime!) == null
+                    ) {
+                      throw new Error(`Informe horários diferentes e válidos na programação ${index + 1}.`);
+                    }
+                    if (cycleLike && !schedule.cycleAnchorDate) {
+                      throw new Error(`Informe o início do ciclo na programação ${index + 1}.`);
+                    }
+                    const hours = parseWhole(schedule.hours);
+                    const minutes = parseWhole(schedule.minutes);
+                    if (hours == null || minutes == null || minutes > 59) {
+                      throw new Error(`Carga inválida na programação ${index + 1}.`);
+                    }
+                    const total = hours === 0 && minutes === 0 ? null : hours * 60 + minutes;
+                    if (schedule.hours.trim() !== "" || schedule.minutes.trim() !== "") {
+                      if (total == null)
+                        throw new Error(`A carga da programação ${index + 1} deve ser maior que zero.`);
+                    }
+                    return {
+                      id: schedule.id,
+                      label: schedule.label?.trim() || null,
+                      weekdays: [...schedule.weekdays].sort((a, b) => a - b),
+                      mode: schedule.mode,
+                      start_time: schedule.startTime || null,
+                      end_time: schedule.endTime || null,
+                      ...(total != null ? { contracted_minutes: total } : {}),
+                      ui_frequency: freq,
+                      frequency: monthly ? "monthly" : cycleLike ? "cycle" : "weekly",
+                      ...(cycleLike
+                        ? {
+                            cycle_length_weeks: freq === "biweekly" ? 2 : Math.max(2, schedule.cycleLengthWeeks ?? 2),
+                            cycle_position: Math.max(0, schedule.cyclePosition ?? 0),
+                            cycle_anchor_date: schedule.cycleAnchorDate || null,
+                          }
+                        : {}),
+                      ...(freq === "monthly"
+                        ? { monthly_day_of_month: Math.max(1, Math.min(28, schedule.monthlyDayOfMonth ?? 1)) }
+                        : {}),
+                      ...(freq === "monthly_pos"
+                        ? {
+                            monthly_position: schedule.monthlyPosition ?? -1,
+                            monthly_weekday: schedule.monthlyWeekday ?? 1,
+                          }
+                        : {}),
+                      active: schedule.active !== false,
+                      sort_order: index,
+                    };
+                  })
+                : [];
+              // Só o "Ciclo alternado" exige todas as posições preenchidas; o
+              // quinzenal atende numa única semana do ciclo de 2 semanas.
+              const cycleGroups = new Map<string, Set<number>>();
+              for (const schedule of habitualSchedule) {
+                if (schedule.ui_frequency !== "cycle") continue;
+                const key = `${schedule.cycle_anchor_date ?? ""}:${schedule.cycle_length_weeks}`;
+                const positions = cycleGroups.get(key) ?? new Set<number>();
+                positions.add(schedule.cycle_position ?? 0);
+                cycleGroups.set(key, positions);
+              }
+              for (const [key, positions] of cycleGroups) {
+                const length = Number(key.split(":").pop());
+                if (positions.size < length) {
+                  throw new Error(`Preencha todas as posições do ciclo alternado (${length} semanas).`);
+                }
+              }
+
+              setLoading(true);
+              let clientId = initial?.id;
+              if (initial) {
+                const { error } = await (supabase.from("clients" as never) as any)
+                  .update({
+                    name: name.trim(),
+                    phone: phone.trim() || null,
+                    email: email.trim() || null,
+                    address: address.trim() || null,
+                    notes: notes.trim() || null,
+                    schedule_notes: scheduleNotes.trim() || null,
+                    instructions: instructions.trim() || null,
+                    status,
+                    timing_mode: timingMode,
+                    billing_mode: billingMode,
+                    ...rates,
+                    contracted_minutes: contractedMinutes,
+                    geo_lat: geoToSave.lat,
+                    geo_lng: geoToSave.lng,
+                    geo_address: address.trim() || null,
+                    geo_radius_m: geoToSave.lat != null ? geoToSave.radiusM : null,
+                    habitual_schedule: habitualSchedule,
+                  })
+                  .eq("id", initial.id);
+                if (error) throw error;
+              } else {
+                const { data, error } = await (supabase.from("clients" as never) as any)
+                  .insert({
                     company_id: companyId,
-                    client_id: clientId,
-                    user_id: u,
-                    is_primary: false,
-                    assignment_type: assignmentTypes[u] ?? "habitual",
-                  })),
-                ),
-              );
-            }
-            for (const assignee of assignees.filter((a) => selected.has(a.user_id))) {
-              guard(
-                await (supabase.from("client_assignees" as never) as any)
-                  .update({ assignment_type: assignmentTypes[assignee.user_id] ?? clientTeamType(assignee) })
-                  .eq("id", assignee.id),
-              );
-            }
-            // Atualiza primário
-            guard(
-              await (supabase.from("client_assignees" as never) as any)
-                .update({ is_primary: false })
-                .eq("client_id", clientId),
-            );
-            if (effectivePrimary) {
-              guard(
-                await (supabase.from("client_assignees" as never) as any)
-                  .update({ is_primary: true })
-                  .eq("client_id", clientId)
-                  .eq("user_id", effectivePrimary),
-              );
-            }
-          }
+                    name: name.trim(),
+                    phone: phone.trim() || null,
+                    email: email.trim() || null,
+                    address: address.trim() || null,
+                    notes: notes.trim() || null,
+                    schedule_notes: scheduleNotes.trim() || null,
+                    instructions: instructions.trim() || null,
+                    status,
+                    created_by: userId,
+                    timing_mode: timingMode,
+                    billing_mode: billingMode,
+                    ...rates,
+                    contracted_minutes: contractedMinutes,
+                    geo_lat: geoToSave.lat,
+                    geo_lng: geoToSave.lng,
+                    geo_address: address.trim() || null,
+                    geo_radius_m: geoToSave.lat != null ? geoToSave.radiusM : null,
+                    habitual_schedule: habitualSchedule,
+                  })
+                  .select("id")
+                  .single();
+                if (error) throw error;
+                clientId = (data as { id: string }).id;
+              }
 
-          toast.success(initial ? "Cliente atualizado" : "Cliente criado");
-          onDone();
-        } catch (err) {
-          toast.error((err as Error).message);
-        } finally {
-          setLoading(false);
-        }
-      }}
-    >
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
-        <div className="min-w-0 space-y-1.5">
-          <Label className="text-xs uppercase tracking-wide text-muted-foreground">Nome cliente</Label>
-          <Input required maxLength={150} value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome completo" />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs uppercase tracking-wide text-muted-foreground">Status</Label>
-          <Select value={status} onValueChange={(v) => setStatus(v as typeof status)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ativo">Ativo</SelectItem>
-              <SelectItem value="inativo">Inativo</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+              // Sincroniza vínculos
+              if (clientId) {
+                const effectivePrimary =
+                  primary && selected.has(primary) && (assignmentTypes[primary] ?? "habitual") === "habitual"
+                    ? primary
+                    : "";
+                // 11092026-001c — a equipa responsável é dado operacional: qualquer
+                // falha de gravação tem de chegar ao Gestor, nunca ser ignorada.
+                const guard = (result: { error: { message: string } | null }) => {
+                  if (result?.error) throw new Error(`Equipa responsável: ${result.error.message}`);
+                };
+                // Remove os desmarcados
+                const toRemove = assignees.filter((a) => !selected.has(a.user_id));
+                if (toRemove.length > 0) {
+                  guard(
+                    await (supabase.from("client_assignees" as never) as any).delete().in(
+                      "id",
+                      toRemove.map((a) => a.id),
+                    ),
+                  );
+                }
+                // Adiciona novos
+                const existing = new Set(assignees.map((a) => a.user_id));
+                const toAdd = [...selected].filter((u) => !existing.has(u));
+                if (toAdd.length > 0) {
+                  guard(
+                    await (supabase.from("client_assignees" as never) as any).insert(
+                      toAdd.map((u) => ({
+                        company_id: companyId,
+                        client_id: clientId,
+                        user_id: u,
+                        is_primary: false,
+                        assignment_type: assignmentTypes[u] ?? "habitual",
+                      })),
+                    ),
+                  );
+                }
+                for (const assignee of assignees.filter((a) => selected.has(a.user_id))) {
+                  guard(
+                    await (supabase.from("client_assignees" as never) as any)
+                      .update({ assignment_type: assignmentTypes[assignee.user_id] ?? clientTeamType(assignee) })
+                      .eq("id", assignee.id),
+                  );
+                }
+                // Atualiza primário
+                guard(
+                  await (supabase.from("client_assignees" as never) as any)
+                    .update({ is_primary: false })
+                    .eq("client_id", clientId),
+                );
+                if (effectivePrimary) {
+                  guard(
+                    await (supabase.from("client_assignees" as never) as any)
+                      .update({ is_primary: true })
+                      .eq("client_id", clientId)
+                      .eq("user_id", effectivePrimary),
+                  );
+                }
+              }
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="min-w-0 space-y-4">
-          <ModalSection title="Dados cadastrais" icon={Mail}>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label>Telefone</Label>
-            <Input maxLength={40} value={phone} onChange={(e) => setPhone(e.target.value)} />
+              toast.success(initial ? "Cliente atualizado" : "Cliente criado");
+              onDone();
+            } catch (err) {
+              toast.error((err as Error).message);
+            } finally {
+              setLoading(false);
+            }
+          }}
+        >
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
+            <div className="min-w-0 space-y-1.5">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">Nome cliente</Label>
+              <Input
+                required
+                maxLength={150}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Nome completo"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">Status</Label>
+              <Select value={status} onValueChange={(v) => setStatus(v as typeof status)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ativo">Ativo</SelectItem>
+                  <SelectItem value="inativo">Inativo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <div className="space-y-1.5">
-            <Label>Email</Label>
-            <Input type="email" maxLength={150} value={email} onChange={(e) => setEmail(e.target.value)} />
-          </div>
-        </div>
-          </ModalSection>
-          <ModalSection title="Geolocalização" icon={MapPin}>
-        <div className="space-y-1.5">
-          <Label>Endereço do cliente</Label>
-          <Input
-            maxLength={250}
-            value={address}
-            onChange={(e) => {
-              const nextAddress = e.target.value;
-              setAddress(nextAddress);
-              setGeo((current) => ({ ...current, address: nextAddress }));
-            }}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Modo de apontamento</Label>
-          <div className="flex gap-2">
-            {([{ v: "start_stop", label: "Start/Stop", hint: "Funcionário marca início e fim" }] as const).map((opt) => (
-              <button
-                key={opt.v}
-                type="button"
-                onClick={() => undefined}
-                className={`flex-1 rounded-lg border p-2 text-left text-xs transition ${
-                  timingMode === opt.v ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
-                }`}
-              >
-                <div className="font-medium">{opt.label}</div>
-                <div className="text-[10px] text-muted-foreground">{opt.hint}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-        <ClientGeoEditor value={geo} onChange={updateGeo} showAddressField={false} />
-          </ModalSection>
-        </div>
-        <div className="min-w-0 space-y-4">
-          <ModalSection title="Horários & programação" description="Usada como sugestão ao criar tarefas para este cliente." icon={CalendarDays}>
-        <div className="flex items-start justify-between gap-3 rounded-lg border border-border bg-muted/20 p-3">
-          <div>
-            <p className="text-sm font-medium">Usar horário habitual</p>
-            <p className="text-xs text-muted-foreground">
-              A tarefa receberá a próxima data e o horário configurado, sem impedir ajustes manuais.
-            </p>
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={scheduleEnabled}
-            onClick={() => setScheduleEnabled((value) => !value)}
-            className={`relative h-6 w-11 shrink-0 rounded-full transition ${scheduleEnabled ? "bg-primary" : "bg-muted"}`}
-          >
-            <span
-              className={`absolute top-1 h-4 w-4 rounded-full bg-background shadow transition ${scheduleEnabled ? "left-6" : "left-1"}`}
-            />
-          </button>
-        </div>
 
-        {scheduleEnabled && (
-          <div className="space-y-3">
-            {schedules.map((schedule, index) => (
-              <div key={schedule.id ?? index} className="space-y-3 rounded-lg border border-border bg-muted/20 p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <Label>Programação {index + 1}</Label>
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    title="Remover programação"
-                    onClick={() => setSchedules((current) => current.filter((_, i) => i !== index))}
-                    disabled={schedules.length === 1}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div className="min-w-0 space-y-4">
+              <ModalSection title="Dados cadastrais" icon={Mail}>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Telefone</Label>
+                    <Input maxLength={40} value={phone} onChange={(e) => setPhone(e.target.value)} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Email</Label>
+                    <Input type="email" maxLength={150} value={email} onChange={(e) => setEmail(e.target.value)} />
+                  </div>
                 </div>
-                <Input
-                  value={schedule.label ?? ""}
-                  onChange={(e) => setSchedules((current) => current.map((s, i) => i === index ? { ...s, label: e.target.value } : s))}
-                  placeholder="Nome opcional (ex.: Semana A)"
-                  aria-label={`Nome da programação ${index + 1}`}
-                />
-                {(() => {
-                  const freq = draftFrequency(schedule);
-                  const quota = weekdayQuota(freq);
-                  const monthly = isMonthlyFrequency(freq);
-                  const cycleLike = freq === "cycle" || freq === "biweekly";
-                  const upd = (patch: (s: ScheduleDraft) => ScheduleDraft) =>
-                    setSchedules((current) => current.map((s, i) => (i === index ? patch(s) : s)));
-                  return (
-                    <>
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <div className="space-y-1.5">
-                          <Label>Tipo de horário</Label>
-                          <Select value={schedule.mode} onValueChange={(value) => upd((s) => ({ ...s, mode: value as ClientHabitualSchedule["mode"] }))}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="fixed">Horário fixo</SelectItem>
-                              <SelectItem value="flexible">Horário flexível</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label>Frequência</Label>
-                          <Select value={freq} onValueChange={(value) => upd((s) => applyFrequency(s, value))}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              {frequencyOptions.map((option) => (
-                                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
+              </ModalSection>
+              <ModalSection title="Geolocalização" icon={MapPin}>
+                <div className="space-y-1.5">
+                  <Label>Endereço do cliente</Label>
+                  <Input
+                    maxLength={250}
+                    value={address}
+                    onChange={(e) => {
+                      const nextAddress = e.target.value;
+                      setAddress(nextAddress);
+                      setGeo((current) => ({ ...current, address: nextAddress }));
+                    }}
+                    onBlur={() => void geocodeFromAddress(address)}
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    {autoGeocoding
+                      ? "A localizar o endereço no mapa..."
+                      : "A localização do trabalho é preenchida automaticamente a partir deste endereço."}
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Modo de apontamento</Label>
+                  <div className="flex gap-2">
+                    {([{ v: "start_stop", label: "Start/Stop", hint: "Funcionário marca início e fim" }] as const).map(
+                      (opt) => (
+                        <button
+                          key={opt.v}
+                          type="button"
+                          onClick={() => undefined}
+                          className={`flex-1 rounded-lg border p-2 text-left text-xs transition ${
+                            timingMode === opt.v
+                              ? "border-primary bg-primary/10"
+                              : "border-border hover:border-primary/50"
+                          }`}
+                        >
+                          <div className="font-medium">{opt.label}</div>
+                          <div className="text-[10px] text-muted-foreground">{opt.hint}</div>
+                        </button>
+                      ),
+                    )}
+                  </div>
+                </div>
+                <ClientGeoEditor value={geo} onChange={updateGeo} showAddressField={false} />
+              </ModalSection>
+            </div>
+            <div className="min-w-0 space-y-4">
+              <ModalSection
+                title="Horários & programação"
+                description="Usada como sugestão ao criar tarefas para este cliente."
+                icon={CalendarDays}
+              >
+                <div className="flex items-start justify-between gap-3 rounded-lg border border-border bg-muted/20 p-3">
+                  <div>
+                    <p className="text-sm font-medium">Usar horário habitual</p>
+                    <p className="text-xs text-muted-foreground">
+                      A tarefa receberá a próxima data e o horário configurado, sem impedir ajustes manuais.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={scheduleEnabled}
+                    onClick={() => setScheduleEnabled((value) => !value)}
+                    className={`relative h-6 w-11 shrink-0 rounded-full transition ${scheduleEnabled ? "bg-primary" : "bg-muted"}`}
+                  >
+                    <span
+                      className={`absolute top-1 h-4 w-4 rounded-full bg-background shadow transition ${scheduleEnabled ? "left-6" : "left-1"}`}
+                    />
+                  </button>
+                </div>
 
-                      {cycleLike && (
-                        <div className="grid gap-3 sm:grid-cols-3">
-                          {freq === "cycle" && (
-                            <div className="space-y-1.5"><Label>Tamanho do ciclo</Label><Select value={String(schedule.cycleLengthWeeks ?? 2)} onValueChange={(value) => upd((s) => ({ ...s, cycleLengthWeeks: Number(value), cyclePosition: Math.min(s.cyclePosition ?? 0, Number(value) - 1) }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{[2, 3, 4].map((size) => <SelectItem key={size} value={String(size)}>{size} semanas</SelectItem>)}</SelectContent></Select></div>
-                          )}
-                          <div className="space-y-1.5"><Label>{freq === "biweekly" ? "Semana de atendimento" : "Posição no ciclo"}</Label><Select value={String((schedule.cyclePosition ?? 0) + 1)} onValueChange={(value) => upd((s) => ({ ...s, cyclePosition: Number(value) - 1 }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Array.from({ length: freq === "biweekly" ? 2 : (schedule.cycleLengthWeeks ?? 2) }, (_, n) => <SelectItem key={n} value={String(n + 1)}>Semana {String.fromCharCode(65 + n)} ({n + 1})</SelectItem>)}</SelectContent></Select></div>
-                          <div className="space-y-1.5"><Label>Início do ciclo</Label><Input type="date" value={schedule.cycleAnchorDate ?? ""} onChange={(e) => upd((s) => ({ ...s, cycleAnchorDate: e.target.value }))} /></div>
+                {scheduleEnabled && (
+                  <div className="space-y-3">
+                    {schedules.map((schedule, index) => (
+                      <div
+                        key={schedule.id ?? index}
+                        className="space-y-3 rounded-lg border border-border bg-muted/20 p-3"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <Label>Programação {index + 1}</Label>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            title="Remover programação"
+                            onClick={() => setSchedules((current) => current.filter((_, i) => i !== index))}
+                            disabled={schedules.length === 1}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
-                      )}
-                      {cycleLike && (
-                        <p className="text-[10px] text-muted-foreground">
-                          {freq === "biweekly"
-                            ? "Mesma programação a cada 2 semanas, contando a partir do início do ciclo."
-                            : "A primeira semana começa nesta data; o ciclo não depende do número da semana no calendário."}
-                        </p>
-                      )}
+                        <Input
+                          value={schedule.label ?? ""}
+                          onChange={(e) =>
+                            setSchedules((current) =>
+                              current.map((s, i) => (i === index ? { ...s, label: e.target.value } : s)),
+                            )
+                          }
+                          placeholder="Nome opcional (ex.: Semana A)"
+                          aria-label={`Nome da programação ${index + 1}`}
+                        />
+                        {(() => {
+                          const freq = draftFrequency(schedule);
+                          const quota = weekdayQuota(freq);
+                          const monthly = isMonthlyFrequency(freq);
+                          const cycleLike = freq === "cycle" || freq === "biweekly";
+                          const upd = (patch: (s: ScheduleDraft) => ScheduleDraft) =>
+                            setSchedules((current) => current.map((s, i) => (i === index ? patch(s) : s)));
+                          return (
+                            <>
+                              <div className="grid gap-3 sm:grid-cols-2">
+                                <div className="space-y-1.5">
+                                  <Label>Tipo de horário</Label>
+                                  <Select
+                                    value={schedule.mode}
+                                    onValueChange={(value) =>
+                                      upd((s) => ({ ...s, mode: value as ClientHabitualSchedule["mode"] }))
+                                    }
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="fixed">Horário fixo</SelectItem>
+                                      <SelectItem value="flexible">Horário flexível</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="space-y-1.5">
+                                  <Label>Frequência</Label>
+                                  <Select value={freq} onValueChange={(value) => upd((s) => applyFrequency(s, value))}>
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {frequencyOptions.map((option) => (
+                                        <SelectItem key={option.value} value={option.value}>
+                                          {option.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
 
-                      {freq === "monthly" && (
-                        <div className="space-y-1.5"><Label>Dia do mês</Label><Input type="number" min="1" max="28" value={schedule.monthlyDayOfMonth ?? 1} onChange={(e) => upd((s) => ({ ...s, monthlyDayOfMonth: Math.max(1, Math.min(28, Number(e.target.value) || 1)) }))} /></div>
-                      )}
-                      {freq === "monthly_pos" && (
+                              {cycleLike && (
+                                <div className="grid gap-3 sm:grid-cols-3">
+                                  {freq === "cycle" && (
+                                    <div className="space-y-1.5">
+                                      <Label>Tamanho do ciclo</Label>
+                                      <Select
+                                        value={String(schedule.cycleLengthWeeks ?? 2)}
+                                        onValueChange={(value) =>
+                                          upd((s) => ({
+                                            ...s,
+                                            cycleLengthWeeks: Number(value),
+                                            cyclePosition: Math.min(s.cyclePosition ?? 0, Number(value) - 1),
+                                          }))
+                                        }
+                                      >
+                                        <SelectTrigger>
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {[2, 3, 4].map((size) => (
+                                            <SelectItem key={size} value={String(size)}>
+                                              {size} semanas
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  )}
+                                  <div className="space-y-1.5">
+                                    <Label>{freq === "biweekly" ? "Semana de atendimento" : "Posição no ciclo"}</Label>
+                                    <Select
+                                      value={String((schedule.cyclePosition ?? 0) + 1)}
+                                      onValueChange={(value) =>
+                                        upd((s) => ({ ...s, cyclePosition: Number(value) - 1 }))
+                                      }
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {Array.from(
+                                          { length: freq === "biweekly" ? 2 : (schedule.cycleLengthWeeks ?? 2) },
+                                          (_, n) => (
+                                            <SelectItem key={n} value={String(n + 1)}>
+                                              Semana {String.fromCharCode(65 + n)} ({n + 1})
+                                            </SelectItem>
+                                          ),
+                                        )}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <Label>Início do ciclo</Label>
+                                    <Input
+                                      type="date"
+                                      value={schedule.cycleAnchorDate ?? ""}
+                                      onChange={(e) => upd((s) => ({ ...s, cycleAnchorDate: e.target.value }))}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                              {cycleLike && (
+                                <p className="text-[10px] text-muted-foreground">
+                                  {freq === "biweekly"
+                                    ? "Mesma programação a cada 2 semanas, contando a partir do início do ciclo."
+                                    : "A primeira semana começa nesta data; o ciclo não depende do número da semana no calendário."}
+                                </p>
+                              )}
+
+                              {freq === "monthly" && (
+                                <div className="space-y-1.5">
+                                  <Label>Dia do mês</Label>
+                                  <Input
+                                    type="number"
+                                    min="1"
+                                    max="28"
+                                    value={schedule.monthlyDayOfMonth ?? 1}
+                                    onChange={(e) =>
+                                      upd((s) => ({
+                                        ...s,
+                                        monthlyDayOfMonth: Math.max(1, Math.min(28, Number(e.target.value) || 1)),
+                                      }))
+                                    }
+                                  />
+                                </div>
+                              )}
+                              {freq === "monthly_pos" && (
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                  <div className="space-y-1.5">
+                                    <Label>Posição</Label>
+                                    <Select
+                                      value={String(schedule.monthlyPosition ?? -1)}
+                                      onValueChange={(value) => upd((s) => ({ ...s, monthlyPosition: Number(value) }))}
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {[
+                                          { v: 1, l: "Primeira" },
+                                          { v: 2, l: "Segunda" },
+                                          { v: 3, l: "Terceira" },
+                                          { v: 4, l: "Quarta" },
+                                          { v: -1, l: "Última" },
+                                        ].map((p) => (
+                                          <SelectItem key={p.v} value={String(p.v)}>
+                                            {p.l}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <Label>Dia da semana</Label>
+                                    <Select
+                                      value={String(schedule.monthlyWeekday ?? 1)}
+                                      onValueChange={(value) => upd((s) => ({ ...s, monthlyWeekday: Number(value) }))}
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"].map(
+                                          (lbl, i) => (
+                                            <SelectItem key={lbl} value={String(i)}>
+                                              {lbl}
+                                            </SelectItem>
+                                          ),
+                                        )}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+                              )}
+
+                              {!monthly && (
+                                <div className="space-y-1.5">
+                                  <Label>Dias habituais</Label>
+                                  {quota != null && (
+                                    <p className="text-[10px] text-muted-foreground">
+                                      Escolha exatamente {quota} dias de atendimento.
+                                    </p>
+                                  )}
+                                  <div className="grid grid-cols-7 gap-1.5">
+                                    {["D", "S", "T", "Q", "Q", "S", "S"].map((label, day) => {
+                                      const active = schedule.weekdays.includes(day);
+                                      return (
+                                        <button
+                                          key={`${label}-${day}`}
+                                          type="button"
+                                          aria-pressed={active}
+                                          onClick={() =>
+                                            upd((s) => {
+                                              const added = [...s.weekdays, day].sort((a, b) => a - b);
+                                              return {
+                                                ...s,
+                                                weekdays: active
+                                                  ? s.weekdays.filter((value) => value !== day)
+                                                  : quota != null && added.length > quota
+                                                    ? added.slice(added.length - quota)
+                                                    : added,
+                                              };
+                                            })
+                                          }
+                                          className={`h-9 rounded-md border text-sm font-medium ${active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:border-primary/50"}`}
+                                        >
+                                          {label}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          );
+                        })()}
                         <div className="grid gap-3 sm:grid-cols-2">
-                          <div className="space-y-1.5"><Label>Posição</Label><Select value={String(schedule.monthlyPosition ?? -1)} onValueChange={(value) => upd((s) => ({ ...s, monthlyPosition: Number(value) }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{[{ v: 1, l: "Primeira" }, { v: 2, l: "Segunda" }, { v: 3, l: "Terceira" }, { v: 4, l: "Quarta" }, { v: -1, l: "Última" }].map((p) => <SelectItem key={p.v} value={String(p.v)}>{p.l}</SelectItem>)}</SelectContent></Select></div>
-                          <div className="space-y-1.5"><Label>Dia da semana</Label><Select value={String(schedule.monthlyWeekday ?? 1)} onValueChange={(value) => upd((s) => ({ ...s, monthlyWeekday: Number(value) }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"].map((lbl, i) => <SelectItem key={lbl} value={String(i)}>{lbl}</SelectItem>)}</SelectContent></Select></div>
-                        </div>
-                      )}
-
-                      {!monthly && (
-                        <div className="space-y-1.5">
-                          <Label>Dias habituais</Label>
-                          {quota != null && <p className="text-[10px] text-muted-foreground">Escolha exatamente {quota} dias de atendimento.</p>}
-                          <div className="grid grid-cols-7 gap-1.5">
-                            {["D", "S", "T", "Q", "Q", "S", "S"].map((label, day) => {
-                              const active = schedule.weekdays.includes(day);
-                              return (
-                                <button
-                                  key={`${label}-${day}`}
-                                  type="button"
-                                  aria-pressed={active}
-                                  onClick={() => upd((s) => {
-                                    const added = [...s.weekdays, day].sort((a, b) => a - b);
-                                    return {
-                                      ...s,
-                                      weekdays: active
-                                        ? s.weekdays.filter((value) => value !== day)
-                                        : quota != null && added.length > quota
-                                          ? added.slice(added.length - quota)
-                                          : added,
-                                    };
-                                  })}
-                                  className={`h-9 rounded-md border text-sm font-medium ${active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:border-primary/50"}`}
-                                >{label}</button>
-                              );
-                            })}
+                          <div className="space-y-1.5">
+                            <Label className="flex items-center gap-1">
+                              <Clock className="h-3.5 w-3.5" /> Hora de início{" "}
+                              <span className="text-xs text-muted-foreground">(opcional no flexível)</span>
+                            </Label>
+                            <Input
+                              type="time"
+                              value={schedule.startTime ?? ""}
+                              onChange={(e) =>
+                                setSchedules((current) =>
+                                  current.map((s, i) => (i === index ? { ...s, startTime: e.target.value } : s)),
+                                )
+                              }
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="flex items-center gap-1">
+                              <Clock className="h-3.5 w-3.5" /> Hora de fim{" "}
+                              <span className="text-xs text-muted-foreground">(opcional no flexível)</span>
+                            </Label>
+                            <Input
+                              type="time"
+                              value={schedule.endTime ?? ""}
+                              onChange={(e) =>
+                                setSchedules((current) =>
+                                  current.map((s, i) => (i === index ? { ...s, endTime: e.target.value } : s)),
+                                )
+                              }
+                            />
+                            {isOvernightTimeRange(schedule.startTime ?? "", schedule.endTime ?? "") && (
+                              <p className="text-xs text-muted-foreground">
+                                O fim será considerado no dia seguinte (+1 dia).
+                              </p>
+                            )}
                           </div>
                         </div>
-                      )}
-                    </>
-                  );
-                })()}
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Hora de início <span className="text-xs text-muted-foreground">(opcional no flexível)</span></Label>
-                    <Input type="time" value={schedule.startTime ?? ""} onChange={(e) => setSchedules((current) => current.map((s, i) => i === index ? { ...s, startTime: e.target.value } : s))} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Hora de fim <span className="text-xs text-muted-foreground">(opcional no flexível)</span></Label>
-                    <Input type="time" value={schedule.endTime ?? ""} onChange={(e) => setSchedules((current) => current.map((s, i) => i === index ? { ...s, endTime: e.target.value } : s))} />
-                    {isOvernightTimeRange(schedule.startTime ?? "", schedule.endTime ?? "") && <p className="text-xs text-muted-foreground">O fim será considerado no dia seguinte (+1 dia).</p>}
-                  </div>
-                </div>
-                {schedule.mode === "fixed" && (
-                  <p className="text-xs text-muted-foreground">No horário fixo, início e fim são obrigatórios. No flexível, são opcionais e servem como sugestão.</p>
-                )}
-                {schedule.mode === "flexible" && <p className="rounded-md border border-border bg-background p-2 text-xs text-muted-foreground">A data segue os dias selecionados; o horário será definido manualmente na tarefa.</p>}
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1.5"><Label>Carga da programação · horas</Label><Input type="number" min="0" step="1" value={schedule.hours} onChange={(e) => setSchedules((current) => current.map((s, i) => i === index ? { ...s, hours: e.target.value } : s))} placeholder="3" /></div>
-                  <div className="space-y-1.5"><Label>Carga · minutos</Label><Input type="number" min="0" max="59" step="1" value={schedule.minutes} onChange={(e) => setSchedules((current) => current.map((s, i) => i === index ? { ...s, minutes: e.target.value } : s))} placeholder="00" /></div>
-                </div>
-              </div>
-            ))}
-            <Button type="button" variant="outline" onClick={() => setSchedules((current) => [...current, scheduleDraft({ weekdays: [1], mode: "fixed", startTime: "", endTime: "", frequency: "weekly" }, current.length)])}>
-              <Plus className="mr-1 h-4 w-4" /> Adicionar programação
-            </Button>
-          </div>
-        )}
-        {initial?.contracted_minutes != null && (
-          <div className="rounded-lg border border-border bg-muted/20 p-3 text-xs text-muted-foreground">
-            Horas totais contratadas (registo antigo, só leitura):{" "}
-            <span className="font-medium text-foreground">
-              {Math.floor(initial.contracted_minutes / 60)}h{String(initial.contracted_minutes % 60).padStart(2, "0")}
-            </span>
-          </div>
-        )}
-            <div className="space-y-1.5">
-              <Label>Observações do horário</Label>
-              <Textarea maxLength={1000} rows={2} value={scheduleNotes} onChange={(e) => setScheduleNotes(e.target.value)} />
-            </div>
-          </ModalSection>
-          <ModalSection title="Cobrança" icon={FileSpreadsheet}>
-        <div className="space-y-1.5">
-          <Label>Forma de cobrança</Label>
-          <Select value={billingMode} onValueChange={(v) => setBillingMode(v as ClientRow["billing_mode"])}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="hourly">Por hora</SelectItem>
-              <SelectItem value="daily">Por dia</SelectItem>
-              <SelectItem value="fixed">Valor fixo por tarefa</SelectItem>
-              <SelectItem value="monthly">Mensal</SelectItem>
-              <SelectItem value="mixed">Misto (hora + fixo)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="grid gap-2 sm:grid-cols-2" translate="no">
-          {(billingMode === "hourly" || billingMode === "mixed") && (
-          <div className="space-y-1.5">
-            <Label className="text-xs">Valor / hora ({currencySymbol})</Label>
-            <Input type="number" step="0.01" min="0" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} placeholder="Herda da empresa" />
-          </div>
-          )}
-          {billingMode === "daily" && (
-          <div className="space-y-1.5">
-            <Label className="text-xs">Valor / dia ({currencySymbol})</Label>
-            <Input type="number" step="0.01" min="0" value={dailyRate} onChange={(e) => setDailyRate(e.target.value)} placeholder="Herda da empresa" />
-          </div>
-          )}
-          {billingMode === "monthly" && (
-          <div className="space-y-1.5">
-            <Label className="text-xs">Valor mensal ({currencySymbol})</Label>
-            <Input type="number" step="0.01" min="0" value={monthlyRate} onChange={(e) => setMonthlyRate(e.target.value)} placeholder="Herda da empresa" />
-          </div>
-          )}
-          {(billingMode === "fixed" || billingMode === "mixed") && (
-          <div className="space-y-1.5">
-            <Label className="text-xs">Valor fixo por tarefa ({currencySymbol})</Label>
-            <Input type="number" step="0.01" min="0" value={fixedRate} onChange={(e) => setFixedRate(e.target.value)} placeholder="Herda da empresa" />
-          </div>
-          )}
-        </div>
-        <p className="text-[10px] text-muted-foreground">
-          Todos os valores são opcionais e independentes. Em branco, herda o valor padrão da
-          empresa. A modalidade aplicada ao pagamento é sempre a do funcionário
-          (Funcionário &gt; Cliente &gt; Empresa).
-        </p>
-          </ModalSection>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4">
-        <div className="space-y-1.5">
-          <Label className="text-xs uppercase tracking-wide text-muted-foreground">Observações gerais</Label>
-          <Textarea className="w-full" maxLength={1000} value={notes} onChange={(e) => setNotes(e.target.value)} />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs uppercase tracking-wide text-muted-foreground">Instruções adicionais</Label>
-          <Textarea className="w-full" maxLength={2000} value={instructions} onChange={(e) => setInstructions(e.target.value)} placeholder="Ex.: código do portão, onde deixar as chaves, cuidados especiais" />
-        </div>
-      </div>
-
-      <ModalSection title="Equipa responsável" icon={UserCog}>
-          <p className="mb-2 text-xs text-muted-foreground">
-            A equipa habitual é pré-selecionada nas novas tarefas. Recursos só entram na operação quando forem atribuídos explicitamente.
-          </p>
-          <div className="mb-2 space-y-1.5">
-            <Label htmlFor="client-team-search">Pesquisar funcionário (opcional)</Label>
-            <Input
-              id="client-team-search"
-              placeholder="Escreva parte do nome"
-              value={teamSearch}
-              onChange={(e) => setTeamSearch(e.target.value)}
-            />
-          </div>
-          {membersLoading ? (
-            <p className="px-2 py-1 text-xs text-muted-foreground">A carregar funcionários…</p>
-          ) : membersError ? (
-            <p className="px-2 py-1 text-xs text-destructive">Não foi possível carregar os funcionários.</p>
-          ) : (
-          <div className="space-y-1 rounded-lg border border-border p-2">
-            {(() => {
-              const linked = sortedMembers.filter((m) => selected.has(m.id) && matchesTeamSearch(m));
-              const available = sortedMembers.filter((m) => !selected.has(m.id) && !m.inactive && matchesTeamSearch(m));
-              const rows = [...linked, ...available];
-              if (rows.length === 0) {
-                return (
-                  <p className="px-2 py-1 text-xs text-muted-foreground">
-                    {teamSearch.trim() ? "Nenhum funcionário encontrado." : "Nenhum funcionário disponível."}
-                  </p>
-                );
-              }
-              return (
-                <div className="max-h-[11.5rem] overflow-y-auto" data-testid="team-list-habitual">
-                {rows.map((m) => {
-                  const checked = selected.has(m.id);
-                  const memberType = assignmentTypes[m.id] ?? "habitual";
-                  return (
-                    <div key={m.id} className="flex h-9 items-center justify-between gap-2 rounded px-2 hover:bg-accent">
-                      <label className="flex min-w-0 items-center gap-2 text-sm">
-                        <input type="checkbox" checked={checked} onChange={() => toggleMember(m.id, "habitual")} />
-                        <span className="truncate">{m.full_name ?? m.id.slice(0, 8)}</span>
-                        {m.inactive && (
-                          <span className="shrink-0 rounded border border-border px-1 text-[10px] text-muted-foreground">Inativo</span>
+                        {schedule.mode === "fixed" && (
+                          <p className="text-xs text-muted-foreground">
+                            No horário fixo, início e fim são obrigatórios. No flexível, são opcionais e servem como
+                            sugestão.
+                          </p>
                         )}
-                      </label>
-                      {checked && (
-                        <div className="flex shrink-0 items-center gap-2 text-[11px] text-muted-foreground">
-                          <label className="flex items-center gap-1">
-                            <input
-                              type="radio"
-                              name={`team-type-${m.id}`}
-                              checked={memberType === "habitual"}
-                              onChange={() => setAssignmentType(m.id, "habitual")}
+                        {schedule.mode === "flexible" && (
+                          <p className="rounded-md border border-border bg-background p-2 text-xs text-muted-foreground">
+                            A data segue os dias selecionados; o horário será definido manualmente na tarefa.
+                          </p>
+                        )}
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="space-y-1.5">
+                            <Label>Carga da programação · horas</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="1"
+                              value={schedule.hours}
+                              onChange={(e) =>
+                                setSchedules((current) =>
+                                  current.map((s, i) => (i === index ? { ...s, hours: e.target.value } : s)),
+                                )
+                              }
+                              placeholder="3"
                             />
-                            habitual
-                          </label>
-                          <label className="flex items-center gap-1">
-                            <input
-                              type="radio"
-                              name={`team-type-${m.id}`}
-                              checked={memberType === "recurso"}
-                              onChange={() => setAssignmentType(m.id, "recurso")}
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label>Carga · minutos</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              max="59"
+                              step="1"
+                              value={schedule.minutes}
+                              onChange={(e) =>
+                                setSchedules((current) =>
+                                  current.map((s, i) => (i === index ? { ...s, minutes: e.target.value } : s)),
+                                )
+                              }
+                              placeholder="00"
                             />
-                            recurso
-                          </label>
-                          {memberType === "habitual" && !m.inactive && (
-                            <label className="flex items-center gap-1">
-                              <input type="radio" name="primary" checked={primary === m.id} onChange={() => setPrimary(m.id)} />
-                              principal
-                            </label>
-                          )}
+                          </div>
                         </div>
-                      )}
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() =>
+                        setSchedules((current) => [
+                          ...current,
+                          scheduleDraft(
+                            { weekdays: [1], mode: "fixed", startTime: "", endTime: "", frequency: "weekly" },
+                            current.length,
+                          ),
+                        ])
+                      }
+                    >
+                      <Plus className="mr-1 h-4 w-4" /> Adicionar programação
+                    </Button>
+                  </div>
+                )}
+                {initial?.contracted_minutes != null && (
+                  <div className="rounded-lg border border-border bg-muted/20 p-3 text-xs text-muted-foreground">
+                    Horas totais contratadas (registo antigo, só leitura):{" "}
+                    <span className="font-medium text-foreground">
+                      {Math.floor(initial.contracted_minutes / 60)}h
+                      {String(initial.contracted_minutes % 60).padStart(2, "0")}
+                    </span>
+                  </div>
+                )}
+                <div className="space-y-1.5">
+                  <Label>Observações do horário</Label>
+                  <Textarea
+                    maxLength={1000}
+                    rows={2}
+                    value={scheduleNotes}
+                    onChange={(e) => setScheduleNotes(e.target.value)}
+                  />
+                </div>
+              </ModalSection>
+              <ModalSection title="Cobrança" icon={FileSpreadsheet}>
+                <div className="space-y-1.5">
+                  <Label>Forma de cobrança</Label>
+                  <Select value={billingMode} onValueChange={(v) => setBillingMode(v as ClientRow["billing_mode"])}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="hourly">Por hora</SelectItem>
+                      <SelectItem value="daily">Por dia</SelectItem>
+                      <SelectItem value="fixed">Valor fixo por tarefa</SelectItem>
+                      <SelectItem value="monthly">Mensal</SelectItem>
+                      <SelectItem value="mixed">Misto (hora + fixo)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2" translate="no">
+                  {(billingMode === "hourly" || billingMode === "mixed") && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Valor / hora ({currencySymbol})</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={hourlyRate}
+                        onChange={(e) => setHourlyRate(e.target.value)}
+                        placeholder="Herda da empresa"
+                      />
+                    </div>
+                  )}
+                  {billingMode === "daily" && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Valor / dia ({currencySymbol})</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={dailyRate}
+                        onChange={(e) => setDailyRate(e.target.value)}
+                        placeholder="Herda da empresa"
+                      />
+                    </div>
+                  )}
+                  {billingMode === "monthly" && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Valor mensal ({currencySymbol})</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={monthlyRate}
+                        onChange={(e) => setMonthlyRate(e.target.value)}
+                        placeholder="Herda da empresa"
+                      />
+                    </div>
+                  )}
+                  {(billingMode === "fixed" || billingMode === "mixed") && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Valor fixo por tarefa ({currencySymbol})</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={fixedRate}
+                        onChange={(e) => setFixedRate(e.target.value)}
+                        placeholder="Herda da empresa"
+                      />
+                    </div>
+                  )}
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Todos os valores são opcionais e independentes. Em branco, herda o valor padrão da empresa. A
+                  modalidade aplicada ao pagamento é sempre a do funcionário (Funcionário &gt; Cliente &gt; Empresa).
+                </p>
+              </ModalSection>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">Observações gerais</Label>
+              <Textarea className="w-full" maxLength={1000} value={notes} onChange={(e) => setNotes(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">Instruções adicionais</Label>
+              <Textarea
+                className="w-full"
+                maxLength={2000}
+                value={instructions}
+                onChange={(e) => setInstructions(e.target.value)}
+                placeholder="Ex.: código do portão, onde deixar as chaves, cuidados especiais"
+              />
+            </div>
+          </div>
+
+          <ModalSection title="Equipa responsável" icon={UserCog}>
+            <p className="mb-2 text-xs text-muted-foreground">
+              A equipa habitual é pré-selecionada nas novas tarefas. Recursos só entram na operação quando forem
+              atribuídos explicitamente.
+            </p>
+            <div className="mb-2 space-y-1.5">
+              <Label htmlFor="client-team-search">Pesquisar funcionário (opcional)</Label>
+              <Input
+                id="client-team-search"
+                placeholder="Escreva parte do nome"
+                value={teamSearch}
+                onChange={(e) => setTeamSearch(e.target.value)}
+              />
+            </div>
+            {membersLoading ? (
+              <p className="px-2 py-1 text-xs text-muted-foreground">A carregar funcionários…</p>
+            ) : membersError ? (
+              <p className="px-2 py-1 text-xs text-destructive">Não foi possível carregar os funcionários.</p>
+            ) : (
+              <div className="space-y-1 rounded-lg border border-border p-2">
+                {(() => {
+                  const linked = sortedMembers.filter((m) => selected.has(m.id) && matchesTeamSearch(m));
+                  const available = sortedMembers.filter(
+                    (m) => !selected.has(m.id) && !m.inactive && matchesTeamSearch(m),
+                  );
+                  const rows = [...linked, ...available];
+                  if (rows.length === 0) {
+                    return (
+                      <p className="px-2 py-1 text-xs text-muted-foreground">
+                        {teamSearch.trim() ? "Nenhum funcionário encontrado." : "Nenhum funcionário disponível."}
+                      </p>
+                    );
+                  }
+                  return (
+                    <div className="max-h-[11.5rem] overflow-y-auto" data-testid="team-list-habitual">
+                      {rows.map((m) => {
+                        const checked = selected.has(m.id);
+                        const memberType = assignmentTypes[m.id] ?? "habitual";
+                        return (
+                          <div
+                            key={m.id}
+                            className="flex h-9 items-center justify-between gap-2 rounded px-2 hover:bg-accent"
+                          >
+                            <label className="flex min-w-0 items-center gap-2 text-sm">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleMember(m.id, "habitual")}
+                              />
+                              <span className="truncate">{m.full_name ?? m.id.slice(0, 8)}</span>
+                              {m.inactive && (
+                                <span className="shrink-0 rounded border border-border px-1 text-[10px] text-muted-foreground">
+                                  Inativo
+                                </span>
+                              )}
+                            </label>
+                            {checked && (
+                              <div className="flex shrink-0 items-center gap-2 text-[11px] text-muted-foreground">
+                                <label className="flex items-center gap-1">
+                                  <input
+                                    type="radio"
+                                    name={`team-type-${m.id}`}
+                                    checked={memberType === "habitual"}
+                                    onChange={() => setAssignmentType(m.id, "habitual")}
+                                  />
+                                  habitual
+                                </label>
+                                <label className="flex items-center gap-1">
+                                  <input
+                                    type="radio"
+                                    name={`team-type-${m.id}`}
+                                    checked={memberType === "recurso"}
+                                    onChange={() => setAssignmentType(m.id, "recurso")}
+                                  />
+                                  recurso
+                                </label>
+                                {memberType === "habitual" && !m.inactive && (
+                                  <label className="flex items-center gap-1">
+                                    <input
+                                      type="radio"
+                                      name="primary"
+                                      checked={primary === m.id}
+                                      onChange={() => setPrimary(m.id)}
+                                    />
+                                    principal
+                                  </label>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   );
-                })}
-                </div>
-              );
-            })()}
-          </div>
-
-          )}
-        </ModalSection>
-    </form>
-    </ModalBody>
-    <ModalFooter>
-      {initial && onDelete && (
-        <Button type="button" variant="destructive" className="sm:mr-auto" onClick={() => { if (confirm(`Excluir o cliente "${initial.name}"?`)) onDelete(initial.id); }}>
-          <Trash2 className="mr-1 h-4 w-4" /> Excluir cliente
+                })()}
+              </div>
+            )}
+          </ModalSection>
+        </form>
+      </ModalBody>
+      <ModalFooter>
+        {initial && onDelete && (
+          <Button
+            type="button"
+            variant="destructive"
+            className="sm:mr-auto"
+            onClick={() => {
+              if (confirm(`Excluir o cliente "${initial.name}"?`)) onDelete(initial.id);
+            }}
+          >
+            <Trash2 className="mr-1 h-4 w-4" /> Excluir cliente
+          </Button>
+        )}
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancelar
         </Button>
-      )}
-      <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
-      <Button type="submit" form="client-form" disabled={loading}>
-        {loading ? "Salvando..." : initial ? "Salvar alterações" : "Criar cliente"}
-      </Button>
-    </ModalFooter>
+        <Button type="submit" form="client-form" disabled={loading}>
+          {loading ? "Salvando..." : initial ? "Salvar alterações" : "Criar cliente"}
+        </Button>
+      </ModalFooter>
     </>
   );
 }
