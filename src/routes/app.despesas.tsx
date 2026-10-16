@@ -45,7 +45,21 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-export const Route = createFileRoute("/app/despesas")({ component: DespesasPage });
+const FOCUS_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Aberto por notificação: ?expense=<despesa>&employee=<funcionário> (só UUIDs válidos). */
+interface DespesasSearch {
+  expense?: string;
+  employee?: string;
+}
+
+export const Route = createFileRoute("/app/despesas")({
+  validateSearch: (raw: Record<string, unknown>): DespesasSearch => ({
+    expense: typeof raw.expense === "string" && FOCUS_UUID.test(raw.expense) ? raw.expense : undefined,
+    employee: typeof raw.employee === "string" && FOCUS_UUID.test(raw.employee) ? raw.employee : undefined,
+  }),
+  component: DespesasPage,
+});
 
 type ExpenseStatus = "pendente" | "aprovada" | "rejeitada";
 type PaymentStatus = "aguardando_pagamento" | "paga";
@@ -520,6 +534,32 @@ function DespesasPage() {
   const [filterStatus, setFilterStatus] = useState<"all" | ExpenseStatus>("all");
   const [filterPayment, setFilterPayment] = useState<"all" | PaymentStatus>("all");
   const [filterUser, setFilterUser] = useState<string>("all");
+
+  // Notificação: abre já no funcionário em questão e destaca a despesa.
+  const focusSearch = Route.useSearch();
+  const focusExpenseId = focusSearch.expense ?? null;
+  const focusEmployeeId =
+    focusSearch.employee ?? (focusExpenseId ? (rows.find((r) => r.id === focusExpenseId)?.user_id ?? null) : null);
+  useEffect(() => {
+    if (focusEmployeeId && isManager) setFilterUser(focusEmployeeId);
+  }, [focusEmployeeId, isManager]);
+  useEffect(() => {
+    if (!focusExpenseId) return;
+    let tries = 0;
+    const timer = window.setInterval(() => {
+      tries += 1;
+      const el = document.querySelector<HTMLElement>(`[data-expense-id="${focusExpenseId}"]`);
+      if (el) {
+        window.clearInterval(timer);
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("ring-2", "ring-primary", "ring-offset-2", "rounded-lg");
+        window.setTimeout(() => el.classList.remove("ring-2", "ring-primary", "ring-offset-2"), 6000);
+      } else if (tries > 25) {
+        window.clearInterval(timer);
+      }
+    }, 300);
+    return () => window.clearInterval(timer);
+  }, [focusExpenseId, rows.length]);
   const [filterDateBy, setFilterDateBy] = useState<"expense_date" | "created_at">("expense_date");
   const [filterStartDate, setFilterStartDate] = useState("");
   const [filterEndDate, setFilterEndDate] = useState("");
@@ -1065,7 +1105,7 @@ function DespesasPage() {
         ) : (
           <ul className="divide-y divide-border">
             {(isManager ? decided : filtered).map((r) => (
-              <li key={r.id} className="flex items-center justify-between gap-3 py-3">
+              <li key={r.id} data-expense-id={r.id} className="flex items-center justify-between gap-3 py-3">
                 <div className="min-w-0">
                   <div className="font-medium">
                     {isManager ? (names[r.user_id] ?? "Colaborador") : "Você"} · {fmtEur(r.amount)}
@@ -1261,7 +1301,7 @@ function PendingRow({
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
   return (
-    <li className="rounded-lg border border-border bg-card p-3">
+    <li data-expense-id={row.id} className="rounded-lg border border-border bg-card p-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="font-medium">
