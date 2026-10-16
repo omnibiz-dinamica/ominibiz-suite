@@ -45,6 +45,19 @@ type EmailChangeRequestRow = {
   requested_at: string;
 };
 
+const MEMBER_ROLE_LABEL: Record<string, string> = {
+  owner: "Proprietário",
+  manager: "Gestor",
+  secretary: "Secretária",
+  accountant: "Contabilidade",
+  employee: "Funcionário",
+  super_admin: "Super Admin",
+};
+
+function memberRoleLabel(role: string): string {
+  return MEMBER_ROLE_LABEL[role] ?? role;
+}
+
 function getMemberDisplayName(member: MemberRow) {
   const fullName = member.profile?.full_name?.trim();
   if (fullName) return fullName;
@@ -99,7 +112,9 @@ function TeamPage() {
       // Keep the primary profile query independent from newer optional
       // columns so older Cloud Database environments still show names.
       const { data: profs } = await (supabase.from("profiles" as never) as any)
-        .select("id, full_name, phone, is_active, status, termination_date, job_title, work_location, supervisor_id, team")
+        .select(
+          "id, full_name, phone, is_active, status, termination_date, job_title, work_location, supervisor_id, team",
+        )
         .in("id", ids);
 
       let emailsById = new Map<string, string>();
@@ -150,6 +165,9 @@ function TeamPage() {
 
   const [editing, setEditing] = useState<MemberRow | null>(null);
   const [showInactive, setShowInactive] = useState(false);
+  const [memberSearch, setMemberSearch] = useState("");
+  const [memberSort, setMemberSort] = useState<"az" | "za">("az");
+  const [memberRoleFilter, setMemberRoleFilter] = useState<string>("all");
 
   const { data: emailChangeRequests = [] } = useQuery({
     queryKey: ["email-change-requests", currentCompanyId, "pending"],
@@ -167,11 +185,8 @@ function TeamPage() {
   });
 
   const decideEmailRequest = useMutation({
-    mutationFn: async (input: {
-      decision: "approve" | "reject";
-      decisionReason?: string;
-      requestId: string;
-    }) => decideEmailChangeRequest(input),
+    mutationFn: async (input: { decision: "approve" | "reject"; decisionReason?: string; requestId: string }) =>
+      decideEmailChangeRequest(input),
     onSuccess: async (result) => {
       toast.success(result.status === "approved" ? "Alteração de e-mail aprovada." : "Pedido recusado.");
       await Promise.all([
@@ -185,13 +200,58 @@ function TeamPage() {
     () =>
       Array.from(
         new Set(
-          (members ?? [])
-            .map((m) => m.profile?.sector?.trim())
-            .filter((sector): sector is string => Boolean(sector)),
+          (members ?? []).map((m) => m.profile?.sector?.trim()).filter((sector): sector is string => Boolean(sector)),
         ),
       ).sort((a, b) => a.localeCompare(b, "pt-BR")),
     [members],
   );
+
+  /** Opções do seletor Cargo / função: papéis do sistema e cargos (job_title) existentes. */
+  const memberRoleOptions = useMemo(() => {
+    const list = members ?? [];
+    const roles = Array.from(new Set(list.map((m) => String(m.role)))).sort((a, b) =>
+      memberRoleLabel(a).localeCompare(memberRoleLabel(b), "pt-BR"),
+    );
+    const jobs = Array.from(
+      new Set(list.map((m) => m.profile?.job_title?.trim()).filter((job): job is string => Boolean(job))),
+    ).sort((a, b) => a.localeCompare(b, "pt-BR"));
+    return { roles, jobs };
+  }, [members]);
+
+  /** Lista de usuários com pesquisa, filtro de cargo/função e ordem alfabética. */
+  const visibleMembers = useMemo(() => {
+    const term = memberSearch
+      .trim()
+      .toLocaleLowerCase("pt-BR")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+    const norm = (value: string | null | undefined) =>
+      (value ?? "")
+        .toLocaleLowerCase("pt-BR")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+    const rows = (members ?? []).filter((m) => {
+      if (showInactive ? isEmployeeActive(m.profile) : !isEmployeeActive(m.profile)) return false;
+      if (memberRoleFilter.startsWith("role:") && String(m.role) !== memberRoleFilter.slice(5)) return false;
+      if (memberRoleFilter.startsWith("job:") && (m.profile?.job_title?.trim() ?? "") !== memberRoleFilter.slice(4)) {
+        return false;
+      }
+      if (!term) return true;
+      return [
+        getMemberDisplayName(m),
+        m.profile?.email,
+        m.profile?.phone,
+        m.profile?.job_title,
+        m.profile?.team,
+        m.profile?.sector,
+        memberRoleLabel(String(m.role)),
+      ].some((value) => norm(value).includes(term));
+    });
+    return rows.sort((a, b) => {
+      const cmp = getMemberDisplayName(a).localeCompare(getMemberDisplayName(b), "pt-BR", { sensitivity: "base" });
+      return memberSort === "az" ? cmp : -cmp;
+    });
+  }, [members, showInactive, memberSearch, memberRoleFilter, memberSort]);
 
   const toggleActive = useMutation({
     mutationFn: async (m: MemberRow) => {
@@ -445,12 +505,59 @@ function TeamPage() {
       <div className="rounded-2xl border border-border bg-card p-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-display text-lg font-semibold">Usuários</h2>
-          <Button type="button" size="sm" variant={showInactive ? "default" : "outline"} aria-pressed={showInactive} onClick={() => setShowInactive((v) => !v)}>
+          <Button
+            type="button"
+            size="sm"
+            variant={showInactive ? "default" : "outline"}
+            aria-pressed={showInactive}
+            onClick={() => setShowInactive((v) => !v)}
+          >
             {showInactive ? "Lista Ativa" : "Lista Inativa"}
           </Button>
         </div>
+        <div className="mt-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_180px_220px]">
+          <Input
+            type="search"
+            value={memberSearch}
+            onChange={(e) => setMemberSearch(e.target.value)}
+            placeholder="Pesquisar por nome, email, telefone ou cargo..."
+            aria-label="Pesquisar usuário"
+          />
+          <Select value={memberSort} onValueChange={(v) => setMemberSort(v as "az" | "za")}>
+            <SelectTrigger aria-label="Ordem alfabética">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="az">Nome A → Z</SelectItem>
+              <SelectItem value="za">Nome Z → A</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={memberRoleFilter} onValueChange={setMemberRoleFilter}>
+            <SelectTrigger aria-label="Cargo ou função">
+              <SelectValue placeholder="Cargo / função" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os cargos e funções</SelectItem>
+              {memberRoleOptions.roles.map((r) => (
+                <SelectItem key={`role:${r}`} value={`role:${r}`}>
+                  Função: {memberRoleLabel(r)}
+                </SelectItem>
+              ))}
+              {memberRoleOptions.jobs.map((job) => (
+                <SelectItem key={`job:${job}`} value={`job:${job}`}>
+                  Cargo: {job}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <ul className="mt-4 divide-y divide-border">
-          {(members ?? []).filter((m) => (showInactive ? !isEmployeeActive(m.profile) : isEmployeeActive(m.profile))).map((m) => {
+          {visibleMembers.length === 0 && (
+            <li className="py-6 text-center text-sm text-muted-foreground">
+              Nenhum usuário encontrado com estes filtros.
+            </li>
+          )}
+          {visibleMembers.map((m) => {
             const active = isEmployeeActive(m.profile);
             const isSelf = m.user_id === user?.id;
             const displayName = getMemberDisplayName(m);
