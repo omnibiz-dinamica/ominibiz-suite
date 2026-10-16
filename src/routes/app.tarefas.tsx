@@ -289,7 +289,7 @@ function TasksPage() {
   }, [editingSeries?.recurrence_id]);
 
   const { data: tasks, isLoading } = useQuery({
-    queryKey: ["tasks", currentCompanyId, user?.id, isManager, view, search.task],
+    queryKey: ["tasks", currentCompanyId, user?.id, isManager, view],
     queryFn: async () => {
       const buildQuery = () => {
         let q = supabase
@@ -307,8 +307,8 @@ function TasksPage() {
         // Tarefas removidas (soft delete) nunca são fonte de verdade operacional:
         // sem este filtro a mesma ocorrência aparecia repetida para o gestor.
         q = q.is("deleted_at", null);
-        if (search.task) q = q.eq("id", search.task);
-        else if (view === "archived") q = q.not("archived_at", "is", null);
+        // Notificação (?task=ID) não filtra mais a consulta: a tela fica normal e a tarefa é destacada.
+        if (view === "archived") q = q.not("archived_at", "is", null);
         else q = q.is("archived_at", null);
         return q;
       };
@@ -330,6 +330,23 @@ function TasksPage() {
     // 11092026-002c — voltar à aba/janela nunca atualiza a lista. O estado
     // atual (filtros, seleção, modal, formulário) é a fonte de verdade; a
     // atualização acontece só por ação explícita do utilizador.
+    refetchOnWindowFocus: false,
+  });
+
+  // Tarefa aberta pela notificação que não está na vista atual (ex.: arquivada):
+  // carregada à parte só para continuar visível e destacada.
+  const focusTaskInList = !!search.task && (tasks ?? []).some((t) => t.id === search.task);
+  const { data: focusTaskExtra } = useQuery({
+    queryKey: ["task-focus", currentCompanyId, search.task, isManager, user?.id],
+    enabled: !!search.task && !!currentCompanyId && !!user && !isLoading && !focusTaskInList,
+    queryFn: async () => {
+      let q = supabase.from("tasks").select("*").eq("id", search.task!).is("deleted_at", null);
+      if (currentCompanyId) q = q.eq("company_id", currentCompanyId);
+      if (!isManager) q = q.eq("assigned_to", user!.id);
+      const { data, error } = await q.maybeSingle();
+      if (error) throw error;
+      return (data ?? null) as unknown as TaskRow | null;
+    },
     refetchOnWindowFocus: false,
   });
 
@@ -896,11 +913,13 @@ function TasksPage() {
 
   // Filtros derivados (status + funcionário) — Fase F.
   const filteredTasks = useMemo(() => {
-    const all = tasks ?? [];
+    const base = tasks ?? [];
+    const all = focusTaskExtra && !base.some((t) => t.id === focusTaskExtra.id) ? [...base, focusTaskExtra] : base;
     const selectedEmployees = new Set(selectedEmployeeIds);
     const selectedClients = new Set(selectedClientIds);
     return all.filter((t) => {
-      if (search.task && t.id !== search.task) return false;
+      // A tarefa aberta pela notificação aparece sempre; as demais seguem os filtros normais.
+      if (search.task && t.id === search.task) return true;
       if (selectedEmployees.size > 0 && (!t.assigned_to || !selectedEmployees.has(t.assigned_to))) return false;
       if (selectedClients.size > 0 && (!t.client_id || !selectedClients.has(t.client_id))) return false;
       // Dia operacional (agendamento / ocorrência / prazo), nunca created_at.
@@ -925,6 +944,7 @@ function TasksPage() {
     search.date,
     selectedEmployeeIds,
     selectedClientIds,
+    focusTaskExtra,
   ]);
 
   const filteredCalendarData = useMemo(
@@ -933,6 +953,28 @@ function TasksPage() {
   );
 
   const orderedTasks = useMemo(() => sortTasksForList(filteredTasks), [filteredTasks]);
+
+  // Notificação: rola até a tarefa (lista ou calendário), pisca e deixa marcada.
+  useEffect(() => {
+    if (!search.task || isLoading) return;
+    const selector = `[data-task-id="${CSS.escape(search.task)}"]`;
+    let tries = 0;
+    const timer = window.setInterval(() => {
+      tries += 1;
+      const el = document.querySelector<HTMLElement>(selector);
+      if (el) {
+        window.clearInterval(timer);
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.setAttribute("tabindex", "-1");
+        el.focus({ preventScroll: true });
+        el.classList.add("ring-4", "ring-primary", "ring-offset-2", "rounded-lg", "bg-primary/10", "animate-pulse");
+        window.setTimeout(() => el.classList.remove("animate-pulse"), 4500);
+      } else if (tries > 30) {
+        window.clearInterval(timer);
+      }
+    }, 300);
+    return () => window.clearInterval(timer);
+  }, [search.task, isLoading, taskView, filteredTasks.length]);
 
   const selectedTasks = useMemo(
     () => (tasks ?? []).filter((task) => selectedTaskIds.includes(task.id)),
@@ -985,7 +1027,7 @@ function TasksPage() {
     <div className="space-y-6">
       {search.task && (
         <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-accent/30 px-3 py-2 text-sm">
-          <span className="text-muted-foreground">Mostrando apenas a tarefa aberta pela notificação.</span>
+          <span className="text-muted-foreground">A tarefa aberta pela notificação está destacada na tela.</span>
           <button
             type="button"
             className="font-medium text-primary underline underline-offset-2"
@@ -993,7 +1035,7 @@ function TasksPage() {
               void navigate({ search: (prev: TasksSearch) => ({ ...prev, task: undefined }), replace: true })
             }
           >
-            Limpar tarefa aberta pela notificação
+            Limpar destaque
           </button>
         </div>
       )}
@@ -1693,6 +1735,17 @@ function TaskPlanningCalendar({
 }) {
   const [mode, setMode] = useState<CalendarMode>("week");
   const [cursor, setCursor] = useState(() => new Date());
+  // Notificação: posiciona o calendário na data da tarefa aberta.
+  const calendarFocusTaskId = Route.useSearch().task;
+  const calendarFocusDay = useMemo(() => {
+    const focused = calendarFocusTaskId ? tasks.find((t) => t.id === calendarFocusTaskId) : undefined;
+    return focused ? taskOperationalDay(focused) : null;
+  }, [calendarFocusTaskId, tasks]);
+  useEffect(() => {
+    if (calendarFocusDay && /^\d{4}-\d{2}-\d{2}$/.test(calendarFocusDay)) {
+      setCursor(new Date(`${calendarFocusDay}T12:00:00`));
+    }
+  }, [calendarFocusDay]);
   const memberName = (id: string | null) => taskMemberName(members, id, "Sem responsável");
   const clientName = (id: string | null) =>
     clients.find((c) => c.id === id)?.name ?? (id ? id.slice(0, 8) : "Sem cliente");
@@ -2088,6 +2141,7 @@ function MiniTaskChip({ task, startedAt, onClick }: { task: TaskRow; startedAt?:
   const lateMinutes = startedLateMinutes(task, startedAt);
   return (
     <button
+      data-task-id={task.id}
       type="button"
       draggable={false}
       onClick={onClick}
@@ -2302,6 +2356,7 @@ function CalendarTaskCard({
 
   return (
     <li
+      data-task-id={task.id}
       className="space-y-2 px-3 py-3"
       draggable={isManager}
       onDragStart={(event) => {
@@ -2599,9 +2654,21 @@ function GroupedTaskList({
     return labelOf(a === emptyKey ? null : a).localeCompare(labelOf(b === emptyKey ? null : b));
   });
 
+  // Notificação: o grupo que contém a tarefa aberta já começa expandido.
+  const groupFocusTaskId = Route.useSearch().task;
+  const groupFocusTask = groupFocusTaskId ? tasks.find((t) => t.id === groupFocusTaskId) : undefined;
+  const groupFocusKey = groupFocusTask
+    ? ((groupBy === "client" ? groupFocusTask.client_id : groupFocusTask.assigned_to) ??
+      (groupBy === "client" ? "__no_client__" : "__unassigned__"))
+    : null;
+
   return (
     <div className="rounded-2xl border border-border bg-card">
-      <Accordion type="multiple" className="divide-y divide-border">
+      <Accordion
+        type="multiple"
+        className="divide-y divide-border"
+        defaultValue={groupFocusKey ? [groupFocusKey] : undefined}
+      >
         {entries.map(([key, list]) => {
           const emptyKey = groupBy === "client" ? "__no_client__" : "__unassigned__";
           const name = labelOf(key === emptyKey ? null : key);
@@ -2701,7 +2768,7 @@ function TaskRowItem({
   const lateStartMinutes = startedLateMinutes(t, taskPunch?.started_at);
 
   return (
-    <li className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+    <li data-task-id={t.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 flex-1 items-start gap-2">
         {isManager && onToggleTaskSelection && (
           <input
