@@ -20,6 +20,7 @@ import {
   Download,
   Plus,
   Trash2,
+  Pencil,
   FileSpreadsheet,
   FileText,
   Package,
@@ -466,6 +467,47 @@ function DespesasPage() {
       qc.invalidateQueries({ queryKey: ["expenses"] });
     },
     onError: (e: any) => toast.error(e.message ?? "Falha"),
+  });
+
+  /** Gestor ou owner edita qualquer despesa (pendente, aprovada ou rejeitada). Status, aprovador e pagamento mantêm-se; o RLS valida no servidor. */
+  const [editingExpense, setEditingExpense] = useState<ExpenseRow | null>(null);
+  const [editDate, setEditDate] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [editReason, setEditReason] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const openEditExpense = (row: ExpenseRow) => {
+    setEditingExpense(row);
+    setEditDate(row.expense_date);
+    setEditAmount(String(row.amount).replace(".", ","));
+    setEditReason(row.reason ?? "");
+    setEditNotes(row.notes ?? "");
+  };
+  const updateExpense = useMutation({
+    mutationFn: async () => {
+      if (!editingExpense) return;
+      const value = Number(editAmount.trim().replace(",", "."));
+      if (!editAmount.trim() || !Number.isFinite(value) || value < 0) throw new Error("Valor inválido");
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(editDate)) throw new Error("Indique a data da despesa");
+      if (!editReason.trim()) throw new Error("Indique o motivo");
+      const { data, error } = await (supabase as any)
+        .from("employee_expenses")
+        .update({
+          expense_date: editDate,
+          amount: value,
+          reason: editReason.trim(),
+          notes: editNotes.trim() || null,
+        })
+        .eq("id", editingExpense.id)
+        .select("id");
+      if (error) throw error;
+      if (!data || data.length === 0) throw new Error("Sem permissão para editar esta despesa");
+    },
+    onSuccess: () => {
+      toast.success("Despesa atualizada");
+      setEditingExpense(null);
+      qc.invalidateQueries({ queryKey: ["expenses"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Falha ao atualizar a despesa"),
   });
 
   const [filterStatus, setFilterStatus] = useState<"all" | ExpenseStatus>("all");
@@ -1009,6 +1051,17 @@ function DespesasPage() {
                       Aguardar pagamento
                     </Button>
                   )}
+                  {isManager && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => openEditExpense(r)}
+                      title="Editar despesa"
+                      aria-label="Editar despesa"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
                   {r.status === "pendente" && r.user_id === user?.id && (
                     <Button size="icon" variant="ghost" onClick={() => remove.mutate(r)} title="Apagar">
                       <Trash2 className="h-4 w-4" />
@@ -1020,6 +1073,72 @@ function DespesasPage() {
           </ul>
         )}
       </section>
+      <AlertDialog
+        open={!!editingExpense}
+        onOpenChange={(open) => {
+          if (!open && !updateExpense.isPending) setEditingExpense(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Editar despesa</AlertDialogTitle>
+            <AlertDialogDescription>
+              {editingExpense
+                ? `Estado atual: ${STATUS_LABEL[editingExpense.status]}. O estado, o aprovador e o pagamento não mudam ao editar.`
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {editingExpense?.status === "aprovada" && editingExpense.payment_status === "paga" && (
+            <p className="rounded-md bg-warning/10 p-2 text-xs text-warning">
+              Esta despesa já está marcada como paga. Confirme se o novo valor corresponde ao pagamento feito.
+            </p>
+          )}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-expense-date">Data</Label>
+              <Input
+                id="edit-expense-date"
+                type="date"
+                value={editDate}
+                onChange={(e) => setEditDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-expense-amount">Valor (€)</Label>
+              <Input
+                id="edit-expense-amount"
+                inputMode="decimal"
+                value={editAmount}
+                onChange={(e) => setEditAmount(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="edit-expense-reason">Motivo</Label>
+              <Input
+                id="edit-expense-reason"
+                maxLength={250}
+                value={editReason}
+                onChange={(e) => setEditReason(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="edit-expense-notes">Observações</Label>
+              <Textarea
+                id="edit-expense-notes"
+                rows={3}
+                value={editNotes}
+                onChange={(e) => setEditNotes(e.target.value)}
+              />
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={updateExpense.isPending}>Cancelar</AlertDialogCancel>
+            <Button type="button" onClick={() => updateExpense.mutate()} disabled={updateExpense.isPending}>
+              {updateExpense.isPending ? "A guardar..." : "Guardar alterações"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
