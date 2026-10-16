@@ -29,9 +29,24 @@ import { exportToExcel, exportToPdf } from "@/lib/exports";
 import { buildAppUrl } from "@/lib/app-url";
 import { CancelVacationDialog, type VacationCancelTarget } from "@/components/ferias/CancelVacationDialog";
 
-export const Route = createFileRoute("/app/ferias")({ component: FeriasPage });
+const FOCUS_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-type VacationStatus = "pendente" | "aguardando_aprovacao" | "pendente_confirmacao" | "aprovado" | "rejeitado" | "cancelado";
+/** Aberto por notificação: ?vacation=<pedido>&employee=<funcionário> (só UUIDs válidos). */
+interface FeriasSearch {
+  vacation?: string;
+  employee?: string;
+}
+
+export const Route = createFileRoute("/app/ferias")({
+  validateSearch: (raw: Record<string, unknown>): FeriasSearch => ({
+    vacation: typeof raw.vacation === "string" && FOCUS_UUID.test(raw.vacation) ? raw.vacation : undefined,
+    employee: typeof raw.employee === "string" && FOCUS_UUID.test(raw.employee) ? raw.employee : undefined,
+  }),
+  component: FeriasPage,
+});
+
+type VacationStatus =
+  "pendente" | "aguardando_aprovacao" | "pendente_confirmacao" | "aprovado" | "rejeitado" | "cancelado";
 type VacationRow = {
   id: string;
   company_id: string;
@@ -132,11 +147,7 @@ function FeriasPage() {
   const userIds = useMemo(
     () =>
       Array.from(
-        new Set(
-          rows.flatMap((r) =>
-            [r.user_id, r.assigned_approver_id, r.forwarded_by].filter(Boolean) as string[],
-          ),
-        ),
+        new Set(rows.flatMap((r) => [r.user_id, r.assigned_approver_id, r.forwarded_by].filter(Boolean) as string[])),
       ),
     [rows],
   );
@@ -188,9 +199,9 @@ function FeriasPage() {
       return ((profiles ?? []) as { id: string; full_name: string | null; company_id: string }[])
         .filter((p) => p.company_id === currentCompanyId && ids.includes(p.id))
         .map((p) => ({
-        id: p.id,
-        name: p.full_name ?? "Gestor",
-        role: roleByUser.get(p.id) ?? "manager",
+          id: p.id,
+          name: p.full_name ?? "Gestor",
+          role: roleByUser.get(p.id) ?? "manager",
         }));
     },
   });
@@ -420,7 +431,6 @@ function FeriasPage() {
   /** ADR-046: cancelamento de férias exige confirmação explícita + motivo. */
   const [cancelTarget, setCancelTarget] = useState<VacationCancelTarget | null>(null);
 
-
   const confirmMutation = useMutation({
     mutationFn: async (vars: { id: string; action: "confirmar" | "solicitar_alteracao"; reason?: string }) => {
       const { error } = await (supabase as any).rpc("vacation_confirm", {
@@ -443,6 +453,32 @@ function FeriasPage() {
   const pending = rows.filter((r) => r.status === "pendente" || r.status === "aguardando_aprovacao");
   // Filtros de visão
   const [filterUser, setFilterUser] = useState<string>("all");
+
+  // Notificação: abre já no funcionário em questão e destaca o pedido.
+  const focusSearch = Route.useSearch();
+  const focusVacationId = focusSearch.vacation ?? null;
+  const focusEmployeeId =
+    focusSearch.employee ?? (focusVacationId ? (rows.find((r) => r.id === focusVacationId)?.user_id ?? null) : null);
+  useEffect(() => {
+    if (focusEmployeeId) setFilterUser(focusEmployeeId);
+  }, [focusEmployeeId]);
+  useEffect(() => {
+    if (!focusVacationId) return;
+    let tries = 0;
+    const timer = window.setInterval(() => {
+      tries += 1;
+      const el = document.querySelector<HTMLElement>(`[data-vacation-id="${focusVacationId}"]`);
+      if (el) {
+        window.clearInterval(timer);
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("ring-2", "ring-primary", "ring-offset-2");
+        window.setTimeout(() => el.classList.remove("ring-2", "ring-primary", "ring-offset-2"), 6000);
+      } else if (tries > 25) {
+        window.clearInterval(timer);
+      }
+    }, 300);
+    return () => window.clearInterval(timer);
+  }, [focusVacationId, rows.length]);
   const [filterMonth, setFilterMonth] = useState<string>(""); // YYYY-MM
   const [filterYear, setFilterYear] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -450,6 +486,8 @@ function FeriasPage() {
   const [businessOnly, setBusinessOnly] = useState<boolean>(false);
 
   const matchesFilters = (r: VacationRow): boolean => {
+    // O pedido aberto pela notificação aparece sempre, mesmo com outros filtros ativos.
+    if (focusVacationId && r.id === focusVacationId) return true;
     if (filterUser !== "all" && r.user_id !== filterUser) return false;
     if (filterStatus !== "all" && r.status !== filterStatus) return false;
     if (filterYear !== "all") {
@@ -539,7 +577,10 @@ function FeriasPage() {
 
   // Requests this user needs to decide on
   const toApprove = rows.filter(
-    (r) => (r.status === "pendente" || r.status === "aguardando_aprovacao") && r.assigned_approver_id === user?.id && r.user_id !== user?.id,
+    (r) =>
+      (r.status === "pendente" || r.status === "aguardando_aprovacao") &&
+      r.assigned_approver_id === user?.id &&
+      r.user_id !== user?.id,
   );
   const forwardedByMe = rows.filter(
     (r) => r.status === "pendente" && r.forwarded_by === user?.id && r.user_id !== user?.id,
@@ -657,9 +698,7 @@ function FeriasPage() {
                   onReject={(reason) => decide.mutate({ id: r.id, action: "rejeitar", reason })}
                   // Fluxo antigo (modal + vacation_forward_for_authorization) desativado aqui.
                   awaiting={r.status === "aguardando_aprovacao"}
-                  onForward={
-                    r.status === "pendente" ? () => requestAuth.mutate(r.id) : undefined
-                  }
+                  onForward={r.status === "pendente" ? () => requestAuth.mutate(r.id) : undefined}
                 />
               ))}
             </ul>
@@ -672,7 +711,11 @@ function FeriasPage() {
           <h2 className="mb-3 font-semibold">Enviados para autorização ({forwardedByMe.length})</h2>
           <ul className="space-y-2">
             {forwardedByMe.map((r) => (
-              <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3">
+              <li
+                key={r.id}
+                data-vacation-id={r.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3"
+              >
                 <div>
                   <div className="font-medium">{nameOf(r.user_id)}</div>
                   <div className="text-sm text-muted-foreground">
@@ -791,7 +834,7 @@ function FeriasPage() {
           </h2>
           <ul className="divide-y divide-border">
             {awaitingTheirConfirm.map((r) => (
-              <li key={r.id} className="flex items-center justify-between gap-3 py-2">
+              <li key={r.id} data-vacation-id={r.id} className="flex items-center justify-between gap-3 py-2">
                 <div>
                   <div className="font-medium">{nameOf(r.user_id)}</div>
                   <div className="text-sm text-muted-foreground">
@@ -906,10 +949,14 @@ function FeriasPage() {
           </div>
         )}
         {!isManager && approved.length > 0 && (
-          <div role="note" className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-200">
+          <div
+            role="note"
+            className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-200"
+          >
             <div className="font-medium">Aviso sobre férias aprovadas</div>
             <div className="mt-1">
-              Depois de aprovadas, as férias não podem ser canceladas pelo funcionário. O gestor mantém a opção de cancelar o pedido.
+              Depois de aprovadas, as férias não podem ser canceladas pelo funcionário. O gestor mantém a opção de
+              cancelar o pedido.
             </div>
           </div>
         )}
@@ -918,7 +965,7 @@ function FeriasPage() {
         ) : (
           <ul className="divide-y divide-border">
             {approved.map((r) => (
-              <li key={r.id} className="flex items-center justify-between gap-3 py-2">
+              <li key={r.id} data-vacation-id={r.id} className="flex items-center justify-between gap-3 py-2">
                 <div>
                   <div className="font-medium">
                     {isManager ? nameOf(r.user_id) : "Você"}
@@ -968,27 +1015,31 @@ function FeriasPage() {
             {pending
               .filter((r) => r.user_id === user?.id)
               .map((r) => (
-                <li key={r.id} className="flex items-center justify-between py-2">
+                <li key={r.id} data-vacation-id={r.id} className="flex items-center justify-between py-2">
                   <div>
-                  <div className="font-medium">{fmt(r.start_date)} → {fmt(r.end_date)}</div>
-                  <div className="text-xs text-muted-foreground">
-                    Aprovador: {r.assigned_approver_id ? nameOf(r.assigned_approver_id) : "Não definido"}
-                  </div>
+                    <div className="font-medium">
+                      {fmt(r.start_date)} → {fmt(r.end_date)}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Aprovador: {r.assigned_approver_id ? nameOf(r.assigned_approver_id) : "Não definido"}
+                    </div>
                     {r.note && <div className="text-xs text-muted-foreground">{r.note}</div>}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_TONE.pendente}`}>Aguardando aprovação</span>
+                    <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_TONE.pendente}`}>
+                      Aguardando aprovação
+                    </span>
                     <Button
                       size="sm"
                       variant="ghost"
-                    onClick={() =>
-                      setCancelTarget({
-                        id: r.id,
-                        employeeName: "Você",
-                        periodLabel: `${fmt(r.start_date)} → ${fmt(r.end_date)}`,
-                        statusLabel: STATUS_LABEL[r.status],
-                      })
-                    }
+                      onClick={() =>
+                        setCancelTarget({
+                          id: r.id,
+                          employeeName: "Você",
+                          periodLabel: `${fmt(r.start_date)} → ${fmt(r.end_date)}`,
+                          statusLabel: STATUS_LABEL[r.status],
+                        })
+                      }
                     >
                       Cancelar
                     </Button>
@@ -1009,7 +1060,7 @@ function FeriasPage() {
         ) : (
           <ul className="divide-y divide-border">
             {history.map((r) => (
-              <li key={r.id} className="flex items-center justify-between gap-3 py-2">
+              <li key={r.id} data-vacation-id={r.id} className="flex items-center justify-between gap-3 py-2">
                 <div>
                   <div className="font-medium">
                     {isManager ? nameOf(r.user_id) : "Você"} — {fmt(r.start_date)} → {fmt(r.end_date)}
@@ -1047,9 +1098,12 @@ function FeriasPage() {
               <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm">
                 <div className="font-medium">Funcionário: {nameOf(forwardTarget.user_id)}</div>
                 <div className="text-muted-foreground">
-                  Período: {fmt(forwardTarget.start_date)} → {fmt(forwardTarget.end_date)} · {countDays(forwardTarget)} dias
+                  Período: {fmt(forwardTarget.start_date)} → {fmt(forwardTarget.end_date)} · {countDays(forwardTarget)}{" "}
+                  dias
                 </div>
-                {forwardTarget.note && <div className="mt-1 text-muted-foreground">Observação: {forwardTarget.note}</div>}
+                {forwardTarget.note && (
+                  <div className="mt-1 text-muted-foreground">Observação: {forwardTarget.note}</div>
+                )}
               </div>
             )}
             <div className="space-y-2">
@@ -1067,7 +1121,9 @@ function FeriasPage() {
                 </SelectContent>
               </Select>
               {approvers.length === 0 && (
-                <p className="text-xs text-muted-foreground">Nenhum outro gestor ativo está disponível nesta empresa.</p>
+                <p className="text-xs text-muted-foreground">
+                  Nenhum outro gestor ativo está disponível nesta empresa.
+                </p>
               )}
             </div>
             <div className="space-y-2">
@@ -1115,7 +1171,7 @@ function ConfirmRow({
   const [requesting, setRequesting] = useState(false);
   const [reason, setReason] = useState("");
   return (
-    <li className="rounded-lg border border-border bg-card p-3">
+    <li data-vacation-id={row.id} className="rounded-lg border border-border bg-card p-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="font-medium">
@@ -1195,7 +1251,7 @@ function PendingRow({
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
   return (
-    <li className="rounded-lg border border-border p-3">
+    <li data-vacation-id={row.id} className="rounded-lg border border-border p-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="font-medium">{name}</div>
@@ -1221,10 +1277,12 @@ function PendingRow({
               <span className="rounded-full bg-amber-500/15 px-2 py-1 text-xs text-amber-700 dark:text-amber-300">
                 Aguardando aprovação
               </span>
-            ) : onForward && (
-              <Button size="sm" variant="outline" onClick={onForward}>
-                <Send className="h-4 w-4" /> Pedir autorização
-              </Button>
+            ) : (
+              onForward && (
+                <Button size="sm" variant="outline" onClick={onForward}>
+                  <Send className="h-4 w-4" /> Pedir autorização
+                </Button>
+              )
             )}
             <Button size="sm" onClick={onApprove}>
               <Check className="h-4 w-4" /> Aprovar
