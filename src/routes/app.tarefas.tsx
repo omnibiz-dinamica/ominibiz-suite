@@ -357,16 +357,31 @@ function TasksPage() {
     queryKey: ["task-punches", currentCompanyId, taskIds],
     queryFn: async (): Promise<TimeEntryRow[]> => {
       if (!currentCompanyId || taskIds.length === 0) return [];
-      const { data, error } = await supabase
-        .from("time_entries")
-        .select(
-          "id,company_id,task_id,user_id,started_at,paused_at,resumed_at,ended_at,effective_minutes,notes,created_at,updated_at",
-        )
-        .eq("company_id", currentCompanyId)
-        .in("task_id", taskIds)
-        .order("started_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as unknown as TimeEntryRow[];
+      // Não enviar milhares de ids num .in(): com ~5.000 tarefas o endereço do pedido passava de
+      // 190 KB e a ligação era cortada (Failed to fetch). Lê os pontos da empresa em páginas
+      // e filtra no navegador pelas tarefas carregadas, mantendo a ordem por started_at desc.
+      const taskIdSet = new Set(taskIds);
+      const rows: TimeEntryRow[] = [];
+      const pageSize = 1000;
+      for (let page = 0; page < 50; page++) {
+        const { data, error } = await supabase
+          .from("time_entries")
+          .select(
+            "id,company_id,task_id,user_id,started_at,paused_at,resumed_at,ended_at,effective_minutes,notes,created_at,updated_at",
+          )
+          .eq("company_id", currentCompanyId)
+          .not("task_id", "is", null)
+          .order("started_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(page * pageSize, page * pageSize + pageSize - 1);
+        if (error) throw error;
+        const batch = (data ?? []) as unknown as TimeEntryRow[];
+        for (const row of batch) {
+          if (row.task_id && taskIdSet.has(row.task_id)) rows.push(row);
+        }
+        if (batch.length < pageSize) break;
+      }
+      return rows;
     },
     enabled: !!user && !!currentCompanyId && tasks !== undefined,
   });
