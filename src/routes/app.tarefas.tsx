@@ -3751,6 +3751,7 @@ function TaskForm({
               }
               confirmedConflictsRef.current = false;
               let error: { message: string } | null = null;
+              let recurrenceSummary: { kind: "success" | "info" | "warning"; text: string } | null = null;
               const createdTaskIds: string[] = [...createdTaskIdsRef.current];
               // Fase B: lote multi-responsável. Cada responsável mantém a SUA tarefa
               // (estado, ponto, recusa e conclusão próprios); o grupo só correlaciona.
@@ -3813,6 +3814,7 @@ function TaskForm({
                 let duplicates = 0;
                 let created = 0;
                 const createdRecurrenceIds: string[] = [];
+                const existingRecurrenceIds: string[] = [];
                 for (const [index, memberId] of selectedAssignees.entries()) {
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   const ins = await (supabase.from("task_recurrences" as any) as any)
@@ -3854,8 +3856,16 @@ function TaskForm({
                     })
                     .select("id");
                   if (ins.error) {
-                    if (String(ins.error.message ?? "").includes("RECURRENCE_DUPLICATE_ACTIVE")) {
+                    const insErrorMessage = String(ins.error.message ?? "");
+                    if (insErrorMessage.includes("RECURRENCE_DUPLICATE_ACTIVE")) {
                       duplicates += 1;
+                      // A série ativa equivalente já existe: em vez de não fazer nada, gera as
+                      // ocorrências que estejam em falta nela (idempotente: série + data é único).
+                      const existingId = insErrorMessage.match(
+                        /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i,
+                      )?.[0];
+                      if (existingId && !existingRecurrenceIds.includes(existingId))
+                        existingRecurrenceIds.push(existingId);
                       continue;
                     }
                     error = ins.error;
@@ -3865,40 +3875,62 @@ function TaskForm({
                   for (const row of (ins.data ?? []) as { id: string }[]) createdRecurrenceIds.push(row.id);
                 }
                 if (!error) {
-                  if (createdRecurrenceIds.length > 0) {
-                    // A geração roda POR SÉRIE recém-criada. Varrer todas as séries da
-                    // empresa estourava o statement_timeout em bases grandes e a série
-                    // nova nunca gerava ocorrência. A janela de pré-geração é de
-                    // 12 meses (séries sem data final continuam sem data final) e o
-                    // índice único (série + data) mantém a idempotência.
-                    const horizon = 365;
-                    const failed: string[] = [];
-                    for (const recurrenceId of createdRecurrenceIds) {
-                      try {
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        const { error: materializeError } = await (supabase.rpc as any)("recurrence_materialize", {
+                  // A geração roda POR SÉRIE (recém-criada ou já existente equivalente). Varrer
+                  // todas as séries da empresa estourava o statement_timeout em bases grandes.
+                  // Janela de 12 meses; o índice único (série + data) mantém a idempotência.
+                  const toMaterialize = [
+                    ...createdRecurrenceIds,
+                    ...existingRecurrenceIds.filter((id) => !createdRecurrenceIds.includes(id)),
+                  ];
+                  const horizon = 365;
+                  const failed: string[] = [];
+                  let generated = 0;
+                  for (const recurrenceId of toMaterialize) {
+                    try {
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      const { data: materialized, error: materializeError } = await (supabase.rpc as any)(
+                        "recurrence_materialize",
+                        {
                           _days_ahead: horizon,
                           _company_id: companyId,
                           _recurrence_id: recurrenceId,
-                        });
-                        if (materializeError) failed.push(materializeError.message ?? "erro desconhecido");
-                      } catch (materializeFailure) {
-                        failed.push((materializeFailure as Error).message ?? "erro desconhecido");
-                      }
-                    }
-                    if (failed.length > 0) {
-                      // Falha de geração é erro real: nunca prometemos geração futura.
-                      toast.error(
-                        `Recorrência salva, mas as ocorrências não foram geradas (${failed.length} de ${createdRecurrenceIds.length}): ${failed[0]}. Use "Gerar próximos 12 meses" em Recorrências.`,
+                        },
                       );
+                      if (materializeError) failed.push(materializeError.message ?? "erro desconhecido");
+                      else generated += Number(materialized ?? 0) || 0;
+                    } catch (materializeFailure) {
+                      failed.push((materializeFailure as Error).message ?? "erro desconhecido");
                     }
                   }
-                  if (duplicates > 0) {
-                    toast.info(
-                      created > 0
-                        ? `${duplicates} recorrência(s) já existiam e não foram duplicadas.`
-                        : "Esta recorrência já existe e não foi duplicada.",
+                  if (failed.length > 0) {
+                    // Falha de geração é erro real: nunca prometemos geração futura.
+                    toast.error(
+                      `Recorrência salva, mas as ocorrências não foram geradas (${failed.length} de ${toMaterialize.length}): ${failed[0]}. Use "Gerar próximos 12 meses" em Recorrências.`,
                     );
+                    recurrenceSummary = {
+                      kind: "warning",
+                      text: "Recorrência salva, mas as tarefas não foram geradas.",
+                    };
+                  } else if (created > 0 && generated === 0) {
+                    recurrenceSummary = {
+                      kind: "warning",
+                      text: "Recorrência salva, mas nenhuma tarefa foi gerada. Confira as datas escolhidas e se já existem tarefas iguais (mesmo funcionário, cliente, data e horário).",
+                    };
+                  } else if (created === 0 && duplicates > 0) {
+                    recurrenceSummary = {
+                      kind: "info",
+                      text:
+                        generated > 0
+                          ? `Esta recorrência já existia e não foi duplicada. Foram geradas ${generated} tarefa(s) que estavam em falta.`
+                          : "Esta recorrência já existe e não foi duplicada. Não havia tarefas em falta para gerar.",
+                    };
+                  } else {
+                    recurrenceSummary = {
+                      kind: "success",
+                      text:
+                        `Recorrência criada: ${generated} tarefa(s) gerada(s).` +
+                        (duplicates > 0 ? ` ${duplicates} recorrência(s) já existiam e não foram duplicadas.` : ""),
+                    };
                   }
                 }
               } else if (createdTaskIds.length === 0) {
@@ -3954,13 +3986,19 @@ function TaskForm({
               }
               submittingRef.current = false;
               setLoading(false);
-              toast.success(
-                initial
-                  ? "Tarefa atualizada"
-                  : selectedAssignees.length > 1
-                    ? `${selectedAssignees.length} tarefas criadas`
-                    : "Tarefa criada",
-              );
+              if (recurrenceSummary) {
+                if (recurrenceSummary.kind === "warning") toast.warning(recurrenceSummary.text, { duration: 15000 });
+                else if (recurrenceSummary.kind === "info") toast.info(recurrenceSummary.text, { duration: 10000 });
+                else toast.success(recurrenceSummary.text);
+              } else {
+                toast.success(
+                  initial
+                    ? "Tarefa atualizada"
+                    : selectedAssignees.length > 1
+                      ? `${selectedAssignees.length} tarefas criadas`
+                      : "Tarefa criada",
+                );
+              }
               onDone();
             } catch (submitError) {
               console.error("[task-create] failed", submitError);
