@@ -17,7 +17,6 @@ import {
   AlertCircle,
   Flame,
   Plus,
-  Building2,
   ShieldAlert,
   Send,
   LogIn,
@@ -325,7 +324,7 @@ function PontoPage() {
     queryFn: async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let q: any = (supabase.from("time_entries" as any) as any)
-        .select("*, tasks(title, scheduled_for, scheduled_end)")
+        .select("*, tasks(title, client_id, scheduled_for, scheduled_end)")
         .not("ended_at", "is", null)
         .order("ended_at", { ascending: false })
         .limit(15);
@@ -334,7 +333,12 @@ function PontoPage() {
       const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as (TimeEntryRow & {
-        tasks: { title: string; scheduled_for: string | null; scheduled_end: string | null } | null;
+        tasks: {
+          title: string;
+          client_id?: string | null;
+          scheduled_for: string | null;
+          scheduled_end: string | null;
+        } | null;
       })[];
     },
     enabled: !!user,
@@ -633,7 +637,9 @@ function PontoPage() {
             {(history ?? []).map((h) => (
               <li key={h.id} className="grid grid-cols-12 items-center gap-3 px-5 py-3 text-sm">
                 <div className="col-span-7 min-w-0">
-                  <div className="truncate font-medium">{h.tasks?.title ?? "Tarefa"}</div>
+                  <div className="truncate font-semibold">
+                    {(h.tasks?.client_id ? clientsMap?.[h.tasks.client_id] : undefined) || h.tasks?.title || "Tarefa"}
+                  </div>
                   <div className="text-xs text-muted-foreground">
                     {new Date(h.started_at).toLocaleString()} →{" "}
                     {h.ended_at ? new Date(h.ended_at).toLocaleTimeString() : "—"}
@@ -920,7 +926,7 @@ function PontoPage() {
               }}
             >
               <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm font-medium">
-                {openTask?.title ?? "Tarefa"}
+                {(openTask?.client_id ? clientsMap?.[openTask.client_id] : undefined) || openTask?.title || "Tarefa"}
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="punch-completion-note">
@@ -1010,12 +1016,9 @@ function ActiveTaskCard({
       </div>
       <div className="min-w-0 space-y-5 p-4 sm:p-6">
         <div>
-          <h2 className="break-words font-display text-2xl font-semibold leading-tight sm:text-3xl">{task.title}</h2>
-          {clientName && (
-            <div className="mt-1 inline-flex items-center gap-1 text-sm text-muted-foreground">
-              <Building2 className="h-3.5 w-3.5" /> Cliente: {clientName}
-            </div>
-          )}
+          <h2 className="break-words font-display text-2xl font-semibold leading-tight sm:text-3xl">
+            {clientName || task.title}
+          </h2>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_TONE[task.status]}`}>
               {STATUS_LABELS[task.status]}
@@ -1257,13 +1260,8 @@ function UpcomingTasks({
               </div>
             )}
             <h2 className="mt-2 font-display text-2xl font-semibold leading-tight sm:text-3xl">
-              {nextStartable.title}
+              {nextClient || nextStartable.title}
             </h2>
-            {nextClient && (
-              <div className="mt-1 inline-flex items-center gap-1 text-sm text-muted-foreground">
-                <Building2 className="h-3.5 w-3.5" /> {nextClient}
-              </div>
-            )}
             <ClientAddressBlock info={nextStartable.client_id ? clientAddresses[nextStartable.client_id] : undefined} />
             {nextStartable.description && (
               <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{nextStartable.description}</p>
@@ -1403,12 +1401,7 @@ function UpcomingTasks({
                         </span>
                       </div>
                     )}
-                    <div className="mt-1 truncate font-medium">{t.title}</div>
-                    {clientName && (
-                      <div className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted-foreground">
-                        <Building2 className="h-3 w-3" /> {clientName}
-                      </div>
-                    )}
+                    <div className="mt-1 truncate font-semibold">{clientName || t.title}</div>
                     <ClientAddressBlock info={clientAddress} compact />
                     <div className="mt-0.5 text-xs text-muted-foreground">
                       {t.scheduled_for
