@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Activity, Loader2, UserCheck } from "lucide-react";
+import { Activity, ChevronDown, Loader2, UserCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
 import { Button } from "@/components/ui/button";
@@ -11,10 +11,54 @@ type Tab = "gestao" | "execucao";
 type EventRow = {
   id: string;
   actor_name: string | null;
+  actor_role: string | null;
   summary: string;
   source: string;
   created_at: string;
+  changes: Record<string, unknown> | null;
 };
+
+const ROLE_LABEL: Record<string, string> = {
+  super_admin: "Super Admin",
+  owner: "Proprietário",
+  manager: "Gestor",
+  accountant: "Contabilidade",
+  secretary: "Secretaria",
+  employee: "Funcionário",
+};
+
+/** Valor de um detalhe em texto legível (datas, listas, sim/não). */
+function formatDetailValue(value: unknown, locale: string): string {
+  if (value === null || value === undefined || value === "") return "—";
+  if (typeof value === "boolean") return value ? "Sim" : "Não";
+  if (Array.isArray(value)) {
+    const items = value.map((v) => formatDetailValue(v, locale));
+    return items.length > 20 ? `${items.slice(0, 20).join(", ")} e mais ${items.length - 20}` : items.join(", ");
+  }
+  if (typeof value === "object") return JSON.stringify(value);
+  const text = String(value);
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(text)) {
+    const d = new Date(text);
+    if (!Number.isNaN(d.getTime())) return d.toLocaleString(locale, { dateStyle: "short", timeStyle: "short" });
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+    const [y, m, day] = text.split("-");
+    return `${day}/${m}/${y}`;
+  }
+  return text;
+}
+
+/** Linhas de detalhe: "Campo: antes → depois" ou "Campo: valor". */
+function detailLines(changes: Record<string, unknown> | null, locale: string) {
+  if (!changes || typeof changes !== "object") return [];
+  return Object.entries(changes).map(([key, value]) => {
+    if (value && typeof value === "object" && !Array.isArray(value) && ("de" in value || "para" in value)) {
+      const v = value as { de?: unknown; para?: unknown };
+      return { key, before: formatDetailValue(v.de, locale), after: formatDetailValue(v.para, locale) };
+    }
+    return { key, value: formatDetailValue(value, locale) };
+  });
+}
 
 const PAGE = 30;
 
@@ -33,6 +77,8 @@ function minutesSince(iso: string, now: number) {
 
 export function ActivityTimeline({ companyId }: { companyId: string }) {
   const [tab, setTab] = useState<Tab>("gestao");
+  // Detalhe fica escondido; abre ao clicar na linha (uma de cada vez).
+  const [openEventId, setOpenEventId] = useState<string | null>(null);
   const { t: tr, lang } = useT();
   const [now, setNow] = useState(() => Date.now());
   const qc = useQueryClient();
@@ -51,7 +97,7 @@ export function ActivityTimeline({ companyId }: { companyId: string }) {
     queryFn: async ({ pageParam }) => {
       let q = (supabase as any)
         .from("activity_events")
-        .select("id, actor_name, summary, source, created_at")
+        .select("id, actor_name, actor_role, summary, source, created_at, changes")
         .eq("company_id", companyId)
         .eq("tab", tab)
         .order("created_at", { ascending: false })
@@ -127,7 +173,9 @@ export function ActivityTimeline({ companyId }: { companyId: string }) {
 
       {busy.length > 0 && (
         <div className="mt-4 rounded-xl border border-primary/30 bg-primary/5 p-3">
-          <div className="mb-2 text-xs font-medium uppercase tracking-wide text-primary">{tr("Em atendimento agora")}</div>
+          <div className="mb-2 text-xs font-medium uppercase tracking-wide text-primary">
+            {tr("Em atendimento agora")}
+          </div>
           <ul className="space-y-1">
             {busy.map((b) => (
               <li key={`${b.entity_type}:${b.entity_id}`} className="flex items-center gap-2 text-sm">
@@ -159,21 +207,75 @@ export function ActivityTimeline({ companyId }: { companyId: string }) {
         {!events.isLoading && !events.isError && rows.length === 0 && (
           <li className="py-8 text-center text-sm text-muted-foreground">{tr("Ainda não há atividade registada.")}</li>
         )}
-        {rows.map((e) => (
-          <li key={e.id} className="flex gap-3 py-3">
-            <span className="w-20 shrink-0 text-xs tabular-nums text-muted-foreground">{formatEventTime(e.created_at, lang === "en" ? "en-GB" : "pt-PT")}</span>
-            <span className="min-w-0 text-sm">
-              {e.actor_name && e.source === "user" && <span className="font-medium">{e.actor_name} · </span>}
-              {e.source !== "user" && <span className="font-medium text-muted-foreground">{tr("Sistema")} · </span>}
-              {e.summary}
-            </span>
-          </li>
-        ))}
+        {rows.map((e) => {
+          const locale = lang === "en" ? "en-GB" : "pt-PT";
+          const isOpen = openEventId === e.id;
+          const lines = isOpen ? detailLines(e.changes, locale) : [];
+          return (
+            <li key={e.id} className="py-1">
+              <button
+                type="button"
+                onClick={() => setOpenEventId(isOpen ? null : e.id)}
+                aria-expanded={isOpen}
+                className="flex w-full gap-3 rounded-lg px-1 py-2 text-left hover:bg-muted/50"
+              >
+                <span className="w-20 shrink-0 text-xs tabular-nums text-muted-foreground">
+                  {formatEventTime(e.created_at, locale)}
+                </span>
+                <span className="min-w-0 flex-1 text-sm">
+                  {e.actor_name && e.source === "user" && <span className="font-medium">{e.actor_name} · </span>}
+                  {e.source !== "user" && <span className="font-medium text-muted-foreground">{tr("Sistema")} · </span>}
+                  {e.summary}
+                </span>
+                <ChevronDown
+                  className={cn(
+                    "mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+                    isOpen && "rotate-180",
+                  )}
+                />
+              </button>
+              {isOpen && (
+                <div className="mb-2 ml-1 space-y-1.5 rounded-lg border border-border bg-muted/30 p-3 text-xs sm:ml-24">
+                  <div className="text-muted-foreground">
+                    {new Date(e.created_at).toLocaleString(locale, { dateStyle: "full", timeStyle: "medium" })}
+                    {e.source === "user" && e.actor_name
+                      ? ` · ${e.actor_name}${e.actor_role ? ` (${ROLE_LABEL[e.actor_role] ?? e.actor_role})` : ""}`
+                      : ` · ${tr("Sistema")}`}
+                  </div>
+                  {lines.length === 0 ? (
+                    <div className="text-muted-foreground">{tr("Sem detalhes registados para esta ação.")}</div>
+                  ) : (
+                    <dl className="space-y-1">
+                      {lines.map((l) => (
+                        <div key={l.key} className="flex flex-wrap gap-x-1.5">
+                          <dt className="font-medium">{l.key}:</dt>
+                          {"value" in l ? (
+                            <dd className="break-words">{l.value}</dd>
+                          ) : (
+                            <dd className="break-words">
+                              <span className="text-muted-foreground line-through">{l.before}</span> →{" "}
+                              <span>{l.after}</span>
+                            </dd>
+                          )}
+                        </div>
+                      ))}
+                    </dl>
+                  )}
+                </div>
+              )}
+            </li>
+          );
+        })}
       </ul>
 
       {events.hasNextPage && (
         <div className="mt-3 text-center">
-          <Button variant="ghost" size="sm" onClick={() => void events.fetchNextPage()} disabled={events.isFetchingNextPage}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => void events.fetchNextPage()}
+            disabled={events.isFetchingNextPage}
+          >
             {events.isFetchingNextPage && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {tr("Carregar mais")}
           </Button>
