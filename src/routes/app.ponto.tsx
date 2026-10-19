@@ -30,6 +30,9 @@ import {
   Ban,
   XCircle,
   Archive,
+  MapPin,
+  Navigation,
+  Copy,
 } from "lucide-react";
 import { TaskDocuments } from "@/components/tasks/TaskDocuments";
 import { Dialog, DialogContent, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/dialog";
@@ -210,7 +213,9 @@ function PontoPage() {
         .is("archived_at", null)
         // Tarefas removidas (soft delete) saem da fila operacional.
         .is("deleted_at", null)
-        .in("status", ["pendente", "autorizado", "ausente", "em_andamento", "cancelado"])
+        // Canceladas não podem ser iniciadas: saem da fila da Folha de Ponto
+        // (continuam visíveis na tela Tarefas, com o motivo do cancelamento).
+        .in("status", ["pendente", "autorizado", "ausente", "em_andamento"])
         // Ordem cronológica pelo início real da tarefa (não pelo prazo/fim).
         .order("scheduled_for", { ascending: true, nullsFirst: false })
         .order("recurrence_date", { ascending: true, nullsFirst: false })
@@ -226,9 +231,7 @@ function PontoPage() {
       const { data, error } = await q;
       if (error) throw error;
       const rows = sortTasksForList((data ?? []) as unknown as TaskRow[]);
-      return isManager || isSuperAdmin
-        ? rows
-        : rows.filter((task) => !isEmployeeCancelledTask(task, user.id));
+      return isManager || isSuperAdmin ? rows : rows.filter((task) => !isEmployeeCancelledTask(task, user.id));
     },
     enabled: !!user && !openEntry,
   });
@@ -312,7 +315,7 @@ function PontoPage() {
   });
 
   const openClientName =
-    (openClientId ? clientsMap?.[openClientId] ?? openClient?.name : undefined) ??
+    (openClientId ? (clientsMap?.[openClientId] ?? openClient?.name) : undefined) ??
     openEntrySummary?.client_name ??
     undefined;
 
@@ -475,7 +478,17 @@ function PontoPage() {
     },
   });
   const manualEndMut = useMutation({
-    mutationFn: async ({ entryId, endedAt, reason, note }: { entryId: string; endedAt: string; reason?: string; note: string }) => {
+    mutationFn: async ({
+      entryId,
+      endedAt,
+      reason,
+      note,
+    }: {
+      entryId: string;
+      endedAt: string;
+      reason?: string;
+      note: string;
+    }) => {
       if (!openEntry) {
         throw new Error("Sem ponto aberto.");
       }
@@ -717,8 +730,6 @@ function PontoPage() {
         }}
       />
 
-
-
       {/* Dialog de escolha de método (modo "ambos") */}
       <Dialog open={!!modeChoice} onOpenChange={(o) => !o && setModeChoice(null)}>
         <DialogContent size="sm">
@@ -894,7 +905,11 @@ function PontoPage() {
         }}
       >
         <DialogContent size="sm">
-          <ModalHeader icon={Square} title="Concluir tarefa" description="Registre uma observação opcional sobre a conclusão." />
+          <ModalHeader
+            icon={Square}
+            title="Concluir tarefa"
+            description="Registre uma observação opcional sobre a conclusão."
+          />
           <ModalBody>
             <form
               id="punch-completion-form"
@@ -923,7 +938,12 @@ function PontoPage() {
             </form>
           </ModalBody>
           <ModalFooter>
-            <Button type="button" variant="outline" disabled={endMut.isPending} onClick={() => setCompletionDialogOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={endMut.isPending}
+              onClick={() => setCompletionDialogOpen(false)}
+            >
               Cancelar
             </Button>
             <Button type="submit" form="punch-completion-form" disabled={endMut.isPending}>
@@ -1023,7 +1043,9 @@ function ActiveTaskCard({
         ) : (
           <div className="flex flex-col items-center justify-center rounded-xl bg-background/60 py-6">
             <div className="text-[11px] uppercase tracking-widest text-muted-foreground">Tempo efetivo</div>
-            <div className="max-w-full break-all font-display text-5xl font-semibold tabular-nums sm:text-6xl">{formatHMS(liveSec)}</div>
+            <div className="max-w-full break-all font-display text-5xl font-semibold tabular-nums sm:text-6xl">
+              {formatHMS(liveSec)}
+            </div>
             {state === "pausado" && (
               <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-warning/15 px-2.5 py-1 text-xs font-medium text-warning-foreground">
                 <Coffee className="h-3 w-3" /> Em pausa
@@ -1035,7 +1057,13 @@ function ActiveTaskCard({
         {/* Ações grandes */}
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {!useManualExit && state === "aberto" && (
-              <Button size="lg" variant="outline" className="h-14 min-w-0 text-sm sm:text-base" disabled={pausing} onClick={onPause}>
+            <Button
+              size="lg"
+              variant="outline"
+              className="h-14 min-w-0 text-sm sm:text-base"
+              disabled={pausing}
+              onClick={onPause}
+            >
               <Pause className="mr-2 h-5 w-5" /> Pausa almoço
             </Button>
           )}
@@ -1109,6 +1137,38 @@ function UpcomingTasks({
   onRefuseTask: (t: TaskRow) => void;
   onArchiveTask: (t: TaskRow) => void;
 }) {
+  // Endereço e coordenadas dos clientes das tarefas na fila (a RLS já permite ao
+  // funcionário ler o cliente das tarefas atribuídas a ele).
+  const clientIds = Array.from(new Set(tasks.map((t) => t.client_id).filter((id): id is string => !!id))).sort();
+  const { data: clientAddresses = {} } = useQuery({
+    queryKey: ["punch-client-addresses", clientIds],
+    queryFn: async () => {
+      const map: Record<string, ClientAddressInfo> = {};
+      if (clientIds.length === 0) return map;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.from("clients" as never) as any)
+        .select("id,address,geo_address,geo_lat,geo_lng")
+        .in("id", clientIds);
+      if (error) throw error;
+      for (const r of (data ?? []) as {
+        id: string;
+        address: string | null;
+        geo_address: string | null;
+        geo_lat: number | null;
+        geo_lng: number | null;
+      }[]) {
+        map[r.id] = {
+          address: (r.address ?? "").trim() || (r.geo_address ?? "").trim() || null,
+          lat: typeof r.geo_lat === "number" ? r.geo_lat : null,
+          lng: typeof r.geo_lng === "number" ? r.geo_lng : null,
+        };
+      }
+      return map;
+    },
+    enabled: clientIds.length > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+
   if (tasks.length === 0) {
     return (
       <section className="rounded-2xl border border-border bg-card p-8 text-center">
@@ -1161,6 +1221,12 @@ function UpcomingTasks({
   const nextRequesting = requestingAuth && requestingAuthId === nextStartable.id;
   const nextLate = isVisuallyLate(nextStartable);
   const nextLateStartMinutes = startedLateMinutes(nextStartable);
+  const nextLateLabel =
+    nextLateStartMinutes !== null
+      ? `Início com atraso · ${formatStartedLateMinutes(nextLateStartMinutes)}`
+      : nextOperationalStatus === "atrasada" || nextLate
+        ? "Atrasada"
+        : null;
   const nextClient = nextStartable.client_id ? clientsMap[nextStartable.client_id] : undefined;
 
   return (
@@ -1180,36 +1246,16 @@ function UpcomingTasks({
         </div>
         <div className="space-y-5 p-5 sm:p-6">
           <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span
-                className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${PRIORITY_TONE[nextStartable.priority] ?? PRIORITY_TONE.media}`}
-              >
-                {nextStartable.priority === "urgente" && <Flame className="mr-1 h-3 w-3" />}
-                {nextStartable.priority}
-              </span>
-              <span
-                className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${nextOperationalStatus === "atrasada" ? "bg-destructive/15 text-destructive" : STATUS_TONE[nextOperationalStatus]}`}
-              >
-                {nextOperationalStatus === "atrasada" ? "Atrasada" : STATUS_LABELS[nextOperationalStatus]}
-              </span>
-              <span className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                {effectiveMode(nextStartable) === "automatico" ? (
-                  <Zap className="h-3 w-3" />
-                ) : (
-                  <Hand className="h-3 w-3" />
-                )}
-                {PUNCH_MODE_LABELS[effectiveMode(nextStartable)]}
-              </span>
-              {nextLateStartMinutes != null ? (
-                <span className="inline-flex items-center gap-1 rounded bg-destructive/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-destructive">
-                  <AlertCircle className="h-3 w-3" /> Início com atraso · {formatStartedLateMinutes(nextLateStartMinutes)}
+            {nextStartable.priority === "urgente" && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${PRIORITY_TONE[nextStartable.priority] ?? PRIORITY_TONE.media}`}
+                >
+                  <Flame className="mr-1 h-3 w-3" />
+                  {nextStartable.priority}
                 </span>
-              ) : nextLate && nextOperationalStatus !== "atrasada" ? (
-                <span className="inline-flex items-center gap-1 rounded bg-destructive/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-destructive">
-                  <AlertCircle className="h-3 w-3" /> atrasada
-                </span>
-              ) : null}
-            </div>
+              </div>
+            )}
             <h2 className="mt-2 font-display text-2xl font-semibold leading-tight sm:text-3xl">
               {nextStartable.title}
             </h2>
@@ -1218,6 +1264,7 @@ function UpcomingTasks({
                 <Building2 className="h-3.5 w-3.5" /> {nextClient}
               </div>
             )}
+            <ClientAddressBlock info={nextStartable.client_id ? clientAddresses[nextStartable.client_id] : undefined} />
             {nextStartable.description && (
               <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{nextStartable.description}</p>
             )}
@@ -1296,15 +1343,21 @@ function UpcomingTasks({
                 <Ban className="mr-2 h-5 w-5" /> Cancelar tarefa
               </Button>
             )}
-            {currentUserId && canArchiveBy(nextStartable, { userId: currentUserId, isManager }) && (
-              <Button
-                size="lg"
-                variant="ghost"
-                className="h-12 w-full text-base"
-                onClick={() => onArchiveTask(nextStartable)}
-              >
-                <Archive className="mr-2 h-5 w-5" /> Arquivar
-              </Button>
+            {((currentUserId && canArchiveBy(nextStartable, { userId: currentUserId, isManager })) ||
+              nextLateLabel) && (
+              <div className="flex items-center justify-center gap-2 sm:col-span-2">
+                {currentUserId && canArchiveBy(nextStartable, { userId: currentUserId, isManager }) && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 px-3 text-xs text-muted-foreground"
+                    onClick={() => onArchiveTask(nextStartable)}
+                  >
+                    <Archive className="mr-1.5 h-4 w-4" /> Arquivar
+                  </Button>
+                )}
+                {nextLateLabel && <LateBadge label={nextLateLabel} />}
+              </div>
             )}
           </div>
         </div>
@@ -1321,6 +1374,13 @@ function UpcomingTasks({
               const late = isVisuallyLate(t);
               const lateStartMinutes = startedLateMinutes(t);
               const operationalStatus = resolveOperationalStatus(t);
+              const lateLabel =
+                lateStartMinutes !== null
+                  ? `Início atrasado · ${formatStartedLateMinutes(lateStartMinutes)}`
+                  : operationalStatus === "atrasada" || late
+                    ? "Atrasada"
+                    : null;
+              const clientAddress = t.client_id ? clientAddresses[t.client_id] : undefined;
               const isStarting = starting && startingId === t.id;
               const clientName = t.client_id ? clientsMap[t.client_id] : undefined;
               const tMode = effectiveMode(t);
@@ -1331,42 +1391,25 @@ function UpcomingTasks({
                 (actionStatus === "pendente" || actionStatus === "autorizado" || actionStatus === "em_andamento") &&
                 isOwn;
               return (
-                <li
-                  key={t.id}
-                  className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:justify-between sm:p-5"
-                >
+                <li key={t.id} className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:justify-between sm:p-5">
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span
-                        className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${PRIORITY_TONE[t.priority] ?? PRIORITY_TONE.media}`}
-                      >
-                        {t.priority}
-                      </span>
-                      {lateStartMinutes != null ? (
-                        <span className="inline-flex items-center gap-1 rounded bg-destructive/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-destructive">
-                          <AlertCircle className="h-3 w-3" /> Início atrasado · {formatStartedLateMinutes(lateStartMinutes)}
+                    {t.priority === "urgente" && (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${PRIORITY_TONE[t.priority] ?? PRIORITY_TONE.media}`}
+                        >
+                          <Flame className="mr-1 h-3 w-3" />
+                          {t.priority}
                         </span>
-                      ) : late && operationalStatus !== "atrasada" ? (
-                        <span className="inline-flex items-center gap-1 rounded bg-destructive/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-destructive">
-                          <AlertCircle className="h-3 w-3" /> atrasada
-                        </span>
-                      ) : null}
-                      <span
-                        className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${operationalStatus === "atrasada" ? "bg-destructive/15 text-destructive" : STATUS_TONE[operationalStatus]}`}
-                      >
-                        {operationalStatus === "atrasada" ? "Atrasada" : STATUS_LABELS[operationalStatus]}
-                      </span>
-                      <span className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                        {tMode === "automatico" ? <Zap className="h-3 w-3" /> : <Hand className="h-3 w-3" />}
-                        {PUNCH_MODE_LABELS[tMode]}
-                      </span>
-                    </div>
+                      </div>
+                    )}
                     <div className="mt-1 truncate font-medium">{t.title}</div>
                     {clientName && (
                       <div className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted-foreground">
                         <Building2 className="h-3 w-3" /> {clientName}
                       </div>
                     )}
+                    <ClientAddressBlock info={clientAddress} compact />
                     <div className="mt-0.5 text-xs text-muted-foreground">
                       {t.scheduled_for
                         ? `${formatWallDate(t.scheduled_for)} · ${formatWallTime(t.scheduled_for)}`
@@ -1418,43 +1461,120 @@ function UpcomingTasks({
                       </Button>
                     )}
                     {currentUserId && canRefuseTask(t, { userId: currentUserId }) && (
-                      <Button
-                        size="lg"
-                        variant="outline"
-                        className="h-12 shrink-0"
-                        onClick={() => onRefuseTask(t)}
-                      >
+                      <Button size="lg" variant="outline" className="h-12 shrink-0" onClick={() => onRefuseTask(t)}>
                         <XCircle className="mr-2 h-5 w-5" /> Recusar tarefa
                       </Button>
                     )}
                     {currentUserId && canCancelTask(t, { userId: currentUserId, isManager }) && (
-                      <Button
-                        size="lg"
-                        variant="outline"
-                        className="h-12 shrink-0"
-                        onClick={() => onCancelTask(t)}
-                      >
+                      <Button size="lg" variant="outline" className="h-12 shrink-0" onClick={() => onCancelTask(t)}>
                         <Ban className="mr-2 h-5 w-5" /> Cancelar tarefa
                       </Button>
                     )}
-                    {currentUserId && canArchiveBy(t, { userId: currentUserId, isManager }) && (
-                      <Button
-                        size="lg"
-                        variant="ghost"
-                        className="h-12 shrink-0"
-                        onClick={() => onArchiveTask(t)}
-                      >
-                        <Archive className="mr-2 h-5 w-5" /> Arquivar
-                      </Button>
+                    {((currentUserId && canArchiveBy(t, { userId: currentUserId, isManager })) || lateLabel) && (
+                      <div className="flex items-center gap-2">
+                        {currentUserId && canArchiveBy(t, { userId: currentUserId, isManager }) && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 shrink-0 px-3 text-xs text-muted-foreground"
+                            onClick={() => onArchiveTask(t)}
+                          >
+                            <Archive className="mr-1.5 h-4 w-4" /> Arquivar
+                          </Button>
+                        )}
+                        {lateLabel && <LateBadge label={lateLabel} />}
+                      </div>
                     )}
                   </div>
                 </li>
-
               );
             })}
           </ul>
         </section>
       )}
     </div>
+  );
+}
+
+type ClientAddressInfo = { address: string | null; lat: number | null; lng: number | null };
+
+/**
+ * Endereço do cliente com atalhos de navegação (Google Maps, Waze, Mapas) e cópia.
+ * Usa as coordenadas do cadastro quando existem (mais precisas); senão o endereço escrito.
+ */
+function ClientAddressBlock({ info, compact = false }: { info?: ClientAddressInfo; compact?: boolean }) {
+  if (!info) return null;
+  const hasCoords = info.lat !== null && info.lng !== null;
+  const coords = hasCoords ? `${info.lat},${info.lng}` : null;
+  const text = info.address;
+  if (!coords && !text) return null;
+  const dest = coords ?? encodeURIComponent(text ?? "");
+  const links = [
+    { label: "Google Maps", href: `https://www.google.com/maps/dir/?api=1&destination=${dest}` },
+    {
+      label: "Waze",
+      href: coords ? `https://waze.com/ul?ll=${coords}&navigate=yes` : `https://waze.com/ul?q=${dest}&navigate=yes`,
+    },
+    { label: "Mapas", href: `https://maps.apple.com/?daddr=${dest}` },
+  ];
+  const copy = async () => {
+    const value = text ?? coords ?? "";
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+      } else {
+        const el = document.createElement("textarea");
+        el.value = value;
+        el.setAttribute("readonly", "");
+        el.style.position = "fixed";
+        el.style.opacity = "0";
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand("copy");
+        document.body.removeChild(el);
+      }
+      toast.success("Endereço copiado");
+    } catch {
+      toast.error("Não foi possível copiar o endereço");
+    }
+  };
+  return (
+    <div className={compact ? "mt-1.5 space-y-1.5" : "mt-2 space-y-2"}>
+      <div className={`flex items-start gap-1.5 text-muted-foreground ${compact ? "text-xs" : "text-sm"}`}>
+        <MapPin className={compact ? "mt-0.5 h-3 w-3 shrink-0" : "mt-0.5 h-3.5 w-3.5 shrink-0"} />
+        <span className="break-words">{text ?? "Localização do cliente no mapa"}</span>
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+          <Navigation className="h-3 w-3" /> Ir com:
+        </span>
+        {links.map((l) => (
+          <a
+            key={l.label}
+            href={l.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex h-8 items-center rounded-md border border-border bg-background px-2.5 text-xs font-medium hover:bg-muted"
+          >
+            {l.label}
+          </a>
+        ))}
+        <button
+          type="button"
+          onClick={() => void copy()}
+          className="inline-flex h-8 items-center gap-1 rounded-md border border-border bg-background px-2.5 text-xs font-medium hover:bg-muted"
+        >
+          <Copy className="h-3.5 w-3.5" /> Copiar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function LateBadge({ label }: { label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded bg-destructive/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-destructive">
+      <AlertCircle className="h-3 w-3" /> {label}
+    </span>
   );
 }
