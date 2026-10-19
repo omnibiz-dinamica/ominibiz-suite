@@ -795,6 +795,8 @@ function ClientForm({
     if (!provider.isAvailable()) return null;
     const seq = manualGeoSeqRef.current;
     setAutoGeocoding(true);
+    const request = { address: addr, promise: Promise.resolve<{ lat: number; lng: number } | null>(null) };
+    pendingGeocodeRef.current = request;
     const promise = (async () => {
     try {
       const results = await provider.geocode(addr);
@@ -814,13 +816,13 @@ function ClientForm({
       console.warn("[clientes] geocodificação automática falhou", err);
       return null;
     } finally {
-      if (pendingGeocodeRef.current?.promise === promise) {
+      if (pendingGeocodeRef.current === request) {
         pendingGeocodeRef.current = null;
         setAutoGeocoding(false);
       }
     }
     })();
-    pendingGeocodeRef.current = { address: addr, promise };
+    request.promise = promise;
     return promise;
   };
 
