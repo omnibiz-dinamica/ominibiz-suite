@@ -48,8 +48,17 @@ import {
 } from "@/lib/tasks/contracted-hours";
 import { describeClientSchedule } from "@/lib/tasks/client-card";
 import { clientTeamType, type ClientTeamType } from "@/lib/tasks/client-team";
+import { resolveClientLocationForSave } from "@/lib/client-location-save";
 
 export const Route = createFileRoute("/app/clientes")({
+  head: () => ({ meta: [
+    { title: "Clientes | OmniBiz" },
+    { name: "description", content: "Gestão de clientes, equipas e localizações de trabalho no OmniBiz." },
+    { property: "og:title", content: "Clientes | OmniBiz" },
+    { property: "og:description", content: "Gestão de clientes, equipas e localizações de trabalho no OmniBiz." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: () => (
     <RoleGuard allow={["manager", "owner", "super_admin"]}>
       <ClientsPage />
@@ -749,11 +758,15 @@ function ClientForm({
     Object.fromEntries(assignees.map((a) => [a.user_id, clientTeamType(a)])),
   );
   const [loading, setLoading] = useState(false);
+  const savingRef = useRef(false);
+  const geoRef = useRef(geo);
+  const addressRef = useRef(address);
+  const pendingGeocodeRef = useRef<{ address: string; promise: Promise<{ lat: number; lng: number } | null> } | null>(null);
 
   /** Último endereço já convertido em coordenadas (evita refazer e sobrescrever o ponto ajustado no mapa). */
   const lastGeocodedRef = useRef<string | null>(
     initial?.geo_lat != null && initial?.geo_lng != null
-      ? (initial?.address ?? initial?.geo_address ?? "").trim()
+      ? (initial?.geo_address ?? initial?.address ?? "").trim()
       : null,
   );
   /** Incrementa a cada ajuste manual no mapa: uma geocodificação em curso é descartada. */
@@ -762,19 +775,27 @@ function ClientForm({
 
   const updateGeo = (next: ClientGeoValue) => {
     manualGeoSeqRef.current += 1;
-    lastGeocodedRef.current = address.trim();
+    if (next.lat !== geoRef.current.lat || next.lng !== geoRef.current.lng) {
+      lastGeocodedRef.current = (next.address ?? address).trim();
+    }
+    geoRef.current = next;
     setGeo(next);
-    if (next.address !== null && next.address !== address) setAddress(next.address);
+    if (next.address !== null && next.address !== address) {
+      addressRef.current = next.address;
+      setAddress(next.address);
+    }
   };
 
   /** Endereço do cliente é a fonte única: preenche latitude e longitude automaticamente. */
   const geocodeFromAddress = async (raw: string): Promise<{ lat: number; lng: number } | null> => {
     const addr = raw.trim();
+    if (pendingGeocodeRef.current?.address === addr) return pendingGeocodeRef.current.promise;
     if (addr.length < 5 || addr === lastGeocodedRef.current) return null;
     const provider = getMapProvider();
     if (!provider.isAvailable()) return null;
     const seq = manualGeoSeqRef.current;
     setAutoGeocoding(true);
+    const promise = (async () => {
     try {
       const results = await provider.geocode(addr);
       const first = results[0];
@@ -782,17 +803,25 @@ function ClientForm({
         toast.warning("Endereço não encontrado no mapa. Corrija o endereço ou marque o ponto no mapa.");
         return null;
       }
-      if (seq !== manualGeoSeqRef.current) return null;
+      if (seq !== manualGeoSeqRef.current || addressRef.current.trim() !== addr) return null;
       lastGeocodedRef.current = addr;
       const point = { lat: first.location.lat, lng: first.location.lng };
-      setGeo((current) => ({ ...current, ...point, address: addr, radiusM: current.radiusM || 50 }));
+      const next = { ...geoRef.current, ...point, address: addr, radiusM: geoRef.current.radiusM || 50 };
+      geoRef.current = next;
+      setGeo(next);
       return point;
     } catch (err) {
       console.warn("[clientes] geocodificação automática falhou", err);
       return null;
     } finally {
-      setAutoGeocoding(false);
+      if (pendingGeocodeRef.current?.promise === promise) {
+        pendingGeocodeRef.current = null;
+        setAutoGeocoding(false);
+      }
     }
+    })();
+    pendingGeocodeRef.current = { address: addr, promise };
+    return promise;
   };
 
   useEffect(() => {
@@ -849,18 +878,21 @@ function ClientForm({
           className="space-y-4"
           onSubmit={async (e) => {
             e.preventDefault();
+            if (savingRef.current) return;
             const geoError = validateClientGeo(geo);
             if (geoError) {
               toast.error(geoError);
               return;
             }
-            // Endereço é a fonte única: sem coordenadas, geocodifica antes de gravar (não bloqueia se falhar).
-            let geoToSave = geo;
-            if ((geo.lat == null || geo.lng == null) && address.trim()) {
-              const point = await geocodeFromAddress(address);
-              if (point) geoToSave = { ...geo, ...point, radiusM: geo.radiusM || 50 };
-            }
+            savingRef.current = true;
+            setLoading(true);
             try {
+              const geoToSave = await resolveClientLocationForSave({
+                address,
+                getLocation: () => geoRef.current,
+                getResolvedAddress: () => lastGeocodedRef.current,
+                geocode: geocodeFromAddress,
+              });
               const parseRate = (s: string): number | null => {
                 const n = Number(s.replace(",", "."));
                 return Number.isFinite(n) && s.trim() !== "" ? n : null;
@@ -1099,6 +1131,7 @@ function ClientForm({
             } catch (err) {
               toast.error((err as Error).message);
             } finally {
+              savingRef.current = false;
               setLoading(false);
             }
           }}
@@ -1150,8 +1183,11 @@ function ClientForm({
                     value={address}
                     onChange={(e) => {
                       const nextAddress = e.target.value;
+                      addressRef.current = nextAddress;
                       setAddress(nextAddress);
-                      setGeo((current) => ({ ...current, address: nextAddress }));
+                      const next = { ...geoRef.current, address: nextAddress };
+                      geoRef.current = next;
+                      setGeo(next);
                     }}
                     onBlur={() => void geocodeFromAddress(address)}
                   />

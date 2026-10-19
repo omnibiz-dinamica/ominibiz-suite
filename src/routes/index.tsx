@@ -7,6 +7,14 @@ import { useT } from "@/i18n";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export const Route = createFileRoute("/")({
+  head: () => ({ meta: [
+    { title: "OmniBiz | Gestão operacional" },
+    { name: "description", content: "Centralize clientes, tarefas, equipas e folha de ponto no OmniBiz." },
+    { property: "og:title", content: "OmniBiz | Gestão operacional" },
+    { property: "og:description", content: "Centralize clientes, tarefas, equipas e folha de ponto no OmniBiz." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: Landing,
 });
 
