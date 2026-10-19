@@ -3878,14 +3878,12 @@ function TaskForm({
                   // A geração roda POR SÉRIE (recém-criada ou já existente equivalente). Varrer
                   // todas as séries da empresa estourava o statement_timeout em bases grandes.
                   // Janela de 12 meses; o índice único (série + data) mantém a idempotência.
-                  const toMaterialize = [
-                    ...createdRecurrenceIds,
-                    ...existingRecurrenceIds.filter((id) => !createdRecurrenceIds.includes(id)),
-                  ];
+                  const reusedRecurrenceIds = existingRecurrenceIds.filter((id) => !createdRecurrenceIds.includes(id));
+                  const toMaterialize = [...createdRecurrenceIds, ...reusedRecurrenceIds];
                   const horizon = 365;
                   const failed: string[] = [];
                   let generated = 0;
-                  for (const recurrenceId of toMaterialize) {
+                  const materializeOne = async (recurrenceId: string) => {
                     try {
                       // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       const { data: materialized, error: materializeError } = await (supabase.rpc as any)(
@@ -3901,7 +3899,9 @@ function TaskForm({
                     } catch (materializeFailure) {
                       failed.push((materializeFailure as Error).message ?? "erro desconhecido");
                     }
-                  }
+                  };
+                  for (const recurrenceId of createdRecurrenceIds) await materializeOne(recurrenceId);
+                  for (const recurrenceId of reusedRecurrenceIds) await materializeOne(recurrenceId);
                   if (failed.length > 0) {
                     // Falha de geração é erro real: nunca prometemos geração futura.
                     toast.error(
