@@ -177,6 +177,13 @@ type ClientOption = {
   timing_mode?: "start_stop" | "manual" | null;
   contracted_minutes?: number | null;
 };
+// Decisão do dono: as tarefas não têm título próprio; o nome do CLIENTE é exibido em
+// negrito como título. Cache alimentado pela lista de clientes da empresa ativa; sem
+// cliente (ou cliente fora da lista), cai no título gravado na tarefa.
+const clientNameCache = new Map<string, string>();
+function taskHeading(t: { client_id?: string | null; title?: string | null }): string {
+  return (t.client_id ? clientNameCache.get(t.client_id) : undefined) || t.title || "Tarefa";
+}
 type CompletionNote = {
   id: string;
   task_id: string;
@@ -454,6 +461,7 @@ function TasksPage() {
     },
     enabled: !!currentCompanyId,
   });
+  for (const c of clientsList ?? []) clientNameCache.set(c.id, c.name);
 
   const { data: approvedVacations } = useQuery({
     queryKey: ["approved-vacations-calendar", currentCompanyId, user?.id, isManager],
@@ -2222,13 +2230,13 @@ function MiniTaskChip({ task, startedAt, onClick }: { task: TaskRow; startedAt?:
       className="block w-full truncate rounded-md bg-primary/10 px-2 py-1 text-left text-[11px] font-medium text-primary hover:bg-primary/15"
       title={
         lateMinutes != null
-          ? `${task.title} · Início com atraso · ${formatStartedLateMinutes(lateMinutes)}`
-          : task.title
+          ? `${taskHeading(task)} · Início com atraso · ${formatStartedLateMinutes(lateMinutes)}`
+          : taskHeading(task)
       }
     >
       {start ? `${start} ` : ""}
       {task.schedule_name ? `[${task.schedule_name}] ` : ""}
-      {task.title}
+      {taskHeading(task)}
     </button>
   );
 }
@@ -2450,7 +2458,7 @@ function CalendarTaskCard({
             />
           )}
           <div className="min-w-0">
-            <div className="break-words text-sm font-medium leading-snug">{task.title}</div>
+            <div className="break-words text-sm font-semibold leading-snug">{taskHeading(task)}</div>
             <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
               {start || end ? (
                 <span className="font-mono">
@@ -2855,7 +2863,7 @@ function TaskRowItem({
         )}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-medium">{t.title}</span>
+            <span className="font-semibold">{taskHeading(t)}</span>
             <span
               className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${operationalStatus === "atrasada" ? "bg-destructive/15 text-destructive" : STATUS_TONE[operationalStatus]}`}
             >
@@ -3631,7 +3639,8 @@ function TaskForm({
               }
               // Título derivado do cliente quando não preenchido manualmente.
               const clientName = clients.find((c) => c.id === clientId)?.name ?? "";
-              const finalTitle = title.trim() || clientName.trim() || description.trim().slice(0, 80) || "Tarefa";
+              // O nome do cliente manda: ao trocar o cliente numa edição, o título acompanha.
+              const finalTitle = clientName.trim() || title.trim() || description.trim().slice(0, 80) || "Tarefa";
               const payload = {
                 title: finalTitle,
                 description: description.trim() || null,
