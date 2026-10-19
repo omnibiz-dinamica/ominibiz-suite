@@ -16,6 +16,68 @@ import { STATUS_LABELS, deleteTaskSeries, isOpenPunchError, type DeleteSeriesSco
 import { formatWallDate, formatWallTime } from "@/lib/wall-clock";
 import { cn } from "@/lib/utils";
 
+/** Outro funcionário da mesma tarefa em equipa (mesmo task_group_id e mesmo dia). */
+export type GroupMate = { taskId: string; name: string; disabled?: boolean; note?: string };
+
+/**
+ * Lista de colegas da mesma tarefa para o gestor escolher quem também sai.
+ * Por padrão nenhum colega é marcado: só o funcionário da linha clicada é excluído.
+ */
+export function GroupMatesPicker({
+  mates,
+  selected,
+  onChange,
+  currentName,
+}: {
+  mates: GroupMate[];
+  selected: string[];
+  onChange: (ids: string[]) => void;
+  currentName?: string;
+}) {
+  if (mates.length === 0) return null;
+  const selectable = mates.filter((m) => !m.disabled).map((m) => m.taskId);
+  const allSelected = selectable.length > 0 && selectable.every((id) => selected.includes(id));
+  const toggle = (id: string, on: boolean) =>
+    onChange(on ? Array.from(new Set([...selected, id])) : selected.filter((x) => x !== id));
+  return (
+    <div className="space-y-2 rounded-xl border border-warning/40 bg-warning/10 p-3 text-left">
+      <div className="text-sm font-medium">
+        Esta tarefa tem mais {mates.length} {mates.length === 1 ? "funcionário" : "funcionários"}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {currentName ? `${currentName} será excluído(a). ` : ""}Marque quem também deve sair desta tarefa. Os não
+        marcados continuam com a tarefa.
+      </p>
+      {selectable.length > 1 && (
+        <label className="flex items-center gap-2 text-sm font-medium">
+          <input
+            type="checkbox"
+            className="h-4 w-4"
+            checked={allSelected}
+            onChange={(e) => onChange(e.target.checked ? selectable : [])}
+          />
+          Todos
+        </label>
+      )}
+      <div className="space-y-1.5">
+        {mates.map((m) => (
+          <label key={m.taskId} className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="h-4 w-4"
+              disabled={m.disabled}
+              checked={selected.includes(m.taskId)}
+              onChange={(e) => toggle(m.taskId, e.target.checked)}
+            />
+            <span className={m.disabled ? "text-muted-foreground" : ""}>{m.name}</span>
+            {m.note && <span className="text-xs text-muted-foreground">({m.note})</span>}
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function DeleteRecurrenceDialog({
   task,
   clientName,
@@ -23,6 +85,8 @@ export function DeleteRecurrenceDialog({
   onOpenChange,
   onDone,
   onOpenPunch,
+  groupMates = [],
+  currentName,
 }: {
   task: TaskRow | null;
   clientName?: string;
@@ -30,15 +94,20 @@ export function DeleteRecurrenceDialog({
   onOpenChange: (v: boolean) => void;
   onDone: () => void;
   onOpenPunch?: () => void;
+  /** Colegas da mesma tarefa em equipa no mesmo dia; o mesmo âmbito é aplicado aos marcados. */
+  groupMates?: GroupMate[];
+  currentName?: string;
 }) {
   const [scope, setScope] = useState<DeleteSeriesScope>("single");
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
+  const [selectedMates, setSelectedMates] = useState<string[]>([]);
 
   useEffect(() => {
     if (open) {
       setScope("single");
       setReason("");
+      setSelectedMates([]);
     }
   }, [open, task?.id]);
 
@@ -53,6 +122,23 @@ export function DeleteRecurrenceDialog({
     setSaving(true);
     try {
       const res = await deleteTaskSeries(task.id, scope, reason);
+      // Mesmo âmbito para cada colega marcado (cada um tem a sua própria série).
+      const mateFailures: string[] = [];
+      for (const mateTaskId of selectedMates) {
+        try {
+          const r = await deleteTaskSeries(mateTaskId, scope, reason);
+          res.deleted += r.deleted;
+          res.cancelled += r.cancelled;
+          res.kept += r.kept;
+        } catch (mateError) {
+          mateFailures.push((mateError as Error).message);
+        }
+      }
+      if (mateFailures.length > 0) {
+        toast.warning(
+          `${mateFailures.length} funcionário(s) não puderam ser excluídos desta tarefa: ${mateFailures[0]}`,
+        );
+      }
       const parts: string[] = [];
       if (res.deleted > 0) parts.push(`${res.deleted} excluída(s)`);
       if (res.cancelled > 0) parts.push(`${res.cancelled} cancelada(s) por terem histórico`);
@@ -107,6 +193,13 @@ export function DeleteRecurrenceDialog({
               <div>Status atual: {task ? STATUS_LABELS[task.status] : "-"}</div>
             </div>
           </ModalSection>
+
+          <GroupMatesPicker
+            mates={groupMates}
+            selected={selectedMates}
+            onChange={setSelectedMates}
+            currentName={currentName}
+          />
 
           <div className="space-y-2">
             {options.map((opt) => {
