@@ -126,7 +126,7 @@ import {
 } from "@/lib/tasks/task-documents";
 import { localDateToDateKey, normalizeCustomRecurrenceDates } from "@/lib/tasks/custom-recurrence";
 import { CancelTaskDialog } from "@/components/tasks/CancelTaskDialog";
-import { DeleteRecurrenceDialog } from "@/components/tasks/DeleteRecurrenceDialog";
+import { DeleteRecurrenceDialog, GroupMatesPicker, type GroupMate } from "@/components/tasks/DeleteRecurrenceDialog";
 import { MarkAbsentDialog } from "@/components/tasks/MarkAbsentDialog";
 import { OpenPunchRecoveryDialog, type RecoveryEntry } from "@/components/ponto/OpenPunchRecoveryDialog";
 import { fetchOpenEntries, fetchOpenEntrySelf } from "@/lib/punch/recovery";
@@ -750,15 +750,29 @@ function TasksPage() {
   });
 
   const deleteTask = useMutation({
-    mutationFn: async (id: string) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase.rpc as any)("task_soft_delete", { _task_id: id });
-      if (error) throw new Error(error.message);
+    // Recebe a tarefa clicada e, opcionalmente, as dos colegas marcados no modal.
+    mutationFn: async (ids: string[]) => {
+      const failed: string[] = [];
+      for (const [index, id] of ids.entries()) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error } = await (supabase.rpc as any)("task_soft_delete", { _task_id: id });
+        if (error) {
+          if (index === 0) throw new Error(error.message);
+          failed.push(error.message);
+        }
+      }
+      return { total: ids.length, failed };
     },
-    onSuccess: () => {
+    onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
       qc.invalidateQueries({ queryKey: ["notifications"] });
-      toast.success("Tarefa excluída");
+      if (res.failed.length > 0) {
+        toast.warning(
+          `${res.total - res.failed.length} de ${res.total} tarefas excluídas. Não foi possível excluir: ${res.failed[0]}`,
+        );
+      } else {
+        toast.success(res.total > 1 ? `${res.total} tarefas excluídas` : "Tarefa excluída");
+      }
       setDeleting(null);
     },
     onError: (e: Error) => toast.error(e.message),
@@ -780,6 +794,32 @@ function TasksPage() {
     enabled: !!deleting?.id && !deleting?.recurrence_id,
     refetchOnWindowFocus: false,
   });
+
+  // Colegas da mesma tarefa em equipa (mesmo task_group_id e mesmo dia): o gestor
+  // escolhe no modal quem também sai. Por padrão só a tarefa clicada é excluída.
+  const { data: deletingGroupRows } = useQuery({
+    queryKey: ["task-group-mates", deleting?.id, deleting?.task_group_id],
+    queryFn: async (): Promise<TaskRow[]> => {
+      if (!deleting?.task_group_id) return [];
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("task_group_id", deleting.task_group_id)
+        .is("deleted_at", null)
+        .neq("id", deleting.id);
+      if (error) throw error;
+      const dayKey = (row: Pick<TaskRow, "recurrence_date" | "scheduled_for" | "due_at">) =>
+        row.recurrence_date ?? (row.scheduled_for ?? row.due_at ?? "").slice(0, 10);
+      const key = dayKey(deleting);
+      return ((data ?? []) as unknown as TaskRow[]).filter((row) => dayKey(row) === key);
+    },
+    enabled: isManager && !!deleting?.task_group_id,
+    refetchOnWindowFocus: false,
+  });
+  const [deleteMatesSelected, setDeleteMatesSelected] = useState<string[]>([]);
+  useEffect(() => {
+    setDeleteMatesSelected([]);
+  }, [deleting?.id]);
 
   const archiveMut = useMutation({
     mutationFn: ({ id, archive }: { id: string; archive: boolean }) => archiveTask(id, archive),
@@ -867,6 +907,17 @@ function TasksPage() {
   const DELETABLE_STATUSES: TaskRow["status"][] = ["pendente", "autorizado", "cancelado", "ausente"];
 
   const canDelete = (t: TaskRow) => isManager && DELETABLE_STATUSES.includes(t.status);
+  const memberDisplayName = (id: string | null | undefined) =>
+    (id && members?.find((m) => m.id === id)?.full_name) || "Funcionário";
+  const deletingGroupMates: GroupMate[] = (deletingGroupRows ?? []).map((row) => {
+    const blocked = !deleting?.recurrence_id && !canDelete(row);
+    return {
+      taskId: row.id,
+      name: memberDisplayName(row.assigned_to),
+      disabled: blocked,
+      note: blocked ? "já tem histórico, não pode ser excluída" : undefined,
+    };
+  });
 
   const handleDeleteRequest = (t: TaskRow) => {
     if (!isManager) return;
@@ -1172,6 +1223,8 @@ function TasksPage() {
         task={deleting?.recurrence_id ? deleting : null}
         clientName={deleting?.client_id ? clientsList?.find((c) => c.id === deleting.client_id)?.name : undefined}
         open={!!deleting?.recurrence_id}
+        groupMates={deletingGroupMates}
+        currentName={deleting ? memberDisplayName(deleting.assigned_to) : undefined}
         onOpenChange={(o) => !o && setDeleting(null)}
         onDone={() => {
           setDeleting(null);
@@ -1199,6 +1252,12 @@ function TasksPage() {
                 confirmar, a tarefa e os anexos serão excluídos.
               </p>
             )}
+            <GroupMatesPicker
+              mates={deletingGroupMates}
+              selected={deleteMatesSelected}
+              onChange={setDeleteMatesSelected}
+              currentName={deleting ? memberDisplayName(deleting.assigned_to) : undefined}
+            />
           </AlertDialogHeader>
 
           <AlertDialogFooter>
@@ -1207,7 +1266,7 @@ function TasksPage() {
               disabled={deleteTask.isPending}
               onClick={(e) => {
                 e.preventDefault();
-                if (deleting) deleteTask.mutate(deleting.id);
+                if (deleting) deleteTask.mutate([deleting.id, ...deleteMatesSelected]);
               }}
             >
               {deleteTask.isPending ? "Excluindo..." : "Excluir"}
