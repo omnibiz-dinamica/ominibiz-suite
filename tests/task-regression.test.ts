@@ -14,16 +14,17 @@ const materialization = readFileSync(
   ),
   "utf8",
 );
-const clientSchedule = readFileSync(
-  new URL("../src/lib/tasks/client-schedule.ts", import.meta.url),
-  "utf8",
-);
+const clientSchedule = readFileSync(new URL("../src/lib/tasks/client-schedule.ts", import.meta.url), "utf8");
 
 test("task visibility stays company-scoped and employee-scoped by canonical IDs", () => {
   assert.match(tasksPage, /if \(currentCompanyId\) q = q\.eq\("company_id", currentCompanyId\)/);
   assert.match(tasksPage, /if \(!isManager\) q = q\.eq\("assigned_to", user!\.id\)/);
   assert.match(tasksPage, /const inserted = await supabase[\s\S]*\.from\("tasks"\)[\s\S]*assigned_to: memberId/);
-  assert.match(tasksPage, /const \{ error: materializeError \} = await \(supabase\.rpc as any\)\("recurrence_materialize"/);
+  // A geração por série também lê quantas ocorrências foram criadas (data: materialized).
+  assert.match(
+    tasksPage,
+    /const \{ (?:data: materialized, )?error: materializeError \} = await \(supabase\.rpc as any\)\(\s*"recurrence_materialize"/,
+  );
   // Janela rolante de pré-geração: 12 meses (o campo "data final" da série
   // continua intacto — o limite existe só na materialização).
   assert.match(tasksPage, /const horizon = 365/);
@@ -36,8 +37,14 @@ test("occurrence generation runs per created series and surfaces real failures",
   assert.doesNotMatch(tasksPage, /As próximas ocorrências serão geradas automaticamente/);
 });
 test("task creation always releases saving state after async failures", () => {
-  assert.match(tasksPage, /if \(submittingRef\.current\) return;\s*submittingRef\.current = true;\s*setLoading\(true\);\s*try \{/);
-  assert.match(tasksPage, /catch \(submitError\)[\s\S]*toast\.error\(taskSaveErrorMessage\(submitError\)\)[\s\S]*finally \{[\s\S]*submittingRef\.current = false;[\s\S]*setLoading\(false\);/);
+  assert.match(
+    tasksPage,
+    /if \(submittingRef\.current\) return;\s*submittingRef\.current = true;\s*setLoading\(true\);\s*try \{/,
+  );
+  assert.match(
+    tasksPage,
+    /catch \(submitError\)[\s\S]*toast\.error\(taskSaveErrorMessage\(submitError\)\)[\s\S]*finally \{[\s\S]*submittingRef\.current = false;[\s\S]*setLoading\(false\);/,
+  );
 });
 
 test("client habitual schedules are not duplicated by active task series", () => {
@@ -46,7 +53,10 @@ test("client habitual schedules are not duplicated by active task series", () =>
 });
 
 test("single-occurrence recurrence edits preserve wall-clock overnight dates", () => {
-  assert.match(recurrenceDialog, /const end = sfIso && safeDuration > 0 \? addWallMinutes\(startDate, startTime, safeDuration\) : null/);
+  assert.match(
+    recurrenceDialog,
+    /const end = sfIso && safeDuration > 0 \? addWallMinutes\(startDate, startTime, safeDuration\) : null/,
+  );
   assert.match(recurrenceDialog, /const seIso = end \? wallDateTimeToISO\(end\.date, end\.time\) : null/);
   assert.doesNotMatch(recurrenceDialog, /new Date\(sfIso\)|sfStart\.getTime\(\)|toISOString\(\)/);
 });
