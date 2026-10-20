@@ -108,3 +108,12 @@ test("notificações mostram a linha de instruções e abrem a Folha de Ponto", 
     /LINK_EVENTS = new Set\(\["punch_regularized", "punch_adjusted", "task_client_instructions_updated"\]\)/,
   );
 });
+
+test("Super Admin e Owner veem pedidos de férias pendentes com outro aprovador (só leitura)", () => {
+  const vacationsPage = readFileSync(new URL("../src/routes/app.ferias.tsx", import.meta.url), "utf8");
+  assert.match(vacationsPage, /isSuperAdmin \|\| isOwner\s*\?\s*rows\.filter\(/);
+  assert.match(vacationsPage, /Pendentes com outro aprovador/);
+  assert.match(vacationsPage, /pendingWithOthers\.map\(\(r\) => \(\s*<li\s+key=\{r\.id\}\s+data-vacation-id=\{r\.id\}/);
+  // a lista de decisão continua só para o aprovador atribuído
+  assert.match(vacationsPage, /r\.assigned_approver_id === user\?\.id &&/);
+});
