@@ -117,3 +117,12 @@ test("Super Admin e Owner veem pedidos de férias pendentes com outro aprovador 
   // a lista de decisão continua só para o aprovador atribuído
   assert.match(vacationsPage, /r\.assigned_approver_id === user\?\.id &&/);
 });
+
+test("datas personalizadas: sem aviso de intervalo e férias só nos dias escolhidos", () => {
+  // o aviso de 'data de fim X dias depois' não vale para datas personalizadas
+  assert.match(tasksPage, /if \(spanDays > 2 && !\(recurrence\.enabled && recurrence\.frequency === "custom"\)\) \{/);
+  // férias: só conflita se cair num dos dias selecionados
+  assert.match(tasksPage, /normalizeCustomRecurrenceDates\(recurrence\.selectedDates \?\? \[\]\)/);
+  assert.match(tasksPage, /customDays\.some\(\(day\) => day >= v\.start_date && day <= v\.end_date\)/);
+  assert.match(tasksPage, /if \(conflictingVacations\.length > 0\) \{/);
+});
