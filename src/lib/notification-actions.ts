@@ -50,7 +50,8 @@ type OpenableNotification = {
   metadata?: unknown;
 };
 
-const LINK_EVENTS = new Set(["punch_regularized", "punch_adjusted"]);
+// task_client_instructions_updated: aviso de instruções do cliente criadas/alteradas (abre a Folha de Ponto).
+const LINK_EVENTS = new Set(["punch_regularized", "punch_adjusted", "task_client_instructions_updated"]);
 
 function safeInternalPath(value: unknown): string | null {
   const link = typeof value === "string" ? value.trim() : "";
