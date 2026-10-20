@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { resolveClientLocationForSave } from "../src/lib/client-location-save.ts";
+import { manuallyResolvedClientAddress, resolveClientLocationForSave } from "../src/lib/client-location-save.ts";
 
 const oldPoint = { lat: 38.7, lng: -9.1, address: "Lisboa", radiusM: 50 };
 
@@ -46,4 +46,36 @@ test("removing the address clears its old point", async () => {
     address: " ", getLocation: () => oldPoint,
     getResolvedAddress: () => "Lisboa", geocode: async () => null,
   }), { ...oldPoint, lat: null, lng: null, address: null });
+});
+
+test("reverse-geocoded map address preserves the exact manual pin without forward geocoding", async () => {
+  const pin = { ...oldPoint, lat: 50.850123, lng: 4.350456 };
+  let resolvedAddress = manuallyResolvedClientAddress(oldPoint, pin, "Lisboa");
+  assert.equal(resolvedAddress, "Lisboa");
+  const reverseResult = { ...pin, address: "Bruxelas, entrada lateral" };
+  resolvedAddress = manuallyResolvedClientAddress(pin, reverseResult, "Lisboa");
+  assert.equal(resolvedAddress, "Bruxelas, entrada lateral");
+  let geocodeCalls = 0;
+  const saved = await resolveClientLocationForSave({
+    address: reverseResult.address,
+    getLocation: () => reverseResult,
+    getResolvedAddress: () => resolvedAddress,
+    geocode: async () => { geocodeCalls += 1; throw new Error("address cannot be forward geocoded"); },
+  });
+  assert.deepEqual(saved, reverseResult);
+  assert.equal(geocodeCalls, 0);
+});
+
+test("radius-only changes do not confirm a newly typed address against the old point", async () => {
+  const typed = { ...oldPoint, address: "Bruxelas" };
+  const radiusEdit = { ...typed, radiusM: 100 };
+  assert.equal(manuallyResolvedClientAddress(typed, radiusEdit, "Bruxelas"), null);
+  await assert.rejects(resolveClientLocationForSave({
+    address: "Bruxelas", getLocation: () => radiusEdit,
+    getResolvedAddress: () => "Lisboa", geocode: async () => null,
+  }), /Não foi possível confirmar/);
+});
+
+test("incomplete manual coordinates cannot confirm an address", () => {
+  assert.equal(manuallyResolvedClientAddress(oldPoint, { ...oldPoint, lat: null }, "Lisboa"), null);
 });
