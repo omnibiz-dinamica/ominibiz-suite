@@ -113,7 +113,7 @@ const businessDaysBetween = (start: string, end: string): number => {
 };
 
 function FeriasPage() {
-  const { user, currentCompanyId, effectiveRole, isManager } = useAuth();
+  const { user, currentCompanyId, effectiveRole, isManager, isSuperAdmin, isOwner } = useAuth();
   const qc = useQueryClient();
   const isEmployee = effectiveRole === "employee";
 
@@ -588,6 +588,18 @@ function FeriasPage() {
   const forwardedByMe = rows.filter(
     (r) => r.status === "pendente" && r.forwarded_by === user?.id && r.user_id !== user?.id,
   );
+  // Super Admin e Owner: acompanham (só leitura) os pedidos pendentes que estão com outro aprovador,
+  // para o "Abrir" das notificações e do painel encontrar o pedido. A decisão continua com o aprovador.
+  const alreadyListedIds = new Set([...toApprove, ...(isManager ? forwardedByMe : [])].map((r) => r.id));
+  const pendingWithOthers =
+    isSuperAdmin || isOwner
+      ? rows.filter(
+          (r) =>
+            (r.status === "pendente" || r.status === "aguardando_aprovacao") &&
+            r.user_id !== user?.id &&
+            !alreadyListedIds.has(r.id),
+        )
+      : [];
 
   return (
     <div className="flex flex-col gap-6">
@@ -709,6 +721,34 @@ function FeriasPage() {
         </section>
       )}
 
+      {pendingWithOthers.length > 0 && (
+        <section className="order-15 rounded-2xl border border-border bg-card p-5">
+          <h2 className="mb-1 font-semibold">Pendentes com outro aprovador ({pendingWithOthers.length})</h2>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Visível para Super Admin e Owner. A decisão continua com o aprovador indicado.
+          </p>
+          <ul className="space-y-2">
+            {pendingWithOthers.map((r) => (
+              <li
+                key={r.id}
+                data-vacation-id={r.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3"
+              >
+                <div className="min-w-0">
+                  <div className="font-medium">{nameOf(r.user_id)}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {fmt(r.start_date)} → {fmt(r.end_date)} · Aprovador:{" "}
+                    {r.assigned_approver_id ? nameOf(r.assigned_approver_id) : "Não definido"}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {r.status === "aguardando_aprovacao" ? "Aguardando aprovação" : "Pendente"}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {isManager && forwardedByMe.length > 0 && (
         <section className="order-15 rounded-2xl border border-border bg-card p-5">
           <h2 className="mb-3 font-semibold">Enviados para autorização ({forwardedByMe.length})</h2>
