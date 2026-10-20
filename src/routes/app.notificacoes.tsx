@@ -64,7 +64,8 @@ type NotificationEvent =
   | "expense_approved"
   | "expense_rejected"
   | "ticket_created"
-  | "ticket_message_added";
+  | "ticket_message_added"
+  | "task_client_instructions_updated";
 
 type NotificationPriority = "baixa" | "media" | "alta" | "urgente";
 
@@ -350,6 +351,7 @@ const EVENT_LABEL: Record<NotificationEvent, string> = {
   task_cancelled: "Cancelada",
   task_marked_absent: "Ausente",
   task_late: "Atrasada",
+  task_client_instructions_updated: "Instruções do cliente",
   vacation_requested: "Férias — solicitação",
   vacation_approved: "Férias — aprovadas",
   vacation_rejected: "Férias — rejeitadas",
@@ -922,7 +924,9 @@ function NotificationsPage() {
                         <p className="mt-0.5 break-words text-sm text-muted-foreground">{ticketDisplay.body}</p>
                       )
                     ) : (
-                      n.body && <p className="mt-0.5 break-words text-sm text-muted-foreground">{n.body}</p>
+                      n.body && (
+                        <p className="mt-0.5 whitespace-pre-line break-words text-sm text-muted-foreground">{n.body}</p>
+                      )
                     )}
                     {n.state_note && <p className="mt-1 text-xs italic text-muted-foreground">Nota: {n.state_note}</p>}
                   </div>
