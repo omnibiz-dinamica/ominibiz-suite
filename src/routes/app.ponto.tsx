@@ -32,6 +32,8 @@ import {
   MapPin,
   Navigation,
   Copy,
+  Info as InfoIcon,
+  ChevronDown as ChevronDownIcon,
 } from "lucide-react";
 import { TaskDocuments } from "@/components/tasks/TaskDocuments";
 import { Dialog, DialogContent, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/dialog";
@@ -998,6 +1000,7 @@ function ActiveTaskCard({
 }) {
   const isManualEntry = mode === "manual" || entry.notes === "Apontamento manual pelo funcionario";
   const useManualExit = isManualEntry;
+  const activeInstructions = usePunchClientInstructions(task.client_id ? [task.client_id] : []);
 
   return (
     <section className="min-w-0 overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card shadow-lg">
@@ -1019,6 +1022,7 @@ function ActiveTaskCard({
           <h2 className="break-words font-display text-2xl font-semibold leading-tight sm:text-3xl">
             {clientName || task.title}
           </h2>
+          <ClientInstructionsToggle text={task.client_id ? activeInstructions[task.client_id] : undefined} />
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_TONE[task.status]}`}>
               {STATUS_LABELS[task.status]}
@@ -1171,6 +1175,7 @@ function UpcomingTasks({
     enabled: clientIds.length > 0,
     staleTime: 5 * 60 * 1000,
   });
+  const clientInstructions = usePunchClientInstructions(clientIds);
 
   if (tasks.length === 0) {
     return (
@@ -1263,6 +1268,9 @@ function UpcomingTasks({
               {nextClient || nextStartable.title}
             </h2>
             <ClientAddressBlock info={nextStartable.client_id ? clientAddresses[nextStartable.client_id] : undefined} />
+            <ClientInstructionsToggle
+              text={nextStartable.client_id ? clientInstructions[nextStartable.client_id] : undefined}
+            />
             {nextStartable.description && (
               <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{nextStartable.description}</p>
             )}
@@ -1403,6 +1411,10 @@ function UpcomingTasks({
                     )}
                     <div className="mt-1 truncate font-semibold">{clientName || t.title}</div>
                     <ClientAddressBlock info={clientAddress} compact />
+                    <ClientInstructionsToggle
+                      text={t.client_id ? clientInstructions[t.client_id] : undefined}
+                      compact
+                    />
                     <div className="mt-0.5 text-xs text-muted-foreground">
                       {t.scheduled_for
                         ? `${formatWallDate(t.scheduled_for)} · ${formatWallTime(t.scheduled_for)}`
@@ -1569,5 +1581,71 @@ function LateBadge({ label }: { label: string }) {
     <span className="inline-flex items-center gap-1 rounded bg-destructive/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-destructive">
       <AlertCircle className="h-3 w-3" /> {label}
     </span>
+  );
+}
+
+/**
+ * "Instruções adicionais" do cliente (clients.instructions) na Folha de Ponto.
+ * Leitura separada e tolerante a falhas: se der erro devolve {} e a tela continua
+ * exatamente igual (endereço, ponto e botões não dependem disto).
+ */
+function usePunchClientInstructions(clientIds: string[]): Record<string, string> {
+  const ids = Array.from(new Set(clientIds.filter((id) => !!id))).sort();
+  const { data } = useQuery({
+    queryKey: ["punch-client-instructions", ids],
+    queryFn: async () => {
+      const map: Record<string, string> = {};
+      if (ids.length === 0) return map;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data, error } = await (supabase.from("clients" as never) as any)
+          .select("id,instructions")
+          .in("id", ids);
+        if (error) return map;
+        for (const r of (data ?? []) as { id: string; instructions: string | null }[]) {
+          const text = (r.instructions ?? "").trim();
+          if (text) map[r.id] = text;
+        }
+      } catch {
+        // sem instruções: a tela segue igual
+      }
+      return map;
+    },
+    enabled: ids.length > 0,
+    staleTime: 60 * 1000,
+    retry: false,
+  });
+  return data ?? {};
+}
+
+/** Botão "Ver instruções do cliente": só aparece com texto; começa fechado. */
+function ClientInstructionsToggle({ text, compact = false }: { text?: string | null; compact?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const value = (text ?? "").trim();
+  if (!value) return null;
+  return (
+    <div className={`${compact ? "mt-1" : "mt-2"} min-w-0`}>
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((o) => !o);
+        }}
+        className="inline-flex max-w-full items-center gap-1.5 rounded-md text-xs font-medium text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <InfoIcon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        <span className="truncate">{open ? "Ocultar instruções do cliente" : "Ver instruções do cliente"}</span>
+        <ChevronDownIcon
+          className={`h-3.5 w-3.5 shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+          aria-hidden
+        />
+      </button>
+      {open && (
+        <p className="mt-1 whitespace-pre-wrap break-words rounded-md border border-border bg-muted/40 px-2.5 py-2 text-xs text-foreground">
+          {value}
+        </p>
+      )}
+    </div>
   );
 }
