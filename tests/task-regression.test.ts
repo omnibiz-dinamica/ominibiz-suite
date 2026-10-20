@@ -67,3 +67,44 @@ test("recurrence materialization preserves the multi-employee task group", () =>
   assert.match(materialization, /existing_task\.title = v_rec\.title/);
   assert.match(materialization, /existing_task\.recurrence_id IS DISTINCT FROM v_rec\.id/);
 });
+
+// Instruções adicionais do cliente (clients.instructions): só exibição, sem mexer no ponto.
+const punchPage = readFileSync(new URL("../src/routes/app.ponto.tsx", import.meta.url), "utf8");
+const notificationsPage = readFileSync(new URL("../src/routes/app.notificacoes.tsx", import.meta.url), "utf8");
+const notificationActions = readFileSync(new URL("../src/lib/notification-actions.ts", import.meta.url), "utf8");
+
+test("Folha de Ponto mostra instruções do cliente sem alterar endereço nem ponto", () => {
+  // leitura separada e tolerante a falhas
+  assert.match(punchPage, /queryKey: \["punch-client-instructions", ids\]/);
+  assert.match(punchPage, /\.select\("id,instructions"\)/);
+  assert.match(punchPage, /if \(error\) return map;/);
+  // a consulta de endereço continua igual
+  assert.match(punchPage, /\.select\("id,address,geo_address,geo_lat,geo_lng"\)/);
+  // só aparece com texto e começa fechado
+  assert.match(
+    punchPage,
+    /function ClientInstructionsToggle[\s\S]*?useState\(false\)[\s\S]*?if \(!value\) return null;/,
+  );
+  // tarefa em andamento, próxima tarefa e lista do dia
+  assert.equal((punchPage.match(/<ClientInstructionsToggle /g) ?? []).length, 3);
+});
+
+test("calendário mostra instruções do cliente sem mudar a lista de clientes", () => {
+  assert.match(tasksPage, /queryKey: \["tasks-client-instructions", currentCompanyId\]/);
+  assert.match(tasksPage, /\.select\("id,name,timing_mode,contracted_minutes"\)/);
+  assert.match(
+    tasksPage,
+    /function CalendarClientInstructions[\s\S]*?useState\(false\)[\s\S]*?if \(!value\) return null;/,
+  );
+  assert.match(tasksPage, /<CalendarClientInstructions text=\{taskClientInstructions\(task\)\} \/>/);
+  assert.match(tasksPage, /aria-label="Tem instruções do cliente"/);
+});
+
+test("notificações mostram a linha de instruções e abrem a Folha de Ponto", () => {
+  assert.match(notificationsPage, /whitespace-pre-line break-words text-sm text-muted-foreground">\{n\.body\}/);
+  assert.match(notificationsPage, /task_client_instructions_updated: "Instruções do cliente"/);
+  assert.match(
+    notificationActions,
+    /LINK_EVENTS = new Set\(\["punch_regularized", "punch_adjusted", "task_client_instructions_updated"\]\)/,
+  );
+});
