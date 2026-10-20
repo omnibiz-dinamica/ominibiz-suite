@@ -126,3 +126,23 @@ test("datas personalizadas: sem aviso de intervalo e férias só nos dias escolh
   assert.match(tasksPage, /customDays\.some\(\(day\) => day >= v\.start_date && day <= v\.end_date\)/);
   assert.match(tasksPage, /if \(conflictingVacations\.length > 0\) \{/);
 });
+
+test("férias aprovadas agrupadas por mês, filtro de cargo, já gozadas em cinza e data do pedido", () => {
+  const vacationsPage = readFileSync(new URL("../src/routes/app.ferias.tsx", import.meta.url), "utf8");
+  assert.match(vacationsPage, /function vacationMonthGroupLabel\(start: string, end: string\)/);
+  assert.match(vacationsPage, /approvedGroups\.map\(\(g\) =>/);
+  assert.match(vacationsPage, /const \[filterJob, setFilterJob\] = useState<string>\("all"\)/);
+  assert.match(vacationsPage, /r\.end_date < todayKey/);
+  assert.match(vacationsPage, /\{fmtRequestedAt\(r\.created_at\)\}/);
+  // Local de trabalho do pedido herda o Setor do utilizador
+  assert.match(vacationsPage, /\.select\("work_location, job_title, sector"\)/);
+});
+
+test("atividade recente pesquisa por funcionário ou cliente no servidor", () => {
+  const timeline = readFileSync(new URL("../src/components/dashboards/ActivityTimeline.tsx", import.meta.url), "utf8");
+  assert.match(timeline, /queryKey: \["activity-events", companyId, tab, searchTerm\]/);
+  assert.match(timeline, /changes->>Funcionário\.ilike/);
+  assert.match(timeline, /changes->>Cliente\.ilike/);
+  // paginação continua igual quando não há pesquisa
+  assert.match(timeline, /\} else if \(pageFilter\) \{\s*q = q\.or\(pageFilter\);/);
+});
