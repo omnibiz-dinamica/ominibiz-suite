@@ -1,4 +1,5 @@
 # Roadmap
+- [x] Corrigir e verificar a preservação do ponto manual ao salvar o cliente.
 - [x] Corrigir e verificar salvamento imediato de endereço e localização de cliente.
 - [x] Cleanup TESTE-LOTE-% (170 tasks, 677 notifications + 508 audit rows via cascade)
 - [x] Ensaios 07/10 e linha de base TESTE-ANTES (arquivada)

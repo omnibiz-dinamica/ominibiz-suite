@@ -48,7 +48,7 @@ import {
 } from "@/lib/tasks/contracted-hours";
 import { describeClientSchedule } from "@/lib/tasks/client-card";
 import { clientTeamType, type ClientTeamType } from "@/lib/tasks/client-team";
-import { resolveClientLocationForSave } from "@/lib/client-location-save";
+import { manuallyResolvedClientAddress, resolveClientLocationForSave } from "@/lib/client-location-save";
 
 export const Route = createFileRoute("/app/clientes")({
   head: () => ({ meta: [
@@ -775,8 +775,9 @@ function ClientForm({
 
   const updateGeo = (next: ClientGeoValue) => {
     manualGeoSeqRef.current += 1;
-    if (next.lat !== geoRef.current.lat || next.lng !== geoRef.current.lng) {
-      lastGeocodedRef.current = (next.address ?? address).trim();
+    const resolvedAddress = manuallyResolvedClientAddress(geoRef.current, next, addressRef.current);
+    if (resolvedAddress !== null) {
+      lastGeocodedRef.current = resolvedAddress;
     }
     geoRef.current = next;
     setGeo(next);
