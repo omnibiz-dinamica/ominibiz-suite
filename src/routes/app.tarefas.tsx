@@ -3671,7 +3671,7 @@ function TaskForm({
                 const spanDays = Math.round(
                   (Date.parse(`${endDate}T00:00:00Z`) - Date.parse(`${startDate}T00:00:00Z`)) / 86_400_000,
                 );
-                if (spanDays > 2) {
+                if (spanDays > 2 && !(recurrence.enabled && recurrence.frequency === "custom")) {
                   const ok = window.confirm(
                     `Atenção: a data de fim está ${spanDays} dias depois da data de início.\n\n` +
                       "A data de fim é o fim do turno de trabalho (normalmente o mesmo dia ou o dia seguinte). " +
@@ -3697,8 +3697,17 @@ function TaskForm({
                   .eq("status", "aprovado")
                   .lte("start_date", rangeEnd)
                   .gte("end_date", rangeStart);
-                if (vacations && vacations.length > 0) {
-                  const periods = vacations
+                // Datas personalizadas: cada data é um turno separado; só conta férias que caem
+                // num dos dias escolhidos (não no intervalo entre a primeira e a última data).
+                const customDays =
+                  recurrence.enabled && recurrence.frequency === "custom"
+                    ? normalizeCustomRecurrenceDates(recurrence.selectedDates ?? [])
+                    : null;
+                const conflictingVacations = (vacations ?? []).filter(
+                  (v) => !customDays || customDays.some((day) => day >= v.start_date && day <= v.end_date),
+                );
+                if (conflictingVacations.length > 0) {
+                  const periods = conflictingVacations
                     .map((v) => {
                       const name = members.find((m) => m.id === v.user_id)?.full_name ?? "Funcionário";
                       return `${name}: ${v.start_date} → ${v.end_date}`;
