@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Activity, ChevronDown, Loader2, UserCheck } from "lucide-react";
+import { Activity, ChevronDown, Loader2, Search, UserCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n";
 
@@ -62,6 +63,27 @@ function detailLines(changes: Record<string, unknown> | null, locale: string) {
 
 const PAGE = 30;
 
+/** Limpa o texto da pesquisa (remove caracteres que quebram o filtro); mínimo 2 letras. */
+function sanitizeActivitySearch(value: string): string {
+  const clean = value
+    .replace(/[,()*%\\:"'.]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return clean.length >= 2 ? clean.slice(0, 60) : "";
+}
+
+/** Pesquisa no resumo, no autor e no funcionário/cliente gravados no detalhe da ação. */
+function activitySearchFilter(term: string): string {
+  const p = `*${term}*`;
+  return [
+    `summary.ilike.${p}`,
+    `actor_name.ilike.${p}`,
+    `changes->>Funcionário.ilike.${p}`,
+    `changes->>Funcionários.ilike.${p}`,
+    `changes->>Cliente.ilike.${p}`,
+  ].join(",");
+}
+
 /** created_at é um instante real (timestamptz): mostra-se na hora local do aparelho, no formato HH:mm da tela de Tarefas. */
 function formatEventTime(iso: string, locale: string) {
   const d = new Date(iso);
@@ -79,6 +101,13 @@ export function ActivityTimeline({ companyId }: { companyId: string }) {
   const [tab, setTab] = useState<Tab>("gestao");
   // Detalhe fica escondido; abre ao clicar na linha (uma de cada vez).
   const [openEventId, setOpenEventId] = useState<string | null>(null);
+  // Pesquisa por funcionário ou cliente (no servidor, em todo o histórico).
+  const [searchInput, setSearchInput] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  useEffect(() => {
+    const id = window.setTimeout(() => setSearchTerm(sanitizeActivitySearch(searchInput)), 350);
+    return () => window.clearTimeout(id);
+  }, [searchInput]);
   const { t: tr, lang } = useT();
   const [now, setNow] = useState(() => Date.now());
   const qc = useQueryClient();
@@ -92,7 +121,7 @@ export function ActivityTimeline({ companyId }: { companyId: string }) {
   }, [qc, companyId]);
 
   const events = useInfiniteQuery({
-    queryKey: ["activity-events", companyId, tab],
+    queryKey: ["activity-events", companyId, tab, searchTerm],
     initialPageParam: null as null | { created_at: string; id: string },
     queryFn: async ({ pageParam }) => {
       let q = (supabase as any)
@@ -103,10 +132,16 @@ export function ActivityTimeline({ companyId }: { companyId: string }) {
         .order("created_at", { ascending: false })
         .order("id", { ascending: false })
         .limit(PAGE);
-      if (pageParam) {
-        q = q.or(
-          `created_at.lt.${pageParam.created_at},and(created_at.eq.${pageParam.created_at},id.lt.${pageParam.id})`,
-        );
+      const pageFilter = pageParam
+        ? `created_at.lt.${pageParam.created_at},and(created_at.eq.${pageParam.created_at},id.lt.${pageParam.id})`
+        : null;
+      const searchFilter = searchTerm ? activitySearchFilter(searchTerm) : null;
+      if (pageFilter && searchFilter) {
+        q = q.or(`and(or(${pageFilter}),or(${searchFilter}))`);
+      } else if (pageFilter) {
+        q = q.or(pageFilter);
+      } else if (searchFilter) {
+        q = q.or(searchFilter);
       }
       const { data, error } = await q;
       if (error) throw error;
@@ -169,6 +204,19 @@ export function ActivityTimeline({ companyId }: { companyId: string }) {
             </button>
           ))}
         </div>
+      </div>
+      <div className="relative mt-3">
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+          aria-hidden
+        />
+        <Input
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          placeholder={tr("Pesquisar funcionário ou cliente…")}
+          aria-label={tr("Pesquisar funcionário ou cliente")}
+          className="pl-9"
+        />
       </div>
 
       {busy.length > 0 && (
