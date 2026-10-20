@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -47,6 +47,45 @@ export const Route = createFileRoute("/app/ferias")({
 
 type VacationStatus =
   "pendente" | "aguardando_aprovacao" | "pendente_confirmacao" | "aprovado" | "rejeitado" | "cancelado";
+const MONTH_NAMES_PT = [
+  "JANEIRO",
+  "FEVEREIRO",
+  "MARÇO",
+  "ABRIL",
+  "MAIO",
+  "JUNHO",
+  "JULHO",
+  "AGOSTO",
+  "SETEMBRO",
+  "OUTUBRO",
+  "NOVEMBRO",
+  "DEZEMBRO",
+];
+
+/** Faixa de agrupamento das férias aprovadas, como na planilha: "FÉRIAS DEZEMBRO A JANEIRO 2026/2027". */
+function vacationMonthGroupLabel(start: string, end: string): string {
+  const s = MONTH_NAMES_PT[Number(start.slice(5, 7)) - 1] ?? "";
+  const e = MONTH_NAMES_PT[Number(end.slice(5, 7)) - 1] ?? "";
+  const sy = start.slice(0, 4);
+  const ey = end.slice(0, 4);
+  if (start.slice(0, 7) === end.slice(0, 7)) return `FÉRIAS ${s} ${sy}`;
+  return sy === ey ? `FÉRIAS ${s} A ${e} ${sy}` : `FÉRIAS ${s} ${sy} A ${e} ${ey}`;
+}
+
+/** Data e hora em que o pedido de férias foi lançado (hora local do aparelho). */
+function fmtRequestedAt(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 type VacationRow = {
   id: string;
   company_id: string;
@@ -123,7 +162,7 @@ function FeriasPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("work_location, job_title")
+        .select("work_location, job_title, sector")
         .eq("id", user!.id)
         .maybeSingle();
       return data ?? null;
@@ -282,11 +321,15 @@ function FeriasPage() {
   const [priorValidation, setPriorValidation] = useState<"sim" | "nao">("nao");
   const [validatedBy, setValidatedBy] = useState("");
 
+  // O Local de trabalho do pedido herda o Setor do cadastro do utilizador (Usuários → Setor);
+  // sem Setor, usa o local de trabalho do perfil, como antes. O funcionário pode alterar.
+  const profileWorkLocation =
+    ((myProfile as { sector?: string | null } | null)?.sector ?? "").trim() || myProfile?.work_location || "";
   useEffect(() => {
-    if (!workLocation && myProfile?.work_location) {
-      setWorkLocation(myProfile.work_location);
+    if (!workLocation && profileWorkLocation) {
+      setWorkLocation(profileWorkLocation);
     }
-  }, [myProfile?.work_location, workLocation]);
+  }, [profileWorkLocation, workLocation]);
 
   const create = useMutation({
     mutationFn: async () => {
@@ -317,7 +360,7 @@ function FeriasPage() {
       toast.success("Solicitação enviada");
       setStart("");
       setEnd("");
-      setWorkLocation(myProfile?.work_location ?? "");
+      setWorkLocation(profileWorkLocation);
       setNote("");
       setPriorValidation("nao");
       setValidatedBy("");
@@ -486,6 +529,7 @@ function FeriasPage() {
   const [filterYear, setFilterYear] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterLocation, setFilterLocation] = useState<string>("");
+  const [filterJob, setFilterJob] = useState<string>("all");
   const [businessOnly, setBusinessOnly] = useState<boolean>(false);
 
   const matchesFilters = (r: VacationRow): boolean => {
@@ -505,6 +549,7 @@ function FeriasPage() {
       const monthEnd = new Date(Date.UTC(yy, mm, 0)).toISOString().slice(0, 10);
       if (r.end_date < monthStart || r.start_date > monthEnd) return false;
     }
+    if (filterJob !== "all" && (names[r.user_id]?.jobTitle ?? "").trim() !== filterJob) return false;
     if (filterLocation.trim()) {
       const q = filterLocation.trim().toLowerCase();
       if (!(r.work_location ?? "").toLowerCase().includes(q)) return false;
@@ -514,6 +559,21 @@ function FeriasPage() {
 
   const filtered = rows.filter(matchesFilters);
   const approved = filtered.filter((r) => r.status === "aprovado");
+  // Aprovadas agrupadas pelo(s) mês(es) do período, na ordem em que aparecem na lista.
+  const todayKey = new Date().toLocaleDateString("en-CA"); // AAAA-MM-DD, data local
+  const approvedGroups = (() => {
+    const map = new Map<string, VacationRow[]>();
+    for (const r of approved) {
+      const label = vacationMonthGroupLabel(r.start_date, r.end_date);
+      const list = map.get(label);
+      if (list) list.push(r);
+      else map.set(label, [r]);
+    }
+    return Array.from(map, ([label, items]) => ({ label, items }));
+  })();
+  const jobOptions = Array.from(
+    new Set(rows.map((r) => (names[r.user_id]?.jobTitle ?? "").trim()).filter((j) => j.length > 0)),
+  ).sort((a, b) => a.localeCompare(b, "pt"));
   const history = rows.filter((r) => (r.status === "rejeitado" || r.status === "cancelado") && matchesFilters(r));
 
   const yearOptions = useMemo(() => {
@@ -927,7 +987,7 @@ function FeriasPage() {
           )}
         </div>
         {isManager && (
-          <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+          <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-7">
             <div>
               <Label className="text-xs">Colaborador</Label>
               <EmployeePicker
@@ -976,6 +1036,22 @@ function FeriasPage() {
               </Select>
             </div>
             <div>
+              <Label className="text-xs">Cargo</Label>
+              <Select value={filterJob} onValueChange={setFilterJob}>
+                <SelectTrigger aria-label="Filtrar por cargo">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {jobOptions.map((j) => (
+                    <SelectItem key={j} value={j}>
+                      {j}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
               <Label className="text-xs">Local de trabalho</Label>
               <Input
                 value={filterLocation}
@@ -1007,44 +1083,61 @@ function FeriasPage() {
           <p className="text-sm text-muted-foreground">Nenhuma férias aprovada.</p>
         ) : (
           <ul className="divide-y divide-border">
-            {approved.map((r) => (
-              <li key={r.id} data-vacation-id={r.id} className="flex items-center justify-between gap-3 py-2">
-                <div>
-                  <div className="font-medium">
-                    {isManager ? nameOf(r.user_id) : "Você"}
-                    {isManager && (
-                      <span className="ml-2 text-xs font-normal text-muted-foreground">· {jobOf(r.user_id)}</span>
-                    )}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {fmt(r.start_date)} → {fmt(r.end_date)}
-                    {" · "}
-                    <span className="font-mono">
-                      {countDays(r)} {businessOnly ? "dias úteis" : "dias"}
-                    </span>
-                    {r.work_location && <span> · {r.work_location}</span>}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_TONE.aprovado}`}>aprovado</span>
-                  {isManager && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() =>
-                        setCancelTarget({
-                          id: r.id,
-                          employeeName: r.user_id === user?.id ? "Você" : nameOf(r.user_id),
-                          periodLabel: `${fmt(r.start_date)} → ${fmt(r.end_date)}`,
-                          statusLabel: STATUS_LABEL[r.status],
-                        })
-                      }
-                    >
-                      Cancelar
-                    </Button>
-                  )}
-                </div>
-              </li>
+            {approvedGroups.map((g) => (
+              <Fragment key={g.label}>
+                <li className="-mx-5 bg-primary px-5 py-2 text-center text-xs font-bold uppercase tracking-wide text-primary-foreground">
+                  {g.label}
+                </li>
+                {g.items.map((r) => (
+                  <li
+                    key={r.id}
+                    data-vacation-id={r.id}
+                    title={r.end_date < todayKey ? "Férias já gozadas" : undefined}
+                    className={`flex items-center justify-between gap-3 py-2 ${
+                      r.end_date < todayKey ? "-mx-5 bg-muted/70 px-5" : ""
+                    }`}
+                  >
+                    <div>
+                      <div className="font-medium">
+                        <span className="mr-2 font-mono text-xs font-normal text-muted-foreground">
+                          {fmtRequestedAt(r.created_at)}
+                        </span>
+                        {isManager ? nameOf(r.user_id) : "Você"}
+                        {isManager && (
+                          <span className="ml-2 text-xs font-normal text-muted-foreground">· {jobOf(r.user_id)}</span>
+                        )}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {fmt(r.start_date)} → {fmt(r.end_date)}
+                        {" · "}
+                        <span className="font-mono">
+                          {countDays(r)} {businessOnly ? "dias úteis" : "dias"}
+                        </span>
+                        {r.work_location && <span> · {r.work_location}</span>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_TONE.aprovado}`}>aprovado</span>
+                      {isManager && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() =>
+                            setCancelTarget({
+                              id: r.id,
+                              employeeName: r.user_id === user?.id ? "Você" : nameOf(r.user_id),
+                              periodLabel: `${fmt(r.start_date)} → ${fmt(r.end_date)}`,
+                              statusLabel: STATUS_LABEL[r.status],
+                            })
+                          }
+                        >
+                          Cancelar
+                        </Button>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </Fragment>
             ))}
           </ul>
         )}
