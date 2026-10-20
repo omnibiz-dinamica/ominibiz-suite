@@ -76,6 +76,8 @@ import {
   XCircle,
   Search,
   AlertTriangle,
+  Info as InfoIcon,
+  ChevronDown as ChevronDownIcon,
 } from "lucide-react";
 import {
   STATUS_LABELS,
@@ -181,6 +183,11 @@ type ClientOption = {
 // negrito como título. Cache alimentado pela lista de clientes da empresa ativa; sem
 // cliente (ou cliente fora da lista), cai no título gravado na tarefa.
 const clientNameCache = new Map<string, string>();
+/** "Instruções adicionais" do cliente (clients.instructions), para o calendário. Vazio = sem instruções. */
+const clientInstructionsCache = new Map<string, string>();
+function taskClientInstructions(t: { client_id?: string | null }): string | undefined {
+  return t.client_id ? clientInstructionsCache.get(t.client_id) : undefined;
+}
 function taskHeading(t: { client_id?: string | null; title?: string | null }): string {
   return (t.client_id ? clientNameCache.get(t.client_id) : undefined) || t.title || "Tarefa";
 }
@@ -462,6 +469,36 @@ function TasksPage() {
     enabled: !!currentCompanyId,
   });
   for (const c of clientsList ?? []) clientNameCache.set(c.id, c.name);
+
+  // Instruções adicionais dos clientes (só para exibir no calendário). Consulta separada e
+  // tolerante a falhas: se der erro, o calendário fica exatamente como antes.
+  const { data: clientInstructionsMap } = useQuery({
+    queryKey: ["tasks-client-instructions", currentCompanyId],
+    queryFn: async () => {
+      const map: Record<string, string> = {};
+      if (!currentCompanyId) return map;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data, error } = await (supabase.from("clients" as never) as any)
+          .select("id,instructions")
+          .eq("company_id", currentCompanyId)
+          .not("instructions", "is", null);
+        if (error) return map;
+        for (const r of (data ?? []) as { id: string; instructions: string | null }[]) {
+          const text = (r.instructions ?? "").trim();
+          if (text) map[r.id] = text;
+        }
+      } catch {
+        // sem instruções: o calendário segue igual
+      }
+      return map;
+    },
+    enabled: !!currentCompanyId,
+    staleTime: 60 * 1000,
+    retry: false,
+  });
+  clientInstructionsCache.clear();
+  for (const [id, text] of Object.entries(clientInstructionsMap ?? {})) clientInstructionsCache.set(id, text);
 
   const { data: approvedVacations } = useQuery({
     queryKey: ["approved-vacations-calendar", currentCompanyId, user?.id, isManager],
@@ -2218,6 +2255,38 @@ function ScheduleNameBadge({ name }: { name?: string | null }) {
   );
 }
 
+/** Botão "Ver instruções do cliente" no cartão do calendário: só aparece com texto; começa fechado. */
+function CalendarClientInstructions({ text }: { text?: string | null }) {
+  const [open, setOpen] = useState(false);
+  const value = (text ?? "").trim();
+  if (!value) return null;
+  return (
+    <div className="mt-1 min-w-0">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((o) => !o);
+        }}
+        className="inline-flex max-w-full items-center gap-1.5 rounded-md text-xs font-medium text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <InfoIcon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        <span className="truncate">{open ? "Ocultar instruções do cliente" : "Ver instruções do cliente"}</span>
+        <ChevronDownIcon
+          className={`h-3.5 w-3.5 shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+          aria-hidden
+        />
+      </button>
+      {open && (
+        <p className="mt-1 whitespace-pre-wrap break-words rounded-md border border-border bg-muted/40 px-2.5 py-2 text-xs text-foreground">
+          {value}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function MiniTaskChip({ task, startedAt, onClick }: { task: TaskRow; startedAt?: string; onClick: () => void }) {
   const start = formatWallTime(task.scheduled_for);
   const lateMinutes = startedLateMinutes(task, startedAt);
@@ -2230,12 +2299,15 @@ function MiniTaskChip({ task, startedAt, onClick }: { task: TaskRow; startedAt?:
       className="block w-full truncate rounded-md bg-primary/10 px-2 py-1 text-left text-[11px] font-medium text-primary hover:bg-primary/15"
       title={
         lateMinutes != null
-          ? `${taskHeading(task)} · Início com atraso · ${formatStartedLateMinutes(lateMinutes)}`
-          : taskHeading(task)
+          ? `${taskHeading(task)} · Início com atraso · ${formatStartedLateMinutes(lateMinutes)}${taskClientInstructions(task) ? `\nInstruções: ${taskClientInstructions(task)}` : ""}`
+          : `${taskHeading(task)}${taskClientInstructions(task) ? `\nInstruções: ${taskClientInstructions(task)}` : ""}`
       }
     >
       {start ? `${start} ` : ""}
       {task.schedule_name ? `[${task.schedule_name}] ` : ""}
+      {taskClientInstructions(task) ? (
+        <InfoIcon className="mr-0.5 inline h-3 w-3 align-[-2px]" aria-label="Tem instruções do cliente" />
+      ) : null}
       {taskHeading(task)}
     </button>
   );
@@ -2477,6 +2549,7 @@ function CalendarTaskCard({
                 {operationalStatus === "atrasada" ? "Atrasada" : STATUS_LABELS[operationalStatus]}
               </span>
             </div>
+            <CalendarClientInstructions text={taskClientInstructions(task)} />
           </div>
         </div>
         {isManager && (
