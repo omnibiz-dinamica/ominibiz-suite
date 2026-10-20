@@ -86,7 +86,7 @@ test("Folha de Ponto mostra instruções do cliente sem alterar endereço nem po
     /function ClientInstructionsToggle[\s\S]*?useState\(false\)[\s\S]*?if \(!value\) return null;/,
   );
   // tarefa em andamento, próxima tarefa e lista do dia
-  assert.equal((punchPage.match(/<ClientInstructionsToggle /g) ?? []).length, 3);
+  assert.equal((punchPage.match(/<ClientInstructionsToggle\s/g) ?? []).length, 3);
 });
 
 test("calendário mostra instruções do cliente sem mudar a lista de clientes", () => {
