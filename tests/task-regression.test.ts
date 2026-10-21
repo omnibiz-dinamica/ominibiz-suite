@@ -114,8 +114,8 @@ test("Super Admin e Owner veem pedidos de férias pendentes com outro aprovador 
   assert.match(vacationsPage, /isSuperAdmin \|\| isOwner\s*\?\s*rows\.filter\(/);
   assert.match(vacationsPage, /Pendentes com outro aprovador/);
   assert.match(vacationsPage, /pendingWithOthers\.map\(\(r\) => \(\s*<li\s+key=\{r\.id\}\s+data-vacation-id=\{r\.id\}/);
-  // a lista de decisão continua só para o aprovador atribuído
-  assert.match(vacationsPage, /r\.assigned_approver_id === user\?\.id &&/);
+  // a lista de decisão: aprovador atribuído, ou qualquer gestor só para pedido pendente não reencaminhado (SUP-149)
+  assert.match(vacationsPage, /r\.assigned_approver_id === user\?\.id \|\|/);
 });
 
 test("datas personalizadas: sem aviso de intervalo e férias só nos dias escolhidos", () => {
