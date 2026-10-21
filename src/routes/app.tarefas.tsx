@@ -838,16 +838,24 @@ function TasksPage() {
   const deleteTask = useMutation({
     // Recebe a tarefa clicada e, opcionalmente, as dos colegas marcados no modal.
     mutationFn: async (ids: string[]) => {
+      // Divisão de horas: guarda o grupo do dia ANTES de excluir, para recalcular quem fica.
+      const rebalanceSnapshot = await snapshotGroupForRebalance(ids, (clientId) =>
+        clientId ? (clientsList?.find((c) => c.id === clientId)?.contracted_minutes ?? null) : null,
+      );
       const failed: string[] = [];
+      const deletedIds = new Set<string>();
       for (const [index, id] of ids.entries()) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { error } = await (supabase.rpc as any)("task_soft_delete", { _task_id: id });
         if (error) {
           if (index === 0) throw new Error(error.message);
           failed.push(error.message);
+        } else {
+          deletedIds.add(id);
         }
       }
-      return { total: ids.length, failed };
+      const rebalance = rebalanceSnapshot ? await applyGroupRebalance(rebalanceSnapshot, deletedIds) : null;
+      return { total: ids.length, failed, rebalance };
     },
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
@@ -858,6 +866,13 @@ function TasksPage() {
         );
       } else {
         toast.success(res.total > 1 ? `${res.total} tarefas excluídas` : "Tarefa excluída");
+      }
+      if (res.rebalance?.kind === "updated") {
+        toast.success(
+          `Horas recalculadas para ${res.rebalance.count === 1 ? "o funcionário que ficou" : `os ${res.rebalance.count} funcionários que ficaram`}: ${formatContractedMinutes(res.rebalance.minutes[0] ?? 0)}${res.rebalance.count > 1 ? " cada" : ""}.`,
+        );
+      } else if (res.rebalance?.kind === "skipped_started") {
+        toast.info("As horas de quem ficou não foram recalculadas porque a tarefa já foi iniciada ou concluída.");
       }
       setDeleting(null);
     },
@@ -2386,6 +2401,88 @@ function TaskClientDetails({ task }: { task: { client_id?: string | null } }) {
       <CalendarClientInstructions text={taskClientInstructions(task)} />
     </>
   );
+}
+
+/**
+ * Divisão de horas contratadas entre colegas da mesma tarefa (mesmo task_group_id e dia).
+ * Antes de excluir, guarda o grupo; só considera "dividido" quando todos começam à mesma hora
+ * e a soma das durações é igual às horas contratadas do cliente.
+ */
+type RebalanceTask = {
+  id: string;
+  scheduled_for: string | null;
+  scheduled_end: string | null;
+  recurrence_date: string | null;
+  due_at: string | null;
+  status: string;
+};
+type RebalanceSnapshot = { total: number; group: RebalanceTask[] };
+type RebalanceResult =
+  { kind: "updated"; count: number; minutes: number[] } | { kind: "skipped_started" } | { kind: "none" };
+
+const rebalanceDayKey = (t: { recurrence_date: string | null; scheduled_for: string | null; due_at: string | null }) =>
+  t.recurrence_date ?? (t.scheduled_for ?? t.due_at ?? "").slice(0, 10);
+
+async function snapshotGroupForRebalance(
+  ids: string[],
+  contractedOf: (clientId: string | null) => number | null,
+): Promise<RebalanceSnapshot | null> {
+  try {
+    if (ids.length === 0) return null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: base } = await (supabase.from("tasks" as never) as any)
+      .select("id, task_group_id, client_id, scheduled_for, recurrence_date, due_at")
+      .eq("id", ids[0])
+      .maybeSingle();
+    if (!base?.task_group_id) return null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: mates, error } = await (supabase.from("tasks" as never) as any)
+      .select("id, scheduled_for, scheduled_end, recurrence_date, due_at, status")
+      .eq("task_group_id", base.task_group_id)
+      .is("deleted_at", null);
+    if (error || !mates) return null;
+    const day = rebalanceDayKey(base);
+    const group = (mates as RebalanceTask[]).filter(
+      (t) => rebalanceDayKey(t) === day && String(t.status) !== "cancelado",
+    );
+    if (group.length < 2) return null;
+    const start = group[0].scheduled_for;
+    if (!start || group.some((t) => t.scheduled_for !== start || !t.scheduled_end)) return null;
+    const durations = group.map((t) =>
+      Math.round((Date.parse(t.scheduled_end as string) - Date.parse(t.scheduled_for as string)) / 60000),
+    );
+    if (durations.some((m) => !(m > 0))) return null;
+    const total = durations.reduce((a, b) => a + b, 0);
+    const contracted = contractedOf(base.client_id ?? null);
+    if (contracted == null || Math.abs(total - contracted) > 1) return null;
+    return { total, group };
+  } catch {
+    return null;
+  }
+}
+
+async function applyGroupRebalance(snapshot: RebalanceSnapshot, deletedIds: Set<string>): Promise<RebalanceResult> {
+  const remaining = snapshot.group.filter((t) => !deletedIds.has(t.id));
+  if (remaining.length === 0 || remaining.length === snapshot.group.length) return { kind: "none" };
+  // Não mexe em tarefas já iniciadas, concluídas ou ausentes.
+  if (remaining.some((t) => !["pendente", "autorizado"].includes(String(t.status)))) {
+    return { kind: "skipped_started" };
+  }
+  const shares = distributeContractedMinutes(snapshot.total, remaining.length);
+  const minutes: number[] = [];
+  for (const [index, t] of remaining.entries()) {
+    const share = shares[index] ?? shares[0] ?? 0;
+    if (!(share > 0) || !t.scheduled_for) continue;
+    const end = new Date(Date.parse(t.scheduled_for) + share * 60000).toISOString();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: updatedRows, error } = await (supabase.from("tasks" as never) as any)
+      .update({ scheduled_end: end, due_at: end })
+      .eq("id", t.id)
+      .select("id");
+    // Só conta se a linha foi mesmo alterada (a RLS pode bloquear sem devolver erro).
+    if (!error && Array.isArray(updatedRows) && updatedRows.length > 0) minutes.push(share);
+  }
+  return minutes.length > 0 ? { kind: "updated", count: minutes.length, minutes } : { kind: "none" };
 }
 
 function MiniTaskChip({ task, startedAt, onClick }: { task: TaskRow; startedAt?: string; onClick: () => void }) {
