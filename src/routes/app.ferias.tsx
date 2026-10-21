@@ -639,11 +639,16 @@ function FeriasPage() {
   const awaitingTheirConfirm = rows.filter((r) => r.status === "pendente_confirmacao" && r.user_id !== user?.id);
 
   // Requests this user needs to decide on
+  // Pedido novo de funcionário (pendente e não reencaminhado a um gestor específico):
+  // qualquer gestor, owner ou Super Admin da empresa pode decidir (o banco já o permite
+  // em vacation_decide). Pedidos reencaminhados ou à espera de autorização continuam só
+  // com o aprovador atribuído.
+  const canDecideAnyPending = isManager || isOwner || isSuperAdmin;
   const toApprove = rows.filter(
     (r) =>
       (r.status === "pendente" || r.status === "aguardando_aprovacao") &&
-      r.assigned_approver_id === user?.id &&
-      r.user_id !== user?.id,
+      r.user_id !== user?.id &&
+      (r.assigned_approver_id === user?.id || (canDecideAnyPending && r.status === "pendente" && !r.forwarded_by)),
   );
   const forwardedByMe = rows.filter(
     (r) => r.status === "pendente" && r.forwarded_by === user?.id && r.user_id !== user?.id,
