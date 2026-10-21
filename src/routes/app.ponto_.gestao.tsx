@@ -162,14 +162,25 @@ function TaskNotesCell({ notes }: { notes: DisplayNote[] }) {
         <div className="space-y-3">
           <p className="text-sm font-semibold">Notas do registro</p>
           {notes.map((note, index) => (
-            <div key={`${note.label}-${note.createdAt ?? "sem-data"}-${index}`} className="border-t border-border pt-3 first:border-t-0 first:pt-0">
+            <div
+              key={`${note.label}-${note.createdAt ?? "sem-data"}-${index}`}
+              className="border-t border-border pt-3 first:border-t-0 first:pt-0"
+            >
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{note.label}</p>
               <p className="mt-1 whitespace-pre-wrap break-words text-sm">{note.text}</p>
-              {note.requestedDate && <p className="mt-2 text-xs text-muted-foreground">Nova data: {formatCivilDate(note.requestedDate)}</p>}
-              {note.needsReassignment !== null && note.needsReassignment !== undefined && (
-                <p className="text-xs text-muted-foreground">Troca de funcionário: {note.needsReassignment ? "Sim" : "Não"}</p>
+              {note.requestedDate && (
+                <p className="mt-2 text-xs text-muted-foreground">Nova data: {formatCivilDate(note.requestedDate)}</p>
               )}
-              {note.createdAt && <p className="mt-1 text-xs text-muted-foreground">Registrado em: {formatNoteTimestamp(note.createdAt)}</p>}
+              {note.needsReassignment !== null && note.needsReassignment !== undefined && (
+                <p className="text-xs text-muted-foreground">
+                  Troca de funcionário: {note.needsReassignment ? "Sim" : "Não"}
+                </p>
+              )}
+              {note.createdAt && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Registrado em: {formatNoteTimestamp(note.createdAt)}
+                </p>
+              )}
             </div>
           ))}
         </div>
@@ -187,8 +198,7 @@ const fmtGeoStatus = (p?: GeoPoint) => {
   return classifyEventStatus(p as unknown as GeoPointRow).label;
 };
 
-const hasWallTime = (iso: string | null | undefined) =>
-  !!iso && formatWallTime(iso) !== "00:00";
+const hasWallTime = (iso: string | null | undefined) => !!iso && formatWallTime(iso) !== "00:00";
 
 /**
  * "Previsto" — data + horário planejado da tarefa.
@@ -241,7 +251,15 @@ function GestaoPonto() {
         .select("id, full_name, is_active, status, termination_date")
         .in("id", ids);
       if (profsErr) throw profsErr;
-      return ((profs ?? []) as { id: string; full_name: string | null; is_active: boolean | null; status: string | null; termination_date: string | null }[])
+      return (
+        (profs ?? []) as {
+          id: string;
+          full_name: string | null;
+          is_active: boolean | null;
+          status: string | null;
+          termination_date: string | null;
+        }[]
+      )
         .map((p) => ({ id: p.id, name: p.full_name ?? p.id, inactive: !isEmployeeActive(p) }))
         .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
     },
@@ -268,7 +286,13 @@ function GestaoPonto() {
   });
 
   // Feed canónico: pontos reais e faltas sem criar time_entry artificial.
-  const { data: result, isLoading, isError, error, refetch } = useQuery({
+  const {
+    data: result,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ["punch-admin-list", currentCompanyId, filters, page],
     enabled: !!currentCompanyId,
     queryFn: async () => {
@@ -467,7 +491,12 @@ function GestaoPonto() {
       if (status === "atrasada") return "Atrasada";
       return "Pendente";
     }
-    if (!isAbsence(r)) return r.entry_kind === "paid_leave" ? "Folga remunerada" : r.operational_status === "em_andamento" ? "Em andamento" : "Trabalhado";
+    if (!isAbsence(r))
+      return r.entry_kind === "paid_leave"
+        ? "Folga remunerada"
+        : r.operational_status === "em_andamento"
+          ? "Em andamento"
+          : "Trabalhado";
     return r.absence_justified ? "Falta · justificada" : "Falta · injustificada";
   };
   const formatOrigin = (r: Row) => {
@@ -485,14 +514,32 @@ function GestaoPonto() {
     const notes: DisplayNote[] = [];
     if (isAbsence(r)) {
       if (r.absence_reason?.trim()) {
-        notes.push({ label: "Motivo da falta", text: r.absence_reason.trim(), createdAt: r.created_at, requestedDate: null, needsReassignment: null });
+        notes.push({
+          label: "Motivo da falta",
+          text: r.absence_reason.trim(),
+          createdAt: r.created_at,
+          requestedDate: null,
+          needsReassignment: null,
+        });
       }
     } else {
       if (r.no_start_reason?.trim()) {
-        notes.push({ label: "Motivo de não início", text: r.no_start_reason.trim(), createdAt: r.no_start_reason_at ?? null, requestedDate: null, needsReassignment: null });
+        notes.push({
+          label: "Motivo de não início",
+          text: r.no_start_reason.trim(),
+          createdAt: r.no_start_reason_at ?? null,
+          requestedDate: null,
+          needsReassignment: null,
+        });
       }
       if (r.notes?.trim()) {
-        notes.push({ label: "Nota do ponto", text: r.notes.trim(), createdAt: r.updated_at, requestedDate: null, needsReassignment: null });
+        notes.push({
+          label: "Nota do ponto",
+          text: r.notes.trim(),
+          createdAt: r.updated_at,
+          requestedDate: null,
+          needsReassignment: null,
+        });
       }
     }
     return [...notes, ...(r.task_notes ?? [])];
@@ -520,7 +567,8 @@ function GestaoPonto() {
     { header: "Funcionário", accessor: (r) => r.profiles?.full_name ?? "" },
     {
       header: "Tarefa",
-      accessor: (r) => (isVacation(r) ? "Férias" : r.entry_kind === "paid_leave" ? "Folga remunerada" : (r.tasks?.title ?? "")),
+      accessor: (r) =>
+        isVacation(r) ? "Férias" : r.entry_kind === "paid_leave" ? "Folga remunerada" : (r.tasks?.title ?? ""),
     },
     { header: "Cliente", accessor: (r) => (r.tasks?.client_id ? (clientsMap[r.tasks.client_id] ?? "") : "") },
     { header: "Previsto", accessor: (r) => (isVacation(r) ? formatVacationDate(r) : formatPrevisto(r.tasks)) },
@@ -581,7 +629,7 @@ function GestaoPonto() {
       geoByEntry.set(p.time_entry_id, summary);
     }
 
-    return rows.map((r) => ({ ...r, geo: isNonWork(r) ? null : geoByEntry.get(r.id) ?? null }));
+    return rows.map((r) => ({ ...r, geo: isNonWork(r) ? null : (geoByEntry.get(r.id) ?? null) }));
   };
 
   const handleExport = async (kind: "xlsx" | "pdf") => {
@@ -667,7 +715,10 @@ function GestaoPonto() {
           <div>
             <Label className="text-xs">Funcionário</Label>
             <EmployeePicker
-              employees={(members ?? []).map((m) => ({ id: m.id, full_name: m.inactive ? `${m.name} (Inativo)` : m.name }))}
+              employees={(members ?? []).map((m) => ({
+                id: m.id,
+                full_name: m.inactive ? `${m.name} (Inativo)` : m.name,
+              }))}
               value={filters.userId === "all" ? null : filters.userId}
               onChange={(id: string) => onFilterChange("userId", id || "all")}
               placeholder="Todos"
@@ -729,12 +780,17 @@ function GestaoPonto() {
           <span>{PAGE_SIZE} por página</span>
         </div>
         {isError && (
-          <div role="alert" className="m-4 flex items-start justify-between gap-4 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+          <div
+            role="alert"
+            className="m-4 flex items-start justify-between gap-4 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive"
+          >
             <div className="flex items-start gap-2">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               <div>
                 <p className="font-medium">Não foi possível carregar a Folha de Ponto.</p>
-                <p className="mt-1 text-xs opacity-90">{error instanceof Error ? error.message : "Erro técnico inesperado."}</p>
+                <p className="mt-1 text-xs opacity-90">
+                  {error instanceof Error ? error.message : "Erro técnico inesperado."}
+                </p>
               </div>
             </div>
             <Button type="button" variant="outline" size="sm" onClick={() => void refetch()}>
@@ -778,7 +834,9 @@ function GestaoPonto() {
               {(result?.rows ?? []).map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="font-medium">{r.profiles?.full_name ?? r.user_id.slice(0, 8)}</TableCell>
-                  <TableCell className="max-w-[260px] truncate">{isVacation(r) ? "Férias" : r.tasks?.title ?? "—"}</TableCell>
+                  <TableCell className="max-w-[260px] truncate">
+                    {isVacation(r) ? "Férias" : (r.tasks?.title ?? "—")}
+                  </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {r.tasks?.client_id ? (clientsMap[r.tasks.client_id] ?? "—") : "—"}
                   </TableCell>
@@ -798,7 +856,9 @@ function GestaoPonto() {
                       {formatSituation(r)}
                     </span>
                   </TableCell>
-                  <TableCell className="text-sm">{isNonWork(r) ? "—" : new Date(r.started_at).toLocaleString()}</TableCell>
+                  <TableCell className="text-sm">
+                    {isNonWork(r) ? "—" : new Date(r.started_at).toLocaleString()}
+                  </TableCell>
                   <TableCell className="text-sm">
                     {isNonWork(r) ? (
                       "—"
@@ -823,53 +883,66 @@ function GestaoPonto() {
                     <TaskNotesCell
                       notes={[
                         ...(formatStartDelay(r)
-                          ? [{ label: "Início com atraso", text: formatStartDelay(r), createdAt: r.started_at, requestedDate: null, needsReassignment: null }]
+                          ? [
+                              {
+                                label: "Início com atraso",
+                                text: formatStartDelay(r),
+                                createdAt: r.started_at,
+                                requestedDate: null,
+                                needsReassignment: null,
+                              },
+                            ]
                           : []),
                         ...getRowNoteItems(r),
                       ]}
                     />
                   </TableCell>
                   <TableCell>
-                    {isOperationalTask(r) || isVacation(r) ? <span className="text-muted-foreground">—</span> : <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Ações do registro">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {isAbsence(r) && (
-                          <DropdownMenuItem onClick={() => openManualPoint(r)}>
-                            <ClockPlus className="mr-2 h-4 w-4" /> Lançar ponto manual
+                    {isOperationalTask(r) || isVacation(r) ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Ações do registro">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {isAbsence(r) && (
+                            <DropdownMenuItem onClick={() => openManualPoint(r)}>
+                              <ClockPlus className="mr-2 h-4 w-4" /> Lançar ponto manual
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem onClick={() => (isAbsence(r) ? openAbsenceEdit(r) : openEdit(r))}>
+                            <Pencil className="mr-2 h-4 w-4" /> {isAbsence(r) ? "Editar falta" : "Editar"}
                           </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem onClick={() => isAbsence(r) ? openAbsenceEdit(r) : openEdit(r)}>
-                          <Pencil className="mr-2 h-4 w-4" /> {isAbsence(r) ? "Editar falta" : "Editar"}
-                        </DropdownMenuItem>
-                        {isAbsence(r) ? (
-                          <DropdownMenuItem disabled title="Falta não possui ponto para devolver">
-                            <RotateCcw className="mr-2 h-4 w-4" /> Devolver para refazer
-                          </DropdownMenuItem>
-                        ) : (
-                          !r.voided_at && r.entry_kind !== "paid_leave" && (
-                            <DropdownMenuItem onClick={() => requestVoid(r)} disabled={voidMut.isPending}>
+                          {isAbsence(r) ? (
+                            <DropdownMenuItem disabled title="Falta não possui ponto para devolver">
                               <RotateCcw className="mr-2 h-4 w-4" /> Devolver para refazer
                             </DropdownMenuItem>
-                          )
-                        )}
-                        <DropdownMenuItem onClick={() => isAbsence(r) ? openTaskAudit(r) : openAudit(r)}>
-                          <History className="mr-2 h-4 w-4" /> Histórico
-                        </DropdownMenuItem>
-                        {isAbsence(r) ? (
-                          <DropdownMenuItem disabled title="Falta não possui geolocalização">
-                            <MapPin className="mr-2 h-4 w-4" /> Geolocalização
+                          ) : (
+                            !r.voided_at &&
+                            r.entry_kind !== "paid_leave" && (
+                              <DropdownMenuItem onClick={() => requestVoid(r)} disabled={voidMut.isPending}>
+                                <RotateCcw className="mr-2 h-4 w-4" /> Devolver para refazer
+                              </DropdownMenuItem>
+                            )
+                          )}
+                          <DropdownMenuItem onClick={() => (isAbsence(r) ? openTaskAudit(r) : openAudit(r))}>
+                            <History className="mr-2 h-4 w-4" /> Histórico
                           </DropdownMenuItem>
-                        ) : (
-                          <DropdownMenuItem onClick={() => openGeo(r)}>
-                            <MapPin className="mr-2 h-4 w-4" /> Geolocalização
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>}
+                          {isAbsence(r) ? (
+                            <DropdownMenuItem disabled title="Falta não possui geolocalização">
+                              <MapPin className="mr-2 h-4 w-4" /> Geolocalização
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem onClick={() => openGeo(r)}>
+                              <MapPin className="mr-2 h-4 w-4" /> Geolocalização
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
@@ -908,6 +981,8 @@ function GestaoPonto() {
         initialEntryKind={initialEntryKind}
         initialUserId={manualPointTarget?.user_id}
         initialTaskId={manualPointTarget?.task_id}
+        initialStartedAt={manualPointTarget?.tasks?.scheduled_for ?? null}
+        initialEndedAt={manualPointTarget?.tasks?.scheduled_end ?? null}
         regularizeTaskAbsence={!!manualPointTarget}
       />
       <PunchAuditDrawer open={auditOpen} onOpenChange={setAuditOpen} timeEntryId={auditEntryId} />
