@@ -201,3 +201,27 @@ test("SUP-149: qualquer gestor decide pedido de férias novo; resposta do ticket
   assert.match(ticketPage, /aria-label="Anexar imagem ou ficheiro"/);
   assert.match(ticketPage, /if \(f\) uploadMut\.mutate\(f\);[\s\S]*replyMut\.mutate\(\)/);
 });
+
+test("SUP-277/158/249/286/274 e Super Admin: férias por mês atual, falta como férias, dashboard em andamento, pausa, notificação filtrada", () => {
+  const vacationsPage = readFileSync(new URL("../src/routes/app.ferias.tsx", import.meta.url), "utf8");
+  const tasksLib = readFileSync(new URL("../src/lib/tasks.ts", import.meta.url), "utf8");
+  const absentDialog = readFileSync(new URL("../src/components/tasks/MarkAbsentDialog.tsx", import.meta.url), "utf8");
+  const punchMgmt = readFileSync(new URL("../src/routes/app.ponto_.gestao.tsx", import.meta.url), "utf8");
+  const nav = readFileSync(new URL("../src/lib/navigation.ts", import.meta.url), "utf8");
+  // 277: mês atual primeiro (crescente), as já terminadas no fim
+  assert.match(vacationsPage, /const currentMonthStartKey = todayKey\.slice\(0, 7\) \+ "-01";/);
+  assert.match(vacationsPage, /if \(aPast !== bPast\) return aPast \? 1 : -1;/);
+  // 158: "Férias" como motivo e como classificação (justificada)
+  assert.match(tasksLib, /"Férias",\s*"Outro",/);
+  assert.match(absentDialog, /setReason\(ABSENCE_REASON_VACATION\);/);
+  assert.match(punchMgmt, /return "Falta · férias";/);
+  // 249: com filtro de estado não semeia todos os colaboradores
+  assert.match(tasksPage, /search\.status\s*\?\s*\[\]\s*:\s*\(activeMembers \?\? \[\]\)\.map\(\(m\) => m\.id\)/);
+  // 286: hora de início da pausa e tempo decorrido
+  assert.match(punchPage, /desde \{pausedAtLabel\} · há \{pauseElapsedLabel\}/);
+  assert.match(punchPage, /entry\.paused_at \? new Date\(entry\.paused_at\)\.getTime\(\) : NaN/);
+  // 274: gestor abre a tarefa filtrada pelo funcionário
+  assert.match(notificationsPage, /search: employee \? \{ task: dest\.taskId, employee \} : \{ task: dest\.taskId \}/);
+  // Super Admin vê também a vista da Contabilidade
+  assert.match(nav, /\.\.\.\(superAdminOperating\s*\?\s*\[\s*\{\s*to: "\/app\/contabilidade\/folhas-ponto"/);
+});
