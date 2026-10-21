@@ -497,6 +497,8 @@ function GestaoPonto() {
         : r.operational_status === "em_andamento"
           ? "Em andamento"
           : "Trabalhado";
+    // SUP-158: falta registada como férias
+    if (r.absence_reason?.trim() === "Férias") return "Falta · férias";
     return r.absence_justified ? "Falta · justificada" : "Falta · injustificada";
   };
   const formatOrigin = (r: Row) => {
