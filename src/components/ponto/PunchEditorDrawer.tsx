@@ -35,6 +35,9 @@ interface Props {
   initialEntryKind?: "work" | "paid_leave";
   initialUserId?: string | null;
   initialTaskId?: string | null;
+  /** Horário previsto da tarefa: sugestão inicial ao lançar ponto manual (o gestor pode alterar). */
+  initialStartedAt?: string | null;
+  initialEndedAt?: string | null;
   regularizeTaskAbsence?: boolean;
 }
 
@@ -92,6 +95,8 @@ export function PunchEditorDrawer({
   initialEntryKind = "work",
   initialUserId = null,
   initialTaskId = null,
+  initialStartedAt = null,
+  initialEndedAt = null,
   regularizeTaskAbsence = false,
 }: Props) {
   const qc = useQueryClient();
@@ -118,9 +123,12 @@ export function PunchEditorDrawer({
         ...emptyForm(initialEntryKind),
         user_id: initialUserId ?? "",
         task_id: initialTaskId ?? "",
+        // Ponto manual de uma tarefa: já vem com o horário previsto da tarefa.
+        started_at: toLocalInput(initialStartedAt),
+        ended_at: toLocalInput(initialEndedAt),
       });
     }
-  }, [open, mode, entry, initialEntryKind, initialUserId, initialTaskId]);
+  }, [open, mode, entry, initialEntryKind, initialUserId, initialTaskId, initialStartedAt, initialEndedAt]);
 
   // Membros da empresa para o select de usuário (somente modo create)
   const { data: members } = useQuery({
@@ -330,7 +338,8 @@ export function PunchEditorDrawer({
           {mode === "create" && regularizeTaskAbsence && (
             <div className="rounded-lg border border-warning/40 bg-warning/5 p-3 text-sm space-y-1">
               <div>
-                <span className="text-muted-foreground">Funcionário:</span> {entryUserName ?? "Selecionado na ocorrência"}
+                <span className="text-muted-foreground">Funcionário:</span>{" "}
+                {entryUserName ?? "Selecionado na ocorrência"}
               </div>
               <div>
                 <span className="text-muted-foreground">Tarefa:</span> {entryTaskTitle ?? "Selecionada na ocorrência"}
@@ -399,7 +408,11 @@ export function PunchEditorDrawer({
           )}
 
           {mode === "create" && form.entry_kind === "paid_leave" ? (
-            <ModalSection title="Folga remunerada" icon={Clock} contentClassName="grid grid-cols-1 gap-3 sm:grid-cols-2 space-y-0">
+            <ModalSection
+              title="Folga remunerada"
+              icon={Clock}
+              contentClassName="grid grid-cols-1 gap-3 sm:grid-cols-2 space-y-0"
+            >
               <div>
                 <Label>Data da folga *</Label>
                 <Input
@@ -423,7 +436,11 @@ export function PunchEditorDrawer({
               </div>
             </ModalSection>
           ) : (
-            <ModalSection title="Horários" icon={Clock} contentClassName="grid grid-cols-1 gap-3 sm:grid-cols-2 space-y-0">
+            <ModalSection
+              title="Horários"
+              icon={Clock}
+              contentClassName="grid grid-cols-1 gap-3 sm:grid-cols-2 space-y-0"
+            >
               <div>
                 <Label>Início *</Label>
                 <Input
@@ -440,22 +457,26 @@ export function PunchEditorDrawer({
                   onChange={(e) => setForm({ ...form, ended_at: e.target.value })}
                 />
               </div>
-              {!regularizeTaskAbsence && <div>
-                <Label>Pausa</Label>
-                <Input
-                  type="datetime-local"
-                  value={form.paused_at}
-                  onChange={(e) => setForm({ ...form, paused_at: e.target.value })}
-                />
-              </div>}
-              {!regularizeTaskAbsence && <div>
-                <Label>Retorno</Label>
-                <Input
-                  type="datetime-local"
-                  value={form.resumed_at}
-                  onChange={(e) => setForm({ ...form, resumed_at: e.target.value })}
-                />
-              </div>}
+              {!regularizeTaskAbsence && (
+                <div>
+                  <Label>Pausa</Label>
+                  <Input
+                    type="datetime-local"
+                    value={form.paused_at}
+                    onChange={(e) => setForm({ ...form, paused_at: e.target.value })}
+                  />
+                </div>
+              )}
+              {!regularizeTaskAbsence && (
+                <div>
+                  <Label>Retorno</Label>
+                  <Input
+                    type="datetime-local"
+                    value={form.resumed_at}
+                    onChange={(e) => setForm({ ...form, resumed_at: e.target.value })}
+                  />
+                </div>
+              )}
             </ModalSection>
           )}
 
