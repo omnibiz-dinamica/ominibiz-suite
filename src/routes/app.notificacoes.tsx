@@ -619,7 +619,21 @@ function NotificationsPage() {
     if (dest.kind === "ticket") {
       nav({ to: "/app/suporte/$id", params: { id: dest.id } });
     } else if (dest.kind === "task") {
-      nav({ to: "/app/tarefas", search: { task: dest.taskId } });
+      // SUP-274: o gestor abre a tarefa já filtrada pelo funcionário responsável.
+      let employee: string | undefined;
+      if (isManager || isSuperAdmin) {
+        try {
+          const { data: taskRow } = await supabase
+            .from("tasks")
+            .select("assigned_to")
+            .eq("id", dest.taskId)
+            .maybeSingle();
+          employee = (taskRow as { assigned_to?: string | null } | null)?.assigned_to ?? undefined;
+        } catch {
+          employee = undefined;
+        }
+      }
+      nav({ to: "/app/tarefas", search: employee ? { task: dest.taskId, employee } : { task: dest.taskId } });
     } else {
       const url = new URL(dest.to, "http://internal");
       const search = Object.fromEntries(url.searchParams.entries());
