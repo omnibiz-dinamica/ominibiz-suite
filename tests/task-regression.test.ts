@@ -183,3 +183,21 @@ test("gestor vê endereço e instruções só no lápis (calendário) ou no bot�
   assert.match(tasksPage, /\{isManager && actionsOpen && <TaskClientDetails task=\{task\} \/>\}/);
   assert.match(tasksPage, /\{\(!isManager \|\| clientInfoOpen\) && <TaskClientDetails task=\{t\} \/>\}/);
 });
+
+test("SUP-149: qualquer gestor decide pedido de férias novo; resposta do ticket permite anexar", () => {
+  const vacationsPage = readFileSync(new URL("../src/routes/app.ferias.tsx", import.meta.url), "utf8");
+  const ticketPage = readFileSync(new URL("../src/routes/app.suporte.$id.tsx", import.meta.url), "utf8");
+  assert.match(vacationsPage, /const canDecideAnyPending = isManager \|\| isOwner \|\| isSuperAdmin;/);
+  // aprovador atribuído continua a decidir; outros gestores só pedidos pendentes não reencaminhados
+  assert.match(
+    vacationsPage,
+    /r\.assigned_approver_id === user\?\.id \|\|\s*\(canDecideAnyPending && r\.status === "pendente" && !r\.forwarded_by\)/,
+  );
+  // quem pediu nunca decide o próprio pedido
+  assert.match(
+    vacationsPage,
+    /const toApprove = rows\.filter\(\s*\(r\) =>\s*\(r\.status === "pendente" \|\| r\.status === "aguardando_aprovacao"\) &&\s*r\.user_id !== user\?\.id &&/,
+  );
+  assert.match(ticketPage, /aria-label="Anexar imagem ou ficheiro"/);
+  assert.match(ticketPage, /if \(f\) uploadMut\.mutate\(f\);[\s\S]*replyMut\.mutate\(\)/);
+});
