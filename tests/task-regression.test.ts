@@ -177,3 +177,9 @@ test("formulário de nova tarefa mostra o horário de cada funcionário quando a
   );
   assert.match(tasksPage, /Horário de cada funcionário \(horas divididas\)/);
 });
+
+test("gestor vê endereço e instruções só no lápis (calendário) ou no botão do mapa (lista); funcionário vê sempre", () => {
+  assert.match(tasksPage, /\{!isManager && <TaskClientDetails task=\{task\} \/>\}/);
+  assert.match(tasksPage, /\{isManager && actionsOpen && <TaskClientDetails task=\{task\} \/>\}/);
+  assert.match(tasksPage, /\{\(!isManager \|\| clientInfoOpen\) && <TaskClientDetails task=\{t\} \/>\}/);
+});
