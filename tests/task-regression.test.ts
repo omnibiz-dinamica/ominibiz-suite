@@ -167,3 +167,13 @@ test("excluir um colega recalcula as horas divididas de quem fica na tarefa", ()
   // redistribui o total entre quem ficou
   assert.match(tasksPage, /const shares = distributeContractedMinutes\(snapshot\.total, remaining\.length\);/);
 });
+
+test("formulário de nova tarefa mostra o horário de cada funcionário quando as horas são divididas", () => {
+  assert.match(tasksPage, /const perEmployeeSchedule = \(\(\) => \{/);
+  // mesma regra do salvamento: sem Hora fim manual e com horas contratadas
+  assert.match(
+    tasksPage,
+    /contractedMinutes == null\s*\|\|\s*manualEndOverride\s*\|\|\s*!startDate\s*\|\|\s*!startTime\s*\|\|\s*!endTime/,
+  );
+  assert.match(tasksPage, /Horário de cada funcionário \(horas divididas\)/);
+});
