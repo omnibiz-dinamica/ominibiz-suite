@@ -29,7 +29,6 @@ import {
   Tags,
   Factory,
   ShoppingCart,
-
 } from "lucide-react";
 import { isModuleEnabled, type BusinessVertical, type ModuleKey } from "@/lib/locale";
 import type { AppRole } from "@/lib/auth";
@@ -85,19 +84,58 @@ const RESTAURANT_ITEMS: NavItem[] = [
 
 /** ADR-033 — Material de Construção. Itens só aparecem com o módulo ativo. */
 const BUILDING_MATERIALS_ITEMS: NavItem[] = [
-  { to: "/app/material-construcao", label: "Visão Geral", icon: LayoutDashboard, module: "building_materials_dashboard" },
+  {
+    to: "/app/material-construcao",
+    label: "Visão Geral",
+    icon: LayoutDashboard,
+    module: "building_materials_dashboard",
+  },
   { to: "/app/material-construcao/produtos", label: "Produtos", icon: Package, module: "building_materials_products" },
   { to: "/app/material-construcao/estoque", label: "Estoque", icon: Warehouse, module: "building_materials_inventory" },
-  { to: "/app/material-construcao/categorias", label: "Categorias", icon: Tags, module: "building_materials_categories" },
-  { to: "/app/material-construcao/fornecedores", label: "Fornecedores", icon: Factory, module: "building_materials_suppliers" },
-  { to: "/app/material-construcao/compras", label: "Compras", icon: ShoppingCart, module: "building_materials_purchases" },
-  { to: "/app/material-construcao/orcamentos", label: "Orçamentos", icon: FileText, module: "building_materials_quotes" },
-  { to: "/app/material-construcao/vendas", label: "Vendas / PDV", icon: ShoppingBag, module: "building_materials_sales" },
-  { to: "/app/material-construcao/clientes", label: "Clientes", icon: Briefcase, module: "building_materials_customers" },
+  {
+    to: "/app/material-construcao/categorias",
+    label: "Categorias",
+    icon: Tags,
+    module: "building_materials_categories",
+  },
+  {
+    to: "/app/material-construcao/fornecedores",
+    label: "Fornecedores",
+    icon: Factory,
+    module: "building_materials_suppliers",
+  },
+  {
+    to: "/app/material-construcao/compras",
+    label: "Compras",
+    icon: ShoppingCart,
+    module: "building_materials_purchases",
+  },
+  {
+    to: "/app/material-construcao/orcamentos",
+    label: "Orçamentos",
+    icon: FileText,
+    module: "building_materials_quotes",
+  },
+  {
+    to: "/app/material-construcao/vendas",
+    label: "Vendas / PDV",
+    icon: ShoppingBag,
+    module: "building_materials_sales",
+  },
+  {
+    to: "/app/material-construcao/clientes",
+    label: "Clientes",
+    icon: Briefcase,
+    module: "building_materials_customers",
+  },
   { to: "/app/material-construcao/entregas", label: "Entregas", icon: Truck, module: "building_materials_deliveries" },
-  { to: "/app/material-construcao/financeiro", label: "Financeiro", icon: CreditCard, module: "building_materials_finance" },
+  {
+    to: "/app/material-construcao/financeiro",
+    label: "Financeiro",
+    icon: CreditCard,
+    module: "building_materials_finance",
+  },
 ];
-
 
 function superAdminGlobalGroups(): NavGroup[] {
   return [
@@ -144,7 +182,11 @@ function employeeGroups(employeeHasVehicle: boolean): NavGroup[] {
     },
   ];
   if (employeeHasVehicle) {
-    groups.push({ id: "frota", label: "Frota", items: [{ to: "/app/frota", label: "Frota", icon: Car, module: "fleet" }] });
+    groups.push({
+      id: "frota",
+      label: "Frota",
+      items: [{ to: "/app/frota", label: "Frota", icon: Car, module: "fleet" }],
+    });
   }
   groups.push({
     id: "suporte",
@@ -185,6 +227,17 @@ function managerGroups(args: { superAdminOperating: boolean; vertical: BusinessV
         { to: "/app/ponto", label: "Folha de Ponto", icon: Clock, module: "time_clock" },
         { to: "/app/ponto/gestao", label: "Ponto · Gestão", icon: ListChecks, module: "time_clock" },
         { to: "/app/ponto/fechamento", label: "Fechamento Mensal", icon: FileText, module: "time_clock" },
+        // Super Admin vê tudo: também a vista da Contabilidade (a rota já o autoriza).
+        ...(superAdminOperating
+          ? [
+              {
+                to: "/app/contabilidade/folhas-ponto",
+                label: "Folhas de Ponto (Contabilidade)",
+                icon: FileText,
+                module: "time_clock" as const,
+              },
+            ]
+          : []),
         { to: "/app/notificacoes", label: "Notificações", icon: Bell },
       ],
     },
@@ -238,7 +291,6 @@ function managerGroups(args: { superAdminOperating: boolean; vertical: BusinessV
   void materialsGroup;
   void vertical;
   const groups = [...general];
-
 
   if (superAdminOperating) {
     groups.push({
