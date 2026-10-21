@@ -558,9 +558,22 @@ function FeriasPage() {
   };
 
   const filtered = rows.filter(matchesFilters);
-  const approved = filtered.filter((r) => r.status === "aprovado");
   // Aprovadas agrupadas pelo(s) mês(es) do período, na ordem em que aparecem na lista.
   const todayKey = new Date().toLocaleDateString("en-CA"); // AAAA-MM-DD, data local
+  // SUP-277: primeiro o mês atual, depois o seguinte, e assim por diante (data de início
+  // crescente). As férias que já terminaram antes deste mês ficam no fim, da mais recente
+  // para a mais antiga.
+  const currentMonthStartKey = todayKey.slice(0, 7) + "-01";
+  const approved = filtered
+    .filter((r) => r.status === "aprovado")
+    .slice()
+    .sort((a, b) => {
+      const aPast = a.end_date < currentMonthStartKey;
+      const bPast = b.end_date < currentMonthStartKey;
+      if (aPast !== bPast) return aPast ? 1 : -1;
+      if (aPast) return b.start_date.localeCompare(a.start_date);
+      return a.start_date.localeCompare(b.start_date) || a.end_date.localeCompare(b.end_date);
+    });
   const approvedGroups = (() => {
     const map = new Map<string, VacationRow[]>();
     for (const r of approved) {
