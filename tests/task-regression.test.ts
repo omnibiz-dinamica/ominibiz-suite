@@ -157,3 +157,13 @@ test("tarefas mostram endereço e instruções na lista e no calendário, e a ba
   const listView = tasksPage.indexOf('taskView === "list" && (');
   assert.ok(employeeBar > 0 && listView > 0 && employeeBar < listView);
 });
+
+test("excluir um colega recalcula as horas divididas de quem fica na tarefa", () => {
+  // grupo guardado antes de excluir; só modo dividir (soma = horas contratadas do cliente)
+  assert.match(tasksPage, /const rebalanceSnapshot = await snapshotGroupForRebalance\(ids,/);
+  assert.match(tasksPage, /Math\.abs\(total - contracted\) > 1\) return null;/);
+  // não mexe em tarefas já iniciadas ou concluídas
+  assert.match(tasksPage, /\["pendente", "autorizado"\]\.includes\(String\(t\.status\)\)/);
+  // redistribui o total entre quem ficou
+  assert.match(tasksPage, /const shares = distributeContractedMinutes\(snapshot\.total, remaining\.length\);/);
+});
