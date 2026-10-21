@@ -14,7 +14,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { UserX } from "lucide-react";
-import { ABSENCE_REASONS, STATUS_LABELS, isOpenPunchError, markTaskAbsent, updateTaskAbsence, type TaskRow } from "@/lib/tasks";
+import {
+  ABSENCE_REASONS,
+  ABSENCE_REASON_VACATION,
+  STATUS_LABELS,
+  isOpenPunchError,
+  markTaskAbsent,
+  updateTaskAbsence,
+  type TaskRow,
+} from "@/lib/tasks";
 import { formatWallDate, formatWallTime } from "@/lib/wall-clock";
 
 export function MarkAbsentDialog({
@@ -51,6 +59,8 @@ export function MarkAbsentDialog({
   }, [open, task?.id, mode, task?.absence_reason, task?.absence_justified]);
 
   const finalReason = mode === "edit" ? reason.trim() : reason === "Outro" ? other.trim() : reason;
+  // SUP-158: falta registada como férias (motivo "Férias", sempre justificada).
+  const isVacation = finalReason === ABSENCE_REASON_VACATION;
   const valid = finalReason.length > 0;
 
   const submit = async () => {
@@ -59,7 +69,9 @@ export function MarkAbsentDialog({
     try {
       if (mode === "edit") await updateTaskAbsence(task.id, finalReason, justified);
       else await markTaskAbsent(task.id, finalReason, justified);
-      toast.success(mode === "edit" ? "Falta atualizada." : justified ? "Falta justificada registada." : "Falta registada.");
+      toast.success(
+        mode === "edit" ? "Falta atualizada." : justified ? "Falta justificada registada." : "Falta registada.",
+      );
       onDone();
       onOpenChange(false);
     } catch (e) {
@@ -86,8 +98,12 @@ export function MarkAbsentDialog({
       <DialogContent size="sm">
         <ModalHeader
           icon={UserX}
-            title={mode === "edit" ? "Editar falta" : "Marcar falta"}
-            description={mode === "edit" ? "Altere o motivo ou a classificação. A edição fica registada no histórico." : "A falta exige motivo e fica registada no histórico da tarefa e do funcionário."}
+          title={mode === "edit" ? "Editar falta" : "Marcar falta"}
+          description={
+            mode === "edit"
+              ? "Altere o motivo ou a classificação. A edição fica registada no histórico."
+              : "A falta exige motivo e fica registada no histórico da tarefa e do funcionário."
+          }
         />
 
         <ModalBody className="space-y-4">
@@ -103,12 +119,24 @@ export function MarkAbsentDialog({
           {mode === "edit" ? (
             <div className="space-y-1.5">
               <Label htmlFor="absence-edit-reason">Motivo da falta *</Label>
-              <Textarea id="absence-edit-reason" value={reason} onChange={(e) => setReason(e.target.value)} rows={3} placeholder="Explique o motivo da falta" />
+              <Textarea
+                id="absence-edit-reason"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                rows={3}
+                placeholder="Explique o motivo da falta"
+              />
             </div>
           ) : (
             <div className="space-y-1.5">
               <Label>Motivo da falta *</Label>
-              <Select value={reason} onValueChange={setReason}>
+              <Select
+                value={reason}
+                onValueChange={(r) => {
+                  setReason(r);
+                  if (r === ABSENCE_REASON_VACATION) setJustified(true);
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o motivo" />
                 </SelectTrigger>
@@ -137,22 +165,39 @@ export function MarkAbsentDialog({
 
           <div className="space-y-1.5">
             <Label>Classificação</Label>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
                 size="sm"
                 variant={justified ? "outline" : "default"}
-                onClick={() => setJustified(false)}
+                onClick={() => {
+                  setJustified(false);
+                  if (isVacation) setReason("");
+                }}
               >
                 Injustificada
               </Button>
               <Button
                 type="button"
                 size="sm"
-                variant={justified ? "default" : "outline"}
-                onClick={() => setJustified(true)}
+                variant={justified && !isVacation ? "default" : "outline"}
+                onClick={() => {
+                  setJustified(true);
+                  if (isVacation) setReason("");
+                }}
               >
                 Justificada
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={justified && isVacation ? "default" : "outline"}
+                onClick={() => {
+                  setJustified(true);
+                  setReason(ABSENCE_REASON_VACATION);
+                }}
+              >
+                Férias
               </Button>
             </div>
           </div>
@@ -163,7 +208,7 @@ export function MarkAbsentDialog({
             Voltar
           </Button>
           <Button variant="destructive" disabled={saving || !valid} onClick={submit}>
-              {saving ? "Guardando..." : mode === "edit" ? "Guardar alterações" : "Confirmar falta"}
+            {saving ? "Guardando..." : mode === "edit" ? "Guardar alterações" : "Confirmar falta"}
           </Button>
         </ModalFooter>
       </DialogContent>
