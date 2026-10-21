@@ -146,3 +146,14 @@ test("atividade recente pesquisa por funcionário ou cliente no servidor", () =>
   // paginação continua igual quando não há pesquisa
   assert.match(timeline, /\} else if \(pageFilter\) \{\s*q = q\.or\(pageFilter\);/);
 });
+
+test("tarefas mostram endereço e instruções na lista e no calendário, e a barra Lista/Calendário fica no topo", () => {
+  assert.match(tasksPage, /queryKey: \["tasks-client-addresses", currentCompanyId\]/);
+  assert.match(tasksPage, /function TaskClientAddress\(/);
+  assert.match(tasksPage, /<TaskClientDetails task=\{t\} \/>/);
+  assert.match(tasksPage, /<TaskClientDetails task=\{task\} \/>/);
+  // a barra do funcionário vem antes da lista (não some no celular)
+  const employeeBar = tasksPage.indexOf("{!isManager && !isLoading && (");
+  const listView = tasksPage.indexOf('taskView === "list" && (');
+  assert.ok(employeeBar > 0 && listView > 0 && employeeBar < listView);
+});
