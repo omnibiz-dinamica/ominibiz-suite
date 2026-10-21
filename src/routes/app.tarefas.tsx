@@ -1773,7 +1773,11 @@ function TasksPage() {
               calendarGroup === "assignee"
                 ? selectedEmployeeIds.length > 0
                   ? selectedEmployeeIds
-                  : (activeMembers ?? []).map((m) => m.id)
+                  : // SUP-249: com filtro de estado (ex.: Em andamento vindo do Dashboard) mostra só
+                    // quem tem tarefas nesse estado; sem filtro, todos os colaboradores ativos.
+                    search.status
+                    ? []
+                    : (activeMembers ?? []).map((m) => m.id)
                 : []
             }
 
