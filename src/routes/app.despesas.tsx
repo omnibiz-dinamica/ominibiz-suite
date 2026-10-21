@@ -24,6 +24,7 @@ import {
   FileSpreadsheet,
   FileText,
   Package,
+  Undo2,
 } from "lucide-react";
 import {
   attachmentArchiveName,
@@ -490,6 +491,38 @@ function DespesasPage() {
 
   /** Despesa a excluir (confirmação antes de apagar). */
   const [deleteTarget, setDeleteTarget] = useState<ExpenseRow | null>(null);
+  // SUP-280: o gestor pode reverter a aprovação de uma despesa ainda não paga (volta a pendente).
+  // Só muda o estado e os campos da decisão/pagamento; data, valor, motivo e comprovante ficam iguais.
+  const [revertTarget, setRevertTarget] = useState<ExpenseRow | null>(null);
+  const revertApproval = useMutation({
+    mutationFn: async (row: ExpenseRow) => {
+      const { data, error } = await (supabase as any)
+        .from("employee_expenses")
+        .update({
+          status: "pendente",
+          decided_by: null,
+          decided_at: null,
+          decision_reason: null,
+          payment_status: null,
+          paid_by: null,
+          paid_at: null,
+        })
+        .eq("id", row.id)
+        .eq("status", "aprovada")
+        .or("payment_status.is.null,payment_status.neq.paga")
+        .select("id");
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error("Não foi possível reverter: a despesa pode já estar paga ou ter mudado.");
+      }
+    },
+    onSuccess: () => {
+      setRevertTarget(null);
+      toast.success("Aprovação revertida: a despesa voltou a pendente");
+      qc.invalidateQueries({ queryKey: ["expenses"] });
+    },
+    onError: (e: any) => toast.error(e.message ?? "Falha ao reverter a aprovação"),
+  });
   /** Gestor ou owner edita qualquer despesa (pendente, aprovada ou rejeitada). Status, aprovador e pagamento mantêm-se; o RLS valida no servidor. */
   const [editingExpense, setEditingExpense] = useState<ExpenseRow | null>(null);
   const [editDate, setEditDate] = useState("");
@@ -1159,6 +1192,17 @@ function DespesasPage() {
                       Aguardar pagamento
                     </Button>
                   )}
+                  {isManager && r.status === "aprovada" && r.payment_status !== "paga" && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={revertApproval.isPending}
+                      onClick={() => setRevertTarget(r)}
+                      title="Reverter aprovação (a despesa volta a pendente)"
+                    >
+                      <Undo2 className="mr-1 h-4 w-4" /> Reverter
+                    </Button>
+                  )}
                   {isManager && (
                     <Button
                       size="icon"
@@ -1190,6 +1234,34 @@ function DespesasPage() {
           </ul>
         )}
       </section>
+      <AlertDialog
+        open={!!revertTarget}
+        onOpenChange={(open) => {
+          if (!open && !revertApproval.isPending) setRevertTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reverter aprovação?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A despesa volta ao estado Pendente e deixa de estar a aguardar pagamento. A data, o valor, o motivo e o
+              comprovante não mudam. Depois pode aprovar ou rejeitar de novo.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={revertApproval.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={revertApproval.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                if (revertTarget) revertApproval.mutate(revertTarget);
+              }}
+            >
+              Reverter
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <AlertDialog
         open={!!editingExpense}
         onOpenChange={(open) => {
