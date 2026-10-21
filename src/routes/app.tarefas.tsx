@@ -2747,7 +2747,8 @@ function CalendarTaskCard({
                 {operationalStatus === "atrasada" ? "Atrasada" : STATUS_LABELS[operationalStatus]}
               </span>
             </div>
-            <TaskClientDetails task={task} />
+            {/* Gestor: endereço e instruções ficam no lápis (área de ações); funcionário vê sempre. */}
+            {!isManager && <TaskClientDetails task={task} />}
           </div>
         </div>
         {isManager && (
@@ -2860,6 +2861,7 @@ function CalendarTaskCard({
       )}
       <TaskRefusalHistory records={refusalHistory} memberNames={memberNames} compact />
 
+      {isManager && actionsOpen && <TaskClientDetails task={task} />}
       {(isManager
         ? actionsOpen
         : actions.length > 0 ||
@@ -3107,6 +3109,8 @@ function TaskRowItem({
   const late = isVisuallyLate(t);
   const operationalStatus = resolveOperationalStatus(t);
   const actions = availableActions(t, { userId, isManager });
+  const [clientInfoOpen, setClientInfoOpen] = useState(false);
+  const hasClientInfo = !!(t.client_id && clientAddressCache.has(t.client_id)) || !!taskClientInstructions(t);
   const archived = !!t.archived_at;
   const archivable = canArchive(t);
   const completionNote = completionNotes.get(t.id);
@@ -3168,7 +3172,8 @@ function TaskRowItem({
             )}
             <ScheduleNameBadge name={t.schedule_name} />
           </div>
-          <TaskClientDetails task={t} />
+          {/* Gestor: endereço e instruções só ao clicar no botão do mapa; funcionário vê sempre. */}
+          {(!isManager || clientInfoOpen) && <TaskClientDetails task={t} />}
           {refusal && (
             <div className="mt-2 space-y-0.5 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs">
               <div className="font-semibold uppercase tracking-wide text-destructive">Recusada pelo funcionário</div>
@@ -3292,6 +3297,17 @@ function TaskRowItem({
             <Button size="sm" variant="ghost" title="Editar" onClick={() => onEdit(t)}>
               <Pencil className="h-3 w-3" />
             </Button>
+            {hasClientInfo && (
+              <Button
+                size="sm"
+                variant={clientInfoOpen ? "secondary" : "ghost"}
+                title={clientInfoOpen ? "Ocultar endereço e instruções" : "Ver endereço e instruções"}
+                aria-expanded={clientInfoOpen}
+                onClick={() => setClientInfoOpen((open) => !open)}
+              >
+                <MapPinIcon className="h-3 w-3" />
+              </Button>
+            )}
             {t.recurrence_id && (
               <Button size="sm" variant="ghost" title="Editar série" onClick={() => onEditSeries(t)}>
                 <Repeat className="h-3 w-3" />
