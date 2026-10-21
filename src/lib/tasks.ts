@@ -668,8 +668,13 @@ export const ABSENCE_REASONS = [
   "Doença / atestado",
   "Motivo pessoal",
   "Transporte / deslocação",
+  // SUP-158: a falta pode ser registada como férias (fica marcada como justificada).
+  "Férias",
   "Outro",
 ] as const;
+
+/** Motivo usado quando a falta é classificada como férias (SUP-158). */
+export const ABSENCE_REASON_VACATION = "Férias";
 
 export function canMarkAbsent(
   t: Pick<TaskRow, "status" | "assigned_to" | "scheduled_for" | "recurrence_date" | "due_at">,
