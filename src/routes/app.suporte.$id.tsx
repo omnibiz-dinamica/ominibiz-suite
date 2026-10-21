@@ -811,15 +811,39 @@ function SupportDetailPage() {
                 ) : (
                   <span />
                 )}
-                <Button onClick={() => replyMut.mutate()} disabled={replyMut.isPending || !reply.trim()}>
-                  {replyMut.isPending ? (
-                    <>
-                      <Loader2 className="mr-1 h-4 w-4 animate-spin" /> Enviando
-                    </>
-                  ) : (
-                    "Enviar"
-                  )}
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <label
+                    className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-md border border-input bg-background px-3 text-sm hover:bg-muted"
+                    title="Anexar imagem ou ficheiro a este ticket"
+                  >
+                    {uploadMut.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Paperclip className="h-4 w-4" />
+                    )}
+                    {uploadMut.isPending ? "A enviar…" : "Anexar"}
+                    <input
+                      type="file"
+                      className="hidden"
+                      aria-label="Anexar imagem ou ficheiro"
+                      disabled={uploadMut.isPending}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) uploadMut.mutate(f);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                  <Button onClick={() => replyMut.mutate()} disabled={replyMut.isPending || !reply.trim()}>
+                    {replyMut.isPending ? (
+                      <>
+                        <Loader2 className="mr-1 h-4 w-4 animate-spin" /> Enviando
+                      </>
+                    ) : (
+                      "Enviar"
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
           )}
