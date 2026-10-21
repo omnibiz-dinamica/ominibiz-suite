@@ -1002,6 +1002,25 @@ function ActiveTaskCard({
   const useManualExit = isManualEntry;
   const activeInstructions = usePunchClientInstructions(task.client_id ? [task.client_id] : []);
 
+  // SUP-286: em pausa, mostra a hora em que a pausa começou e há quanto tempo dura.
+  const [pauseNow, setPauseNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (state !== "pausado") return;
+    setPauseNow(Date.now());
+    const id = window.setInterval(() => setPauseNow(Date.now()), 15000);
+    return () => window.clearInterval(id);
+  }, [state]);
+  const pausedAtMs = state === "pausado" && entry.paused_at ? new Date(entry.paused_at).getTime() : NaN;
+  const hasPauseStart = Number.isFinite(pausedAtMs);
+  const pauseElapsedMin = hasPauseStart ? Math.max(0, Math.floor((pauseNow - pausedAtMs) / 60000)) : 0;
+  const pauseElapsedLabel =
+    pauseElapsedMin < 60
+      ? `${pauseElapsedMin} min`
+      : `${Math.floor(pauseElapsedMin / 60)} h ${String(pauseElapsedMin % 60).padStart(2, "0")} min`;
+  const pausedAtLabel = hasPauseStart
+    ? new Date(pausedAtMs).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })
+    : "";
+
   return (
     <section className="min-w-0 overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card shadow-lg">
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-b border-border/60 px-4 py-3 text-xs font-medium uppercase tracking-wide text-primary sm:px-5">
@@ -1056,6 +1075,12 @@ function ActiveTaskCard({
             {state === "pausado" && (
               <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-warning/15 px-2.5 py-1 text-xs font-medium text-warning-foreground">
                 <Coffee className="h-3 w-3" /> Em pausa
+                {hasPauseStart && (
+                  <span data-testid="pause-since">
+                    {" "}
+                    desde {pausedAtLabel} · há {pauseElapsedLabel}
+                  </span>
+                )}
               </div>
             )}
           </div>
