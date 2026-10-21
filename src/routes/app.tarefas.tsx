@@ -3607,6 +3607,26 @@ function TaskForm({
     () => distributeContractedMinutes(contractedMinutes, assignees.length),
     [contractedMinutes, assignees.length],
   );
+  // Prévia, no próprio formulário, do horário de cada funcionário quando as horas contratadas
+  // são divididas (mesma regra usada ao gravar: mesmo início, cada um com a sua parte).
+  const perEmployeeSchedule = (() => {
+    const unique = [...new Set(assignees)];
+    if (contractedMinutes == null || manualEndOverride || !startDate || !startTime || !endTime || unique.length < 2) {
+      return [] as { id: string; name: string; end: string; duration: string }[];
+    }
+    const shares = distributeContractedMinutes(contractedMinutes, unique.length);
+    return unique.map((id, index) => {
+      const minutes = shares[index] ?? shares[0] ?? 0;
+      const end = addWallMinutes(startDate, startTime, minutes);
+      const name = members.find((m) => m.id === id)?.full_name?.trim() || "Funcionário";
+      return {
+        id,
+        name,
+        end: end ? (end.date !== startDate ? `${end.time} (dia seguinte)` : end.time) : "—",
+        duration: formatContractedMinutes(minutes),
+      };
+    });
+  })();
 
   useEffect(() => {
     if (initial || !startDate || recurrenceStartTouchedRef.current) return;
@@ -4691,6 +4711,22 @@ function TaskForm({
                 }}
               />
             </div>
+            {perEmployeeSchedule.length > 1 && (
+              <div className="col-span-2 rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs">
+                <div className="font-medium">Horário de cada funcionário (horas divididas)</div>
+                <ul className="mt-1 space-y-0.5">
+                  {perEmployeeSchedule.map((p) => (
+                    <li key={p.id}>
+                      <span className="font-medium">{p.name}</span>: {startTime} → {p.end} ({p.duration})
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-1 text-muted-foreground">
+                  A Hora fim acima é o fim do serviço completo; cada funcionário fica com a sua parte. Ao marcar ou
+                  desmarcar funcionários, o cálculo é refeito. Para dar o horário completo a todos, altere a Hora fim.
+                </p>
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label>Tolerância de ausência (min)</Label>
               <Input
