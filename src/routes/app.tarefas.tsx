@@ -77,6 +77,7 @@ import {
   Search,
   AlertTriangle,
   Info as InfoIcon,
+  MapPin as MapPinIcon,
   ChevronDown as ChevronDownIcon,
 } from "lucide-react";
 import {
@@ -185,6 +186,9 @@ type ClientOption = {
 const clientNameCache = new Map<string, string>();
 /** "Instruções adicionais" do cliente (clients.instructions), para o calendário. Vazio = sem instruções. */
 const clientInstructionsCache = new Map<string, string>();
+/** Endereço do cliente (clients.address / geo) para a lista e o calendário de tarefas. */
+type TaskClientAddressInfo = { address: string | null; lat: number | null; lng: number | null };
+const clientAddressCache = new Map<string, TaskClientAddressInfo>();
 function taskClientInstructions(t: { client_id?: string | null }): string | undefined {
   return t.client_id ? clientInstructionsCache.get(t.client_id) : undefined;
 }
@@ -499,6 +503,43 @@ function TasksPage() {
   });
   clientInstructionsCache.clear();
   for (const [id, text] of Object.entries(clientInstructionsMap ?? {})) clientInstructionsCache.set(id, text);
+
+  // Endereço dos clientes para a lista e o calendário (mesma origem da Folha de Ponto).
+  // Consulta separada e tolerante a falhas: se der erro, a tela fica exatamente como antes.
+  const { data: clientAddressMap } = useQuery({
+    queryKey: ["tasks-client-addresses", currentCompanyId],
+    queryFn: async () => {
+      const map: Record<string, TaskClientAddressInfo> = {};
+      if (!currentCompanyId) return map;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data, error } = await (supabase.from("clients" as never) as any)
+          .select("id,address,geo_address,geo_lat,geo_lng")
+          .eq("company_id", currentCompanyId);
+        if (error) return map;
+        for (const r of (data ?? []) as {
+          id: string;
+          address: string | null;
+          geo_address: string | null;
+          geo_lat: number | null;
+          geo_lng: number | null;
+        }[]) {
+          const address = (r.address ?? "").trim() || (r.geo_address ?? "").trim() || null;
+          const lat = typeof r.geo_lat === "number" ? r.geo_lat : null;
+          const lng = typeof r.geo_lng === "number" ? r.geo_lng : null;
+          if (address || (lat !== null && lng !== null)) map[r.id] = { address, lat, lng };
+        }
+      } catch {
+        // sem endereço: a tela segue igual
+      }
+      return map;
+    },
+    enabled: !!currentCompanyId,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+  clientAddressCache.clear();
+  for (const [id, info] of Object.entries(clientAddressMap ?? {})) clientAddressCache.set(id, info);
 
   const { data: approvedVacations } = useQuery({
     queryKey: ["approved-vacations-calendar", currentCompanyId, user?.id, isManager],
@@ -1515,6 +1556,12 @@ function TasksPage() {
           Carregando...
         </div>
       )}
+      {!isManager && !isLoading && (
+        <div className="flex flex-wrap items-center gap-1 rounded-2xl border border-border bg-card px-3 py-2">
+          <FilterChip label="Lista" active={taskView === "list"} onClick={() => setTaskView("list")} />
+          <FilterChip label="Calendário" active={taskView === "calendar"} onClick={() => setTaskView("calendar")} />
+        </div>
+      )}
       {isManager && currentCompanyId && (
         <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card px-3 py-2">
           <div className="flex flex-wrap items-center gap-1">
@@ -1740,13 +1787,6 @@ function TasksPage() {
             onNoStartReason={setNoStartTarget}
           />
         )}
-
-      {!isManager && !isLoading && (
-        <div className="flex flex-wrap items-center gap-1 rounded-2xl border border-border bg-card px-3 py-2">
-          <FilterChip label="Lista" active={taskView === "list"} onClick={() => setTaskView("list")} />
-          <FilterChip label="Calendário" active={taskView === "calendar"} onClick={() => setTaskView("calendar")} />
-        </div>
-      )}
 
       {!isLoading &&
         (filteredCalendarData.tasks.length > 0 || filteredCalendarData.vacations.length > 0) &&
@@ -2287,6 +2327,67 @@ function CalendarClientInstructions({ text }: { text?: string | null }) {
   );
 }
 
+/** Endereço do cliente com atalhos de navegação (Google Maps, Waze, Mapas) e Copiar. */
+function TaskClientAddress({ clientId }: { clientId?: string | null }) {
+  const info = clientId ? clientAddressCache.get(clientId) : undefined;
+  if (!info) return null;
+  const hasGeo = info.lat !== null && info.lng !== null;
+  const dest = hasGeo ? `${info.lat},${info.lng}` : (info.address ?? "");
+  if (!dest) return null;
+  const google = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}`;
+  const waze = hasGeo
+    ? `https://waze.com/ul?ll=${info.lat},${info.lng}&navigate=yes`
+    : `https://waze.com/ul?q=${encodeURIComponent(info.address ?? "")}&navigate=yes`;
+  const apple = `https://maps.apple.com/?daddr=${encodeURIComponent(dest)}`;
+  const copy = () => {
+    const text = info.address ?? dest;
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(
+        () => toast.success("Endereço copiado"),
+        () => toast.error("Não foi possível copiar o endereço"),
+      );
+    } else {
+      toast.error("Não foi possível copiar o endereço");
+    }
+  };
+  const linkClass = "font-medium text-primary hover:underline";
+  return (
+    <div className="mt-1 min-w-0 text-xs text-muted-foreground" onClick={(e) => e.stopPropagation()}>
+      {info.address && (
+        <div className="flex items-start gap-1">
+          <MapPinIcon className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
+          <span className="break-words">{info.address}</span>
+        </div>
+      )}
+      <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span>Ir com:</span>
+        <a href={google} target="_blank" rel="noopener noreferrer" className={linkClass}>
+          Google Maps
+        </a>
+        <a href={waze} target="_blank" rel="noopener noreferrer" className={linkClass}>
+          Waze
+        </a>
+        <a href={apple} target="_blank" rel="noopener noreferrer" className={linkClass}>
+          Mapas
+        </a>
+        <button type="button" onClick={copy} className={linkClass}>
+          Copiar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Endereço + instruções adicionais do cliente (lista e calendário, PC e celular). */
+function TaskClientDetails({ task }: { task: { client_id?: string | null } }) {
+  return (
+    <>
+      <TaskClientAddress clientId={task.client_id} />
+      <CalendarClientInstructions text={taskClientInstructions(task)} />
+    </>
+  );
+}
+
 function MiniTaskChip({ task, startedAt, onClick }: { task: TaskRow; startedAt?: string; onClick: () => void }) {
   const start = formatWallTime(task.scheduled_for);
   const lateMinutes = startedLateMinutes(task, startedAt);
@@ -2549,7 +2650,7 @@ function CalendarTaskCard({
                 {operationalStatus === "atrasada" ? "Atrasada" : STATUS_LABELS[operationalStatus]}
               </span>
             </div>
-            <CalendarClientInstructions text={taskClientInstructions(task)} />
+            <TaskClientDetails task={task} />
           </div>
         </div>
         {isManager && (
@@ -2970,6 +3071,7 @@ function TaskRowItem({
             )}
             <ScheduleNameBadge name={t.schedule_name} />
           </div>
+          <TaskClientDetails task={t} />
           {refusal && (
             <div className="mt-2 space-y-0.5 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs">
               <div className="font-semibold uppercase tracking-wide text-destructive">Recusada pelo funcionário</div>
