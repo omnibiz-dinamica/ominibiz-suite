@@ -1757,12 +1757,13 @@ function TasksPage() {
       )}
 
       {!isLoading &&
-        (filteredCalendarData.tasks.length > 0 || filteredCalendarData.vacations.length > 0) &&
+        (filteredCalendarData.tasks.length > 0 || (!search.status && filteredCalendarData.vacations.length > 0)) &&
         isManager &&
         taskView === "calendar" && (
           <TaskPlanningCalendar
             tasks={filteredCalendarData.tasks}
-            vacations={filteredCalendarData.vacations}
+            // SUP-249: com filtro de estado (ex.: Em andamento) mostra só quem tem tarefas nesse estado.
+            vacations={search.status ? [] : filteredCalendarData.vacations}
             members={members ?? []}
             clients={clientsList ?? []}
             groupBy={calendarGroup}
