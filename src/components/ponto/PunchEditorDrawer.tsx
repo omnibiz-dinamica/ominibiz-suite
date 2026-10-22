@@ -18,6 +18,7 @@ import {
   type AdminTimeEntry,
   ORIGIN_LABEL,
 } from "@/lib/punch-admin";
+import { wallISOToInput } from "@/lib/wall-clock";
 import { formatDuration } from "@/lib/tasks";
 import { ClockPlus, Pencil, Users, Clock, FileText } from "lucide-react";
 
@@ -123,9 +124,12 @@ export function PunchEditorDrawer({
         ...emptyForm(initialEntryKind),
         user_id: initialUserId ?? "",
         task_id: initialTaskId ?? "",
-        // Ponto manual de uma tarefa: já vem com o horário previsto da tarefa.
-        started_at: toLocalInput(initialStartedAt),
-        ended_at: toLocalInput(initialEndedAt),
+        // Ponto manual de uma tarefa: já vem com o horário previsto da tarefa,
+        // que é wall-clock (guardado como se fosse UTC). Ler componentes UTC
+        // evita o deslocamento do fuso do dispositivo; ao salvar, fromLocalInput
+        // grava o horário de parede como instante local correto.
+        started_at: wallISOToInput(initialStartedAt),
+        ended_at: wallISOToInput(initialEndedAt),
       });
     }
   }, [open, mode, entry, initialEntryKind, initialUserId, initialTaskId, initialStartedAt, initialEndedAt]);
