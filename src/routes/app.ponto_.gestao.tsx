@@ -47,6 +47,7 @@ import {
   punchAdminVoidForRedo,
   type OperationalPunchRow,
 } from "@/lib/punch-admin";
+import { formatPauseList, type TimeEntryPauseRow } from "@/lib/punch/pause";
 import {
   formatDuration,
   formatStartedLateMinutes,
@@ -103,7 +104,25 @@ type TaskJoin = {
   due_at?: string | null;
 };
 
+/** Todas as pausas de cada ponto (time_entry_pauses; RLS: gestor da empresa / super admin). */
+async function fetchPausesByEntry(ids: string[]): Promise<Map<string, TimeEntryPauseRow[]>> {
+  const map = new Map<string, TimeEntryPauseRow[]>();
+  if (ids.length === 0) return map;
+  const { data, error } = await (supabase.from("time_entry_pauses" as never) as any)
+    .select("time_entry_id, paused_at, resumed_at, is_current")
+    .in("time_entry_id", ids)
+    .order("paused_at", { ascending: true });
+  if (error) throw error;
+  for (const p of (data ?? []) as TimeEntryPauseRow[]) {
+    const list = map.get(p.time_entry_id) ?? [];
+    list.push(p);
+    map.set(p.time_entry_id, list);
+  }
+  return map;
+}
+
 type Row = OperationalPunchRow & {
+  pauses?: TimeEntryPauseRow[];
   tasks: TaskJoin | null;
   geo?: GeoSummary | null;
 };
@@ -310,6 +329,20 @@ function GestaoPonto() {
         offset: page * PAGE_SIZE,
       });
     },
+  });
+
+  const pauseEntryIds = useMemo(() => (result?.rows ?? []).map((r) => r.id), [result?.rows]);
+  const { data: pausesByEntry } = useQuery({
+    // A chave muda quando a pausa atual/efetivo de algum ponto da página muda -> recarrega as pausas.
+    queryKey: [
+      "punch-admin-pauses",
+      currentCompanyId,
+      (result?.rows ?? [])
+        .map((r) => `${r.id}|${r.paused_at ?? ""}|${r.resumed_at ?? ""}|${r.effective_minutes ?? ""}`)
+        .join(","),
+    ],
+    enabled: !!currentCompanyId && pauseEntryIds.length > 0,
+    queryFn: () => fetchPausesByEntry(pauseEntryIds),
   });
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil((result?.total ?? 0) / PAGE_SIZE)), [result?.total]);
@@ -560,9 +593,19 @@ function GestaoPonto() {
     return minutes == null ? "" : `Início com atraso · ${formatStartedLateMinutes(minutes)}`;
   };
   const formatPause = (r: Row) => {
-    const minutes = pauseMinutesNow(r);
+    // Várias pausas por ponto: as anteriores vêm de time_entry_pauses (is_current = false).
+    const list = r.pauses ?? pausesByEntry?.get(r.id) ?? [];
+    const priorSec = list
+      .filter((p) => !p.is_current && p.resumed_at)
+      .reduce(
+        (acc, p) =>
+          acc + Math.max(0, Math.round((new Date(p.resumed_at!).getTime() - new Date(p.paused_at).getTime()) / 1000)),
+        0,
+      );
+    const minutes = pauseMinutesNow({ ...r, prior_pause_seconds: priorSec });
     if (minutes == null) return "—";
-    return !r.resumed_at && !r.ended_at ? "Em pausa" : formatDuration(minutes);
+    const base = r.paused_at && !r.resumed_at && !r.ended_at ? "Em pausa" : formatDuration(minutes);
+    return list.length > 1 ? `${base} · ${list.length} pausas (${formatPauseList(list)})` : base;
   };
 
   const exportColumns = (): ExportColumn<Row>[] => [
@@ -631,7 +674,12 @@ function GestaoPonto() {
       geoByEntry.set(p.time_entry_id, summary);
     }
 
-    return rows.map((r) => ({ ...r, geo: isNonWork(r) ? null : (geoByEntry.get(r.id) ?? null) }));
+    const pausesAll = await fetchPausesByEntry(ids);
+    return rows.map((r) => ({
+      ...r,
+      geo: isNonWork(r) ? null : (geoByEntry.get(r.id) ?? null),
+      pauses: pausesAll.get(r.id) ?? [],
+    }));
   };
 
   const handleExport = async (kind: "xlsx" | "pdf") => {
