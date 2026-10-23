@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { formatPauseList, pauseMinutesNow } from "../src/lib/punch/pause.ts";
+import { formatPauseList, pauseMinutesNow, validatePauseList } from "../src/lib/punch/pause.ts";
 
 test("calculates a completed pause in minutes", () => {
   assert.equal(
@@ -61,4 +61,52 @@ test("lists all pauses in chronological order", () => {
     "Europe/Lisbon",
   );
   assert.equal(label, "12:54–13:12 · 16:57–16:57");
+});
+
+// Fase 2: o gestor edita várias pausas (mesmas regras de punch_admin_set_pauses)
+test("validatePauseList accepts ordered, non-overlapping pauses inside the punch", () => {
+  assert.equal(
+    validatePauseList(
+      [
+        { paused_at: "2026-10-23T14:00:00Z", resumed_at: "2026-10-23T14:20:00Z" },
+        { paused_at: "2026-10-23T11:00:00Z", resumed_at: "2026-10-23T11:15:00Z" },
+      ],
+      "2026-10-23T06:20:00Z",
+      "2026-10-23T15:58:00Z",
+    ),
+    null,
+  );
+  assert.equal(validatePauseList([], "2026-10-23T06:20:00Z", "2026-10-23T15:58:00Z"), null);
+});
+
+test("validatePauseList rejects overlap, inverted, missing and out-of-range pauses", () => {
+  const s = "2026-10-23T06:20:00Z";
+  const e = "2026-10-23T15:58:00Z";
+  assert.equal(
+    validatePauseList(
+      [
+        { paused_at: "2026-10-23T09:00:00Z", resumed_at: "2026-10-23T09:30:00Z" },
+        { paused_at: "2026-10-23T09:20:00Z", resumed_at: "2026-10-23T09:40:00Z" },
+      ],
+      s,
+      e,
+    ),
+    "As pausas não se podem sobrepor",
+  );
+  assert.equal(
+    validatePauseList([{ paused_at: "2026-10-23T09:00:00Z", resumed_at: "2026-10-23T08:30:00Z" }], s, e),
+    "O fim da pausa tem de ser depois do início",
+  );
+  assert.equal(
+    validatePauseList([{ paused_at: "2026-10-23T09:00:00Z", resumed_at: null }], s, e),
+    "Cada pausa precisa de início e fim",
+  );
+  assert.equal(
+    validatePauseList([{ paused_at: "2026-10-23T05:00:00Z", resumed_at: "2026-10-23T05:30:00Z" }], s, e),
+    "Pausa fora do horário do ponto",
+  );
+  assert.equal(
+    validatePauseList([{ paused_at: "2026-10-23T15:50:00Z", resumed_at: "2026-10-23T16:10:00Z" }], s, e),
+    "Pausa fora do horário do ponto",
+  );
 });
