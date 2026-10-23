@@ -12,6 +12,20 @@ interface Props {
 
 function fmtVal(v: unknown): string {
   if (v === null || v === undefined || v === "") return "—";
+  // Lista de pausas (várias pausas por ponto): "12:54–13:12, 16:57–16:57"
+  if (Array.isArray(v)) {
+    if (v.length === 0) return "nenhuma";
+    const t = (s: unknown) =>
+      typeof s === "string" && s
+        ? new Date(s).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })
+        : "…";
+    return v
+      .map((p) => {
+        const o = (p ?? {}) as { paused_at?: unknown; resumed_at?: unknown };
+        return `${t(o.paused_at)}–${t(o.resumed_at)}`;
+      })
+      .join(", ");
+  }
   if (typeof v === "string") {
     // tenta datetime
     const d = new Date(v);
@@ -26,6 +40,7 @@ const FIELD_LABEL: Record<string, string> = {
   ended_at: "Fim",
   paused_at: "Pausa",
   resumed_at: "Retorno",
+  pauses: "Pausas",
   notes: "Notas",
   effective_minutes: "Min. efetivos",
 };
@@ -42,10 +57,7 @@ export function PunchAuditDrawer({ open, onOpenChange, timeEntryId }: Props) {
     queryKey: ["punch-audit-names", userIds.sort().join(",")],
     enabled: open && userIds.length > 0,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("id, full_name")
-        .in("id", userIds);
+      const { data } = await supabase.from("profiles").select("id, full_name").in("id", userIds);
       const map: Record<string, string> = {};
       for (const r of (data ?? []) as { id: string; full_name: string | null }[]) {
         map[r.id] = r.full_name ?? r.id;
@@ -74,14 +86,16 @@ export function PunchAuditDrawer({ open, onOpenChange, timeEntryId }: Props) {
             <div key={a.id} className="rounded-lg border border-border p-3 text-sm">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  {a.action === "create" ? <Plus className="h-3.5 w-3.5 text-success" /> : <Pencil className="h-3.5 w-3.5 text-info" />}
+                  {a.action === "create" ? (
+                    <Plus className="h-3.5 w-3.5 text-success" />
+                  ) : (
+                    <Pencil className="h-3.5 w-3.5 text-info" />
+                  )}
                   <span className="font-medium">{a.action === "create" ? "Criação" : "Correção"}</span>
                 </div>
                 <span className="text-xs text-muted-foreground">{new Date(a.changed_at).toLocaleString()}</span>
               </div>
-              <div className="mt-1 text-xs text-muted-foreground">
-                por {names?.[a.changed_by] ?? a.changed_by}
-              </div>
+              <div className="mt-1 text-xs text-muted-foreground">por {names?.[a.changed_by] ?? a.changed_by}</div>
               <div className="mt-2 rounded bg-muted/40 px-2 py-1 text-xs italic">"{a.reason}"</div>
               {Object.keys(a.changes ?? {}).length > 0 && (
                 <ul className="mt-2 space-y-1 text-xs">
