@@ -385,7 +385,7 @@ function TasksPage() {
         const { data, error } = await supabase
           .from("time_entries")
           .select(
-            "id,company_id,task_id,user_id,started_at,paused_at,resumed_at,ended_at,effective_minutes,notes,created_at,updated_at",
+            "id,company_id,task_id,user_id,started_at,paused_at,resumed_at,ended_at,effective_minutes,notes,created_at,updated_at,prior_pause_seconds",
           )
           .eq("company_id", currentCompanyId)
           .not("task_id", "is", null)
@@ -3396,7 +3396,7 @@ function PauseSummary({ entry }: { entry: TimeEntryRow }) {
   return (
     <span className="inline-flex items-center gap-1 rounded-full bg-warning/15 px-2 py-0.5 font-medium text-warning-foreground">
       <Clock className="h-3 w-3" />
-      {!entry.resumed_at && !entry.ended_at ? "Em pausa" : `Pausa ${formatDuration(minutes)}`}
+      {entry.paused_at && !entry.resumed_at && !entry.ended_at ? "Em pausa" : `Pausa ${formatDuration(minutes)}`}
     </span>
   );
 }
