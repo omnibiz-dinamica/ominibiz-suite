@@ -19,6 +19,7 @@ import {
   ORIGIN_LABEL,
 } from "@/lib/punch-admin";
 import { wallISOToInput } from "@/lib/wall-clock";
+import { formatPauseList, type TimeEntryPauseRow } from "@/lib/punch/pause";
 import { formatDuration } from "@/lib/tasks";
 import { ClockPlus, Pencil, Users, Clock, FileText } from "lucide-react";
 
@@ -193,7 +194,27 @@ export function PunchEditorDrawer({
     return lines;
   }, [mode, entry, form]);
 
-  const eff = previewEffective(form);
+  // Várias pausas por ponto: as pausas anteriores (só leitura nesta fase) também são descontadas.
+  const { data: entryPauses } = useQuery({
+    queryKey: ["punch-entry-pauses", entry?.id ?? null],
+    enabled: open && mode === "edit" && !!entry?.id,
+    queryFn: async () => {
+      const { data, error } = await (supabase.from("time_entry_pauses" as never) as any)
+        .select("time_entry_id, paused_at, resumed_at, is_current")
+        .eq("time_entry_id", entry!.id)
+        .order("paused_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as TimeEntryPauseRow[];
+    },
+  });
+  const priorPauses = (entryPauses ?? []).filter((p) => !p.is_current && !!p.resumed_at);
+  const priorPauseSec = priorPauses.reduce(
+    (acc, p) =>
+      acc + Math.max(0, Math.round((new Date(p.resumed_at!).getTime() - new Date(p.paused_at).getTime()) / 1000)),
+    0,
+  );
+  const effBase = previewEffective(form);
+  const eff = effBase === null ? null : Math.max(0, effBase - Math.round(priorPauseSec / 60));
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["punch-admin-list"] });
@@ -490,6 +511,12 @@ export function PunchEditorDrawer({
               <Textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
             </div>
 
+            {priorPauses.length > 0 && (
+              <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+                Pausas anteriores (também descontadas): {formatPauseList(priorPauses)} ·{" "}
+                {formatDuration(Math.round(priorPauseSec / 60))}
+              </div>
+            )}
             {eff !== null && (
               <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm">
                 Tempo efetivo previsto: <span className="font-mono font-semibold">{formatDuration(eff)}</span>
