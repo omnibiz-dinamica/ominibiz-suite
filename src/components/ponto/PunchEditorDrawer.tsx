@@ -19,9 +19,9 @@ import {
   ORIGIN_LABEL,
 } from "@/lib/punch-admin";
 import { wallISOToInput } from "@/lib/wall-clock";
-import { formatPauseList, type TimeEntryPauseRow } from "@/lib/punch/pause";
+import { validatePauseList, type TimeEntryPauseRow } from "@/lib/punch/pause";
 import { formatDuration } from "@/lib/tasks";
-import { ClockPlus, Pencil, Users, Clock, FileText } from "lucide-react";
+import { ClockPlus, Pencil, Users, Clock, FileText, Coffee, Plus, Trash2 } from "lucide-react";
 
 type Mode = "create" | "edit";
 
@@ -103,6 +103,9 @@ export function PunchEditorDrawer({
 }: Props) {
   const qc = useQueryClient();
   const [form, setForm] = useState<FormState>(emptyForm());
+  // Várias pausas (fase 2): lista editável das pausas terminadas do ponto.
+  const [pauseRows, setPauseRows] = useState<{ paused_at: string; resumed_at: string }[]>([]);
+  const [pausesDirty, setPausesDirty] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -207,18 +210,56 @@ export function PunchEditorDrawer({
       return (data ?? []) as TimeEntryPauseRow[];
     },
   });
-  const priorPauses = (entryPauses ?? []).filter((p) => !p.is_current && !!p.resumed_at);
-  const priorPauseSec = priorPauses.reduce(
-    (acc, p) =>
-      acc + Math.max(0, Math.round((new Date(p.resumed_at!).getTime() - new Date(p.paused_at).getTime()) / 1000)),
-    0,
-  );
-  const effBase = previewEffective(form);
-  const eff = effBase === null ? null : Math.max(0, effBase - Math.round(priorPauseSec / 60));
+  // Ponto de trabalho em edição: as pausas são editadas como lista (todas contam no efetivo).
+  const isWorkEdit = mode === "edit" && !!entry && (entry.entry_kind ?? "work") === "work" && !regularizeTaskAbsence;
+  // Pausa a decorrer num ponto aberto: não é editável.
+  const runningPauseStart = entry && !entry.ended_at && entry.paused_at && !entry.resumed_at ? entry.paused_at : null;
+
+  useEffect(() => {
+    if (!open || !isWorkEdit || !entry || entryPauses === undefined) return;
+    const finished = entryPauses.filter((p) => !!p.resumed_at);
+    const base =
+      entryPauses.length > 0
+        ? finished.map((p) => ({ paused_at: p.paused_at, resumed_at: p.resumed_at as string }))
+        : entry.paused_at && entry.resumed_at
+          ? [{ paused_at: entry.paused_at, resumed_at: entry.resumed_at }]
+          : [];
+    setPauseRows(base.map((p) => ({ paused_at: toLocalInput(p.paused_at), resumed_at: toLocalInput(p.resumed_at) })));
+    setPausesDirty(false);
+  }, [open, isWorkEdit, entry, entryPauses]);
+
+  const updatePauseRow = (i: number, patch: Partial<{ paused_at: string; resumed_at: string }>) => {
+    setPauseRows((rows) => rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+    setPausesDirty(true);
+  };
+  const removePauseRow = (i: number) => {
+    setPauseRows((rows) => rows.filter((_, j) => j !== i));
+    setPausesDirty(true);
+  };
+  const addPauseRow = () => {
+    setPauseRows((rows) => [...rows, { paused_at: "", resumed_at: "" }]);
+    setPausesDirty(true);
+  };
+
+  const pauseRowsMs = pauseRows.reduce((acc, p) => {
+    const a = new Date(p.paused_at).getTime();
+    const b = new Date(p.resumed_at).getTime();
+    return Number.isFinite(a) && Number.isFinite(b) && b > a ? acc + (b - a) : acc;
+  }, 0);
+  const eff = (() => {
+    if (!isWorkEdit) return previewEffective(form);
+    if (!form.started_at || !form.ended_at) return null;
+    const s = new Date(form.started_at).getTime();
+    const e = new Date(form.ended_at).getTime();
+    if (isNaN(s) || isNaN(e) || e < s) return null;
+    return Math.max(0, Math.floor((e - s - pauseRowsMs) / 60000 + 0.5));
+  })();
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["punch-admin-list"] });
     qc.invalidateQueries({ queryKey: ["punch-audit"] });
+    qc.invalidateQueries({ queryKey: ["punch-entry-pauses"] });
+    qc.invalidateQueries({ queryKey: ["punch-admin-pauses"] });
   };
 
   const createMut = useMutation({
@@ -267,7 +308,7 @@ export function PunchEditorDrawer({
   });
 
   const updateMut = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       if (!entry) throw new Error("Sem registro");
       const payload: Record<string, unknown> = {};
       const oldStarted = toLocalInput(entry.started_at);
@@ -279,8 +320,32 @@ export function PunchEditorDrawer({
       if (form.paused_at !== oldPaused) payload.paused_at = fromLocalInput(form.paused_at);
       if (form.resumed_at !== oldResumed) payload.resumed_at = fromLocalInput(form.resumed_at);
       if (form.notes !== (entry.notes ?? "")) payload.notes = form.notes || null;
-      if (Object.keys(payload).length === 0) throw new Error("Nada a alterar");
-      return punchAdminUpdate(entry.id, payload, form.reason);
+      // Várias pausas: a lista é validada aqui e de novo no banco (punch_admin_set_pauses).
+      let pausesPayload: { paused_at: string | null; resumed_at: string | null }[] | null = null;
+      if (isWorkEdit && pausesDirty) {
+        const iso = pauseRows.map((p) => ({
+          paused_at: fromLocalInput(p.paused_at),
+          resumed_at: fromLocalInput(p.resumed_at),
+        }));
+        const limit = runningPauseStart ?? fromLocalInput(form.ended_at) ?? new Date().toISOString();
+        const err = validatePauseList(iso, fromLocalInput(form.started_at), limit);
+        if (err) throw new Error(err);
+        pausesPayload = iso;
+      }
+      if (Object.keys(payload).length === 0 && !pausesPayload) throw new Error("Nada a alterar");
+      let result: unknown = null;
+      if (Object.keys(payload).length > 0) result = await punchAdminUpdate(entry.id, payload, form.reason);
+      if (pausesPayload) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data, error } = await (supabase.rpc as any)("punch_admin_set_pauses", {
+          _id: entry.id,
+          _pauses: pausesPayload,
+          _reason: form.reason || null,
+        });
+        if (error) throw new Error(error.message);
+        result = data;
+      }
+      return result;
     },
     onSuccess: () => {
       toast.success("Correção aplicada");
@@ -482,7 +547,7 @@ export function PunchEditorDrawer({
                   onChange={(e) => setForm({ ...form, ended_at: e.target.value })}
                 />
               </div>
-              {!regularizeTaskAbsence && (
+              {!regularizeTaskAbsence && !isWorkEdit && (
                 <div>
                   <Label>Pausa</Label>
                   <Input
@@ -492,7 +557,7 @@ export function PunchEditorDrawer({
                   />
                 </div>
               )}
-              {!regularizeTaskAbsence && (
+              {!regularizeTaskAbsence && !isWorkEdit && (
                 <div>
                   <Label>Retorno</Label>
                   <Input
@@ -505,30 +570,81 @@ export function PunchEditorDrawer({
             </ModalSection>
           )}
 
+          {isWorkEdit && (
+            <ModalSection title="Pausas" icon={Coffee}>
+              {entryPauses === undefined ? (
+                <div className="text-xs text-muted-foreground">A carregar pausas…</div>
+              ) : (
+                <div className="space-y-2">
+                  {pauseRows.length === 0 && (
+                    <div className="text-xs text-muted-foreground">Sem pausas terminadas.</div>
+                  )}
+                  {pauseRows.map((p, i) => (
+                    <div
+                      key={i}
+                      className="grid grid-cols-1 gap-2 rounded-lg border border-border p-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+                    >
+                      <div>
+                        <Label>Pausa {i + 1} · início</Label>
+                        <Input
+                          type="datetime-local"
+                          value={p.paused_at}
+                          onChange={(e) => updatePauseRow(i, { paused_at: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label>Retorno</Label>
+                        <Input
+                          type="datetime-local"
+                          value={p.resumed_at}
+                          onChange={(e) => updatePauseRow(i, { resumed_at: e.target.value })}
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removePauseRow(i)}
+                        aria-label={`Remover pausa ${i + 1}`}
+                      >
+                        <Trash2 className="h-4 w-4" /> Remover
+                      </Button>
+                    </div>
+                  ))}
+                  {runningPauseStart && (
+                    <div className="rounded-lg border border-warning/40 bg-warning/5 p-2 text-xs">
+                      Pausa em curso desde{" "}
+                      {new Date(runningPauseStart).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}{" "}
+                      — não pode ser editada enquanto decorre.
+                    </div>
+                  )}
+                  <Button type="button" variant="outline" size="sm" onClick={addPauseRow}>
+                    <Plus className="h-4 w-4" /> Adicionar pausa
+                  </Button>
+                </div>
+              )}
+            </ModalSection>
+          )}
+
           <ModalSection title="Motivo e auditoria" icon={FileText}>
             <div>
               <Label>Notas</Label>
               <Textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
             </div>
 
-            {priorPauses.length > 0 && (
-              <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
-                Pausas anteriores (também descontadas): {formatPauseList(priorPauses)} ·{" "}
-                {formatDuration(Math.round(priorPauseSec / 60))}
-              </div>
-            )}
             {eff !== null && (
               <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm">
                 Tempo efetivo previsto: <span className="font-mono font-semibold">{formatDuration(eff)}</span>
               </div>
             )}
 
-            {mode === "edit" && diffPreview.length > 0 && (
+            {mode === "edit" && (diffPreview.length > 0 || pausesDirty) && (
               <div className="rounded-lg border border-info/40 bg-info/5 p-3 text-xs space-y-1">
                 <div className="font-medium text-info">Alterações a aplicar:</div>
                 {diffPreview.map((l, i) => (
                   <div key={i}>{l}</div>
                 ))}
+                {pausesDirty && <div>Pausas: {pauseRows.length} pausa(s) depois da correção</div>}
               </div>
             )}
 
