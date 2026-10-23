@@ -967,6 +967,8 @@ export function effectiveMinutesNow(e: TimeEntryRow): number {
         : Date.now();
     pauseMs = Math.max(0, r - p);
   }
+  // Pausas anteriores (várias pausas por ponto).
+  pauseMs += Math.max(0, Number(e.prior_pause_seconds ?? 0) || 0) * 1000;
   const seconds = Math.max(0, (end - start - pauseMs) / 1000);
   // Half-up: Math.floor(x + 0.5) trata exatamente como round() do Postgres em positivos.
   return Math.max(0, Math.floor(seconds / 60 + 0.5));
