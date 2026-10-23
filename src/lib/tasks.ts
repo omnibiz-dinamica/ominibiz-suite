@@ -913,6 +913,8 @@ export interface TimeEntryRow {
   void_reason?: string | null;
   entry_kind?: "work" | "paid_leave";
   paid_leave_minutes?: number | null;
+  /** Soma (segundos) das pausas anteriores à pausa atual (várias pausas por ponto). */
+  prior_pause_seconds?: number | null;
 }
 
 export type PunchState = "aberto" | "pausado" | "encerrado";
@@ -992,6 +994,8 @@ export function effectiveSecondsNow(e: TimeEntryRow): number {
         : Date.now();
     pauseMs = Math.max(0, r - p);
   }
+  // Pausas anteriores (o ponto pode ter várias pausas; só a atual fica em paused_at/resumed_at).
+  pauseMs += Math.max(0, Number(e.prior_pause_seconds ?? 0) || 0) * 1000;
   return Math.max(0, Math.floor((end - start - pauseMs) / 1000));
 }
 
