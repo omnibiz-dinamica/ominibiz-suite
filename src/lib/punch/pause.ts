@@ -41,3 +41,31 @@ export function formatPauseList(rows: TimeEntryPauseRow[], timeZone?: string): s
     .map((p) => fmt(p.paused_at) + "–" + fmt(p.resumed_at))
     .join(" · ");
 }
+
+export type PauseInput = { paused_at: string | null; resumed_at: string | null };
+
+/**
+ * Valida a lista de pausas terminadas editada pelo gestor (mesmas regras de
+ * punch_admin_set_pauses no banco). Devolve a mensagem de erro ou null.
+ */
+export function validatePauseList(rows: PauseInput[], startIso: string | null, limitIso: string | null): string | null {
+  const start = startIso ? new Date(startIso).getTime() : NaN;
+  const limit = limitIso ? new Date(limitIso).getTime() : NaN;
+  const parsed: [number, number][] = [];
+  for (const r of rows) {
+    if (!r.paused_at || !r.resumed_at) return "Cada pausa precisa de início e fim";
+    const p = new Date(r.paused_at).getTime();
+    const q = new Date(r.resumed_at).getTime();
+    if (!Number.isFinite(p) || !Number.isFinite(q)) return "Data/hora de pausa inválida";
+    if (q <= p) return "O fim da pausa tem de ser depois do início";
+    if ((Number.isFinite(start) && p < start) || (Number.isFinite(limit) && q > limit)) {
+      return "Pausa fora do horário do ponto";
+    }
+    parsed.push([p, q]);
+  }
+  parsed.sort((a, b) => a[0] - b[0]);
+  for (let i = 1; i < parsed.length; i++) {
+    if (parsed[i][0] < parsed[i - 1][1]) return "As pausas não se podem sobrepor";
+  }
+  return null;
+}
