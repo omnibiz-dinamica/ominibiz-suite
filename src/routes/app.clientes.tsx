@@ -155,7 +155,7 @@ function ClientsPage() {
     companyId: currentCompanyId,
     userId: user?.id,
     enabled: isManager && !!user && !!currentCompanyId,
-    baseUpdatedAt: editing?.updated_at ?? null,
+    // A tabela clients não tem updated_at: sem deteção de conflito por versão.
     dirty: clientDraftDirty,
   });
   // Reabre o diálogo de criação se havia rascunho com o formulário aberto.
@@ -170,12 +170,18 @@ function ClientsPage() {
   const handleClientDraftValues = (values: ClientFormDraft) => {
     if (clientBaselineRef.current === "") clientBaselineRef.current = JSON.stringify(values);
     setClientDraftValues(values);
-    clientDraft.save(values, { open: true });
+    if (JSON.stringify(values) !== clientBaselineRef.current) clientDraft.save(values, { open: true });
   };
+  const [clientFormKey, setClientFormKey] = useState(0);
   const clearClientDraft = () => {
     clientBaselineRef.current = "";
     setClientDraftValues(null);
     clientDraft.clear();
+  };
+  // Descartar: limpa e remonta o formulário com os valores iniciais do registo.
+  const discardClientDraft = () => {
+    clearClientDraft();
+    setClientFormKey((k) => k + 1);
   };
 
   const { data: clients, isLoading } = useQuery({
@@ -473,7 +479,7 @@ function ClientsPage() {
               onOpenChange={(v) => {
                 if (!v) {
                   // Fechar por ESC/clique fora: mantém o rascunho com open:false.
-                  if (clientDraftValues) clientDraft.save(clientDraftValues, { open: false });
+                  if (clientDraftValues && clientDraftDirty) clientDraft.save(clientDraftValues, { open: false });
                   setOpen(false);
                   setEditing(null);
                 } else {
@@ -497,6 +503,7 @@ function ClientsPage() {
                   }
                 />
                 <ClientForm
+                  key={clientFormKey}
                   companyId={currentCompanyId}
                   userId={user!.id}
                   initial={editing}
@@ -517,7 +524,7 @@ function ClientsPage() {
                   draftSavedAt={clientDraft.savedAt}
                   draftConflict={clientDraft.conflict}
                   onDraftValues={handleClientDraftValues}
-                  onDraftDiscard={clearClientDraft}
+                  onDraftDiscard={discardClientDraft}
                   onDone={() => {
                     clearClientDraft();
                     setOpen(false);

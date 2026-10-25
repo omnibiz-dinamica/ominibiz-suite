@@ -56,13 +56,13 @@ function useLocalFormDraft(values: VehicleFormDraft, initial: VehicleFormDraft, 
   useEffect(() => {
     if (skipSave.current) { skipSave.current = false; return; }
     if (blocked.current || (draft.conflict && restoredValues.current)) return;
-    if (dirty || applied.current) draft.save(values, { open });
+    if (dirty) draft.save(values, { open });
   }, [values.plate, values.kind, values.brand, values.model, values.year, values.km, values.fuelTypeV, values.status, open, dirty, draft.save]);
   return {
     clear: () => { blocked.current = true; draft.clear(); },
     resume: () => { blocked.current = false; },
     notice: draft.savedAt !== null ? <DraftNotice savedAt={draft.savedAt}
-      conflict={draft.conflict} onDiscard={() => { blocked.current = true; draft.clear(); }}
+      conflict={draft.conflict} onDiscard={() => { blocked.current = true; draft.clear(); restoredValues.current = null; apply(initial); }}
       onUseDraft={() => {
         if (restoredValues.current) {
           blocked.current = false;
@@ -742,7 +742,7 @@ function VehicleRow({
             </select>
           </div>
           <div className="md:col-span-3 flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => { localDraft.clear(); setEditing(false); }}>Cancelar</Button>
+            <Button variant="ghost" onClick={() => { localDraft.clear(); resetForm(); setEditing(false); }}>Cancelar</Button>
             <Button onClick={() => save.mutate()} disabled={save.isPending}>Salvar alterações</Button>
           </div>
         </div>

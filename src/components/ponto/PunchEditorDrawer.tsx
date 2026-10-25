@@ -121,6 +121,8 @@ export function PunchEditorDrawer({
   const restoredDraftRef = useRef<PunchEditorDraft | null>(null);
   const suppressedDraftRef = useRef(false);
   const initialFingerprintRef = useRef("");
+  // Valores iniciais do formulário (antes de qualquer rascunho), para "Descartar".
+  const baseSnapshotRef = useRef<PunchEditorDraft | null>(null);
   const reopenedRef = useRef(false);
   const draftDirty =
     initialFingerprintRef.current !== "" &&
@@ -161,9 +163,10 @@ export function PunchEditorDrawer({
     if (initialFingerprintRef.current === "") {
       // Primeira passagem após abrir: fixa a linha de base, ainda não grava.
       initialFingerprintRef.current = JSON.stringify({ form, pauseRows, pausesDirty });
+      baseSnapshotRef.current = { form, pauseRows, pausesDirty };
       return;
     }
-    if (!draftDirty && draft.savedAt === null) return;
+    if (!draftDirty) return;
     draft.save({ form, pauseRows, pausesDirty }, { open: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form, pauseRows, pausesDirty, open, draftDirty]);
@@ -175,7 +178,7 @@ export function PunchEditorDrawer({
   };
   // Fechar por ESC/clique fora: mantém o rascunho com open:false.
   const handleOpenChange = (v: boolean) => {
-    if (!v && !suppressedDraftRef.current && initialFingerprintRef.current !== "") {
+    if (!v && !suppressedDraftRef.current && draftDirty) {
       draft.save({ form, pauseRows, pausesDirty }, { open: false });
     }
     if (v) suppressedDraftRef.current = false;
@@ -304,10 +307,14 @@ export function PunchEditorDrawer({
         : entry.paused_at && entry.resumed_at
           ? [{ paused_at: entry.paused_at, resumed_at: entry.resumed_at }]
           : [];
-    setPauseRows(base.map((p) => ({ paused_at: toLocalInput(p.paused_at), resumed_at: toLocalInput(p.resumed_at) })));
+    const baseRows = base.map((p) => ({ paused_at: toLocalInput(p.paused_at), resumed_at: toLocalInput(p.resumed_at) }));
+    setPauseRows(baseRows);
     setPausesDirty(false);
     if (!appliedDraftRef.current) {
-      initialFingerprintRef.current = JSON.stringify({ form, pauseRows: base, pausesDirty: false });
+      initialFingerprintRef.current = JSON.stringify({ form, pauseRows: baseRows, pausesDirty: false });
+      baseSnapshotRef.current = { form, pauseRows: baseRows, pausesDirty: false };
+    } else if (baseSnapshotRef.current) {
+      baseSnapshotRef.current = { ...baseSnapshotRef.current, pauseRows: baseRows, pausesDirty: false };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, isWorkEdit, entry, entryPauses]);
@@ -495,7 +502,18 @@ export function PunchEditorDrawer({
               onUseDraft={() => {
                 if (restoredDraftRef.current) applyDraft(restoredDraftRef.current);
               }}
-              onDiscard={clearDraft}
+              onDiscard={() => {
+                // Repõe os valores iniciais e limpa o rascunho.
+                const base = baseSnapshotRef.current;
+                clearDraft();
+                if (base) {
+                  setForm(base.form);
+                  setPauseRows(base.pauseRows);
+                  setPausesDirty(base.pausesDirty);
+                  initialFingerprintRef.current = JSON.stringify(base);
+                }
+                suppressedDraftRef.current = false;
+              }}
             />
           )}
           {mode === "edit" && entry && (

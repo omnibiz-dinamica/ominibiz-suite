@@ -200,3 +200,23 @@ describe("sanitizeDraftValues: nunca guardar binários nem senhas", () => {
     expect(readDraft<{ title: string }>(storage, key, NOW)?.values.title).toBe("A");
   });
 });
+
+describe("conflito por versão do registo (correções da auditoria)", () => {
+  const rec = (baseUpdatedAt: string | null): DraftRecord<{ a: number }> => ({
+    v: 1,
+    savedAt: 1,
+    baseUpdatedAt,
+    open: true,
+    values: { a: 1 },
+  });
+  it("template: updated_at do servidor diferente do guardado gera conflito", () => {
+    expect(isDraftConflict(rec("2026-10-01T10:00:00Z"), "2026-10-02T09:00:00Z")).toBe(true);
+  });
+  it("template: mesmo updated_at não gera conflito", () => {
+    expect(isDraftConflict(rec("2026-10-01T10:00:00Z"), "2026-10-01T10:00:00Z")).toBe(false);
+  });
+  it("cliente sem updated_at (baseUpdatedAt nulo) nunca gera conflito", () => {
+    expect(isDraftConflict(rec(null), null)).toBe(false);
+    expect(isDraftConflict(rec(null), undefined)).toBe(false);
+  });
+});

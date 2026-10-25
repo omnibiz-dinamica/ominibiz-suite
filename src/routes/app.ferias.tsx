@@ -770,8 +770,15 @@ function FeriasPage() {
                   if (restoredDraftRef.current) applyDraft(restoredDraftRef.current);
                 }}
                 onDiscard={() => {
-                  restoredDraftRef.current = null;
-                  draft.clear();
+                  // Limpa o rascunho e repõe os campos iniciais; clearedDraftRef
+                  // impede que o autosave o recrie até haver nova alteração.
+                  clearDraft();
+                  setStart("");
+                  setEnd("");
+                  setWorkLocation(profileWorkLocation);
+                  setNote("");
+                  setPriorValidation("nao");
+                  setValidatedBy("");
                 }}
               />
             </div>

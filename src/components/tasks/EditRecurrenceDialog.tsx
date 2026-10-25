@@ -113,7 +113,6 @@ export function EditRecurrenceDialog({
     setDuration(values.duration);
     setSeriesStart(values.seriesStart);
     setSeriesEnd(values.seriesEnd);
-    initialFingerprintRef.current = JSON.stringify(values);
   };
 
   // Restaura o rascunho depois da inicialização normal dos campos.
@@ -125,17 +124,21 @@ export function EditRecurrenceDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, draft.restored, draft.conflict]);
 
-  // Grava o rascunho (debounced no hook) quando os campos mudam.
+  const isDirtyNow = () =>
+    initialFingerprintRef.current !== "" && JSON.stringify(currentValues()) !== initialFingerprintRef.current;
+
+  // Grava o rascunho (debounced no hook) só quando os campos diferem da linha de base.
   useEffect(() => {
     if (!open) return;
     if (draft.restored && !appliedDraftRef.current) return; // rascunho pendente de decisão
+    if (!isDirtyNow()) return;
     draft.save(currentValues(), { open: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, scope, title, priority, assignedTo, scheduledTime, scheduledFor, duration, seriesStart, seriesEnd]);
 
-  // Fechar por ESC/clique fora: mantém o rascunho com open:false.
+  // Fechar por ESC/clique fora: mantém o rascunho com open:false (só se alterado).
   const handleOpenChange = (v: boolean) => {
-    if (!v) draft.save(currentValues(), { open: false });
+    if (!v && isDirtyNow()) draft.save(currentValues(), { open: false });
     onOpenChange(v);
   };
 
@@ -145,34 +148,67 @@ export function EditRecurrenceDialog({
     draft.clear();
   };
 
-  useEffect(() => {
-    if (!open) return;
-    setScope(allowThis ? "this" : "future");
-    setSeriesStart(recurrence?.start_date ?? "");
-    setSeriesEnd(recurrence?.end_date ?? "");
+  // Valores iniciais derivados do registo (linha de base do rascunho).
+  const initialValues = (): RecurrenceEditDraft => {
+    const v: RecurrenceEditDraft = {
+      scope: allowThis ? "this" : "future",
+      title,
+      priority,
+      assignedTo,
+      scheduledTime,
+      scheduledFor,
+      duration,
+      seriesStart: recurrence?.start_date ?? "",
+      seriesEnd: recurrence?.end_date ?? "",
+    };
     if (fromTask) {
-      setTitle(fromTask.title);
-      setPriority(fromTask.priority);
-      setAssignedTo(fromTask.assigned_to ?? "");
+      v.title = fromTask.title;
+      v.priority = fromTask.priority;
+      v.assignedTo = fromTask.assigned_to ?? "";
       const sf = fromTask.scheduled_for;
       if (sf) {
-        setScheduledFor(wallISOToInput(sf));
-        setScheduledTime(formatWallTime(sf));
+        v.scheduledFor = wallISOToInput(sf);
+        v.scheduledTime = formatWallTime(sf);
       } else if (recurrence) {
-        setScheduledTime(recurrence.scheduled_time?.slice(0, 5) ?? "");
-        setScheduledFor("");
+        v.scheduledTime = recurrence.scheduled_time?.slice(0, 5) ?? "";
+        v.scheduledFor = "";
       }
-      setDuration(recurrence?.duration_minutes ?? 0);
+      v.duration = recurrence?.duration_minutes ?? 0;
     } else if (recurrence) {
-      setTitle(recurrence.title);
-      setPriority(recurrence.priority);
-      setAssignedTo(recurrence.assigned_to ?? "");
-      setScheduledTime(recurrence.scheduled_time?.slice(0, 5) ?? "");
-      setDuration(recurrence.duration_minutes);
+      v.title = recurrence.title;
+      v.priority = recurrence.priority;
+      v.assignedTo = recurrence.assigned_to ?? "";
+      v.scheduledTime = recurrence.scheduled_time?.slice(0, 5) ?? "";
+      v.duration = recurrence.duration_minutes;
     }
+    return v;
+  };
+  const setFields = (v: RecurrenceEditDraft) => {
+    setScope(v.scope);
+    setTitle(v.title);
+    setPriority(v.priority);
+    setAssignedTo(v.assignedTo);
+    setScheduledTime(v.scheduledTime);
+    setScheduledFor(v.scheduledFor);
+    setDuration(v.duration);
+    setSeriesStart(v.seriesStart);
+    setSeriesEnd(v.seriesEnd);
+  };
+  // Descartar: limpa o rascunho e repõe os valores do registo.
+  const discardDraft = () => {
+    const v = initialValues();
+    initialFingerprintRef.current = JSON.stringify(v);
+    setFields(v);
+    clearDraft();
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const v = initialValues();
     if (!appliedDraftRef.current) {
-      initialFingerprintRef.current = JSON.stringify(currentValues());
+      setFields(v);
     }
+    initialFingerprintRef.current = JSON.stringify(v);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, recurrence, fromTask, allowThis]);
 
@@ -306,7 +342,7 @@ export function EditRecurrenceDialog({
               onUseDraft={() => {
                 if (restoredDraftRef.current) applyDraft(restoredDraftRef.current);
               }}
-              onDiscard={clearDraft}
+              onDiscard={discardDraft}
             />
           )}
           <div className="space-y-1.5">
@@ -408,7 +444,7 @@ export function EditRecurrenceDialog({
             variant="outline"
             disabled={saving}
             onClick={() => {
-              clearDraft();
+              discardDraft();
               onOpenChange(false);
             }}
           >

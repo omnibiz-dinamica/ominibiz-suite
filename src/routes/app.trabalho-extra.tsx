@@ -490,8 +490,11 @@ function NewExtraWorkSection({
     setTitle("");
     setDescription("");
     setSlots("1");
-    setRows([{ date: tomorrowKey(), start: "09:00", end: "13:00" }]);
+    const freshRows = [{ date: tomorrowKey(), start: "09:00", end: "13:00" }];
+    setRows(freshRows);
     setCheckedDays(null);
+    // Nova linha de base: o formulário reposto não é "alterado".
+    initialFingerprintRef.current = JSON.stringify({ clientId: "", title: "", description: "", slots: "1", rows: freshRows });
   };
 
   const validate = (): string | null => {
@@ -517,7 +520,9 @@ function NewExtraWorkSection({
             }}
             onDiscard={() => {
               restoredDraftRef.current = null;
+              appliedDraftRef.current = false;
               draft.clear();
+              reset();
             }}
           />
         </div>
@@ -635,7 +640,7 @@ function NewExtraWorkSection({
             excludeUserIds={[]}
             confirmLabel="Criar e enviar convites"
             onCancel={() => {
-              draft.clear();
+              // Mantém o rascunho: o utilizador continua a preencher o formulário.
               setCheckedDays(null);
             }}
             onConfirm={async (userIds) => {
