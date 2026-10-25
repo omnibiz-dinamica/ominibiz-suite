@@ -18,6 +18,8 @@ import {
   ModalSection,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { useFormDraft } from "@/lib/form-draft";
+import { DraftNotice } from "@/components/form-draft/DraftNotice";
 import {
   Plus,
   Users,
@@ -844,33 +846,36 @@ function ClientForm({
 
   // ----- Rascunho automático: restaura os valores guardados e reporta mudanças -----
   const appliedDraftRef = useRef(false);
-  useEffect(() => {
-    if (!draftValues || appliedDraftRef.current || draftConflict) return;
+  const applyDraftValues = (values: ClientFormDraft) => {
     appliedDraftRef.current = true;
-    setName(draftValues.name);
-    setPhone(draftValues.phone);
-    setEmail(draftValues.email);
-    setAddress(draftValues.address);
-    addressRef.current = draftValues.address;
-    setNotes(draftValues.notes);
-    setScheduleNotes(draftValues.scheduleNotes);
-    setInstructions(draftValues.instructions);
-    setStatus(draftValues.status);
-    setBillingMode(draftValues.billingMode);
-    setHourlyRate(draftValues.hourlyRate);
-    setFixedRate(draftValues.fixedRate);
-    setMonthlyRate(draftValues.monthlyRate);
-    setDailyRate(draftValues.dailyRate);
-    setScheduleEnabled(draftValues.scheduleEnabled);
-    setSchedules(draftValues.schedules as ScheduleDraft[]);
-    setGeo(draftValues.geo);
-    geoRef.current = draftValues.geo;
-    setSelected(new Set(draftValues.selected));
-    setPrimary(draftValues.primary);
-    setAssignmentTypes(draftValues.assignmentTypes);
-    if (draftValues.address.trim() && draftValues.address.trim() !== (initial?.geo_address ?? initial?.address ?? "").trim()) {
+    setName(values.name);
+    setPhone(values.phone);
+    setEmail(values.email);
+    setAddress(values.address);
+    addressRef.current = values.address;
+    setNotes(values.notes);
+    setScheduleNotes(values.scheduleNotes);
+    setInstructions(values.instructions);
+    setStatus(values.status);
+    setBillingMode(values.billingMode);
+    setHourlyRate(values.hourlyRate);
+    setFixedRate(values.fixedRate);
+    setMonthlyRate(values.monthlyRate);
+    setDailyRate(values.dailyRate);
+    setScheduleEnabled(values.scheduleEnabled);
+    setSchedules(values.schedules as ScheduleDraft[]);
+    setGeo(values.geo);
+    geoRef.current = values.geo;
+    setSelected(new Set(values.selected));
+    setPrimary(values.primary);
+    setAssignmentTypes(values.assignmentTypes);
+    if (values.address.trim() && values.address.trim() !== (initial?.geo_address ?? initial?.address ?? "").trim()) {
       lastGeocodedRef.current = null; // endereço restaurado ainda não geocodificado
     }
+  };
+  useEffect(() => {
+    if (!draftValues || appliedDraftRef.current || draftConflict) return;
+    applyDraftValues(draftValues);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftValues, draftConflict]);
 
@@ -1042,7 +1047,7 @@ function ClientForm({
             savedAt={draftSavedAt}
             conflict={draftConflict}
             onUseDraft={() => {
-              appliedDraftRef.current = false;
+              if (draftValues) applyDraftValues(draftValues);
             }}
             onDiscard={() => {
               appliedDraftRef.current = false;
