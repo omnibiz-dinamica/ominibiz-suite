@@ -170,6 +170,10 @@ export function EditRecurrenceDialog({
       setScheduledTime(recurrence.scheduled_time?.slice(0, 5) ?? "");
       setDuration(recurrence.duration_minutes);
     }
+    if (!appliedDraftRef.current) {
+      initialFingerprintRef.current = JSON.stringify(currentValues());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, recurrence, fromTask, allowThis]);
 
   const submit = async (confirmed = false) => {
