@@ -1,8 +1,10 @@
 import { createFileRoute, Link, Outlet, useChildMatches } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { useFormDraft } from "@/lib/form-draft";
+import { DraftNotice } from "@/components/form-draft/DraftNotice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,12 +20,65 @@ import {
   type CatalogRow,
 } from "@/lib/vehicle-brands";
 
+
+interface VehicleFormDraft extends Record<string, unknown> {
+  plate: string;
+  kind: string;
+  brand: string;
+  model: string;
+  year: string;
+  km: string;
+  fuelTypeV: string;
+  status?: string;
+}
+
+function useLocalFormDraft(values: VehicleFormDraft, initial: VehicleFormDraft, open: boolean,
+  apply: (values: VehicleFormDraft) => void, reopen: () => void,
+  recordId?: string, baseUpdatedAt?: string | null) {
+  const { user, currentCompanyId } = useAuth();
+  const dirty = JSON.stringify(values) !== JSON.stringify(initial);
+  const draft = useFormDraft<VehicleFormDraft>({
+    formId: "vehicle-form", recordId, baseUpdatedAt,
+    userId: user?.id, companyId: currentCompanyId, dirty,
+  });
+  const applied = useRef(false);
+  const restoredValues = useRef<VehicleFormDraft | null>(null);
+  const skipSave = useRef(false);
+  const blocked = useRef(false);
+  useEffect(() => {
+    if (draft.restored === null || applied.current) return;
+    applied.current = true;
+    restoredValues.current = draft.restored;
+    skipSave.current = true;
+    if (!draft.conflict) apply(draft.restored);
+    if (!recordId && draft.restoredOpen) reopen();
+  }, [draft.restored, draft.conflict, draft.restoredOpen, recordId]);
+  useEffect(() => {
+    if (skipSave.current) { skipSave.current = false; return; }
+    if (blocked.current || (draft.conflict && restoredValues.current)) return;
+    if (dirty || applied.current) draft.save(values, { open });
+  }, [values.plate, values.kind, values.brand, values.model, values.year, values.km, values.fuelTypeV, values.status, open, dirty, draft.save]);
+  return {
+    clear: () => { blocked.current = true; draft.clear(); },
+    resume: () => { blocked.current = false; },
+    notice: draft.savedAt !== null ? <DraftNotice savedAt={draft.savedAt}
+      conflict={draft.conflict} onDiscard={() => { blocked.current = true; draft.clear(); }}
+      onUseDraft={() => {
+        if (restoredValues.current) {
+          blocked.current = false;
+          apply(restoredValues.current);
+          restoredValues.current = null;
+        }
+      }} /> : null,
+  };
+}
+
 export const Route = createFileRoute("/app/frota")({ component: FrotaPage });
 
 type Vehicle = {
   id: string; company_id: string; plate: string; brand: string | null; model: string | null;
   year: number | null; current_km: number; fuel_type: string; kind: string; status: string;
-  plate_photo_path: string | null;
+  plate_photo_path: string | null; updated_at?: string | null;
 };
 type Assignment = { id: string; vehicle_id: string; user_id: string };
 type FuelCard = {
@@ -387,8 +442,11 @@ function VehicleManager({
 
   const brandsForKind = brandsByKind[kind] ?? {};
 
-  useEffect(() => { setBrand(""); setModel(""); }, [kind]);
-  useEffect(() => { setModel(""); }, [brand]);
+  const localDraft = useLocalFormDraft(
+    { plate, kind, brand, model, year, km, fuelTypeV },
+    { plate: "", kind: "carro", brand: "", model: "", year: "", km: "0", fuelTypeV: "flex" },
+    open, (d) => { setPlate(d.plate); setKind(d.kind); setBrand(d.brand); setModel(d.model);
+      setYear(d.year); setKm(d.km); setFuelTypeV(d.fuelTypeV); }, () => setOpen(true));
 
   const create = useMutation({
     mutationFn: async () => {
@@ -404,6 +462,7 @@ function VehicleManager({
       if (error) throw error;
     },
     onSuccess: () => {
+      localDraft.clear();
       toast.success("Veículo cadastrado");
       setOpen(false);
       setPlate(""); setBrand(""); setModel(""); setYear(""); setKm("0");
@@ -436,13 +495,14 @@ function VehicleManager({
     <section className="rounded-2xl border border-border bg-card p-5">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="font-semibold">Veículos ({vehicles.length})</h2>
-        <Button size="sm" onClick={() => setOpen((o) => !o)}>
+        <Button size="sm" onClick={() => { localDraft.resume(); setOpen((o) => !o); }}>
           <Plus className="h-4 w-4" /> {open ? "Fechar" : "Novo veículo"}
         </Button>
       </div>
 
       {open && (
         <div className="mb-4 grid gap-3 rounded-lg border border-border bg-background p-3 md:grid-cols-3">
+          <div className="md:col-span-3">{localDraft.notice}</div>
           <div>
             <Label>Matrícula / Placa</Label>
             <Input value={plate} onChange={(e) => setPlate(e.target.value)} placeholder="AA-00-AA" />
@@ -450,7 +510,7 @@ function VehicleManager({
           <div>
             <Label>Tipo</Label>
             <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-              value={kind} onChange={(e) => setKind(e.target.value)}>
+              value={kind} onChange={(e) => { setKind(e.target.value); setBrand(""); setModel(""); }}>
               {VEHICLE_KINDS.map((x) => <option key={x} value={x}>{VEHICLE_KIND_LABELS[x]}</option>)}
             </select>
           </div>
@@ -468,7 +528,7 @@ function VehicleManager({
             brandsForKind={brandsForKind}
             brand={brand}
             model={model}
-            onBrandChange={setBrand}
+            onBrandChange={(b) => { setBrand(b); setModel(""); }}
             onModelChange={setModel}
             onCatalogChanged={onChange}
           />
@@ -533,6 +593,15 @@ function VehicleRow({
 
   const brandsForKind = brandsByKind[kind] ?? {};
 
+  const localDraft = useLocalFormDraft(
+    { plate, kind, brand, model, year, km, fuelTypeV, status },
+    { plate: v.plate, kind: v.kind, brand: v.brand ?? "", model: v.model ?? "",
+      year: v.year != null ? String(v.year) : "", km: String(v.current_km ?? 0),
+      fuelTypeV: v.fuel_type, status: v.status }, editing,
+    (d) => { setPlate(d.plate); setKind(d.kind); setBrand(d.brand); setModel(d.model);
+      setYear(d.year); setKm(d.km); setFuelTypeV(d.fuelTypeV); setStatus(d.status ?? v.status); },
+    () => {}, v.id, v.updated_at);
+
   const resetForm = () => {
     setPlate(v.plate); setKind(v.kind); setBrand(v.brand ?? "");
     setModel(v.model ?? ""); setYear(v.year != null ? String(v.year) : "");
@@ -552,7 +621,7 @@ function VehicleRow({
       }).eq("id", v.id);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Veículo atualizado"); setEditing(false); onChanged(); },
+    onSuccess: () => { localDraft.clear(); toast.success("Veículo atualizado"); setEditing(false); onChanged(); },
     onError: (e: any) => toast.error(e.message ?? "Falha"),
   });
 
@@ -615,7 +684,7 @@ function VehicleRow({
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button size="sm" variant="outline" onClick={() => { resetForm(); setEditing((o) => !o); }}>
+          <Button size="sm" variant="outline" onClick={() => { if (editing) { localDraft.clear(); resetForm(); } else { localDraft.resume(); if (!localDraft.notice) resetForm(); } setEditing((o) => !o); }}>
             <Pencil className="h-4 w-4" /> {editing ? "Cancelar" : "Editar"}
           </Button>
           <Button size="sm" variant="outline" onClick={() => toggleStatus.mutate()} disabled={toggleStatus.isPending}>
@@ -631,6 +700,7 @@ function VehicleRow({
 
       {editing && (
         <div className="mt-3 grid gap-3 rounded-lg border border-border bg-background p-3 md:grid-cols-3">
+          <div className="md:col-span-3">{localDraft.notice}</div>
           <div>
             <Label>Matrícula / Placa</Label>
             <Input value={plate} onChange={(e) => setPlate(e.target.value)} />
@@ -672,7 +742,7 @@ function VehicleRow({
             </select>
           </div>
           <div className="md:col-span-3 flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => setEditing(false)}>Cancelar</Button>
+            <Button variant="ghost" onClick={() => { localDraft.clear(); setEditing(false); }}>Cancelar</Button>
             <Button onClick={() => save.mutate()} disabled={save.isPending}>Salvar alterações</Button>
           </div>
         </div>
