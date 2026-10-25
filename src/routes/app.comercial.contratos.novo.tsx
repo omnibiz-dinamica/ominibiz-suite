@@ -1,7 +1,10 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
+import { useFormDraft } from "@/lib/form-draft";
+import { DraftNotice } from "@/components/form-draft/DraftNotice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,6 +37,75 @@ function WizardPage() {
   const [promoFee, setPromoFee] = useState("");
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState("");
+
+  // ----- Rascunho automático do assistente de novo contrato -----
+  interface ContractWizardDraft extends Record<string, unknown> {
+    step: number;
+    clientId: string;
+    templateId: string;
+    planName: string;
+    services: string[];
+    monthlyFee: string;
+    creditsLimit: string;
+    promoMonths: string;
+    promoFee: string;
+    startDate: string;
+    notes: string;
+  }
+  const { user, currentCompanyId } = useAuth();
+  const appliedDraftRef = useRef(false);
+  const restoredDraftRef = useRef<ContractWizardDraft | null>(null);
+  const initialFingerprintRef = useRef<string | null>(null);
+  if (initialFingerprintRef.current === null) {
+    initialFingerprintRef.current = JSON.stringify({
+      step, clientId, templateId, planName, services, monthlyFee, creditsLimit, promoMonths, promoFee, startDate, notes,
+    });
+  }
+  const draftDirty =
+    JSON.stringify({
+      step, clientId, templateId, planName, services, monthlyFee, creditsLimit, promoMonths, promoFee, startDate, notes,
+    }) !== initialFingerprintRef.current;
+  const draft = useFormDraft<ContractWizardDraft>({
+    formId: "contract-wizard-form",
+    companyId: currentCompanyId,
+    userId: user?.id,
+    dirty: draftDirty,
+  });
+  const applyDraft = (values: ContractWizardDraft) => {
+    appliedDraftRef.current = true;
+    setStep(values.step);
+    setClientId(values.clientId);
+    setTemplateId(values.templateId);
+    setPlanName(values.planName);
+    setServices(values.services);
+    setMonthlyFee(values.monthlyFee);
+    setCreditsLimit(values.creditsLimit);
+    setPromoMonths(values.promoMonths);
+    setPromoFee(values.promoFee);
+    setStartDate(values.startDate);
+    setNotes(values.notes);
+  };
+  useEffect(() => {
+    if (!draft.restored || appliedDraftRef.current) return;
+    restoredDraftRef.current = draft.restored;
+    if (!draft.conflict) applyDraft(draft.restored);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft.restored, draft.conflict]);
+  useEffect(() => {
+    if (draft.restored && !appliedDraftRef.current) return; // rascunho pendente de decisão
+    if (!draftDirty) return;
+    draft.save(
+      { step, clientId, templateId, planName, services, monthlyFee, creditsLimit, promoMonths, promoFee, startDate, notes },
+      { open: true },
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, clientId, templateId, planName, services, monthlyFee, creditsLimit, promoMonths, promoFee, startDate, notes, draftDirty]);
+  const clearDraft = () => {
+    appliedDraftRef.current = false;
+    restoredDraftRef.current = null;
+    draft.clear();
+  };
+
 
   const { data: clients = [] } = useQuery({
     queryKey: ["wizard-clients"],
@@ -94,6 +166,7 @@ function WizardPage() {
       return { id: contractId, token };
     },
     onSuccess: ({ id, token }) => {
+      clearDraft();
       const url = buildAppUrl(`/sign/${token}`);
       navigator.clipboard?.writeText(url).catch(() => {});
       toast.success("Contrato criado", { description: "Link de assinatura copiado." });
@@ -124,6 +197,18 @@ function WizardPage() {
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-6">
+        {draft.savedAt !== null && (
+          <div className="mb-4">
+            <DraftNotice
+              savedAt={draft.savedAt}
+              conflict={draft.conflict}
+              onUseDraft={() => {
+                if (restoredDraftRef.current) applyDraft(restoredDraftRef.current);
+              }}
+              onDiscard={clearDraft}
+            />
+          </div>
+        )}
         {step === 0 && (
           <div className="space-y-3">
             <Label>Cliente</Label>

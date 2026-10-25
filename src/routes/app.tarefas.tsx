@@ -116,6 +116,8 @@ import {
 import { RecurrenceForm, emptyRecurrence, type RecurrenceFormValue } from "@/components/tasks/RecurrenceForm";
 import { TaskDocuments } from "@/components/tasks/TaskDocuments";
 import { ReassignDialog } from "@/components/tasks/ReassignDialog";
+import { useFormDraft } from "@/lib/form-draft";
+import { DraftNotice } from "@/components/form-draft/DraftNotice";
 import { EditRecurrenceDialog } from "@/components/tasks/EditRecurrenceDialog";
 import type { RecurrenceRow } from "@/lib/tasks";
 import { isRefused } from "@/lib/tasks";
@@ -254,6 +256,49 @@ function TasksPage() {
   const navigate = Route.useNavigate();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<TaskRow | null>(null);
+
+  // ----- Rascunho automático do formulário de tarefa (criar/editar) -----
+  // O diálogo desmonta o TaskForm, por isso o rascunho vive aqui: o
+  // formulário reporta os valores e recebe o rascunho para restaurar.
+  const [taskDraftValues, setTaskDraftValues] = useState<TaskFormDraft | null>(null);
+  const taskBaselineRef = useRef("");
+  const taskReopenedRef = useRef(false);
+  const taskDialogOpen = open || !!editing;
+  const taskDraftDirty =
+    taskDialogOpen && taskDraftValues !== null && JSON.stringify(taskDraftValues) !== taskBaselineRef.current;
+  const taskDraft = useFormDraft<TaskFormDraft>({
+    formId: "task-form",
+    recordId: editing?.id ?? null,
+    companyId: currentCompanyId,
+    userId: user?.id,
+    enabled: isManager && !!user && !!currentCompanyId,
+    baseUpdatedAt: (editing as { updated_at?: string | null } | null)?.updated_at ?? null,
+    dirty: taskDraftDirty,
+  });
+  // Nova sessão de diálogo: zera a linha de base do rascunho.
+  useEffect(() => {
+    taskBaselineRef.current = "";
+    setTaskDraftValues(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editing?.id]);
+  // Reabre o diálogo de criação se havia rascunho com o formulário aberto.
+  useEffect(() => {
+    if (!taskDraft.restored || !taskDraft.restoredOpen) return;
+    if (taskDialogOpen || taskReopenedRef.current) return;
+    taskReopenedRef.current = true;
+    setOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taskDraft.restored, taskDraft.restoredOpen, taskDialogOpen]);
+  const handleTaskDraftValues = (values: TaskFormDraft) => {
+    if (taskBaselineRef.current === "") taskBaselineRef.current = JSON.stringify(values);
+    setTaskDraftValues(values);
+    taskDraft.save(values, { open: true });
+  };
+  const clearTaskDraft = () => {
+    taskBaselineRef.current = "";
+    setTaskDraftValues(null);
+    taskDraft.clear();
+  };
   const [reassigning, setReassigning] = useState<TaskRow | null>(null);
   const [editingSeries, setEditingSeries] = useState<TaskRow | null>(null);
   const [seriesRow, setSeriesRow] = useState<RecurrenceRow | null>(null);
@@ -1236,7 +1281,14 @@ function TasksPage() {
                 <Repeat className="mr-2 h-4 w-4" /> Recorrências
               </Link>
             </Button>
-            <Dialog open={open} onOpenChange={setOpen}>
+            <Dialog
+              open={open}
+              onOpenChange={(v) => {
+                // Fechar por ESC/clique fora: mantém o rascunho com open:false.
+                if (!v && taskDraftValues) taskDraft.save(taskDraftValues, { open: false });
+                setOpen(v);
+              }}
+            >
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="mr-2 h-4 w-4" /> Nova tarefa
@@ -1254,8 +1306,17 @@ function TasksPage() {
                   clients={clientsList ?? []}
                   companyId={currentCompanyId}
                   userId={user!.id}
-                  onCancel={() => setOpen(false)}
+                  draftValues={taskDraft.restored}
+                  draftSavedAt={taskDraft.savedAt}
+                  draftConflict={taskDraft.conflict}
+                  onDraftValues={handleTaskDraftValues}
+                  onDraftDiscard={clearTaskDraft}
+                  onCancel={() => {
+                    clearTaskDraft();
+                    setOpen(false);
+                  }}
                   onDone={() => {
+                    clearTaskDraft();
                     setOpen(false);
                     qc.invalidateQueries({ queryKey: ["tasks"] });
                   }}
@@ -1266,7 +1327,16 @@ function TasksPage() {
         )}
       </div>
 
-      <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
+      <Dialog
+        open={!!editing}
+        onOpenChange={(v) => {
+          // Fechar por ESC/clique fora: mantém o rascunho com open:false.
+          if (!v) {
+            if (taskDraftValues) taskDraft.save(taskDraftValues, { open: false });
+            setEditing(null);
+          }
+        }}
+      >
         <DialogContent size="lg">
           <ModalHeader icon={ListTodo} title="Editar tarefa" description="Atualize os dados e anexos da tarefa." />
           {editing && (
@@ -1282,8 +1352,17 @@ function TasksPage() {
               clients={clientsList ?? []}
               companyId={editing.company_id}
               userId={user!.id}
-              onCancel={() => setEditing(null)}
+              draftValues={taskDraft.restored}
+              draftSavedAt={taskDraft.savedAt}
+              draftConflict={taskDraft.conflict}
+              onDraftValues={handleTaskDraftValues}
+              onDraftDiscard={clearTaskDraft}
+              onCancel={() => {
+                clearTaskDraft();
+                setEditing(null);
+              }}
               onDone={() => {
+                clearTaskDraft();
                 setEditing(null);
                 qc.invalidateQueries({ queryKey: ["tasks"] });
               }}
@@ -3437,6 +3516,23 @@ function taskSaveErrorMessage(error: unknown): string {
     .join("\n");
 }
 
+/** Rascunho do formulário de tarefa (criar/editar), guardado pelo pai. */
+interface TaskFormDraft extends Record<string, unknown> {
+  title: string;
+  description: string;
+  assignees: string[];
+  clientId: string;
+  priority: "baixa" | "media" | "alta" | "urgente";
+  startDate: string;
+  startTime: string;
+  endDate: string;
+  endTime: string;
+  graceMinutes: number;
+  punchMode: string;
+  recurrence: RecurrenceFormValue;
+  manualEndOverride: boolean;
+}
+
 function TaskForm({
   formId,
   members,
@@ -3447,6 +3543,11 @@ function TaskForm({
   onCancel,
   onDone,
   documentsSlot,
+  draftValues = null,
+  draftSavedAt = null,
+  draftConflict = false,
+  onDraftValues,
+  onDraftDiscard,
 }: {
   formId: string;
   members: { id: string; full_name: string | null; email?: string | null }[];
@@ -3462,6 +3563,11 @@ function TaskForm({
   onCancel: () => void;
   onDone: () => void;
   documentsSlot?: ReactNode;
+  draftValues?: TaskFormDraft | null;
+  draftSavedAt?: number | null;
+  draftConflict?: boolean;
+  onDraftValues?: (values: TaskFormDraft) => void;
+  onDraftDiscard?: () => void;
 }) {
   const { t } = useT();
   const [title, setTitle] = useState(initial?.title ?? "");
@@ -3615,6 +3721,64 @@ function TaskForm({
   const [schedulePrompt, setSchedulePrompt] = useState<ClientScheduleSlot[]>([]);
   const [scheduleHint, setScheduleHint] = useState<string | null>(null);
   const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(null);
+
+  // ----- Rascunho automático: restaura os valores guardados e reporta mudanças -----
+  const appliedDraftRef = useRef(false);
+  const applyDraftValues = (values: TaskFormDraft) => {
+    appliedDraftRef.current = true;
+    setTitle(values.title);
+    setDescription(values.description);
+    setAssignees(values.assignees);
+    setGroupAssignees(values.assignees);
+    setClientId(values.clientId);
+    setPriority(values.priority);
+    setStartDate(values.startDate);
+    setStartTime(values.startTime);
+    setEndDate(values.endDate);
+    setEndTime(values.endTime);
+    setGraceMinutes(values.graceMinutes);
+    setPunchMode(values.punchMode as PunchMode | "");
+    setRecurrence(values.recurrence);
+    setManualEndOverride(values.manualEndOverride);
+  };
+  useEffect(() => {
+    if (!draftValues || appliedDraftRef.current || draftConflict) return;
+    applyDraftValues(draftValues);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftValues, draftConflict]);
+  useEffect(() => {
+    onDraftValues?.({
+      title,
+      description,
+      assignees,
+      clientId,
+      priority,
+      startDate,
+      startTime,
+      endDate,
+      endTime,
+      graceMinutes,
+      punchMode,
+      recurrence,
+      manualEndOverride,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    title,
+    description,
+    assignees,
+    clientId,
+    priority,
+    startDate,
+    startTime,
+    endDate,
+    endTime,
+    graceMinutes,
+    punchMode,
+    recurrence,
+    manualEndOverride,
+  ]);
+
 
   const selectedClient = clients.find((client) => client.id === clientId);
   const selectedSchedule = clientSchedule.find((schedule) => schedule.id === selectedScheduleId) ?? null;
@@ -3827,6 +3991,19 @@ function TaskForm({
   return (
     <>
       <ModalBody className="space-y-4" data-modal-body>
+        {draftSavedAt !== null && (
+          <DraftNotice
+            savedAt={draftSavedAt}
+            conflict={draftConflict}
+            onUseDraft={() => {
+              if (draftValues) applyDraftValues(draftValues);
+            }}
+            onDiscard={() => {
+              appliedDraftRef.current = false;
+              onDraftDiscard?.();
+            }}
+          />
+        )}
         <form
           id={formId}
           className="space-y-4"

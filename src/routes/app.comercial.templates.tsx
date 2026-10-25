@@ -1,7 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
+import { useFormDraft } from "@/lib/form-draft";
+import { DraftNotice } from "@/components/form-draft/DraftNotice";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,7 +57,47 @@ const DEFAULT_MAP: PlaceholderMap = {
 
 function TemplatesPage() {
   const qc = useQueryClient();
+  const { user, currentCompanyId } = useAuth();
   const [editing, setEditing] = useState<Tpl | null>(null);
+
+  // ----- Rascunho automático do editor de templates -----
+  type TemplateDraft = Tpl & Record<string, unknown>;
+  const appliedDraftRef = useRef(false);
+  const restoredDraftRef = useRef<TemplateDraft | null>(null);
+  const baselineRef = useRef("");
+  const editingKey = editing ? editing.id || "new" : "";
+  const prevEditingKeyRef = useRef("");
+  if (editingKey !== prevEditingKeyRef.current) {
+    prevEditingKeyRef.current = editingKey;
+    baselineRef.current = editing ? JSON.stringify(editing) : "";
+  }
+  const draftDirty = !!editing && baselineRef.current !== "" && JSON.stringify(editing) !== baselineRef.current;
+  const draft = useFormDraft<TemplateDraft>({
+    formId: "contract-template-form",
+    recordId: editing?.id || null,
+    companyId: currentCompanyId,
+    userId: user?.id,
+    dirty: draftDirty,
+  });
+  useEffect(() => {
+    if (!draft.restored || appliedDraftRef.current || editing) return;
+    appliedDraftRef.current = true;
+    restoredDraftRef.current = draft.restored;
+    setEditing(draft.restored);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft.restored, editing]);
+  useEffect(() => {
+    if (!editing) return;
+    if (draft.restored && !appliedDraftRef.current) return;
+    if (!draftDirty && draft.savedAt === null) return;
+    draft.save({ ...editing }, { open: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing, draftDirty]);
+  const clearDraft = () => {
+    appliedDraftRef.current = false;
+    restoredDraftRef.current = null;
+    draft.clear();
+  };
 
   const { data: tpls = [] } = useQuery({
     queryKey: ["contract_templates"],
@@ -90,6 +133,7 @@ function TemplatesPage() {
       }
     },
     onSuccess: () => {
+      clearDraft();
       toast.success("Template guardado");
       qc.invalidateQueries({ queryKey: ["contract_templates"] });
       setEditing(null);
@@ -159,6 +203,16 @@ function TemplatesPage() {
           <div className="text-sm text-muted-foreground">Selecione ou crie um template para editar.</div>
         ) : (
           <div className="space-y-3">
+            {draft.savedAt !== null && (
+              <DraftNotice
+                savedAt={draft.savedAt}
+                conflict={draft.conflict}
+                onUseDraft={() => {
+                  if (restoredDraftRef.current) setEditing(restoredDraftRef.current);
+                }}
+                onDiscard={clearDraft}
+              />
+            )}
             <div className="flex items-center justify-between gap-2">
               <Label className="text-base font-medium">{editing.id ? "Editar template" : "Novo template"}</Label>
               <div className="flex items-center gap-2">
@@ -225,7 +279,7 @@ function TemplatesPage() {
             </details>
 
             <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => setEditing(null)}>Cancelar</Button>
+              <Button variant="ghost" onClick={() => { clearDraft(); setEditing(null); }}>Cancelar</Button>
               <Button onClick={() => save.mutate(editing)} disabled={save.isPending}>{save.isPending ? "A guardar…" : "Guardar"}</Button>
             </div>
           </div>
