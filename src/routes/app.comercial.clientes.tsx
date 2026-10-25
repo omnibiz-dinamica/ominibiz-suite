@@ -102,6 +102,7 @@ function ClientsPage() {
       baselineRef.current = JSON.stringify(form);
       return;
     }
+    if (!draftDirty) return;
     draft.save({ ...form }, { open: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form, open]);
@@ -112,7 +113,7 @@ function ClientsPage() {
     draft.clear();
   };
   const handleOpenChange = (v: boolean) => {
-    if (!v && baselineRef.current !== "") draft.save({ ...form }, { open: false });
+    if (!v && draftDirty) draft.save({ ...form }, { open: false });
     setOpen(v);
   };
 
@@ -223,7 +224,14 @@ function ClientsPage() {
                   onUseDraft={() => {
                     if (restoredDraftRef.current) applyDraft(restoredDraftRef.current);
                   }}
-                  onDiscard={clearDraft}
+                  onDiscard={() => {
+                    // Limpa o rascunho e repõe os valores do registo (ou vazio).
+                    const id = form.id;
+                    clearDraft();
+                    const row = id ? clients.find((c) => c.id === id) : undefined;
+                    if (row) openEdit(row);
+                    else setForm({ ...empty });
+                  }}
                 />
               )}
               <ModalSection title="Dados do cliente" icon={Building2}>
