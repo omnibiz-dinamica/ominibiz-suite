@@ -507,6 +507,21 @@ function NewExtraWorkSection({
       <h2 className="mb-3 flex items-center gap-2 font-semibold">
         <Plus className="h-4 w-4" /> Novo trabalho extra
       </h2>
+      {draft.savedAt !== null && (
+        <div className="mb-3">
+          <DraftNotice
+            savedAt={draft.savedAt}
+            conflict={draft.conflict}
+            onUseDraft={() => {
+              if (restoredDraftRef.current) applyDraft(restoredDraftRef.current);
+            }}
+            onDiscard={() => {
+              restoredDraftRef.current = null;
+              draft.clear();
+            }}
+          />
+        </div>
+      )}
       <div className="grid gap-3 md:grid-cols-3">
         <div>
           <Label>Cliente</Label>
