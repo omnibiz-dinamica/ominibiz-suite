@@ -337,6 +337,9 @@ function EligibleSection({ members }: { members: { id: string; name: string }[] 
   });
 
   const selected = draft ?? eligible ?? new Set<string>();
+  // Sem lista definida: a lista abre logo, com a explicação (antes de criar trabalhos extra).
+  const isEmpty = eligible !== undefined && eligible.size === 0;
+  const showList = open || isEmpty;
   const toggle = (id: string) => {
     const next = new Set(selected);
     if (next.has(id)) next.delete(id);
@@ -369,12 +372,20 @@ function EligibleSection({ members }: { members: { id: string; name: string }[] 
           <Users className="h-4 w-4" /> Funcionários que fazem trabalho extra
           <span className="text-sm font-normal text-muted-foreground">({eligible?.size ?? 0})</span>
         </h2>
-        <Button variant="outline" size="sm" onClick={() => setOpen((o) => !o)}>
-          {open ? "Fechar" : "Editar lista"}
-        </Button>
+        {!isEmpty && (
+          <Button variant="outline" size="sm" onClick={() => setOpen((o) => !o)}>
+            {open ? "Fechar" : "Editar lista"}
+          </Button>
+        )}
       </div>
-      {open && (
+      {showList && (
         <div className="mt-3 space-y-3">
+          {isEmpty && (
+            <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+              Primeiro escolha quem faz trabalho extra: marque os funcionários abaixo e carregue em "Guardar lista". Só
+              eles aparecem na lista de disponíveis.
+            </div>
+          )}
           {members.length === 0 && <div className="text-sm text-muted-foreground">Sem funcionários ativos.</div>}
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {members.map((m) => (
@@ -639,7 +650,8 @@ function AvailabilityPicker({
       {error && <div className="text-sm text-destructive">{errorMessage(error)}</div>}
       {!isLoading && !error && rows.length === 0 && (
         <div className="text-sm text-muted-foreground">
-          Nenhum funcionário elegível. Use "Editar lista" em "Funcionários que fazem trabalho extra".
+          Ainda não há funcionários na lista de trabalho extra. Escolha-os acima, em "Funcionários que fazem trabalho
+          extra", e guarde a lista.
         </div>
       )}
 
