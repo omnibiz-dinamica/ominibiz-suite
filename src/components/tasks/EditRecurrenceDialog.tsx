@@ -284,6 +284,7 @@ export function EditRecurrenceDialog({
         );
         toast.success(`${n} ocorrência(s) atualizada(s)`);
       }
+      clearDraft();
       onDone();
       onOpenChange(false);
     } catch (e) {
@@ -294,10 +295,20 @@ export function EditRecurrenceDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent size="md">
         <ModalHeader icon={Repeat} title="Editar recorrência" description="Atualize os dados desta série de tarefas." />
         <ModalBody className="space-y-4">
+          {draft.savedAt !== null && (
+            <DraftNotice
+              savedAt={draft.savedAt}
+              conflict={draft.conflict}
+              onUseDraft={() => {
+                if (restoredDraftRef.current) applyDraft(restoredDraftRef.current);
+              }}
+              onDiscard={clearDraft}
+            />
+          )}
           <div className="space-y-1.5">
             <Label>Aplicar em</Label>
             <Select value={scope} onValueChange={(v) => setScope(v as ReassignScope)}>
@@ -392,7 +403,15 @@ export function EditRecurrenceDialog({
 
         </ModalBody>
         <ModalFooter>
-          <Button type="button" variant="outline" disabled={saving} onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={saving}
+            onClick={() => {
+              clearDraft();
+              onOpenChange(false);
+            }}
+          >
             Cancelar
           </Button>
           <Button disabled={saving || !title.trim() || !assignedTo} onClick={() => void submit()}>
