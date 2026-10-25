@@ -369,7 +369,9 @@ function FeriasPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft.restored, draft.conflict]);
   useEffect(() => {
-    if (clearedDraftRef.current) return;
+    // Si tras limpiar (envío o descarte) la persona vuelve a escribir, se reactiva el rascunho.
+    if (clearedDraftRef.current && !draftDirty) return;
+    if (draftDirty) clearedDraftRef.current = false;
     if (draft.restored && !appliedDraftRef.current) return; // rascunho pendente de decisão
     if (!draftDirty) return;
     draft.save({ start, end, workLocation, note, priorValidation, validatedBy }, { open: true });
@@ -759,6 +761,21 @@ function FeriasPage() {
           <h2 className="mb-3 flex items-center gap-2 font-semibold">
             <Plus className="h-4 w-4" /> Nova Solicitação
           </h2>
+          {draft.savedAt !== null && (
+            <div className="mb-3">
+              <DraftNotice
+                savedAt={draft.savedAt}
+                conflict={draft.conflict}
+                onUseDraft={() => {
+                  if (restoredDraftRef.current) applyDraft(restoredDraftRef.current);
+                }}
+                onDiscard={() => {
+                  restoredDraftRef.current = null;
+                  draft.clear();
+                }}
+              />
+            </div>
+          )}
           <div className="grid gap-3 md:grid-cols-3">
             <div>
               <Label htmlFor="start">Data de início</Label>
