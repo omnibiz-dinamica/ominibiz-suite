@@ -116,6 +116,8 @@ import {
 import { RecurrenceForm, emptyRecurrence, type RecurrenceFormValue } from "@/components/tasks/RecurrenceForm";
 import { TaskDocuments } from "@/components/tasks/TaskDocuments";
 import { ReassignDialog } from "@/components/tasks/ReassignDialog";
+import { useFormDraft } from "@/lib/form-draft";
+import { DraftNotice } from "@/components/form-draft/DraftNotice";
 import { EditRecurrenceDialog } from "@/components/tasks/EditRecurrenceDialog";
 import type { RecurrenceRow } from "@/lib/tasks";
 import { isRefused } from "@/lib/tasks";
@@ -3720,6 +3722,64 @@ function TaskForm({
   const [scheduleHint, setScheduleHint] = useState<string | null>(null);
   const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(null);
 
+  // ----- Rascunho automático: restaura os valores guardados e reporta mudanças -----
+  const appliedDraftRef = useRef(false);
+  const applyDraftValues = (values: TaskFormDraft) => {
+    appliedDraftRef.current = true;
+    setTitle(values.title);
+    setDescription(values.description);
+    setAssignees(values.assignees);
+    setGroupAssignees(values.assignees);
+    setClientId(values.clientId);
+    setPriority(values.priority);
+    setStartDate(values.startDate);
+    setStartTime(values.startTime);
+    setEndDate(values.endDate);
+    setEndTime(values.endTime);
+    setGraceMinutes(values.graceMinutes);
+    setPunchMode(values.punchMode as PunchMode | "");
+    setRecurrence(values.recurrence);
+    setManualEndOverride(values.manualEndOverride);
+  };
+  useEffect(() => {
+    if (!draftValues || appliedDraftRef.current || draftConflict) return;
+    applyDraftValues(draftValues);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftValues, draftConflict]);
+  useEffect(() => {
+    onDraftValues?.({
+      title,
+      description,
+      assignees,
+      clientId,
+      priority,
+      startDate,
+      startTime,
+      endDate,
+      endTime,
+      graceMinutes,
+      punchMode,
+      recurrence,
+      manualEndOverride,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    title,
+    description,
+    assignees,
+    clientId,
+    priority,
+    startDate,
+    startTime,
+    endDate,
+    endTime,
+    graceMinutes,
+    punchMode,
+    recurrence,
+    manualEndOverride,
+  ]);
+
+
   const selectedClient = clients.find((client) => client.id === clientId);
   const selectedSchedule = clientSchedule.find((schedule) => schedule.id === selectedScheduleId) ?? null;
   // Programações com nome no cadastro do cliente (ex.: "Klein", "Grote").
@@ -3931,6 +3991,19 @@ function TaskForm({
   return (
     <>
       <ModalBody className="space-y-4" data-modal-body>
+        {draftSavedAt !== null && (
+          <DraftNotice
+            savedAt={draftSavedAt}
+            conflict={draftConflict}
+            onUseDraft={() => {
+              if (draftValues) applyDraftValues(draftValues);
+            }}
+            onDiscard={() => {
+              appliedDraftRef.current = false;
+              onDraftDiscard?.();
+            }}
+          />
+        )}
         <form
           id={formId}
           className="space-y-4"
