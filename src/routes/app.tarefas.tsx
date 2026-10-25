@@ -1294,7 +1294,14 @@ function TasksPage() {
                 <Repeat className="mr-2 h-4 w-4" /> Recorrências
               </Link>
             </Button>
-            <Dialog open={open} onOpenChange={setOpen}>
+            <Dialog
+              open={open}
+              onOpenChange={(v) => {
+                // Fechar por ESC/clique fora: mantém o rascunho com open:false.
+                if (!v && taskDraftValues) taskDraft.save(taskDraftValues, { open: false });
+                setOpen(v);
+              }}
+            >
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="mr-2 h-4 w-4" /> Nova tarefa
@@ -1312,8 +1319,17 @@ function TasksPage() {
                   clients={clientsList ?? []}
                   companyId={currentCompanyId}
                   userId={user!.id}
-                  onCancel={() => setOpen(false)}
+                  draftValues={taskDraft.restored}
+                  draftSavedAt={taskDraft.savedAt}
+                  draftConflict={taskDraft.conflict}
+                  onDraftValues={handleTaskDraftValues}
+                  onDraftDiscard={clearTaskDraft}
+                  onCancel={() => {
+                    clearTaskDraft();
+                    setOpen(false);
+                  }}
                   onDone={() => {
+                    clearTaskDraft();
                     setOpen(false);
                     qc.invalidateQueries({ queryKey: ["tasks"] });
                   }}
@@ -1324,7 +1340,16 @@ function TasksPage() {
         )}
       </div>
 
-      <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
+      <Dialog
+        open={!!editing}
+        onOpenChange={(v) => {
+          // Fechar por ESC/clique fora: mantém o rascunho com open:false.
+          if (!v) {
+            if (taskDraftValues) taskDraft.save(taskDraftValues, { open: false });
+            setEditing(null);
+          }
+        }}
+      >
         <DialogContent size="lg">
           <ModalHeader icon={ListTodo} title="Editar tarefa" description="Atualize os dados e anexos da tarefa." />
           {editing && (
@@ -1340,8 +1365,17 @@ function TasksPage() {
               clients={clientsList ?? []}
               companyId={editing.company_id}
               userId={user!.id}
-              onCancel={() => setEditing(null)}
+              draftValues={taskDraft.restored}
+              draftSavedAt={taskDraft.savedAt}
+              draftConflict={taskDraft.conflict}
+              onDraftValues={handleTaskDraftValues}
+              onDraftDiscard={clearTaskDraft}
+              onCancel={() => {
+                clearTaskDraft();
+                setEditing(null);
+              }}
               onDone={() => {
+                clearTaskDraft();
                 setEditing(null);
                 qc.invalidateQueries({ queryKey: ["tasks"] });
               }}
