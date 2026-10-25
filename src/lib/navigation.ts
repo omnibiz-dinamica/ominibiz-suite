@@ -168,6 +168,7 @@ function employeeGroups(employeeHasVehicle: boolean): NavGroup[] {
         { to: "/app/ponto", label: "Folha de Ponto", icon: Clock, module: "time_clock" },
         { to: "/app/ponto/meus-relatorios", label: "Meus Relatórios", icon: FileText, module: "time_clock" },
         { to: "/app/tarefas", label: "Minhas Tarefas", icon: ListChecks, module: "tasks" },
+        { to: "/app/trabalho-extra", label: "Trabalho Extra", icon: Sparkles, module: "extra_work" },
         { to: "/app/notificacoes", label: "Notificações", icon: Bell },
       ],
     },
@@ -224,6 +225,7 @@ function managerGroups(args: { superAdminOperating: boolean; vertical: BusinessV
         // Clientes faz parte de Planeamento e Tarefas (decisão 2026-09-28).
         { to: "/app/clientes", label: "Clientes", icon: Briefcase, module: "tasks" },
         { to: "/app/tarefas", label: "Tarefas", icon: ClipboardList, module: "tasks" },
+        { to: "/app/trabalho-extra", label: "Trabalho Extra", icon: Sparkles, module: "extra_work" },
         { to: "/app/ponto", label: "Folha de Ponto", icon: Clock, module: "time_clock" },
         { to: "/app/ponto/gestao", label: "Ponto · Gestão", icon: ListChecks, module: "time_clock" },
         { to: "/app/ponto/fechamento", label: "Fechamento Mensal", icon: FileText, module: "time_clock" },

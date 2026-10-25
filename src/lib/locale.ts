@@ -36,6 +36,7 @@ export type ModuleKey =
   | "bi_advanced"
   | "ai_automations"
   | "notes"
+  | "extra_work"
   | "restaurant_dashboard"
   | "restaurant_menu"
   | "restaurant_tables"
@@ -59,12 +60,7 @@ export type ModuleKey =
 
 /** ADR-027 / ADR-033 — Ramo de atividade da empresa (business vertical). */
 export type BusinessVertical =
-  | "cleaning_services"
-  | "restaurant_delivery"
-  | "building_materials"
-  | "hospitality"
-  | "auto_repair"
-  | "generic";
+  "cleaning_services" | "restaurant_delivery" | "building_materials" | "hospitality" | "auto_repair" | "generic";
 
 /** De momento apenas Limpeza está disponível (decisão 2026-09-28). */
 export const BUSINESS_VERTICALS: { value: BusinessVertical; label: string }[] = [
@@ -83,7 +79,6 @@ const KNOWN_VERTICALS: BusinessVertical[] = [
 export function normalizeBusinessVertical(value: string | null | undefined): BusinessVertical {
   return KNOWN_VERTICALS.includes(value as BusinessVertical) ? (value as BusinessVertical) : "cleaning_services";
 }
-
 
 /** Módulos ativados automaticamente ao marcar a empresa como Restaurante & Delivery. */
 export const RESTAURANT_ENABLED_MODULES: ModuleKey[] = [
@@ -202,6 +197,13 @@ export const MODULE_CATALOG: Record<
   fleet: {
     label: "Frota",
     description: "Gestão de veículos e cartões.",
+    addonMonthly: 19,
+    included: false,
+  },
+  extra_work: {
+    label: "Trabalho Extra",
+    description:
+      "Convocação de trabalhos extra: funcionários disponíveis, convites e aceite com criação automática das tarefas.",
     addonMonthly: 19,
     included: false,
   },
@@ -351,7 +353,6 @@ export const MODULE_CATALOG: Record<
   },
 };
 
-
 /** Plano base (decisão 2026-09-28): Notas passa a ser padrão; adicionais ficam desmarcados. */
 export const DEFAULT_ENABLED_MODULES: ModuleKey[] = [
   "core",
@@ -373,10 +374,9 @@ export const DEFAULT_ENABLED_MODULES: ModuleKey[] = [
  * porque o toggle ignora módulos incluídos. A normalização passa a garantir
  * sempre este piso mínimo.
  */
-export const ESSENTIAL_MODULES: ModuleKey[] = (
-  Object.keys(MODULE_CATALOG) as ModuleKey[]
-).filter((m) => MODULE_CATALOG[m].included);
-
+export const ESSENTIAL_MODULES: ModuleKey[] = (Object.keys(MODULE_CATALOG) as ModuleKey[]).filter(
+  (m) => MODULE_CATALOG[m].included,
+);
 
 /**
  * ADR-033 — Módulos do vertical Material de Construção.
@@ -413,13 +413,7 @@ export const BUILDING_MATERIALS_ROUTE_MODULES: Array<{ prefix: string; module: M
 ];
 
 /** ADR-028 / ADR-033 — agrupamento dos módulos por aba na configuração da empresa (UI). */
-export type ModuleTabKey =
-  | "general"
-  | "cleaning"
-  | "restaurant"
-  | "building_materials"
-  | "hospitality"
-  | "auto_repair";
+export type ModuleTabKey = "general" | "cleaning" | "restaurant" | "building_materials" | "hospitality" | "auto_repair";
 
 export const MODULE_TABS: Array<{
   key: ModuleTabKey;
@@ -441,6 +435,7 @@ export const MODULE_TABS: Array<{
       "notes",
       "crm",
       "fleet",
+      "extra_work",
       "whatsapp_ai",
       "bi_advanced",
       "ai_automations",
@@ -451,7 +446,7 @@ export const MODULE_TABS: Array<{
     key: "cleaning",
     label: "Limpeza",
     vertical: "cleaning_services",
-    modules: ["tasks", "crm", "time_clock", "fleet"],
+    modules: ["tasks", "crm", "time_clock", "fleet", "extra_work"],
   },
   {
     key: "restaurant",
@@ -483,7 +478,6 @@ export const MODULE_TABS: Array<{
   modules: ModuleKey[];
 }>; // Ramos não-limpeza ocultos de momento (decisão 2026-09-28).
 
-
 export const ROUTE_MODULES: Array<{ prefix: string; module: ModuleKey }> = [
   { prefix: "/app/tarefas", module: "tasks" },
   { prefix: "/app/ponto", module: "time_clock" },
@@ -495,6 +489,7 @@ export const ROUTE_MODULES: Array<{ prefix: string; module: ModuleKey }> = [
   { prefix: "/app/clientes", module: "tasks" },
   { prefix: "/app/comercial", module: "crm" },
   { prefix: "/app/frota", module: "fleet" },
+  { prefix: "/app/trabalho-extra", module: "extra_work" },
   { prefix: "/app/assistente", module: "whatsapp_ai" },
   { prefix: "/app/notas", module: "notes" },
   { prefix: "/app/suporte", module: "support" },
@@ -526,7 +521,6 @@ export function normalizeModules(modules: CompanyBilling["enabled_modules"]): Mo
     ]),
   );
 }
-
 
 export function isModuleEnabled(modules: CompanyBilling["enabled_modules"], module: ModuleKey): boolean {
   return normalizeModules(modules).includes(module);
