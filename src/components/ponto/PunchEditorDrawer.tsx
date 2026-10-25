@@ -208,6 +208,9 @@ export function PunchEditorDrawer({
         ended_at: wallISOToInput(initialEndedAt),
       });
     }
+    if (!appliedDraftRef.current) {
+      initialFingerprintRef.current = "";
+    }
   }, [open, mode, entry, initialEntryKind, initialUserId, initialTaskId, initialStartedAt, initialEndedAt]);
 
   // Membros da empresa para o select de usuário (somente modo create)
@@ -299,6 +302,10 @@ export function PunchEditorDrawer({
           : [];
     setPauseRows(base.map((p) => ({ paused_at: toLocalInput(p.paused_at), resumed_at: toLocalInput(p.resumed_at) })));
     setPausesDirty(false);
+    if (!appliedDraftRef.current) {
+      initialFingerprintRef.current = JSON.stringify({ form, pauseRows: base, pausesDirty: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, isWorkEdit, entry, entryPauses]);
 
   const updatePauseRow = (i: number, patch: Partial<{ paused_at: string; resumed_at: string }>) => {
