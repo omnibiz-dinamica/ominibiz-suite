@@ -619,7 +619,10 @@ function NewExtraWorkSection({
             days={days}
             excludeUserIds={[]}
             confirmLabel="Criar e enviar convites"
-            onCancel={() => setCheckedDays(null)}
+            onCancel={() => {
+              draft.clear();
+              setCheckedDays(null);
+            }}
             onConfirm={async (userIds) => {
               const err = validate();
               if (err) throw new Error(err);
@@ -638,6 +641,7 @@ function NewExtraWorkSection({
               });
               if (sendError) throw sendError;
               reportSend(sent);
+              draft.clear();
               reset();
               onCreated();
             }}
