@@ -113,7 +113,6 @@ export function EditRecurrenceDialog({
     setDuration(values.duration);
     setSeriesStart(values.seriesStart);
     setSeriesEnd(values.seriesEnd);
-    initialFingerprintRef.current = JSON.stringify(values);
   };
 
   // Restaura o rascunho depois da inicialização normal dos campos.
@@ -343,7 +342,7 @@ export function EditRecurrenceDialog({
               onUseDraft={() => {
                 if (restoredDraftRef.current) applyDraft(restoredDraftRef.current);
               }}
-              onDiscard={clearDraft}
+              onDiscard={discardDraft}
             />
           )}
           <div className="space-y-1.5">
@@ -445,7 +444,7 @@ export function EditRecurrenceDialog({
             variant="outline"
             disabled={saving}
             onClick={() => {
-              clearDraft();
+              discardDraft();
               onOpenChange(false);
             }}
           >
