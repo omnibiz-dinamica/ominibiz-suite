@@ -427,13 +427,55 @@ function NewExtraWorkSection({
   clients: { id: string; name: string }[];
   onCreated: () => void;
 }) {
-  const { currentCompanyId } = useAuth();
+  const { user, currentCompanyId } = useAuth();
   const [clientId, setClientId] = useState<string>("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [slots, setSlots] = useState("1");
   const [rows, setRows] = useState<DayDraft[]>([{ date: tomorrowKey(), start: "09:00", end: "13:00" }]);
   const [checkedDays, setCheckedDays] = useState<DayIso[] | null>(null);
+
+  interface ExtraWorkFormDraft extends Record<string, unknown> {
+    clientId: string;
+    title: string;
+    description: string;
+    slots: string;
+    rows: DayDraft[];
+  }
+  const initialFingerprintRef = useRef<string | null>(null);
+  if (initialFingerprintRef.current === null) {
+    initialFingerprintRef.current = JSON.stringify({ clientId, title, description, slots, rows });
+  }
+  const dirty =
+    JSON.stringify({ clientId, title, description, slots, rows }) !== initialFingerprintRef.current;
+  const draft = useFormDraft<ExtraWorkFormDraft>({
+    formId: "extra-work-form",
+    userId: user?.id,
+    companyId: currentCompanyId,
+    dirty,
+  });
+  const appliedDraftRef = useRef(false);
+  const restoredDraftRef = useRef<ExtraWorkFormDraft | null>(null);
+  const applyDraft = useCallback((values: ExtraWorkFormDraft) => {
+    appliedDraftRef.current = true;
+    setClientId(values.clientId);
+    setTitle(values.title);
+    setDescription(values.description);
+    setSlots(values.slots);
+    setRows(values.rows);
+    setCheckedDays(null);
+  }, []);
+  useEffect(() => {
+    if (!draft.restored || appliedDraftRef.current) return;
+    restoredDraftRef.current = draft.restored;
+    if (!draft.conflict) applyDraft(draft.restored);
+  }, [draft.restored, draft.conflict, applyDraft]);
+  useEffect(() => {
+    if (draft.restored && !appliedDraftRef.current) return; // rascunho pendente de decisão
+    if (!dirty) return;
+    draft.save({ clientId, title, description, slots, rows }, { open: true });
+  }, [clientId, title, description, slots, rows, dirty, draft]);
+
 
   const days = draftToDays(rows);
   const daysKey = JSON.stringify(days);
