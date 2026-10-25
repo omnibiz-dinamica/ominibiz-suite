@@ -158,7 +158,11 @@ export function PunchEditorDrawer({
     if (!open) return;
     if (suppressedDraftRef.current) return;
     if (draft.restored && !appliedDraftRef.current) return; // rascunho pendente de decisão
-    if (initialFingerprintRef.current === "") return; // ainda não inicializou
+    if (initialFingerprintRef.current === "") {
+      // Primeira passagem após abrir: fixa a linha de base, ainda não grava.
+      initialFingerprintRef.current = JSON.stringify({ form, pauseRows, pausesDirty });
+      return;
+    }
     if (!draftDirty && draft.savedAt === null) return;
     draft.save({ form, pauseRows, pausesDirty }, { open: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
