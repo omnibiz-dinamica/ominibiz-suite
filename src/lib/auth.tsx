@@ -1,14 +1,8 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-export type AppRole =
-  | "super_admin"
-  | "owner"
-  | "manager"
-  | "accountant"
-  | "secretary"
-  | "employee";
+export type AppRole = "super_admin" | "owner" | "manager" | "accountant" | "secretary" | "employee";
 
 export interface AuthProfile {
   id: string;
@@ -47,6 +41,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [roles, setRoles] = useState<{ role: AppRole; company_id: string | null }[]>([]);
   const [currentCompanyId, setCurrentCompanyId] = useState<string | null>(null);
   const [profile, setProfile] = useState<AuthProfile | null>(null);
+  // Utilizador cujo contexto já está carregado no ecrã (ver applySession).
+  const loadedUserIdRef = useRef<string | null>(null);
 
   const loadAuthContext = async (
     uid: string,
@@ -97,12 +93,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setRoles([]);
         setCurrentCompanyId(null);
         setProfile(null);
+        loadedUserIdRef.current = null;
         setLoading(false);
         setInitialized(true);
         log("state:commit (no user)", { reqId });
         return;
       }
-      setLoading(true);
+      // Mesmo utilizador já carregado (ex.: SIGNED_IN ao voltar à aba ou à app):
+      // atualiza o contexto em segundo plano, sem loading=true. Com loading=true o
+      // app.tsx desmonta o ecrã inteiro e fecha formulários abertos sem gravar.
+      const silent = loadedUserIdRef.current === s.user.id;
+      if (!silent) setLoading(true);
       try {
         const ctx = await loadAuthContext(s.user.id, reqId);
         if (!active || reqId !== currentReqId) {
@@ -118,6 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setRoles(ctx.roles);
         setCurrentCompanyId(ctx.currentCompanyId);
         setProfile(ctx.profile);
+        loadedUserIdRef.current = s.user.id;
         setLoading(false);
         setInitialized(true);
         log("state:commit", {
@@ -174,9 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           void applySession(null, "visibility:no-session");
           return;
         }
-        setSession((prev) =>
-          prev?.access_token === data.session!.access_token ? prev : data.session,
-        );
+        setSession((prev) => (prev?.access_token === data.session!.access_token ? prev : data.session));
       });
     };
     if (typeof document !== "undefined") {
@@ -229,55 +229,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isSuperAdmin: roles.some((r) => r.role === "super_admin"),
     isOwner:
       roles.some((r) => r.role === "super_admin") ||
-      roles.some(
-        (r) => r.role === "owner" && (!currentCompanyId || r.company_id === currentCompanyId),
-      ),
+      roles.some((r) => r.role === "owner" && (!currentCompanyId || r.company_id === currentCompanyId)),
     isManager:
       roles.some((r) => r.role === "super_admin") ||
       roles.some(
-        (r) =>
-          (r.role === "manager" || r.role === "owner") &&
-          (!currentCompanyId || r.company_id === currentCompanyId),
+        (r) => (r.role === "manager" || r.role === "owner") && (!currentCompanyId || r.company_id === currentCompanyId),
       ),
     isEmployee:
       !roles.some((r) => r.role === "super_admin") &&
       !roles.some(
-        (r) =>
-          (r.role === "manager" || r.role === "owner") &&
-          (!currentCompanyId || r.company_id === currentCompanyId),
+        (r) => (r.role === "manager" || r.role === "owner") && (!currentCompanyId || r.company_id === currentCompanyId),
       ) &&
       roles.some((r) => r.role === "employee"),
     isAccountant:
       roles.some((r) => r.role === "super_admin") ||
-      roles.some(
-        (r) =>
-          r.role === "accountant" && (!currentCompanyId || r.company_id === currentCompanyId),
-      ),
+      roles.some((r) => r.role === "accountant" && (!currentCompanyId || r.company_id === currentCompanyId)),
     effectiveRole: roles.some((r) => r.role === "super_admin")
       ? "super_admin"
-      : roles.some(
-          (r) =>
-            r.role === "owner" && (!currentCompanyId || r.company_id === currentCompanyId),
-        )
-      ? "owner"
-      : roles.some(
-          (r) =>
-            r.role === "manager" && (!currentCompanyId || r.company_id === currentCompanyId),
-        )
-      ? "manager"
-      : roles.some(
-          (r) =>
-            r.role === "accountant" && (!currentCompanyId || r.company_id === currentCompanyId),
-        )
-      ? "accountant"
-      : roles.some(
-          (r) =>
-            r.role === "secretary" && (!currentCompanyId || r.company_id === currentCompanyId),
-        )
-      ? "secretary"
-      : roles.some((r) => r.role === "employee")
-      ? "employee"
-      : null,
+      : roles.some((r) => r.role === "owner" && (!currentCompanyId || r.company_id === currentCompanyId))
+        ? "owner"
+        : roles.some((r) => r.role === "manager" && (!currentCompanyId || r.company_id === currentCompanyId))
+          ? "manager"
+          : roles.some((r) => r.role === "accountant" && (!currentCompanyId || r.company_id === currentCompanyId))
+            ? "accountant"
+            : roles.some((r) => r.role === "secretary" && (!currentCompanyId || r.company_id === currentCompanyId))
+              ? "secretary"
+              : roles.some((r) => r.role === "employee")
+                ? "employee"
+                : null,
   };
 
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
