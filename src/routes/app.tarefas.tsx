@@ -254,6 +254,64 @@ function TasksPage() {
   const navigate = Route.useNavigate();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<TaskRow | null>(null);
+
+  // ----- Rascunho automático do formulário de tarefa (criar/editar) -----
+  // O diálogo desmonta o TaskForm, por isso o rascunho vive aqui: o
+  // formulário reporta os valores e recebe o rascunho para restaurar.
+  interface TaskFormDraft extends Record<string, unknown> {
+    title: string;
+    description: string;
+    assignees: string[];
+    clientId: string;
+    priority: "baixa" | "media" | "alta" | "urgente";
+    startDate: string;
+    startTime: string;
+    endDate: string;
+    endTime: string;
+    graceMinutes: number;
+    punchMode: string;
+    recurrence: RecurrenceFormValue;
+    manualEndOverride: boolean;
+  }
+  const [taskDraftValues, setTaskDraftValues] = useState<TaskFormDraft | null>(null);
+  const taskBaselineRef = useRef("");
+  const taskReopenedRef = useRef(false);
+  const taskDialogOpen = open || !!editing;
+  const taskDraftDirty =
+    taskDialogOpen && taskDraftValues !== null && JSON.stringify(taskDraftValues) !== taskBaselineRef.current;
+  const taskDraft = useFormDraft<TaskFormDraft>({
+    formId: "task-form",
+    recordId: editing?.id ?? null,
+    companyId: currentCompanyId,
+    userId: user?.id,
+    enabled: isManager && !!user && !!currentCompanyId,
+    baseUpdatedAt: (editing as { updated_at?: string | null } | null)?.updated_at ?? null,
+    dirty: taskDraftDirty,
+  });
+  // Nova sessão de diálogo: zera a linha de base do rascunho.
+  useEffect(() => {
+    taskBaselineRef.current = "";
+    setTaskDraftValues(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editing?.id]);
+  // Reabre o diálogo de criação se havia rascunho com o formulário aberto.
+  useEffect(() => {
+    if (!taskDraft.restored || !taskDraft.restoredOpen) return;
+    if (taskDialogOpen || taskReopenedRef.current) return;
+    taskReopenedRef.current = true;
+    setOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taskDraft.restored, taskDraft.restoredOpen, taskDialogOpen]);
+  const handleTaskDraftValues = (values: TaskFormDraft) => {
+    if (taskBaselineRef.current === "") taskBaselineRef.current = JSON.stringify(values);
+    setTaskDraftValues(values);
+    taskDraft.save(values, { open: true });
+  };
+  const clearTaskDraft = () => {
+    taskBaselineRef.current = "";
+    setTaskDraftValues(null);
+    taskDraft.clear();
+  };
   const [reassigning, setReassigning] = useState<TaskRow | null>(null);
   const [editingSeries, setEditingSeries] = useState<TaskRow | null>(null);
   const [seriesRow, setSeriesRow] = useState<RecurrenceRow | null>(null);
