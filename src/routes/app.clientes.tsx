@@ -1037,6 +1037,19 @@ function ClientForm({
   return (
     <>
       <ModalBody>
+        {draftSavedAt !== null && (
+          <DraftNotice
+            savedAt={draftSavedAt}
+            conflict={draftConflict}
+            onUseDraft={() => {
+              appliedDraftRef.current = false;
+            }}
+            onDiscard={() => {
+              appliedDraftRef.current = false;
+              onDraftDiscard?.();
+            }}
+          />
+        )}
         <form
           id="client-form"
           className="space-y-4"
