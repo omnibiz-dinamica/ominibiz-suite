@@ -217,7 +217,7 @@ export function useFormDraft<T extends Record<string, unknown>>(opts: UseFormDra
     if (!pending) return;
     pendingRef.current = null;
     writeDraft(getDefaultStorage(), pending.key, pending.values, {
-      baseUpdatedAt: baseRef.current,
+      baseUpdatedAt: pending.baseUpdatedAt,
       open: pending.open,
     });
   }, []);
@@ -226,7 +226,7 @@ export function useFormDraft<T extends Record<string, unknown>>(opts: UseFormDra
     (values: T, { open }: { open: boolean }) => {
       const k = keyRef.current;
       if (!k) return;
-      pendingRef.current = { key: k, values, open };
+      pendingRef.current = { key: k, baseUpdatedAt: baseRef.current, values, open };
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(flush, DRAFT_DEBOUNCE_MS);
     },
