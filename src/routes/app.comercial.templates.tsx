@@ -27,6 +27,7 @@ type Tpl = {
   is_active: boolean;
   pdf_path: string | null;
   placeholder_map: PlaceholderMap;
+  updated_at?: string | null;
 };
 
 const PLACEHOLDER_KEYS = [
@@ -60,6 +61,18 @@ function TemplatesPage() {
   const { user, currentCompanyId } = useAuth();
   const [editing, setEditing] = useState<Tpl | null>(null);
 
+  const { data: tpls = [] } = useQuery({
+    queryKey: ["contract_templates"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("contract_templates")
+        .select("id,name,body,version,is_active,pdf_path,placeholder_map,updated_at")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as Tpl[];
+    },
+  });
+
   // ----- Rascunho automático do editor de templates -----
   type TemplateDraft = Tpl & Record<string, unknown>;
   const appliedDraftRef = useRef(false);
@@ -77,6 +90,8 @@ function TemplatesPage() {
     recordId: editing?.id || null,
     companyId: currentCompanyId,
     userId: user?.id,
+    // updated_at atual do registo no servidor (não o guardado no rascunho).
+    baseUpdatedAt: editing?.id ? (tpls.find((t) => t.id === editing.id)?.updated_at ?? null) : null,
     dirty: draftDirty,
   });
   useEffect(() => {
@@ -89,7 +104,7 @@ function TemplatesPage() {
   useEffect(() => {
     if (!editing) return;
     if (draft.restored && !appliedDraftRef.current) return;
-    if (!draftDirty && draft.savedAt === null) return;
+    if (!draftDirty) return;
     draft.save({ ...editing }, { open: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editing, draftDirty]);
@@ -99,17 +114,6 @@ function TemplatesPage() {
     draft.clear();
   };
 
-  const { data: tpls = [] } = useQuery({
-    queryKey: ["contract_templates"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("contract_templates")
-        .select("id,name,body,version,is_active,pdf_path,placeholder_map")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as Tpl[];
-    },
-  });
 
   const save = useMutation({
     mutationFn: async (t: Tpl) => {
@@ -210,7 +214,15 @@ function TemplatesPage() {
                 onUseDraft={() => {
                   if (restoredDraftRef.current) setEditing(restoredDraftRef.current);
                 }}
-                onDiscard={clearDraft}
+                onDiscard={() => {
+                  // Limpa o rascunho e repõe o template do servidor (ou um novo vazio).
+                  const id = editing?.id;
+                  clearDraft();
+                  const row = id ? tpls.find((t) => t.id === id) : undefined;
+                  const fresh: Tpl = row ?? { id: "", name: "", body: DEFAULT_TEMPLATE_BODY, version: 1, is_active: true, pdf_path: null, placeholder_map: DEFAULT_MAP };
+                  baselineRef.current = JSON.stringify(fresh);
+                  setEditing(fresh);
+                }}
               />
             )}
             <div className="flex items-center justify-between gap-2">
