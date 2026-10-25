@@ -841,6 +841,84 @@ function ClientForm({
     Object.fromEntries(assignees.map((a) => [a.user_id, clientTeamType(a)])),
   );
   const [loading, setLoading] = useState(false);
+
+  // ----- Rascunho automático: restaura os valores guardados e reporta mudanças -----
+  const appliedDraftRef = useRef(false);
+  useEffect(() => {
+    if (!draftValues || appliedDraftRef.current || draftConflict) return;
+    appliedDraftRef.current = true;
+    setName(draftValues.name);
+    setPhone(draftValues.phone);
+    setEmail(draftValues.email);
+    setAddress(draftValues.address);
+    addressRef.current = draftValues.address;
+    setNotes(draftValues.notes);
+    setScheduleNotes(draftValues.scheduleNotes);
+    setInstructions(draftValues.instructions);
+    setStatus(draftValues.status);
+    setBillingMode(draftValues.billingMode);
+    setHourlyRate(draftValues.hourlyRate);
+    setFixedRate(draftValues.fixedRate);
+    setMonthlyRate(draftValues.monthlyRate);
+    setDailyRate(draftValues.dailyRate);
+    setScheduleEnabled(draftValues.scheduleEnabled);
+    setSchedules(draftValues.schedules as ScheduleDraft[]);
+    setGeo(draftValues.geo);
+    geoRef.current = draftValues.geo;
+    setSelected(new Set(draftValues.selected));
+    setPrimary(draftValues.primary);
+    setAssignmentTypes(draftValues.assignmentTypes);
+    if (draftValues.address.trim() && draftValues.address.trim() !== (initial?.geo_address ?? initial?.address ?? "").trim()) {
+      lastGeocodedRef.current = null; // endereço restaurado ainda não geocodificado
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftValues, draftConflict]);
+
+  useEffect(() => {
+    onDraftValues?.({
+      name,
+      phone,
+      email,
+      address,
+      notes,
+      scheduleNotes,
+      instructions,
+      status,
+      billingMode,
+      hourlyRate,
+      fixedRate,
+      monthlyRate,
+      dailyRate,
+      scheduleEnabled,
+      schedules,
+      geo,
+      selected: [...selected],
+      primary,
+      assignmentTypes,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    name,
+    phone,
+    email,
+    address,
+    notes,
+    scheduleNotes,
+    instructions,
+    status,
+    billingMode,
+    hourlyRate,
+    fixedRate,
+    monthlyRate,
+    dailyRate,
+    scheduleEnabled,
+    schedules,
+    geo,
+    selected,
+    primary,
+    assignmentTypes,
+  ]);
+
   const savingRef = useRef(false);
   const geoRef = useRef(geo);
   const addressRef = useRef(address);
