@@ -201,7 +201,7 @@ export function useFormDraft<T extends Record<string, unknown>>(opts: UseFormDra
   const key = enabled && userId && companyId ? draftKey(userId, companyId, formId, recordId) : null;
   const [record, setRecord] = useState<DraftRecord<T> | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingRef = useRef<{ key: string; values: T; open: boolean } | null>(null);
+  const pendingRef = useRef<{ key: string; baseUpdatedAt: string | null; values: T; open: boolean } | null>(null);
   const keyRef = useRef<string | null>(key);
   const baseRef = useRef<string | null>(baseUpdatedAt);
   keyRef.current = key;
