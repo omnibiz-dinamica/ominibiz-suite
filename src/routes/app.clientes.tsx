@@ -724,6 +724,11 @@ function ClientForm({
   onDone,
   onCancel,
   onDelete,
+  draftValues = null,
+  draftSavedAt = null,
+  draftConflict = false,
+  onDraftValues,
+  onDraftDiscard,
 }: {
   companyId: string;
   userId: string;
@@ -735,6 +740,11 @@ function ClientForm({
   onDone: () => void;
   onCancel: () => void;
   onDelete?: (id: string) => void;
+  draftValues?: ClientFormDraft | null;
+  draftSavedAt?: number | null;
+  draftConflict?: boolean;
+  onDraftValues?: (values: ClientFormDraft) => void;
+  onDraftDiscard?: () => void;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [phone, setPhone] = useState(initial?.phone ?? "");
