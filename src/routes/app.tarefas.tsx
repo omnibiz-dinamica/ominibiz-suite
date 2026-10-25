@@ -290,8 +290,11 @@ function TasksPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [taskDraft.restored, taskDraft.restoredOpen, taskDialogOpen]);
   const handleTaskDraftValues = (values: TaskFormDraft) => {
-    if (taskBaselineRef.current === "") taskBaselineRef.current = JSON.stringify(values);
+    const json = JSON.stringify(values);
+    if (taskBaselineRef.current === "") taskBaselineRef.current = json;
     setTaskDraftValues(values);
+    // Formulário ainda sem alterações: não cria rascunho (evita "Rascunho recuperado" vazio).
+    if (json === taskBaselineRef.current) return;
     taskDraft.save(values, { open: true });
   };
   const clearTaskDraft = () => {
@@ -1285,7 +1288,7 @@ function TasksPage() {
               open={open}
               onOpenChange={(v) => {
                 // Fechar por ESC/clique fora: mantém o rascunho com open:false.
-                if (!v && taskDraftValues) taskDraft.save(taskDraftValues, { open: false });
+                if (!v && taskDraftValues && taskDraftDirty) taskDraft.save(taskDraftValues, { open: false });
                 setOpen(v);
               }}
             >
@@ -3778,7 +3781,6 @@ function TaskForm({
     recurrence,
     manualEndOverride,
   ]);
-
 
   const selectedClient = clients.find((client) => client.id === clientId);
   const selectedSchedule = clientSchedule.find((schedule) => schedule.id === selectedScheduleId) ?? null;
