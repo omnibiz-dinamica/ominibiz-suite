@@ -153,6 +153,15 @@ function errorMessage(e: unknown): string {
   return msg.replace(/^MODULE_NOT_ENABLED:\s*/, "");
 }
 
+/** Pesquisa por nome sem acentos nem maiúsculas. */
+function normalizeSearch(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
 function TrabalhoExtraPage() {
   const { isManager } = useAuth();
   return (
@@ -327,6 +336,9 @@ function EligibleSection({ members }: { members: { id: string; name: string }[] 
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Set<string> | null>(null);
+  const [search, setSearch] = useState("");
+  const term = normalizeSearch(search);
+  const visibleMembers = term ? members.filter((m) => normalizeSearch(m.name).includes(term)) : members;
 
   const { data: eligible } = useQuery({
     queryKey: ["extra-work-eligible", currentCompanyId],
@@ -389,8 +401,23 @@ function EligibleSection({ members }: { members: { id: string; name: string }[] 
             </div>
           )}
           {members.length === 0 && <div className="text-sm text-muted-foreground">Sem funcionários ativos.</div>}
+          {members.length > 0 && (
+            <div className="relative max-w-sm">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Pesquisar funcionário"
+                aria-label="Pesquisar funcionário"
+                className="pl-8"
+              />
+            </div>
+          )}
+          {members.length > 0 && visibleMembers.length === 0 && (
+            <div className="text-sm text-muted-foreground">Nenhum funcionário encontrado.</div>
+          )}
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {members.map((m) => (
+            {visibleMembers.map((m) => (
               <label
                 key={m.id}
                 className="flex cursor-pointer items-center gap-2 rounded-lg border border-border p-2 text-sm"
@@ -446,8 +473,7 @@ function NewExtraWorkSection({
   if (initialFingerprintRef.current === null) {
     initialFingerprintRef.current = JSON.stringify({ clientId, title, description, slots, rows });
   }
-  const dirty =
-    JSON.stringify({ clientId, title, description, slots, rows }) !== initialFingerprintRef.current;
+  const dirty = JSON.stringify({ clientId, title, description, slots, rows }) !== initialFingerprintRef.current;
   const draft = useFormDraft<ExtraWorkFormDraft>({
     formId: "extra-work-form",
     userId: user?.id,
@@ -476,7 +502,6 @@ function NewExtraWorkSection({
     draft.save({ clientId, title, description, slots, rows }, { open: true });
   }, [clientId, title, description, slots, rows, dirty, draft]);
 
-
   const days = draftToDays(rows);
   const daysKey = JSON.stringify(days);
   const checkedKey = checkedDays ? JSON.stringify(checkedDays) : null;
@@ -494,7 +519,13 @@ function NewExtraWorkSection({
     setRows(freshRows);
     setCheckedDays(null);
     // Nova linha de base: o formulário reposto não é "alterado".
-    initialFingerprintRef.current = JSON.stringify({ clientId: "", title: "", description: "", slots: "1", rows: freshRows });
+    initialFingerprintRef.current = JSON.stringify({
+      clientId: "",
+      title: "",
+      description: "",
+      slots: "1",
+      rows: freshRows,
+    });
   };
 
   const validate = (): string | null => {
@@ -688,6 +719,7 @@ function AvailabilityPicker({
   const { currentCompanyId } = useAuth();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
+  const [search, setSearch] = useState("");
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["extra-work-availability", currentCompanyId, JSON.stringify(days)],
@@ -700,8 +732,10 @@ function AvailabilityPicker({
   });
 
   const rows = (data ?? []).filter((r) => !excludeUserIds.includes(r.user_id));
-  const available = rows.filter((r) => r.available);
-  const busyRows = rows.filter((r) => !r.available);
+  const term = normalizeSearch(search);
+  const matches = (r: Availability) => !term || normalizeSearch(r.full_name ?? "").includes(term);
+  const available = rows.filter((r) => r.available && matches(r));
+  const busyRows = rows.filter((r) => !r.available && matches(r));
   const allSelected = available.length > 0 && available.every((r) => selected.has(r.user_id));
 
   const toggle = (id: string) =>
@@ -723,6 +757,21 @@ function AvailabilityPicker({
         </div>
       )}
 
+      {rows.length > 0 && (
+        <div className="relative max-w-sm">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Pesquisar funcionário"
+            aria-label="Pesquisar funcionário"
+            className="pl-8"
+          />
+        </div>
+      )}
+      {rows.length > 0 && term && available.length === 0 && busyRows.length === 0 && (
+        <div className="text-sm text-muted-foreground">Nenhum funcionário encontrado.</div>
+      )}
       {available.length > 0 && (
         <div className="space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -732,7 +781,17 @@ function AvailabilityPicker({
                 type="checkbox"
                 className="h-4 w-4"
                 checked={allSelected}
-                onChange={() => setSelected(allSelected ? new Set() : new Set(available.map((r) => r.user_id)))}
+                onChange={() =>
+                  // Só os funcionários visíveis (com a pesquisa) são marcados/desmarcados.
+                  setSelected((s) => {
+                    const n = new Set(s);
+                    for (const r of available) {
+                      if (allSelected) n.delete(r.user_id);
+                      else n.add(r.user_id);
+                    }
+                    return n;
+                  })
+                }
               />
               Marcar todos
             </label>
