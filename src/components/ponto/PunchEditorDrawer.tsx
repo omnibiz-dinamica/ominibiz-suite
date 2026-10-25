@@ -1,6 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
+import { useFormDraft } from "@/lib/form-draft";
+import { DraftNotice } from "@/components/form-draft/DraftNotice";
 import { Sheet, SheetContent, ModalBody, ModalFooter, ModalHeader, ModalSection } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -106,6 +109,75 @@ export function PunchEditorDrawer({
   // Várias pausas (fase 2): lista editável das pausas terminadas do ponto.
   const [pauseRows, setPauseRows] = useState<{ paused_at: string; resumed_at: string }[]>([]);
   const [pausesDirty, setPausesDirty] = useState(false);
+
+  // ----- Rascunho automático do editor de ponto -----
+  interface PunchEditorDraft extends Record<string, unknown> {
+    form: FormState;
+    pauseRows: { paused_at: string; resumed_at: string }[];
+    pausesDirty: boolean;
+  }
+  const { user } = useAuth();
+  const appliedDraftRef = useRef(false);
+  const restoredDraftRef = useRef<PunchEditorDraft | null>(null);
+  const suppressedDraftRef = useRef(false);
+  const initialFingerprintRef = useRef("");
+  const reopenedRef = useRef(false);
+  const draftDirty =
+    initialFingerprintRef.current !== "" &&
+    JSON.stringify({ form, pauseRows, pausesDirty }) !== initialFingerprintRef.current;
+  const draft = useFormDraft<PunchEditorDraft>({
+    formId: "punch-editor",
+    recordId:
+      mode === "edit" ? (entry?.id ?? null) : regularizeTaskAbsence ? `regularize-${initialTaskId ?? ""}` : null,
+    baseUpdatedAt: mode === "edit" ? (entry?.updated_at ?? null) : null,
+    userId: user?.id,
+    companyId,
+    enabled: mode === "create" || !!entry?.id,
+    dirty: open && draftDirty,
+  });
+  const applyDraft = (values: PunchEditorDraft) => {
+    appliedDraftRef.current = true;
+    setForm(values.form);
+    setPauseRows(values.pauseRows);
+    setPausesDirty(values.pausesDirty);
+    initialFingerprintRef.current = JSON.stringify(values);
+  };
+  useEffect(() => {
+    if (!draft.restored || appliedDraftRef.current) return;
+    restoredDraftRef.current = draft.restored;
+    if (mode === "create" && draft.restoredOpen && !open && !reopenedRef.current) {
+      reopenedRef.current = true;
+      onOpenChange(true);
+      return;
+    }
+    if (!open || draft.conflict) return;
+    applyDraft(draft.restored);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft.restored, draft.restoredOpen, draft.conflict, open, mode]);
+  useEffect(() => {
+    if (!open) return;
+    if (suppressedDraftRef.current) return;
+    if (draft.restored && !appliedDraftRef.current) return; // rascunho pendente de decisão
+    if (initialFingerprintRef.current === "") return; // ainda não inicializou
+    if (!draftDirty && draft.savedAt === null) return;
+    draft.save({ form, pauseRows, pausesDirty }, { open: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, pauseRows, pausesDirty, open, draftDirty]);
+  const clearDraft = () => {
+    suppressedDraftRef.current = true;
+    appliedDraftRef.current = false;
+    restoredDraftRef.current = null;
+    draft.clear();
+  };
+  // Fechar por ESC/clique fora: mantém o rascunho com open:false.
+  const handleOpenChange = (v: boolean) => {
+    if (!v && !suppressedDraftRef.current && initialFingerprintRef.current !== "") {
+      draft.save({ form, pauseRows, pausesDirty }, { open: false });
+    }
+    if (v) suppressedDraftRef.current = false;
+    onOpenChange(v);
+  };
+
 
   useEffect(() => {
     if (!open) return;
@@ -217,6 +289,7 @@ export function PunchEditorDrawer({
 
   useEffect(() => {
     if (!open || !isWorkEdit || !entry || entryPauses === undefined) return;
+    if (appliedDraftRef.current) return;
     const finished = entryPauses.filter((p) => !!p.resumed_at);
     const base =
       entryPauses.length > 0
