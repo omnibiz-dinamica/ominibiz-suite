@@ -32,6 +32,7 @@ import { Route as AppPontoRouteImport } from './routes/app.ponto'
 import { Route as AppRhRouteImport } from './routes/app.rh'
 import { Route as AppSuporteRouteImport } from './routes/app.suporte'
 import { Route as AppTarefasRouteImport } from './routes/app.tarefas'
+import { Route as AppTrabalhoExtraRouteImport } from './routes/app.trabalho-extra'
 import { Route as SignTokenRouteImport } from './routes/sign.$token'
 import { Route as ApiEmailSendRouteImport } from './routes/api/email/send'
 import { Route as ApiExpensesAttachmentsRouteImport } from './routes/api/expenses/attachments'
@@ -193,6 +194,11 @@ const AppSuporteRoute = AppSuporteRouteImport.update({
 const AppTarefasRoute = AppTarefasRouteImport.update({
   id: '/tarefas',
   path: '/tarefas',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTrabalhoExtraRoute = AppTrabalhoExtraRouteImport.update({
+  id: '/trabalho-extra',
+  path: '/trabalho-extra',
   getParentRoute: () => AppRoute,
 } as any)
 const SignTokenRoute = SignTokenRouteImport.update({
@@ -472,6 +478,7 @@ export interface FileRoutesByFullPath {
   '/app/rh': typeof AppRhRouteWithChildren
   '/app/suporte': typeof AppSuporteRouteWithChildren
   '/app/tarefas': typeof AppTarefasRoute
+  '/app/trabalho-extra': typeof AppTrabalhoExtraRoute
   '/sign/$token': typeof SignTokenRoute
   '/app/': typeof AppIndexRoute
   '/api/email/send': typeof ApiEmailSendRoute
@@ -541,6 +548,7 @@ export interface FileRoutesByTo {
   '/app/ponto': typeof AppPontoRoute
   '/app/suporte': typeof AppSuporteRouteWithChildren
   '/app/tarefas': typeof AppTarefasRoute
+  '/app/trabalho-extra': typeof AppTrabalhoExtraRoute
   '/sign/$token': typeof SignTokenRoute
   '/app': typeof AppIndexRoute
   '/api/email/send': typeof ApiEmailSendRoute
@@ -614,6 +622,7 @@ export interface FileRoutesById {
   '/app/rh': typeof AppRhRouteWithChildren
   '/app/suporte': typeof AppSuporteRouteWithChildren
   '/app/tarefas': typeof AppTarefasRoute
+  '/app/trabalho-extra': typeof AppTrabalhoExtraRoute
   '/sign/$token': typeof SignTokenRoute
   '/app/': typeof AppIndexRoute
   '/api/email/send': typeof ApiEmailSendRoute
@@ -688,6 +697,7 @@ export interface FileRouteTypes {
     | '/app/rh'
     | '/app/suporte'
     | '/app/tarefas'
+    | '/app/trabalho-extra'
     | '/sign/$token'
     | '/app/'
     | '/api/email/send'
@@ -757,6 +767,7 @@ export interface FileRouteTypes {
     | '/app/ponto'
     | '/app/suporte'
     | '/app/tarefas'
+    | '/app/trabalho-extra'
     | '/sign/$token'
     | '/app'
     | '/api/email/send'
@@ -829,6 +840,7 @@ export interface FileRouteTypes {
     | '/app/rh'
     | '/app/suporte'
     | '/app/tarefas'
+    | '/app/trabalho-extra'
     | '/sign/$token'
     | '/app/'
     | '/api/email/send'
@@ -1059,6 +1071,13 @@ declare module '@tanstack/react-router' {
       path: '/tarefas'
       fullPath: '/app/tarefas'
       preLoaderRoute: typeof AppTarefasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/trabalho-extra': {
+      id: '/app/trabalho-extra'
+      path: '/trabalho-extra'
+      fullPath: '/app/trabalho-extra'
+      preLoaderRoute: typeof AppTrabalhoExtraRouteImport
       parentRoute: typeof AppRoute
     }
     '/sign/$token': {
@@ -1494,6 +1513,7 @@ interface AppRouteChildren {
   AppRhRoute: typeof AppRhRouteWithChildren
   AppSuporteRoute: typeof AppSuporteRouteWithChildren
   AppTarefasRoute: typeof AppTarefasRoute
+  AppTrabalhoExtraRoute: typeof AppTrabalhoExtraRoute
   AppIndexRoute: typeof AppIndexRoute
   AppContabilidadeFolhasPontoRoute: typeof AppContabilidadeFolhasPontoRoute
   AppMaterialConstrucaoCategoriasRoute: typeof AppMaterialConstrucaoCategoriasRoute
@@ -1539,6 +1559,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppRhRoute: AppRhRouteWithChildren,
   AppSuporteRoute: AppSuporteRouteWithChildren,
   AppTarefasRoute: AppTarefasRoute,
+  AppTrabalhoExtraRoute: AppTrabalhoExtraRoute,
   AppIndexRoute: AppIndexRoute,
   AppContabilidadeFolhasPontoRoute: AppContabilidadeFolhasPontoRoute,
   AppMaterialConstrucaoCategoriasRoute: AppMaterialConstrucaoCategoriasRoute,
