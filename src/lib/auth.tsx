@@ -225,6 +225,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     switchCompany,
     refresh,
     signOut: async () => {
+      clearAllDrafts();
       await supabase.auth.signOut();
     },
     isSuperAdmin: roles.some((r) => r.role === "super_admin"),
