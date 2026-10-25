@@ -1196,6 +1196,293 @@ export type Database = {
           },
         ]
       }
+      extra_work_days: {
+        Row: {
+          company_id: string
+          ends_at: string
+          extra_work_id: string
+          id: string
+          starts_at: string
+          task_group_id: string
+        }
+        Insert: {
+          company_id: string
+          ends_at: string
+          extra_work_id: string
+          id?: string
+          starts_at: string
+          task_group_id?: string
+        }
+        Update: {
+          company_id?: string
+          ends_at?: string
+          extra_work_id?: string
+          id?: string
+          starts_at?: string
+          task_group_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extra_work_days_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extra_work_days_extra_work_id_fkey"
+            columns: ["extra_work_id"]
+            isOneToOne: false
+            referencedRelation: "extra_works"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      extra_work_eligible: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extra_work_eligible_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extra_work_eligible_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extra_work_eligible_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      extra_work_invites: {
+        Row: {
+          company_id: string
+          extra_work_id: string
+          id: string
+          invited_at: string
+          invited_by: string | null
+          responded_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          extra_work_id: string
+          id?: string
+          invited_at?: string
+          invited_by?: string | null
+          responded_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          extra_work_id?: string
+          id?: string
+          invited_at?: string
+          invited_by?: string | null
+          responded_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extra_work_invites_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extra_work_invites_extra_work_id_fkey"
+            columns: ["extra_work_id"]
+            isOneToOne: false
+            referencedRelation: "extra_works"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extra_work_invites_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extra_work_invites_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      extra_work_tasks: {
+        Row: {
+          company_id: string
+          created_at: string
+          extra_work_day_id: string
+          invite_id: string
+          task_id: string | null
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          extra_work_day_id: string
+          invite_id: string
+          task_id?: string | null
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          extra_work_day_id?: string
+          invite_id?: string
+          task_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extra_work_tasks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extra_work_tasks_extra_work_day_id_fkey"
+            columns: ["extra_work_day_id"]
+            isOneToOne: false
+            referencedRelation: "extra_work_days"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extra_work_tasks_invite_id_fkey"
+            columns: ["invite_id"]
+            isOneToOne: false
+            referencedRelation: "extra_work_invites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extra_work_tasks_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extra_work_tasks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      extra_works: {
+        Row: {
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          client_id: string | null
+          company_id: string
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          slots: number
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          client_id?: string | null
+          company_id: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          slots: number
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          client_id?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          slots?: number
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extra_works_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extra_works_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extra_works_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extra_works_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financial_audit: {
         Row: {
           actor_id: string | null
@@ -3126,6 +3413,7 @@ export type Database = {
           origin: string
           paid_leave_minutes: number | null
           paused_at: string | null
+          prior_pause_seconds: number
           resumed_at: string | null
           start_geo_reason_code:
             | Database["public"]["Enums"]["geo_reason_code"]
@@ -3161,6 +3449,7 @@ export type Database = {
           origin?: string
           paid_leave_minutes?: number | null
           paused_at?: string | null
+          prior_pause_seconds?: number
           resumed_at?: string | null
           start_geo_reason_code?:
             | Database["public"]["Enums"]["geo_reason_code"]
@@ -3196,6 +3485,7 @@ export type Database = {
           origin?: string
           paid_leave_minutes?: number | null
           paused_at?: string | null
+          prior_pause_seconds?: number
           resumed_at?: string | null
           start_geo_reason_code?:
             | Database["public"]["Enums"]["geo_reason_code"]
@@ -3382,6 +3672,54 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      time_entry_pauses: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          is_current: boolean
+          paused_at: string
+          resumed_at: string | null
+          time_entry_id: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          is_current?: boolean
+          paused_at: string
+          resumed_at?: string | null
+          time_entry_id: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_current?: boolean
+          paused_at?: string
+          resumed_at?: string | null
+          time_entry_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_entry_pauses_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entry_pauses_time_entry_id_fkey"
+            columns: ["time_entry_id"]
+            isOneToOne: false
+            referencedRelation: "time_entries"
             referencedColumns: ["id"]
           },
         ]
@@ -4319,6 +4657,26 @@ export type Database = {
         Args: { _company: string; _uid: string }
         Returns: string
       }
+      _extra_work_days_label: {
+        Args: { _extra_work_id: string }
+        Returns: string
+      }
+      _extra_work_is_active_employee: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: boolean
+      }
+      _extra_work_now_wall: { Args: { _company_id: string }; Returns: string }
+      _extra_work_parse_days: {
+        Args: { _days: Json }
+        Returns: {
+          ends_at: string
+          starts_at: string
+        }[]
+      }
+      _extra_work_user_check: {
+        Args: { _company_id: string; _days: Json; _user_id: string }
+        Returns: Record<string, unknown>
+      }
       _notify: {
         Args: {
           _body: string
@@ -4587,6 +4945,10 @@ export type Database = {
           id: string
         }[]
       }
+      company_module_enabled: {
+        Args: { _company_id: string; _module: string }
+        Returns: boolean
+      }
       contract_sign_get: {
         Args: { _token: string }
         Returns: {
@@ -4735,6 +5097,43 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      extra_work_availability: {
+        Args: { _company_id: string; _days: Json }
+        Returns: {
+          available: boolean
+          full_name: string
+          reasons: string[]
+          user_id: string
+          warnings: string[]
+        }[]
+      }
+      extra_work_cancel: {
+        Args: { _extra_work_id: string; _reason: string }
+        Returns: undefined
+      }
+      extra_work_create: {
+        Args: {
+          _client_id: string
+          _company_id: string
+          _days: Json
+          _description: string
+          _slots: number
+          _title: string
+        }
+        Returns: string
+      }
+      extra_work_eligible_set: {
+        Args: { _company_id: string; _user_ids: string[] }
+        Returns: number
+      }
+      extra_work_respond: {
+        Args: { _accept: boolean; _invite_id: string }
+        Returns: Json
+      }
+      extra_work_send_invites: {
+        Args: { _extra_work_id: string; _user_ids: string[] }
+        Returns: Json
       }
       finance_summary: {
         Args: {
@@ -4962,6 +5361,52 @@ export type Database = {
           origin: string
           paid_leave_minutes: number | null
           paused_at: string | null
+          prior_pause_seconds: number
+          resumed_at: string | null
+          start_geo_reason_code:
+            | Database["public"]["Enums"]["geo_reason_code"]
+            | null
+          start_geo_reason_text: string | null
+          start_geo_status: Database["public"]["Enums"]["geo_status"] | null
+          started_at: string
+          task_id: string | null
+          updated_at: string
+          user_id: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "time_entries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      punch_admin_set_pauses: {
+        Args: { _id: string; _pauses: Json; _reason: string }
+        Returns: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          effective_minutes: number | null
+          end_geo_reason_code:
+            | Database["public"]["Enums"]["geo_reason_code"]
+            | null
+          end_geo_reason_text: string | null
+          end_geo_status: Database["public"]["Enums"]["geo_status"] | null
+          ended_at: string | null
+          entry_kind: string
+          geo_policy_version: number | null
+          id: string
+          last_edit_reason: string | null
+          last_edited_at: string | null
+          last_edited_by: string | null
+          notes: string | null
+          origin: string
+          paid_leave_minutes: number | null
+          paused_at: string | null
+          prior_pause_seconds: number
           resumed_at: string | null
           start_geo_reason_code:
             | Database["public"]["Enums"]["geo_reason_code"]
@@ -5006,6 +5451,7 @@ export type Database = {
           origin: string
           paid_leave_minutes: number | null
           paused_at: string | null
+          prior_pause_seconds: number
           resumed_at: string | null
           start_geo_reason_code:
             | Database["public"]["Enums"]["geo_reason_code"]
@@ -5050,6 +5496,7 @@ export type Database = {
           origin: string
           paid_leave_minutes: number | null
           paused_at: string | null
+          prior_pause_seconds: number
           resumed_at: string | null
           start_geo_reason_code:
             | Database["public"]["Enums"]["geo_reason_code"]
@@ -5120,6 +5567,7 @@ export type Database = {
           origin: string
           paid_leave_minutes: number | null
           paused_at: string | null
+          prior_pause_seconds: number
           resumed_at: string | null
           start_geo_reason_code:
             | Database["public"]["Enums"]["geo_reason_code"]
@@ -5164,6 +5612,7 @@ export type Database = {
           origin: string
           paid_leave_minutes: number | null
           paused_at: string | null
+          prior_pause_seconds: number
           resumed_at: string | null
           start_geo_reason_code:
             | Database["public"]["Enums"]["geo_reason_code"]
@@ -5213,6 +5662,7 @@ export type Database = {
           origin: string
           paid_leave_minutes: number | null
           paused_at: string | null
+          prior_pause_seconds: number
           resumed_at: string | null
           start_geo_reason_code:
             | Database["public"]["Enums"]["geo_reason_code"]
@@ -5257,6 +5707,7 @@ export type Database = {
           origin: string
           paid_leave_minutes: number | null
           paused_at: string | null
+          prior_pause_seconds: number
           resumed_at: string | null
           start_geo_reason_code:
             | Database["public"]["Enums"]["geo_reason_code"]
@@ -5301,6 +5752,7 @@ export type Database = {
           origin: string
           paid_leave_minutes: number | null
           paused_at: string | null
+          prior_pause_seconds: number
           resumed_at: string | null
           start_geo_reason_code:
             | Database["public"]["Enums"]["geo_reason_code"]
@@ -5355,6 +5807,7 @@ export type Database = {
           origin: string
           paid_leave_minutes: number | null
           paused_at: string | null
+          prior_pause_seconds: number
           resumed_at: string | null
           start_geo_reason_code:
             | Database["public"]["Enums"]["geo_reason_code"]
@@ -5399,6 +5852,7 @@ export type Database = {
           origin: string
           paid_leave_minutes: number | null
           paused_at: string | null
+          prior_pause_seconds: number
           resumed_at: string | null
           start_geo_reason_code:
             | Database["public"]["Enums"]["geo_reason_code"]
@@ -5454,6 +5908,7 @@ export type Database = {
           origin: string
           paid_leave_minutes: number | null
           paused_at: string | null
+          prior_pause_seconds: number
           resumed_at: string | null
           start_geo_reason_code:
             | Database["public"]["Enums"]["geo_reason_code"]
@@ -7276,6 +7731,10 @@ export type Database = {
         | "timesheet_sent_to_accounting"
         | "vacation_awaiting_approval"
         | "punch_adjusted"
+        | "extra_work_invite"
+        | "extra_work_accepted"
+        | "extra_work_declined"
+        | "extra_work_filled"
       notification_priority: "baixa" | "media" | "alta" | "urgente"
       notification_state:
         | "nova"
@@ -7605,6 +8064,10 @@ export const Constants = {
         "timesheet_sent_to_accounting",
         "vacation_awaiting_approval",
         "punch_adjusted",
+        "extra_work_invite",
+        "extra_work_accepted",
+        "extra_work_declined",
+        "extra_work_filled",
       ],
       notification_priority: ["baixa", "media", "alta", "urgente"],
       notification_state: [
