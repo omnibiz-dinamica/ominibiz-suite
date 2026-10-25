@@ -384,6 +384,7 @@ export function PunchEditorDrawer({
       );
     },
     onSuccess: () => {
+      clearDraft();
       toast.success("Ponto criado");
       invalidate();
       onOpenChange(false);
@@ -432,6 +433,7 @@ export function PunchEditorDrawer({
       return result;
     },
     onSuccess: () => {
+      clearDraft();
       toast.success("Correção aplicada");
       invalidate();
       onOpenChange(false);
@@ -471,7 +473,7 @@ export function PunchEditorDrawer({
   const pending = createMut.isPending || updateMut.isPending;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent className="w-full sm:max-w-lg">
         <ModalHeader
           icon={mode === "create" ? ClockPlus : Pencil}
@@ -486,6 +488,16 @@ export function PunchEditorDrawer({
         />
 
         <ModalBody className="space-y-4">
+          {draft.savedAt !== null && (
+            <DraftNotice
+              savedAt={draft.savedAt}
+              conflict={draft.conflict}
+              onUseDraft={() => {
+                if (restoredDraftRef.current) applyDraft(restoredDraftRef.current);
+              }}
+              onDiscard={clearDraft}
+            />
+          )}
           {mode === "edit" && entry && (
             <div className="rounded-lg border border-border bg-muted/40 p-3 text-xs space-y-1">
               <div>
@@ -751,7 +763,14 @@ export function PunchEditorDrawer({
           </ModalSection>
         </ModalBody>
         <ModalFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
+          <Button
+            variant="outline"
+            onClick={() => {
+              clearDraft();
+              onOpenChange(false);
+            }}
+            disabled={pending}
+          >
             Cancelar
           </Button>
           <Button onClick={submit} disabled={pending}>
