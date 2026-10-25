@@ -258,21 +258,6 @@ function TasksPage() {
   // ----- Rascunho automático do formulário de tarefa (criar/editar) -----
   // O diálogo desmonta o TaskForm, por isso o rascunho vive aqui: o
   // formulário reporta os valores e recebe o rascunho para restaurar.
-  interface TaskFormDraft extends Record<string, unknown> {
-    title: string;
-    description: string;
-    assignees: string[];
-    clientId: string;
-    priority: "baixa" | "media" | "alta" | "urgente";
-    startDate: string;
-    startTime: string;
-    endDate: string;
-    endTime: string;
-    graceMinutes: number;
-    punchMode: string;
-    recurrence: RecurrenceFormValue;
-    manualEndOverride: boolean;
-  }
   const [taskDraftValues, setTaskDraftValues] = useState<TaskFormDraft | null>(null);
   const taskBaselineRef = useRef("");
   const taskReopenedRef = useRef(false);
@@ -3529,6 +3514,23 @@ function taskSaveErrorMessage(error: unknown): string {
     .join("\n");
 }
 
+/** Rascunho do formulário de tarefa (criar/editar), guardado pelo pai. */
+interface TaskFormDraft extends Record<string, unknown> {
+  title: string;
+  description: string;
+  assignees: string[];
+  clientId: string;
+  priority: "baixa" | "media" | "alta" | "urgente";
+  startDate: string;
+  startTime: string;
+  endDate: string;
+  endTime: string;
+  graceMinutes: number;
+  punchMode: string;
+  recurrence: RecurrenceFormValue;
+  manualEndOverride: boolean;
+}
+
 function TaskForm({
   formId,
   members,
@@ -3539,6 +3541,11 @@ function TaskForm({
   onCancel,
   onDone,
   documentsSlot,
+  draftValues = null,
+  draftSavedAt = null,
+  draftConflict = false,
+  onDraftValues,
+  onDraftDiscard,
 }: {
   formId: string;
   members: { id: string; full_name: string | null; email?: string | null }[];
@@ -3554,6 +3561,11 @@ function TaskForm({
   onCancel: () => void;
   onDone: () => void;
   documentsSlot?: ReactNode;
+  draftValues?: TaskFormDraft | null;
+  draftSavedAt?: number | null;
+  draftConflict?: boolean;
+  onDraftValues?: (values: TaskFormDraft) => void;
+  onDraftDiscard?: () => void;
 }) {
   const { t } = useT();
   const [title, setTitle] = useState(initial?.title ?? "");
