@@ -7735,6 +7735,7 @@ export type Database = {
         | "extra_work_accepted"
         | "extra_work_declined"
         | "extra_work_filled"
+        | "task_deleted"
       notification_priority: "baixa" | "media" | "alta" | "urgente"
       notification_state:
         | "nova"
@@ -8068,6 +8069,7 @@ export const Constants = {
         "extra_work_accepted",
         "extra_work_declined",
         "extra_work_filled",
+        "task_deleted",
       ],
       notification_priority: ["baixa", "media", "alta", "urgente"],
       notification_state: [
