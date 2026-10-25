@@ -91,6 +91,30 @@ interface ClientRow {
   geo_address: string | null;
   geo_radius_m: number | null;
   habitual_schedule?: unknown;
+  updated_at?: string | null;
+}
+
+/** Rascunho do formulário de cliente (criar/editar). */
+interface ClientFormDraft extends Record<string, unknown> {
+  name: string;
+  phone: string;
+  email: string;
+  address: string;
+  notes: string;
+  scheduleNotes: string;
+  instructions: string;
+  status: "ativo" | "inativo";
+  billingMode: ClientRow["billing_mode"];
+  hourlyRate: string;
+  fixedRate: string;
+  monthlyRate: string;
+  dailyRate: string;
+  scheduleEnabled: boolean;
+  schedules: unknown[];
+  geo: ClientGeoValue;
+  selected: string[];
+  primary: string;
+  assignmentTypes: Record<string, ClientTeamType>;
 }
 
 interface AssigneeRow {
@@ -113,6 +137,44 @@ function ClientsPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<ClientRow | null>(null);
   const [search, setSearch] = useState("");
+
+  // ----- Rascunho automático do formulário de cliente -----
+  // O diálogo desmonta o ClientForm, por isso o rascunho vive aqui: o
+  // formulário reporta os valores e recebe o rascunho para restaurar.
+  const [clientDraftValues, setClientDraftValues] = useState<ClientFormDraft | null>(null);
+  const clientBaselineRef = useRef("");
+  const clientReopenedRef = useRef(false);
+  const clientDialogOpen = open || !!editing;
+  const clientDraftDirty =
+    clientDialogOpen && clientDraftValues !== null && JSON.stringify(clientDraftValues) !== clientBaselineRef.current;
+  const clientDraft = useFormDraft<ClientFormDraft>({
+    formId: "client-form",
+    recordId: editing?.id ?? null,
+    companyId: currentCompanyId,
+    userId: user?.id,
+    enabled: isManager && !!user && !!currentCompanyId,
+    baseUpdatedAt: editing?.updated_at ?? null,
+    dirty: clientDraftDirty,
+  });
+  // Reabre o diálogo de criação se havia rascunho com o formulário aberto.
+  useEffect(() => {
+    if (!clientDraft.restored || !clientDraft.restoredOpen) return;
+    if (clientDialogOpen || clientReopenedRef.current) return;
+    clientReopenedRef.current = true;
+    setEditing(null);
+    setOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientDraft.restored, clientDraft.restoredOpen, clientDialogOpen]);
+  const handleClientDraftValues = (values: ClientFormDraft) => {
+    if (clientBaselineRef.current === "") clientBaselineRef.current = JSON.stringify(values);
+    setClientDraftValues(values);
+    clientDraft.save(values, { open: true });
+  };
+  const clearClientDraft = () => {
+    clientBaselineRef.current = "";
+    setClientDraftValues(null);
+    clientDraft.clear();
+  };
 
   const { data: clients, isLoading } = useQuery({
     queryKey: ["clients", currentCompanyId, isManager, user?.id],
@@ -408,9 +470,13 @@ function ClientsPage() {
               open={open || !!editing}
               onOpenChange={(v) => {
                 if (!v) {
+                  // Fechar por ESC/clique fora: mantém o rascunho com open:false.
+                  if (clientDraftValues) clientDraft.save(clientDraftValues, { open: false });
                   setOpen(false);
                   setEditing(null);
                 } else {
+                  clientBaselineRef.current = "";
+                  setClientDraftValues(null);
                   setOpen(true);
                 }
               }}
@@ -445,12 +511,19 @@ function ClientsPage() {
                   membersLoading={activeMembersLoading}
                   membersError={!!activeMembersError}
                   assignees={editing ? (assigneesByClient[editing.id] ?? []) : []}
+                  draftValues={clientDraft.restored}
+                  draftSavedAt={clientDraft.savedAt}
+                  draftConflict={clientDraft.conflict}
+                  onDraftValues={handleClientDraftValues}
+                  onDraftDiscard={clearClientDraft}
                   onDone={() => {
+                    clearClientDraft();
                     setOpen(false);
                     setEditing(null);
                     invalidateClientsCache(qc);
                   }}
                   onCancel={() => {
+                    clearClientDraft();
                     setOpen(false);
                     setEditing(null);
                   }}
