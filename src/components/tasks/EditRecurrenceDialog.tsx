@@ -125,17 +125,21 @@ export function EditRecurrenceDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, draft.restored, draft.conflict]);
 
-  // Grava o rascunho (debounced no hook) quando os campos mudam.
+  const isDirtyNow = () =>
+    initialFingerprintRef.current !== "" && JSON.stringify(currentValues()) !== initialFingerprintRef.current;
+
+  // Grava o rascunho (debounced no hook) só quando os campos diferem da linha de base.
   useEffect(() => {
     if (!open) return;
     if (draft.restored && !appliedDraftRef.current) return; // rascunho pendente de decisão
+    if (!isDirtyNow()) return;
     draft.save(currentValues(), { open: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, scope, title, priority, assignedTo, scheduledTime, scheduledFor, duration, seriesStart, seriesEnd]);
 
-  // Fechar por ESC/clique fora: mantém o rascunho com open:false.
+  // Fechar por ESC/clique fora: mantém o rascunho com open:false (só se alterado).
   const handleOpenChange = (v: boolean) => {
-    if (!v) draft.save(currentValues(), { open: false });
+    if (!v && isDirtyNow()) draft.save(currentValues(), { open: false });
     onOpenChange(v);
   };
 
