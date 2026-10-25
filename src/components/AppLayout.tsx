@@ -1,18 +1,7 @@
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Shield,
-  LogOut,
-  Moon,
-  Sun,
-  Menu,
-  X,
-  ChevronDown,
-  Repeat,
-  LifeBuoy,
-  UserCircle,
-} from "lucide-react";
+import { Shield, LogOut, Moon, Sun, Menu, X, ChevronDown, Repeat, LifeBuoy, UserCircle } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
@@ -32,6 +21,15 @@ import { getAppVersion } from "@/lib/app-version";
 import { useT } from "@/i18n";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { latestChangeId } from "@/lib/change-log";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { formatWallDate, formatWallTime } from "@/lib/wall-clock";
 
 function detectBrowser(): { name: string; version: string } {
   if (typeof navigator === "undefined") return { name: "ssr", version: "" };
@@ -85,8 +83,8 @@ function DeploymentDiagnostics() {
       <span className="font-sans">OmniBiz · Diagnóstico</span>
       <span>
         v1 · build {version.buildId} · commit {version.shortCommitSha} · env {env} · host {host} · {browser}{" "}
-        {browserVersion} · pwa{" "}
-        {isStandalone ? "on" : "off"} · sw {swCount === null ? "?" : swCount === -1 ? "err" : swCount}
+        {browserVersion} · pwa {isStandalone ? "on" : "off"} · sw{" "}
+        {swCount === null ? "?" : swCount === -1 ? "err" : swCount}
       </span>
     </div>
   );
@@ -96,7 +94,8 @@ const GROUPS_STORAGE_KEY = "omnibiz:sidebar:groups:v2";
 const FORCE_MENU_CLOSED_KEY = "omnibiz:force-mobile-menu-closed";
 const MOBILE_QUERY = "(max-width: 767px)";
 export function AppLayout({ children }: { children?: ReactNode }) {
-  const { user, isManager, isSuperAdmin, currentCompanyId, signOut, effectiveRole, switchCompany, initialized } = useAuth();
+  const { user, isManager, isSuperAdmin, currentCompanyId, signOut, effectiveRole, switchCompany, initialized } =
+    useAuth();
   const { theme, toggle } = useTheme();
   const { t } = useT();
   const nav = useNavigate();
@@ -199,9 +198,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
         .select("*", { count: "exact", head: true })
         .eq("user_id", user!.id);
       if (currentCompanyId) query.eq("company_id", currentCompanyId);
-      const { count, error } = await query
-        .is("read_at", null)
-        .not("state", "in", "(resolvida,arquivada)");
+      const { count, error } = await query.is("read_at", null).not("state", "in", "(resolvida,arquivada)");
       if (error) throw error;
       if (!currentCompanyId || !isManager) return count ?? 0;
       const { count: vacationCount, error: vacationError } = await (supabase as any)
@@ -234,8 +231,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
 
   // Contexto necessário para resolver a navegação. Loading NUNCA é tratado
   // como "sem permissão" (ADR-030).
-  const contextReady =
-    initialized && !!effectiveRole && (!currentCompanyId || companyFetched);
+  const contextReady = initialized && !!effectiveRole && (!currentCompanyId || companyFetched);
 
   const { ready: navReady, groups } = useMemo(() => {
     const resolved = resolveAvailableNavigation({
@@ -414,66 +410,66 @@ export function AppLayout({ children }: { children?: ReactNode }) {
               )}
               {navReady &&
                 groups.map((group) => {
-                const isCollapsed = collapsed[group.id] ?? false;
-                const groupHasActive = group.items.some(
-                  (it) => path === it.to || (it.to !== "/app" && path.startsWith(it.to)),
-                );
-                return (
-                  <div key={group.id}>
-                    <button
-                      type="button"
-                      onClick={() => setCollapsed((prev) => ({ ...prev, [group.id]: !isCollapsed }))}
-                      className={cn(
-                        "group flex w-full items-center justify-between rounded px-2 py-1 text-[10px] font-semibold uppercase tracking-wider transition-colors",
-                        groupHasActive
-                          ? "text-sidebar-foreground"
-                          : "text-muted-foreground hover:text-sidebar-foreground",
+                  const isCollapsed = collapsed[group.id] ?? false;
+                  const groupHasActive = group.items.some(
+                    (it) => path === it.to || (it.to !== "/app" && path.startsWith(it.to)),
+                  );
+                  return (
+                    <div key={group.id}>
+                      <button
+                        type="button"
+                        onClick={() => setCollapsed((prev) => ({ ...prev, [group.id]: !isCollapsed }))}
+                        className={cn(
+                          "group flex w-full items-center justify-between rounded px-2 py-1 text-[10px] font-semibold uppercase tracking-wider transition-colors",
+                          groupHasActive
+                            ? "text-sidebar-foreground"
+                            : "text-muted-foreground hover:text-sidebar-foreground",
+                        )}
+                        aria-expanded={!isCollapsed}
+                      >
+                        <span>{t(group.label)}</span>
+                        <ChevronDown
+                          className={cn("h-3 w-3 transition-transform", isCollapsed ? "-rotate-90" : "rotate-0")}
+                        />
+                      </button>
+                      {!isCollapsed && (
+                        <ul className="mt-1 space-y-0.5">
+                          {group.items.map((it) => {
+                            const active = path === it.to || (it.to !== "/app" && path.startsWith(it.to));
+                            const Icon = it.icon;
+                            return (
+                              <li key={it.to}>
+                                <Link
+                                  to={it.to}
+                                  onClick={() => setOpen(false)}
+                                  className={cn(
+                                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                                    active
+                                      ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
+                                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                                  )}
+                                >
+                                  <Icon className="h-4 w-4 shrink-0" />
+                                  <span className="flex-1 truncate">{t(it.label)}</span>
+                                  {it.soon && (
+                                    <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">
+                                      {t("em breve")}
+                                    </span>
+                                  )}
+                                  {!it.soon && it.badge ? (
+                                    <span className="min-w-5 rounded-full bg-destructive px-1.5 py-0.5 text-center text-[10px] font-semibold leading-none text-destructive-foreground">
+                                      {it.badge > 99 ? "99+" : it.badge}
+                                    </span>
+                                  ) : null}
+                                </Link>
+                              </li>
+                            );
+                          })}
+                        </ul>
                       )}
-                      aria-expanded={!isCollapsed}
-                    >
-                      <span>{t(group.label)}</span>
-                      <ChevronDown
-                        className={cn("h-3 w-3 transition-transform", isCollapsed ? "-rotate-90" : "rotate-0")}
-                      />
-                    </button>
-                    {!isCollapsed && (
-                      <ul className="mt-1 space-y-0.5">
-                        {group.items.map((it) => {
-                          const active = path === it.to || (it.to !== "/app" && path.startsWith(it.to));
-                          const Icon = it.icon;
-                          return (
-                            <li key={it.to}>
-                              <Link
-                                to={it.to}
-                                onClick={() => setOpen(false)}
-                                className={cn(
-                                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                                  active
-                                    ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
-                                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                                )}
-                              >
-                                <Icon className="h-4 w-4 shrink-0" />
-                                <span className="flex-1 truncate">{t(it.label)}</span>
-                                {it.soon && (
-                                  <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">
-                                    {t("em breve")}
-                                  </span>
-                                )}
-                                {!it.soon && it.badge ? (
-                                  <span className="min-w-5 rounded-full bg-destructive px-1.5 py-0.5 text-center text-[10px] font-semibold leading-none text-destructive-foreground">
-                                    {it.badge > 99 ? "99+" : it.badge}
-                                  </span>
-                                ) : null}
-                              </Link>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    )}
-                  </div>
-                );
-              })}
+                    </div>
+                  );
+                })}
 
               {navReady && isSuperAdmin && !currentCompanyId && (
                 <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/60 p-3 text-xs text-sidebar-foreground">
@@ -596,7 +592,9 @@ export function AppLayout({ children }: { children?: ReactNode }) {
               className="hidden sm:inline-flex"
               onClick={() => setReportDialogOpen(true)}
               disabled={!currentCompanyId}
-              title={!currentCompanyId ? t("Selecione uma empresa antes de reportar") : t("Reportar problema nesta tela")}
+              title={
+                !currentCompanyId ? t("Selecione uma empresa antes de reportar") : t("Reportar problema nesta tela")
+              }
             >
               <LifeBuoy className="mr-1.5 h-4 w-4" /> {t("Reportar problema")}
             </Button>
@@ -610,6 +608,10 @@ export function AppLayout({ children }: { children?: ReactNode }) {
         )}
       </div>
 
+      {user?.id && !isManager && isModuleEnabled(enabledModules, "extra_work") && (
+        <ExtraWorkInviteModal userId={user.id} />
+      )}
+
       <NewTicketDialog
         open={reportDialogOpen}
         onOpenChange={setReportDialogOpen}
@@ -618,5 +620,148 @@ export function AppLayout({ children }: { children?: ReactNode }) {
         defaultModule={typeof window !== "undefined" ? window.location.pathname.replace(/^\/app\/?/, "") : ""}
       />
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Trabalho Extra (módulo extra_work): modal do convite em tempo real  */
+/* ------------------------------------------------------------------ */
+
+type ExtraInviteRow = {
+  id: string;
+  status: string;
+  extra_works: {
+    id: string;
+    title: string;
+    description: string | null;
+    slots: number;
+    status: string;
+    extra_work_days: { starts_at: string; ends_at: string }[] | null;
+  } | null;
+};
+
+const EXTRA_DISMISSED_KEY = "extra-work-dismissed-invites";
+
+function ExtraWorkInviteModal({ userId }: { userId: string }) {
+  const qc = useQueryClient();
+  const [dismissed, setDismissed] = useState<string[]>(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem(EXTRA_DISMISSED_KEY) ?? "[]") as string[];
+    } catch {
+      return [];
+    }
+  });
+  const [busy, setBusy] = useState(false);
+
+  const { data: invites } = useQuery({
+    queryKey: ["extra-work-my-invites", userId],
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
+        .from("extra_work_invites")
+        .select(
+          "id, status, invited_at, responded_at, extra_works(id, title, description, slots, status, extra_work_days(starts_at, ends_at))",
+        )
+        .eq("user_id", userId)
+        .order("invited_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return (data ?? []) as ExtraInviteRow[];
+    },
+  });
+
+  // Convite novo (ou vagas preenchidas/cancelado) chega como notificação: atualiza na hora.
+  useEffect(() => {
+    const channel = supabase
+      .channel("extra-work-invites:" + userId)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "notifications", filter: "user_id=eq." + userId },
+        (payload: { new?: { event?: string } }) => {
+          if (String(payload.new?.event ?? "").startsWith("extra_work")) {
+            qc.invalidateQueries({ queryKey: ["extra-work-my-invites"] });
+          }
+        },
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [userId, qc]);
+
+  const current = (invites ?? []).find(
+    (i) => i.status === "enviado" && i.extra_works?.status === "aberto" && !dismissed.includes(i.id),
+  );
+
+  const dismiss = (id: string) => {
+    const next = [...dismissed, id];
+    setDismissed(next);
+    try {
+      sessionStorage.setItem(EXTRA_DISMISSED_KEY, JSON.stringify(next));
+    } catch {
+      /* armazenamento indisponível: fecha só nesta sessão */
+    }
+  };
+
+  const respond = async (accept: boolean) => {
+    if (!current) return;
+    setBusy(true);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any).rpc("extra_work_respond", { _invite_id: current.id, _accept: accept });
+      if (error) throw error;
+      toast.success(accept ? "Aceite! As tarefas foram criadas em Minhas Tarefas." : "Convite recusado.");
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+    } catch (e) {
+      toast.error(String((e as { message?: string })?.message ?? e).replace(/^MODULE_NOT_ENABLED:\s*/, ""));
+    } finally {
+      qc.invalidateQueries({ queryKey: ["extra-work-my-invites"] });
+      setBusy(false);
+    }
+  };
+
+  if (!current || !current.extra_works) return null;
+  const w = current.extra_works;
+  const days = [...(w.extra_work_days ?? [])].sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+
+  return (
+    <Dialog
+      open
+      onOpenChange={(o) => {
+        if (!o && !busy) dismiss(current.id);
+      }}
+    >
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Trabalho extra disponível</DialogTitle>
+          <DialogDescription>
+            {w.slots === 1 ? "1 vaga" : w.slots + " vagas"} · os primeiros a aceitar ficam com as vagas.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2 text-sm">
+          <div className="font-medium">{w.title}</div>
+          <ul className="space-y-0.5 text-muted-foreground">
+            {days.map((d) => (
+              <li key={d.starts_at}>
+                {formatWallDate(d.starts_at)} · {formatWallTime(d.starts_at)}–{formatWallTime(d.ends_at)}
+              </li>
+            ))}
+          </ul>
+          {w.description && <div>{w.description}</div>}
+          {days.length > 1 && <div className="text-xs text-muted-foreground">Ao aceitar, fica com todos os dias.</div>}
+        </div>
+        <DialogFooter className="flex-wrap gap-2 sm:gap-2">
+          <Button variant="ghost" disabled={busy} onClick={() => dismiss(current.id)}>
+            Depois
+          </Button>
+          <Button variant="outline" disabled={busy} onClick={() => respond(false)}>
+            Recusar
+          </Button>
+          <Button disabled={busy} onClick={() => respond(true)}>
+            {busy ? "A enviar..." : "Aceitar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
