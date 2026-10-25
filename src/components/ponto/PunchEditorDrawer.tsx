@@ -1,6 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
+import { useFormDraft } from "@/lib/form-draft";
+import { DraftNotice } from "@/components/form-draft/DraftNotice";
 import { Sheet, SheetContent, ModalBody, ModalFooter, ModalHeader, ModalSection } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -107,6 +110,79 @@ export function PunchEditorDrawer({
   const [pauseRows, setPauseRows] = useState<{ paused_at: string; resumed_at: string }[]>([]);
   const [pausesDirty, setPausesDirty] = useState(false);
 
+  // ----- Rascunho automático do editor de ponto -----
+  interface PunchEditorDraft extends Record<string, unknown> {
+    form: FormState;
+    pauseRows: { paused_at: string; resumed_at: string }[];
+    pausesDirty: boolean;
+  }
+  const { user } = useAuth();
+  const appliedDraftRef = useRef(false);
+  const restoredDraftRef = useRef<PunchEditorDraft | null>(null);
+  const suppressedDraftRef = useRef(false);
+  const initialFingerprintRef = useRef("");
+  const reopenedRef = useRef(false);
+  const draftDirty =
+    initialFingerprintRef.current !== "" &&
+    JSON.stringify({ form, pauseRows, pausesDirty }) !== initialFingerprintRef.current;
+  const draft = useFormDraft<PunchEditorDraft>({
+    formId: "punch-editor",
+    recordId:
+      mode === "edit" ? (entry?.id ?? null) : regularizeTaskAbsence ? `regularize-${initialTaskId ?? ""}` : null,
+    baseUpdatedAt: mode === "edit" ? (entry?.updated_at ?? null) : null,
+    userId: user?.id,
+    companyId,
+    enabled: mode === "create" || !!entry?.id,
+    dirty: open && draftDirty,
+  });
+  const applyDraft = (values: PunchEditorDraft) => {
+    appliedDraftRef.current = true;
+    setForm(values.form);
+    setPauseRows(values.pauseRows);
+    setPausesDirty(values.pausesDirty);
+    initialFingerprintRef.current = JSON.stringify(values);
+  };
+  useEffect(() => {
+    if (!draft.restored || appliedDraftRef.current) return;
+    restoredDraftRef.current = draft.restored;
+    if (mode === "create" && draft.restoredOpen && !open && !reopenedRef.current) {
+      reopenedRef.current = true;
+      onOpenChange(true);
+      return;
+    }
+    if (!open || draft.conflict) return;
+    applyDraft(draft.restored);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft.restored, draft.restoredOpen, draft.conflict, open, mode]);
+  useEffect(() => {
+    if (!open) return;
+    if (suppressedDraftRef.current) return;
+    if (draft.restored && !appliedDraftRef.current) return; // rascunho pendente de decisão
+    if (initialFingerprintRef.current === "") {
+      // Primeira passagem após abrir: fixa a linha de base, ainda não grava.
+      initialFingerprintRef.current = JSON.stringify({ form, pauseRows, pausesDirty });
+      return;
+    }
+    if (!draftDirty && draft.savedAt === null) return;
+    draft.save({ form, pauseRows, pausesDirty }, { open: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, pauseRows, pausesDirty, open, draftDirty]);
+  const clearDraft = () => {
+    suppressedDraftRef.current = true;
+    appliedDraftRef.current = false;
+    restoredDraftRef.current = null;
+    draft.clear();
+  };
+  // Fechar por ESC/clique fora: mantém o rascunho com open:false.
+  const handleOpenChange = (v: boolean) => {
+    if (!v && !suppressedDraftRef.current && initialFingerprintRef.current !== "") {
+      draft.save({ form, pauseRows, pausesDirty }, { open: false });
+    }
+    if (v) suppressedDraftRef.current = false;
+    onOpenChange(v);
+  };
+
+
   useEffect(() => {
     if (!open) return;
     if (mode === "edit" && entry) {
@@ -135,6 +211,9 @@ export function PunchEditorDrawer({
         started_at: wallISOToInput(initialStartedAt),
         ended_at: wallISOToInput(initialEndedAt),
       });
+    }
+    if (!appliedDraftRef.current) {
+      initialFingerprintRef.current = "";
     }
   }, [open, mode, entry, initialEntryKind, initialUserId, initialTaskId, initialStartedAt, initialEndedAt]);
 
@@ -217,6 +296,7 @@ export function PunchEditorDrawer({
 
   useEffect(() => {
     if (!open || !isWorkEdit || !entry || entryPauses === undefined) return;
+    if (appliedDraftRef.current) return;
     const finished = entryPauses.filter((p) => !!p.resumed_at);
     const base =
       entryPauses.length > 0
@@ -226,6 +306,10 @@ export function PunchEditorDrawer({
           : [];
     setPauseRows(base.map((p) => ({ paused_at: toLocalInput(p.paused_at), resumed_at: toLocalInput(p.resumed_at) })));
     setPausesDirty(false);
+    if (!appliedDraftRef.current) {
+      initialFingerprintRef.current = JSON.stringify({ form, pauseRows: base, pausesDirty: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, isWorkEdit, entry, entryPauses]);
 
   const updatePauseRow = (i: number, patch: Partial<{ paused_at: string; resumed_at: string }>) => {
@@ -300,6 +384,7 @@ export function PunchEditorDrawer({
       );
     },
     onSuccess: () => {
+      clearDraft();
       toast.success("Ponto criado");
       invalidate();
       onOpenChange(false);
@@ -348,6 +433,7 @@ export function PunchEditorDrawer({
       return result;
     },
     onSuccess: () => {
+      clearDraft();
       toast.success("Correção aplicada");
       invalidate();
       onOpenChange(false);
@@ -387,7 +473,7 @@ export function PunchEditorDrawer({
   const pending = createMut.isPending || updateMut.isPending;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent className="w-full sm:max-w-lg">
         <ModalHeader
           icon={mode === "create" ? ClockPlus : Pencil}
@@ -402,6 +488,16 @@ export function PunchEditorDrawer({
         />
 
         <ModalBody className="space-y-4">
+          {draft.savedAt !== null && (
+            <DraftNotice
+              savedAt={draft.savedAt}
+              conflict={draft.conflict}
+              onUseDraft={() => {
+                if (restoredDraftRef.current) applyDraft(restoredDraftRef.current);
+              }}
+              onDiscard={clearDraft}
+            />
+          )}
           {mode === "edit" && entry && (
             <div className="rounded-lg border border-border bg-muted/40 p-3 text-xs space-y-1">
               <div>
@@ -667,7 +763,14 @@ export function PunchEditorDrawer({
           </ModalSection>
         </ModalBody>
         <ModalFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
+          <Button
+            variant="outline"
+            onClick={() => {
+              clearDraft();
+              onOpenChange(false);
+            }}
+            disabled={pending}
+          >
             Cancelar
           </Button>
           <Button onClick={submit} disabled={pending}>

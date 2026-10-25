@@ -1,7 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
+import { useFormDraft } from "@/lib/form-draft";
+import { DraftNotice } from "@/components/form-draft/DraftNotice";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +35,7 @@ type ClientRow = {
   website: string | null;
   status: string;
   notes: string | null;
+  updated_at?: string | null;
 };
 
 const empty = {
@@ -54,8 +58,63 @@ const empty = {
 
 function ClientsPage() {
   const qc = useQueryClient();
+  const { user, currentCompanyId } = useAuth();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ ...empty });
+
+  // ----- Rascunho automático do formulário de cliente comercial -----
+  type CommercialClientDraft = typeof empty & Record<string, unknown>;
+  const [editingUpdatedAt, setEditingUpdatedAt] = useState<string | null>(null);
+  const appliedDraftRef = useRef(false);
+  const restoredDraftRef = useRef<CommercialClientDraft | null>(null);
+  const reopenedRef = useRef(false);
+  const baselineRef = useRef("");
+  const draftDirty = baselineRef.current !== "" && JSON.stringify(form) !== baselineRef.current;
+  const draft = useFormDraft<CommercialClientDraft>({
+    formId: "commercial-client-form",
+    recordId: form.id || null,
+    companyId: currentCompanyId,
+    userId: user?.id,
+    baseUpdatedAt: form.id ? editingUpdatedAt : null,
+    dirty: open && draftDirty,
+  });
+  const applyDraft = (values: CommercialClientDraft) => {
+    appliedDraftRef.current = true;
+    setForm({ ...values });
+    baselineRef.current = JSON.stringify(values);
+  };
+  useEffect(() => {
+    if (!draft.restored || appliedDraftRef.current) return;
+    restoredDraftRef.current = draft.restored;
+    if (!draft.restored.id && draft.restoredOpen && !open && !reopenedRef.current) {
+      reopenedRef.current = true;
+      setOpen(true);
+      return;
+    }
+    if (draft.conflict) return;
+    applyDraft(draft.restored);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft.restored, draft.conflict, draft.restoredOpen, open]);
+  useEffect(() => {
+    if (!open) return;
+    if (draft.restored && !appliedDraftRef.current) return; // rascunho pendente de decisão
+    if (baselineRef.current === "") {
+      baselineRef.current = JSON.stringify(form);
+      return;
+    }
+    draft.save({ ...form }, { open: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, open]);
+  const clearDraft = () => {
+    appliedDraftRef.current = false;
+    restoredDraftRef.current = null;
+    baselineRef.current = "";
+    draft.clear();
+  };
+  const handleOpenChange = (v: boolean) => {
+    if (!v && baselineRef.current !== "") draft.save({ ...form }, { open: false });
+    setOpen(v);
+  };
 
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ["commercial_clients"],
@@ -97,6 +156,7 @@ function ClientsPage() {
       }
     },
     onSuccess: () => {
+      clearDraft();
       toast.success(form.id ? "Cliente atualizado" : "Cliente criado");
       qc.invalidateQueries({ queryKey: ["commercial_clients"] });
       setOpen(false);
@@ -117,8 +177,10 @@ function ClientsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const openNew = () => { setForm({ ...empty }); setOpen(true); };
+  const openNew = () => { baselineRef.current = ""; setForm({ ...empty }); setEditingUpdatedAt(null); setOpen(true); };
   const openEdit = (c: ClientRow) => {
+    baselineRef.current = "";
+    setEditingUpdatedAt(c.updated_at ?? null);
     setForm({
       id: c.id,
       company_name: c.company_name,
@@ -143,7 +205,7 @@ function ClientsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="font-display text-xl font-semibold">Clientes comerciais</h2>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
           <DialogTrigger asChild>
             <Button onClick={openNew}><Plus className="mr-2 h-4 w-4" /> Novo cliente</Button>
           </DialogTrigger>
@@ -154,6 +216,16 @@ function ClientsPage() {
               description={form.id ? "Atualize os dados do cliente comercial." : "Preencha os dados para registar um novo cliente comercial."}
             />
             <ModalBody className="space-y-4">
+              {draft.savedAt !== null && (
+                <DraftNotice
+                  savedAt={draft.savedAt}
+                  conflict={draft.conflict}
+                  onUseDraft={() => {
+                    if (restoredDraftRef.current) applyDraft(restoredDraftRef.current);
+                  }}
+                  onDiscard={clearDraft}
+                />
+              )}
               <ModalSection title="Dados do cliente" icon={Building2}>
                 <div className="grid gap-3 md:grid-cols-2">
                   <div><Label>Nome comercial *</Label><Input value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} /></div>
@@ -203,7 +275,7 @@ function ClientsPage() {
               </ModalSection>
             </ModalBody>
             <ModalFooter>
-              <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
+              <Button variant="ghost" onClick={() => { clearDraft(); setForm({ ...empty }); setOpen(false); }}>Cancelar</Button>
               <Button onClick={() => save.mutate()} disabled={save.isPending}>{save.isPending ? "A guardar…" : "Guardar"}</Button>
             </ModalFooter>
           </DialogContent>

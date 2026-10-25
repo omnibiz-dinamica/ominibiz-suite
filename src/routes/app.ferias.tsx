@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { useFormDraft } from "@/lib/form-draft";
+import { DraftNotice } from "@/components/form-draft/DraftNotice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -325,8 +327,65 @@ function FeriasPage() {
   // sem Setor, usa o local de trabalho do perfil, como antes. O funcionário pode alterar.
   const profileWorkLocation =
     ((myProfile as { sector?: string | null } | null)?.sector ?? "").trim() || myProfile?.work_location || "";
+
+  // ----- Rascunho automático do pedido de férias -----
+  interface VacationRequestDraft extends Record<string, unknown> {
+    start: string;
+    end: string;
+    workLocation: string;
+    note: string;
+    priorValidation: "sim" | "nao";
+    validatedBy: string;
+  }
+  const appliedDraftRef = useRef(false);
+  const restoredDraftRef = useRef<VacationRequestDraft | null>(null);
+  const clearedDraftRef = useRef(false);
+  const draftDirty =
+    !!start ||
+    !!end ||
+    !!note ||
+    priorValidation !== "nao" ||
+    !!validatedBy.trim() ||
+    (workLocation !== "" && workLocation !== profileWorkLocation);
+  const draft = useFormDraft<VacationRequestDraft>({
+    formId: "vacation-request",
+    userId: user?.id,
+    companyId: currentCompanyId,
+    dirty: draftDirty,
+  });
+  const applyDraft = (values: VacationRequestDraft) => {
+    appliedDraftRef.current = true;
+    setStart(values.start);
+    setEnd(values.end);
+    setWorkLocation(values.workLocation);
+    setNote(values.note);
+    setPriorValidation(values.priorValidation);
+    setValidatedBy(values.validatedBy);
+  };
   useEffect(() => {
-    if (!workLocation && profileWorkLocation) {
+    if (!draft.restored || appliedDraftRef.current) return;
+    restoredDraftRef.current = draft.restored;
+    if (!draft.conflict) applyDraft(draft.restored);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft.restored, draft.conflict]);
+  useEffect(() => {
+    // Si tras limpiar (envío o descarte) la persona vuelve a escribir, se reactiva el rascunho.
+    if (clearedDraftRef.current && !draftDirty) return;
+    if (draftDirty) clearedDraftRef.current = false;
+    if (draft.restored && !appliedDraftRef.current) return; // rascunho pendente de decisão
+    if (!draftDirty) return;
+    draft.save({ start, end, workLocation, note, priorValidation, validatedBy }, { open: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [start, end, workLocation, note, priorValidation, validatedBy, draftDirty]);
+  const clearDraft = () => {
+    clearedDraftRef.current = true;
+    appliedDraftRef.current = false;
+    restoredDraftRef.current = null;
+    draft.clear();
+  };
+
+  useEffect(() => {
+    if (!workLocation && profileWorkLocation && !appliedDraftRef.current && !restoredDraftRef.current) {
       setWorkLocation(profileWorkLocation);
     }
   }, [profileWorkLocation, workLocation]);
@@ -357,6 +416,7 @@ function FeriasPage() {
       if (data?.id) await sendVacationEmail(data.id, "vacation_request", "vacation_request", "create");
     },
     onSuccess: () => {
+      clearDraft();
       toast.success("Solicitação enviada");
       setStart("");
       setEnd("");
@@ -701,6 +761,21 @@ function FeriasPage() {
           <h2 className="mb-3 flex items-center gap-2 font-semibold">
             <Plus className="h-4 w-4" /> Nova Solicitação
           </h2>
+          {draft.savedAt !== null && (
+            <div className="mb-3">
+              <DraftNotice
+                savedAt={draft.savedAt}
+                conflict={draft.conflict}
+                onUseDraft={() => {
+                  if (restoredDraftRef.current) applyDraft(restoredDraftRef.current);
+                }}
+                onDiscard={() => {
+                  restoredDraftRef.current = null;
+                  draft.clear();
+                }}
+              />
+            </div>
+          )}
           <div className="grid gap-3 md:grid-cols-3">
             <div>
               <Label htmlFor="start">Data de início</Label>

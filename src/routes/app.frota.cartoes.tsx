@@ -1,8 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { useFormDraft } from "@/lib/form-draft";
+import { DraftNotice } from "@/components/form-draft/DraftNotice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +12,53 @@ import { toast } from "sonner";
 import { CreditCard, Plus, ArrowLeft, X } from "lucide-react";
 import { PhotoPicker } from "@/components/PhotoPicker";
 import { RoleGuard } from "@/components/RoleGuard";
+
+
+interface FleetCardFormDraft extends Record<string, unknown> {
+  label: string;
+  number: string;
+}
+
+function useLocalFormDraft(values: FleetCardFormDraft, initial: FleetCardFormDraft, open: boolean,
+  apply: (values: FleetCardFormDraft) => void, reopen: () => void,
+  recordId?: string, baseUpdatedAt?: string | null) {
+  const { user, currentCompanyId } = useAuth();
+  const dirty = JSON.stringify(values) !== JSON.stringify(initial);
+  const draft = useFormDraft<FleetCardFormDraft>({
+    formId: "fleet-card-form", recordId, baseUpdatedAt,
+    userId: user?.id, companyId: currentCompanyId, dirty,
+  });
+  const applied = useRef(false);
+  const restoredValues = useRef<FleetCardFormDraft | null>(null);
+  const skipSave = useRef(false);
+  const blocked = useRef(false);
+  useEffect(() => {
+    if (draft.restored === null || applied.current) return;
+    applied.current = true;
+    restoredValues.current = draft.restored;
+    skipSave.current = true;
+    if (!draft.conflict) apply(draft.restored);
+    if (!recordId && draft.restoredOpen) reopen();
+  }, [draft.restored, draft.conflict, draft.restoredOpen, recordId]);
+  useEffect(() => {
+    if (skipSave.current) { skipSave.current = false; return; }
+    if (blocked.current || (draft.conflict && restoredValues.current)) return;
+    if (dirty || applied.current) draft.save(values, { open });
+  }, [values.label, values.number, open, dirty, draft.save]);
+  return {
+    clear: () => { blocked.current = true; draft.clear(); },
+    resume: () => { blocked.current = false; },
+    notice: draft.savedAt !== null ? <DraftNotice savedAt={draft.savedAt}
+      conflict={draft.conflict} onDiscard={() => { blocked.current = true; draft.clear(); }}
+      onUseDraft={() => {
+        if (restoredValues.current) {
+          blocked.current = false;
+          apply(restoredValues.current);
+          restoredValues.current = null;
+        }
+      }} /> : null,
+  };
+}
 
 export const Route = createFileRoute("/app/frota/cartoes")({
   component: () => (
@@ -164,6 +213,9 @@ function NewCardForm({ companyId, onSaved }: { companyId: string; onSaved: () =>
   const [number, setNumber] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
 
+  const localDraft = useLocalFormDraft({ label, number }, { label: "", number: "" }, open,
+    (d) => { setLabel(d.label); setNumber(d.number); }, () => setOpen(true));
+
   const create = useMutation({
     mutationFn: async () => {
       if (!number.trim()) throw new Error("Número obrigatório");
@@ -175,6 +227,7 @@ function NewCardForm({ companyId, onSaved }: { companyId: string; onSaved: () =>
       if (error) throw error;
     },
     onSuccess: () => {
+      localDraft.clear();
       toast.success("Cartão cadastrado");
       setOpen(false); setLabel(""); setNumber(""); setPhoto(null);
       onSaved();
@@ -186,12 +239,13 @@ function NewCardForm({ companyId, onSaved }: { companyId: string; onSaved: () =>
     <section className="rounded-2xl border border-border bg-card p-5">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="font-semibold">Novo cartão</h2>
-        <Button size="sm" onClick={() => setOpen((o) => !o)}>
+        <Button size="sm" onClick={() => { localDraft.resume(); setOpen((o) => !o); }}>
           <Plus className="h-4 w-4" /> {open ? "Fechar" : "Adicionar"}
         </Button>
       </div>
       {open && (
         <div className="grid gap-3 md:grid-cols-3">
+          <div className="md:col-span-3">{localDraft.notice}</div>
           <div><Label>Nome do cartão</Label><Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Ex.: Galp Frota" /></div>
           <div><Label>Número</Label><Input value={number} onChange={(e) => setNumber(e.target.value)} /></div>
           <div>

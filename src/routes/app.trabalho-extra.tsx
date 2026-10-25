@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { ModuleGuard } from "@/components/ModuleGuard";
+import { useFormDraft } from "@/lib/form-draft";
+import { DraftNotice } from "@/components/form-draft/DraftNotice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -425,13 +427,55 @@ function NewExtraWorkSection({
   clients: { id: string; name: string }[];
   onCreated: () => void;
 }) {
-  const { currentCompanyId } = useAuth();
+  const { user, currentCompanyId } = useAuth();
   const [clientId, setClientId] = useState<string>("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [slots, setSlots] = useState("1");
   const [rows, setRows] = useState<DayDraft[]>([{ date: tomorrowKey(), start: "09:00", end: "13:00" }]);
   const [checkedDays, setCheckedDays] = useState<DayIso[] | null>(null);
+
+  interface ExtraWorkFormDraft extends Record<string, unknown> {
+    clientId: string;
+    title: string;
+    description: string;
+    slots: string;
+    rows: DayDraft[];
+  }
+  const initialFingerprintRef = useRef<string | null>(null);
+  if (initialFingerprintRef.current === null) {
+    initialFingerprintRef.current = JSON.stringify({ clientId, title, description, slots, rows });
+  }
+  const dirty =
+    JSON.stringify({ clientId, title, description, slots, rows }) !== initialFingerprintRef.current;
+  const draft = useFormDraft<ExtraWorkFormDraft>({
+    formId: "extra-work-form",
+    userId: user?.id,
+    companyId: currentCompanyId,
+    dirty,
+  });
+  const appliedDraftRef = useRef(false);
+  const restoredDraftRef = useRef<ExtraWorkFormDraft | null>(null);
+  const applyDraft = useCallback((values: ExtraWorkFormDraft) => {
+    appliedDraftRef.current = true;
+    setClientId(values.clientId);
+    setTitle(values.title);
+    setDescription(values.description);
+    setSlots(values.slots);
+    setRows(values.rows);
+    setCheckedDays(null);
+  }, []);
+  useEffect(() => {
+    if (!draft.restored || appliedDraftRef.current) return;
+    restoredDraftRef.current = draft.restored;
+    if (!draft.conflict) applyDraft(draft.restored);
+  }, [draft.restored, draft.conflict, applyDraft]);
+  useEffect(() => {
+    if (draft.restored && !appliedDraftRef.current) return; // rascunho pendente de decisão
+    if (!dirty) return;
+    draft.save({ clientId, title, description, slots, rows }, { open: true });
+  }, [clientId, title, description, slots, rows, dirty, draft]);
+
 
   const days = draftToDays(rows);
   const daysKey = JSON.stringify(days);
@@ -463,6 +507,21 @@ function NewExtraWorkSection({
       <h2 className="mb-3 flex items-center gap-2 font-semibold">
         <Plus className="h-4 w-4" /> Novo trabalho extra
       </h2>
+      {draft.savedAt !== null && (
+        <div className="mb-3">
+          <DraftNotice
+            savedAt={draft.savedAt}
+            conflict={draft.conflict}
+            onUseDraft={() => {
+              if (restoredDraftRef.current) applyDraft(restoredDraftRef.current);
+            }}
+            onDiscard={() => {
+              restoredDraftRef.current = null;
+              draft.clear();
+            }}
+          />
+        </div>
+      )}
       <div className="grid gap-3 md:grid-cols-3">
         <div>
           <Label>Cliente</Label>
@@ -575,7 +634,10 @@ function NewExtraWorkSection({
             days={days}
             excludeUserIds={[]}
             confirmLabel="Criar e enviar convites"
-            onCancel={() => setCheckedDays(null)}
+            onCancel={() => {
+              draft.clear();
+              setCheckedDays(null);
+            }}
             onConfirm={async (userIds) => {
               const err = validate();
               if (err) throw new Error(err);
@@ -594,6 +656,7 @@ function NewExtraWorkSection({
               });
               if (sendError) throw sendError;
               reportSend(sent);
+              draft.clear();
               reset();
               onCreated();
             }}

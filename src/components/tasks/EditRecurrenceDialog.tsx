@@ -1,4 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useAuth } from "@/lib/auth";
+import { useFormDraft } from "@/lib/form-draft";
+import { DraftNotice } from "@/components/form-draft/DraftNotice";
 import { Dialog, DialogContent, ModalHeader, ModalBody, ModalFooter } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -63,6 +66,85 @@ export function EditRecurrenceDialog({
   const [saving, setSaving] = useState(false);
   const [scheduleConflicts, setScheduleConflicts] = useState<TaskScheduleConflict[]>([]);
 
+  interface RecurrenceEditDraft extends Record<string, unknown> {
+    scope: ReassignScope;
+    title: string;
+    priority: Priority;
+    assignedTo: string;
+    scheduledTime: string;
+    scheduledFor: string;
+    duration: number;
+    seriesStart: string;
+    seriesEnd: string;
+  }
+  const { user } = useAuth();
+  const currentValues = (): RecurrenceEditDraft => ({
+    scope,
+    title,
+    priority,
+    assignedTo,
+    scheduledTime,
+    scheduledFor,
+    duration,
+    seriesStart,
+    seriesEnd,
+  });
+  const appliedDraftRef = useRef(false);
+  const restoredDraftRef = useRef<RecurrenceEditDraft | null>(null);
+  const initialFingerprintRef = useRef("");
+  const draft = useFormDraft<RecurrenceEditDraft>({
+    formId: "recurrence-form",
+    recordId: recurrence?.id ?? null,
+    companyId: recurrence?.company_id ?? null,
+    userId: user?.id,
+    enabled: open && !!recurrence,
+    baseUpdatedAt: recurrence?.updated_at ?? null,
+    dirty: open && initialFingerprintRef.current !== "" && JSON.stringify(currentValues()) !== initialFingerprintRef.current,
+  });
+
+  const applyDraft = (values: RecurrenceEditDraft) => {
+    appliedDraftRef.current = true;
+    setScope(values.scope);
+    setTitle(values.title);
+    setPriority(values.priority);
+    setAssignedTo(values.assignedTo);
+    setScheduledTime(values.scheduledTime);
+    setScheduledFor(values.scheduledFor);
+    setDuration(values.duration);
+    setSeriesStart(values.seriesStart);
+    setSeriesEnd(values.seriesEnd);
+    initialFingerprintRef.current = JSON.stringify(values);
+  };
+
+  // Restaura o rascunho depois da inicialização normal dos campos.
+  useEffect(() => {
+    if (!open || !draft.restored || appliedDraftRef.current) return;
+    restoredDraftRef.current = draft.restored;
+    if (draft.conflict) return;
+    applyDraft(draft.restored);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, draft.restored, draft.conflict]);
+
+  // Grava o rascunho (debounced no hook) quando os campos mudam.
+  useEffect(() => {
+    if (!open) return;
+    if (draft.restored && !appliedDraftRef.current) return; // rascunho pendente de decisão
+    draft.save(currentValues(), { open: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, scope, title, priority, assignedTo, scheduledTime, scheduledFor, duration, seriesStart, seriesEnd]);
+
+  // Fechar por ESC/clique fora: mantém o rascunho com open:false.
+  const handleOpenChange = (v: boolean) => {
+    if (!v) draft.save(currentValues(), { open: false });
+    onOpenChange(v);
+  };
+
+  const clearDraft = () => {
+    appliedDraftRef.current = false;
+    restoredDraftRef.current = null;
+    draft.clear();
+  };
+
   useEffect(() => {
     if (!open) return;
     setScope(allowThis ? "this" : "future");
@@ -88,6 +170,10 @@ export function EditRecurrenceDialog({
       setScheduledTime(recurrence.scheduled_time?.slice(0, 5) ?? "");
       setDuration(recurrence.duration_minutes);
     }
+    if (!appliedDraftRef.current) {
+      initialFingerprintRef.current = JSON.stringify(currentValues());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, recurrence, fromTask, allowThis]);
 
   const submit = async (confirmed = false) => {
@@ -198,6 +284,7 @@ export function EditRecurrenceDialog({
         );
         toast.success(`${n} ocorrência(s) atualizada(s)`);
       }
+      clearDraft();
       onDone();
       onOpenChange(false);
     } catch (e) {
@@ -208,10 +295,20 @@ export function EditRecurrenceDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent size="md">
         <ModalHeader icon={Repeat} title="Editar recorrência" description="Atualize os dados desta série de tarefas." />
         <ModalBody className="space-y-4">
+          {draft.savedAt !== null && (
+            <DraftNotice
+              savedAt={draft.savedAt}
+              conflict={draft.conflict}
+              onUseDraft={() => {
+                if (restoredDraftRef.current) applyDraft(restoredDraftRef.current);
+              }}
+              onDiscard={clearDraft}
+            />
+          )}
           <div className="space-y-1.5">
             <Label>Aplicar em</Label>
             <Select value={scope} onValueChange={(v) => setScope(v as ReassignScope)}>
@@ -306,7 +403,15 @@ export function EditRecurrenceDialog({
 
         </ModalBody>
         <ModalFooter>
-          <Button type="button" variant="outline" disabled={saving} onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={saving}
+            onClick={() => {
+              clearDraft();
+              onOpenChange(false);
+            }}
+          >
             Cancelar
           </Button>
           <Button disabled={saving || !title.trim() || !assignedTo} onClick={() => void submit()}>
