@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { clearAllDrafts } from "@/lib/form-draft";
 
 export type AppRole = "super_admin" | "owner" | "manager" | "accountant" | "secretary" | "employee";
 
