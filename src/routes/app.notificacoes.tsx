@@ -65,7 +65,12 @@ type NotificationEvent =
   | "expense_rejected"
   | "ticket_created"
   | "ticket_message_added"
-  | "task_client_instructions_updated";
+  | "task_client_instructions_updated"
+  | "task_deleted"
+  | "extra_work_invite"
+  | "extra_work_accepted"
+  | "extra_work_declined"
+  | "extra_work_filled";
 
 type NotificationPriority = "baixa" | "media" | "alta" | "urgente";
 
@@ -352,6 +357,11 @@ const EVENT_LABEL: Record<NotificationEvent, string> = {
   task_marked_absent: "Ausente",
   task_late: "Atrasada",
   task_client_instructions_updated: "Instruções do cliente",
+  task_deleted: "Excluída",
+  extra_work_invite: "Trabalho extra — convite",
+  extra_work_accepted: "Trabalho extra — aceite",
+  extra_work_declined: "Trabalho extra — recusa",
+  extra_work_filled: "Trabalho extra — vagas preenchidas",
   vacation_requested: "Férias — solicitação",
   vacation_approved: "Férias — aprovadas",
   vacation_rejected: "Férias — rejeitadas",
