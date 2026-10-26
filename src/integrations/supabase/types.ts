@@ -4677,6 +4677,10 @@ export type Database = {
         Args: { _company_id: string; _days: Json; _user_id: string }
         Returns: Record<string, unknown>
       }
+      _notification_is_manager_copy: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: boolean
+      }
       _notify: {
         Args: {
           _body: string
