@@ -188,11 +188,11 @@ test("SUP-149: qualquer gestor decide pedido de férias novo; resposta do ticket
   const vacationsPage = readFileSync(new URL("../src/routes/app.ferias.tsx", import.meta.url), "utf8");
   const ticketPage = readFileSync(new URL("../src/routes/app.suporte.$id.tsx", import.meta.url), "utf8");
   assert.match(vacationsPage, /const canDecideAnyPending = isManager \|\| isOwner \|\| isSuperAdmin;/);
-  // aprovador atribuído continua a decidir; outros gestores só pedidos pendentes não reencaminhados
-  assert.match(
-    vacationsPage,
-    /r\.assigned_approver_id === user\?\.id \|\|\s*\(canDecideAnyPending && r\.status === "pendente" && !r\.forwarded_by\)/,
-  );
+  // 26/10/2026: qualquer gestor/owner/super admin decide pendentes e aguardando aprovação,
+  // incluindo os reencaminhados; o aprovador atribuído continua a decidir.
+  assert.match(vacationsPage, /r\.assigned_approver_id === user\?\.id \|\| canDecideAnyPending\)/);
+  // os reencaminhados por mim não aparecem duas vezes
+  assert.match(vacationsPage, /!toApproveIds\.has\(r\.id\)/);
   // quem pediu nunca decide o próprio pedido
   assert.match(
     vacationsPage,
