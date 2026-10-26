@@ -8,6 +8,8 @@ import type { AdminTimeEntry } from "../src/lib/punch-admin";
 // Exercise the real editor, queries and localStorage hook without browser portals
 // or writes to hosted time entries.
 const storage = new Map<string, string>();
+const originalWindow = globalThis.window;
+const testWindow = { localStorage: undefined as unknown, addEventListener() {}, removeEventListener() {} };
 const localStorage = {
   getItem: (key: string) => storage.get(key) ?? null,
   setItem: (key: string, value: string) => { storage.set(key, value); },
@@ -75,13 +77,12 @@ afterEach(async () => {
   renderer = null;
   storage.clear();
   calls.length = 0;
+  Object.assign(globalThis, { window: originalWindow });
 });
 
 describe("punch editor draft isolation", () => {
   it("keeps A's restored pauses out of B's correction and draft after casual close", async () => {
-    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true, window: {
-      localStorage, addEventListener() {}, removeEventListener() {},
-    } });
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true, window: { ...testWindow, localStorage } });
     writeDraft(localStorage, draftKey("manager", "company-a", "punch-editor", "A"), draftValues("A"), {
       open: false, baseUpdatedAt: entry("A").updated_at,
     });
@@ -117,5 +118,36 @@ describe("punch editor draft isolation", () => {
     expect(readDraft(localStorage, draftKey("manager", "company-a", "punch-editor", "A"))?.values).toMatchObject({
       form: { notes: "A changed" }, pauseRows: draftValues("A").pauseRows, pausesDirty: true,
     });
+    await act(async () => renderer?.update(renderEntry("A", true)));
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
+    expect(root().findAllByType("textarea")[0]?.props.value).toBe("A changed");
+    expect(root().findAllByType("input")).toHaveLength(4);
+  });
+
+  it("restores B's own draft and resets pauses when the company or mode changes", async () => {
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true, window: { ...testWindow, localStorage } });
+    for (const id of ["A", "B"]) {
+      writeDraft(localStorage, draftKey("manager", "company-a", "punch-editor", id), draftValues(id), {
+        open: false, baseUpdatedAt: entry(id).updated_at,
+      });
+    }
+    client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const renderEntry = (id: string, companyId = "company-a", mode: "edit" | "create" = "edit") =>
+      createElement(QueryClientProvider, { client: client as QueryClient },
+        createElement(PunchEditorDrawer, { open: true, onOpenChange() {}, mode, companyId, entry: entry(id), regularizeTaskAbsence: mode === "create" }));
+    await act(async () => { renderer = create(renderEntry("A")); });
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
+    await act(async () => renderer?.update(renderEntry("B")));
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
+    expect(renderer?.root.findAllByType("textarea")[0]?.props.value).toBe("draft-B");
+    expect(renderer?.root.findAllByType("input")).toHaveLength(4);
+    await act(async () => renderer?.update(renderEntry("B", "company-b")));
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
+    expect(renderer?.root.findAllByType("textarea")[0]?.props.value).toBe("notes-B");
+    expect(renderer?.root.findAllByType("input")).toHaveLength(2);
+    expect(readDraft(localStorage, draftKey("manager", "company-b", "punch-editor", "B"))).toBeNull();
+    await act(async () => renderer?.update(renderEntry("B", "company-b", "create")));
+    expect(renderer?.root.findAllByType("textarea")[0]?.props.value).toBe("");
+    expect(renderer?.root.findAllByType("input").map(input => input.props.value)).toEqual(["", ""]);
   });
 });
