@@ -98,6 +98,7 @@
     "@types/node": "^22.16.5",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "@types/react-test-renderer": "^19.3.0",
     "@vitejs/plugin-react": "^5.0.4",
     "drizzle-kit": "0.x",
     "drizzle-orm": "0.x",
@@ -109,6 +110,7 @@
     "globals": "^15.15.0",
     "postgres": "^3.4.9",
     "prettier": "^3.7.3",
+    "react-test-renderer": "^19.2.0",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
     "vite": "^7.3.1"

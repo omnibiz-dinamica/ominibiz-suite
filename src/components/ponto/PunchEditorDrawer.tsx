@@ -88,7 +88,24 @@ function previewEffective(f: Pick<FormState, "started_at" | "ended_at" | "paused
   return Math.max(0, Math.floor((end - start - pauseMs) / 1000 / 60 + 0.5));
 }
 
-export function PunchEditorDrawer({
+export function PunchEditorDrawer(props: Props) {
+  const { user } = useAuth();
+  // O formulário, as pausas e as refs pertencem à mesma identidade do rascunho.
+  // Desmontar o editor anterior também descarrega a sua gravação pendente.
+  const editorKey = JSON.stringify([
+    user?.id ?? null,
+    props.companyId,
+    props.mode,
+    props.mode === "edit" ? props.entry?.id ?? null : null,
+    props.mode === "create" ? props.regularizeTaskAbsence ?? false : false,
+    props.mode === "create" ? props.initialTaskId ?? null : null,
+    props.mode === "create" ? props.initialUserId ?? null : null,
+    props.mode === "create" ? props.initialEntryKind ?? "work" : null,
+  ]);
+  return <PunchEditorSession key={editorKey} {...props} />;
+}
+
+function PunchEditorSession({
   open,
   onOpenChange,
   mode,
