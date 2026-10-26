@@ -465,7 +465,7 @@ function NotificationsPage() {
     const ids = new Set<string>();
     for (const n of (data ?? []) as NotificationRow[]) {
       const h = n.state === "resolvida" ? (n.resolved_by ?? n.state_changed_by) : n.state_changed_by;
-      if (h && h !== user?.id) ids.add(h);
+      if (h) ids.add(h);
     }
     return Array.from(ids).sort();
   }, [data, user?.id]);
@@ -806,7 +806,15 @@ function NotificationsPage() {
               !!handlerId &&
               handlerId !== user?.id &&
               (state === "em_tratamento" || state === "encaminhada" || state === "resolvida");
-            const handlerName = handledByOther ? handlerNames?.get(handlerId!) || "outro gestor" : null;
+            // Nome de quem trata: gravado na notificação pelo banco (metadata.handled_by_name),
+            // senão pelo perfil; aparece para todos, incluindo quem está a tratar.
+            const showsHandler =
+              !!handlerId && (state === "em_tratamento" || state === "encaminhada" || state === "resolvida");
+            const storedHandlerName =
+              typeof n.metadata?.handled_by_name === "string" ? (n.metadata.handled_by_name as string).trim() : "";
+            const handlerName = showsHandler
+              ? storedHandlerName || handlerNames?.get(handlerId!) || (handledByOther ? "outro gestor" : "você")
+              : null;
             const canManage = canManageNotification({
               currentCompanyId,
               isManager,
