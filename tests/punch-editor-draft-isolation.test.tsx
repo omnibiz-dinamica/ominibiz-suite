@@ -89,6 +89,7 @@ describe("punch editor draft isolation", () => {
     const renderEntry = (id: string, open: boolean) => createElement(QueryClientProvider, { client: client as QueryClient },
       createElement(PunchEditorDrawer, { open, onOpenChange() {}, mode: "edit", companyId: "company-a", entry: entry(id) }));
     await act(async () => { renderer = create(renderEntry("A", true)); });
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
     const root = () => {
       if (!renderer) throw new Error("Editor not mounted");
       return renderer.root;
