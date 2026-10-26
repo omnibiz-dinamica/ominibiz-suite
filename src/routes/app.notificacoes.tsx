@@ -93,6 +93,9 @@ type NotificationRow = {
   forwarded_to: string | null;
   state_note: string | null;
   state_changed_at: string | null;
+  /** Quem pôs no estado atual (em tratamento / encaminhada / resolvida). */
+  state_changed_by?: string | null;
+  resolved_by?: string | null;
 };
 
 type VacationQueueRow = {
@@ -457,6 +460,27 @@ function NotificationsPage() {
     enabled: !!user,
   });
 
+  // Nomes de quem trata/resolve (as cópias dos outros gestores mostram "Em tratamento por Fulano").
+  const handlerIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const n of (data ?? []) as NotificationRow[]) {
+      const h = n.state === "resolvida" ? (n.resolved_by ?? n.state_changed_by) : n.state_changed_by;
+      if (h && h !== user?.id) ids.add(h);
+    }
+    return Array.from(ids).sort();
+  }, [data, user?.id]);
+  const { data: handlerNames } = useQuery({
+    queryKey: ["notification-handlers", handlerIds],
+    enabled: handlerIds.length > 0,
+    queryFn: async () => {
+      const { data: profs, error } = await supabase.from("profiles").select("id,full_name").in("id", handlerIds);
+      if (error) throw error;
+      return new Map(
+        ((profs ?? []) as { id: string; full_name: string | null }[]).map((p) => [p.id, p.full_name ?? ""]),
+      );
+    },
+  });
+
   // Realtime unificado (Fase 4): infra em `src/lib/realtime/subscribe.ts`
   // + helper de cache central em `src/lib/cache/notifications.ts`.
   useRealtimeInvalidate({
@@ -776,6 +800,13 @@ function NotificationsPage() {
         <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
           {visible.map((n) => {
             const state = n.state ?? "nova";
+            // Tratada por outro gestor (cópia partilhada): mostra quem e não oferece "Tratar".
+            const handlerId = state === "resolvida" ? (n.resolved_by ?? n.state_changed_by) : n.state_changed_by;
+            const handledByOther =
+              !!handlerId &&
+              handlerId !== user?.id &&
+              (state === "em_tratamento" || state === "encaminhada" || state === "resolvida");
+            const handlerName = handledByOther ? handlerNames?.get(handlerId!) || "outro gestor" : null;
             const canManage = canManageNotification({
               currentCompanyId,
               isManager,
@@ -832,6 +863,7 @@ function NotificationsPage() {
                         }
                       >
                         {STATE_LABEL[state]}
+                        {handlerName ? ` por ${handlerName}` : ""}
                         {state === "encaminhada" && n.forwarded_to ? ` · ${n.forwarded_to}` : ""}
                       </span>
                       <span className="text-xs text-muted-foreground">{new Date(n.created_at).toLocaleString()}</span>
@@ -982,7 +1014,7 @@ function NotificationsPage() {
                     </Button>
                   )}
 
-                  {actions.treat && (
+                  {actions.treat && !(handledByOther && state === "em_tratamento") && (
                     <Button
                       size="sm"
                       variant="ghost"
