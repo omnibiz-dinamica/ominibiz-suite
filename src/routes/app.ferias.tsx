@@ -714,17 +714,19 @@ function FeriasPage() {
   // Requests this user needs to decide on
   // Pedido novo de funcionário (pendente e não reencaminhado a um gestor específico):
   // qualquer gestor, owner ou Super Admin da empresa pode decidir (o banco já o permite
-  // em vacation_decide). Pedidos reencaminhados ou à espera de autorização continuam só
-  // com o aprovador atribuído.
+  // em vacation_decide), incluindo pedidos reencaminhados ou aguardando aprovação.
   const canDecideAnyPending = isManager || isOwner || isSuperAdmin;
   const toApprove = rows.filter(
     (r) =>
       (r.status === "pendente" || r.status === "aguardando_aprovacao") &&
       r.user_id !== user?.id &&
-      (r.assigned_approver_id === user?.id || (canDecideAnyPending && r.status === "pendente" && !r.forwarded_by)),
+      // Todos os gestores/owners/Super Admin decidem pedidos pendentes e aguardando aprovação,
+      // incluindo os reencaminhados (pedido da operação, 26/10/2026). O banco já o permite.
+      (r.assigned_approver_id === user?.id || canDecideAnyPending),
   );
+  const toApproveIds = new Set(toApprove.map((r) => r.id));
   const forwardedByMe = rows.filter(
-    (r) => r.status === "pendente" && r.forwarded_by === user?.id && r.user_id !== user?.id,
+    (r) => r.status === "pendente" && r.forwarded_by === user?.id && r.user_id !== user?.id && !toApproveIds.has(r.id),
   );
   // Super Admin e Owner: acompanham (só leitura) os pedidos pendentes que estão com outro aprovador,
   // para o "Abrir" das notificações e do painel encontrar o pedido. A decisão continua com o aprovador.
