@@ -40,7 +40,11 @@ import {
   slotsForDate,
   nextDateForSchedule,
   describeSlot,
+  parseHabitualSchedule,
+  slotTimesForTeam,
+  teamStartTimeFor,
   type ClientScheduleSlot,
+  type TeamStartVariation,
 } from "@/lib/tasks/client-schedule";
 import { clientTeamType } from "@/lib/tasks/client-team";
 import {
@@ -917,7 +921,7 @@ function TasksPage() {
       }
       if (res.rebalance?.kind === "updated") {
         toast.success(
-          `Horas recalculadas para ${res.rebalance.count === 1 ? "o funcionário que ficou" : `os ${res.rebalance.count} funcionários que ficaram`}: ${formatContractedMinutes(res.rebalance.minutes[0] ?? 0)}${res.rebalance.count > 1 ? " cada" : ""}.`,
+          `Horas recalculadas para ${res.rebalance.count === 1 ? "o funcionário que ficou" : `os ${res.rebalance.count} funcionários que ficaram`}: ${formatContractedMinutes(res.rebalance.minutes[0] ?? 0)}${res.rebalance.count > 1 ? " cada" : ""}${res.rebalance.startTime ? `, com entrada às ${res.rebalance.startTime}` : ""}.`,
         );
       } else if (res.rebalance?.kind === "skipped_started") {
         toast.info("As horas de quem ficou não foram recalculadas porque a tarefa já foi iniciada ou concluída.");
@@ -2503,9 +2507,52 @@ type RebalanceTask = {
   due_at: string | null;
   status: string;
 };
-type RebalanceSnapshot = { total: number; group: RebalanceTask[] };
+type RebalanceSnapshot = {
+  total: number;
+  group: RebalanceTask[];
+  /** Entradas alternativas por nº de pessoas da programação do cliente para este dia (se houver). */
+  teamVariations?: TeamStartVariation[];
+};
 type RebalanceResult =
-  { kind: "updated"; count: number; minutes: number[] } | { kind: "skipped_started" } | { kind: "none" };
+  | { kind: "updated"; count: number; minutes: number[]; startTime?: string }
+  | { kind: "skipped_started" }
+  | { kind: "none" };
+
+/**
+ * Programação do cliente a que pertence a tarefa do grupo: primeiro pelo nome
+ * da programação gravado na tarefa; senão pelo dia da semana + hora de entrada
+ * (normal ou alternativa). Só devolve quando há UMA correspondência certa.
+ */
+async function teamVariationsForGroup(
+  clientId: string | null,
+  scheduleName: string | null,
+  scheduledFor: string,
+): Promise<TeamStartVariation[] | undefined> {
+  if (!clientId) return undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data } = await (supabase.from("clients" as never) as any)
+    .select("habitual_schedule")
+    .eq("id", clientId)
+    .maybeSingle();
+  const slots = parseHabitualSchedule(data?.habitual_schedule).filter(
+    (slot) => slot.active !== false && (slot.teamVariations?.length ?? 0) > 0,
+  );
+  if (slots.length === 0) return undefined;
+  const name = scheduleName?.trim();
+  if (name) {
+    const named = slots.filter((slot) => slot.label?.trim() === name);
+    if (named.length === 1) return named[0].teamVariations;
+    if (named.length > 1) return undefined;
+  }
+  const weekday = new Date(scheduledFor).getUTCDay();
+  const time = formatWallTime(scheduledFor);
+  const matches = slots.filter(
+    (slot) =>
+      (slot.weekdays.length === 0 || slot.weekdays.includes(weekday)) &&
+      (slot.startTime === time || (slot.teamVariations ?? []).some((v) => v.startTime === time)),
+  );
+  return matches.length === 1 ? matches[0].teamVariations : undefined;
+}
 
 const rebalanceDayKey = (t: { recurrence_date: string | null; scheduled_for: string | null; due_at: string | null }) =>
   t.recurrence_date ?? (t.scheduled_for ?? t.due_at ?? "").slice(0, 10);
@@ -2518,7 +2565,7 @@ async function snapshotGroupForRebalance(
     if (ids.length === 0) return null;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: base } = await (supabase.from("tasks" as never) as any)
-      .select("id, task_group_id, client_id, scheduled_for, recurrence_date, due_at")
+      .select("id, task_group_id, client_id, schedule_name, scheduled_for, recurrence_date, due_at")
       .eq("id", ids[0])
       .maybeSingle();
     if (!base?.task_group_id) return null;
@@ -2542,7 +2589,13 @@ async function snapshotGroupForRebalance(
     const total = durations.reduce((a, b) => a + b, 0);
     const contracted = contractedOf(base.client_id ?? null);
     if (contracted == null || Math.abs(total - contracted) > 1) return null;
-    return { total, group };
+    let teamVariations: TeamStartVariation[] | undefined;
+    try {
+      teamVariations = await teamVariationsForGroup(base.client_id ?? null, base.schedule_name ?? null, start);
+    } catch {
+      teamVariations = undefined;
+    }
+    return { total, group, teamVariations };
   } catch {
     return null;
   }
@@ -2556,20 +2609,30 @@ async function applyGroupRebalance(snapshot: RebalanceSnapshot, deletedIds: Set<
     return { kind: "skipped_started" };
   }
   const shares = distributeContractedMinutes(snapshot.total, remaining.length);
+  // Entrada alternativa da programação do cliente para quem fica (ex.: 1 pessoa entra às 07:30).
+  // Sem variação para esse número de pessoas, a entrada mantém-se (comportamento anterior).
+  const newStartTime = teamStartTimeFor({ teamVariations: snapshot.teamVariations }, remaining.length);
   const minutes: number[] = [];
   for (const [index, t] of remaining.entries()) {
     const share = shares[index] ?? shares[0] ?? 0;
     if (!(share > 0) || !t.scheduled_for) continue;
-    const end = new Date(Date.parse(t.scheduled_for) + share * 60000).toISOString();
+    const start =
+      (newStartTime ? wallDateTimeToISO(wallISOToDateInput(t.scheduled_for), newStartTime) : null) ?? t.scheduled_for;
+    const end = new Date(Date.parse(start) + share * 60000).toISOString();
+    const patch = start !== t.scheduled_for
+      ? { scheduled_for: start, scheduled_end: end, due_at: end }
+      : { scheduled_end: end, due_at: end };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: updatedRows, error } = await (supabase.from("tasks" as never) as any)
-      .update({ scheduled_end: end, due_at: end })
+      .update(patch)
       .eq("id", t.id)
       .select("id");
     // Só conta se a linha foi mesmo alterada (a RLS pode bloquear sem devolver erro).
     if (!error && Array.isArray(updatedRows) && updatedRows.length > 0) minutes.push(share);
   }
-  return minutes.length > 0 ? { kind: "updated", count: minutes.length, minutes } : { kind: "none" };
+  return minutes.length > 0
+    ? { kind: "updated", count: minutes.length, minutes, ...(newStartTime ? { startTime: newStartTime } : {}) }
+    : { kind: "none" };
 }
 
 function MiniTaskChip({ task, startedAt, onClick }: { task: TaskRow; startedAt?: string; onClick: () => void }) {
@@ -3838,6 +3901,31 @@ function TaskForm({
     if (contractedMinutes != null && assignees.length > 0) setManualEndOverride(false);
   }, [assignees.length, contractedMinutes]);
 
+  /**
+   * Entrada conforme o número de pessoas (programação do cliente). Ex.: 2 pessoas
+   * entram às 08:30 (1h30 cada); 1 pessoa entra às 07:30 (3h). Só em tarefas
+   * novas, com uma programação escolhida e sem horário digitado pelo gestor.
+   */
+  const teamSize = new Set(assignees).size;
+  const teamTimesRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (initial || touchedTimes || !selectedSchedule?.teamVariations?.length || teamSize === 0) return;
+    const key = `${selectedSchedule.id}:${teamSize}`;
+    if (teamTimesRef.current === key) return;
+    teamTimesRef.current = key;
+    const times = slotTimesForTeam(selectedSchedule, teamSize);
+    if (!times.startTime) return;
+    setStartTime(times.startTime);
+    setEndTime(times.endTime ?? "");
+    setManualEndOverride(false);
+    if (times.adjusted) {
+      setScheduleHint(
+        `Entrada ajustada para ${teamSize} ${teamSize === 1 ? "pessoa" : "pessoas"}: ${times.startTime}${times.endTime ? `–${times.endTime}` : ""} (a carga do serviço não muda).`,
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initial, touchedTimes, selectedSchedule?.id, teamSize]);
+
   // A hora de fim é OPCIONAL e pertence exclusivamente ao gestor/super admin.
   // O sistema nunca preenche nem deriva esse campo: se o gestor não digitar,
   // a tarefa é gravada sem hora de fim (scheduled_end = null).
@@ -3858,8 +3946,11 @@ function TaskForm({
     setSelectedScheduleId(slot.id);
     setManualEndOverride(false);
     // Flexible schedules may still contain an optional suggested time pair.
-    setStartTime(slot.startTime ?? "");
-    setEndTime(slot.endTime ?? "");
+    // Com entrada alternativa para o nº de pessoas escolhido, usa essa entrada.
+    const teamTimes = !initial && teamSize > 0 ? slotTimesForTeam(slot, teamSize) : null;
+    teamTimesRef.current = teamTimes ? `${slot.id}:${teamSize}` : null;
+    setStartTime(teamTimes?.startTime ?? slot.startTime ?? "");
+    setEndTime(teamTimes?.endTime ?? slot.endTime ?? "");
     if (slot.punchMode) setPunchMode(slot.punchMode as PunchMode);
     setSchedulePrompt([]);
     if (!silent) setScheduleHint(`Horário sugerido pela programação do cliente: ${describeSlot(slot)}.`);
@@ -4180,7 +4271,7 @@ function TaskForm({
                         .map((slot) => ({
                           weekdays: slot.weekdays,
                           schedule_name: slot.label ?? null,
-                          start_time: slot.startTime,
+                          start_time: teamStartTimeFor(slot, selectedAssignees.length) ?? slot.startTime,
                           duration_minutes:
                             distributeContractedMinutes(
                               slot.contractedMinutes ?? slot.durationMinutes,

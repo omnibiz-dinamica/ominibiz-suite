@@ -1153,6 +1153,24 @@ function ClientForm({
                       if (total == null)
                         throw new Error(`A carga da programação ${index + 1} deve ser maior que zero.`);
                     }
+                    // Entrada conforme o nº de pessoas: só a hora de entrada muda; a carga é a mesma.
+                    const teamVariations = (schedule.teamVariations ?? []).filter(
+                      (v) => v.startTime !== "" || v.teamSize > 0,
+                    );
+                    const teamSizes = new Set<number>();
+                    for (const v of teamVariations) {
+                      if (!Number.isInteger(v.teamSize) || v.teamSize < 1 || v.teamSize > 50)
+                        throw new Error(`Informe um número de pessoas válido (1 a 50) na programação ${index + 1}.`);
+                      if (!/^\d{2}:\d{2}$/.test(v.startTime))
+                        throw new Error(`Informe a hora de entrada para ${v.teamSize} pessoa(s) na programação ${index + 1}.`);
+                      if (teamSizes.has(v.teamSize))
+                        throw new Error(`O número de pessoas ${v.teamSize} está repetido na programação ${index + 1}.`);
+                      teamSizes.add(v.teamSize);
+                    }
+                    if (teamVariations.length > 0 && total == null && initial?.contracted_minutes == null)
+                      throw new Error(
+                        `Defina a carga da programação ${index + 1} para usar a entrada conforme o número de pessoas.`,
+                      );
                     return {
                       id: schedule.id,
                       label: schedule.label?.trim() || null,
@@ -1181,6 +1199,13 @@ function ClientForm({
                         : {}),
                       active: schedule.active !== false,
                       sort_order: index,
+                      ...(teamVariations.length > 0
+                        ? {
+                            team_variations: [...teamVariations]
+                              .sort((a, b) => a.teamSize - b.teamSize)
+                              .map((v) => ({ team_size: v.teamSize, start_time: v.startTime })),
+                          }
+                        : {}),
                     };
                   })
                 : [];
@@ -1767,6 +1792,105 @@ function ClientForm({
                               placeholder="00"
                             />
                           </div>
+                        </div>
+                        <div className="space-y-2 rounded-md border border-dashed border-border p-2.5">
+                          <div>
+                            <p className="text-sm font-medium">
+                              Entrada conforme o nº de pessoas{" "}
+                              <span className="text-xs font-normal text-muted-foreground">(opcional)</span>
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Ex.: 2 pessoas entram às 08:30; se for só 1 pessoa, entra às 07:30. A carga é a mesma e
+                              o fim é calculado pela parte de cada um.
+                            </p>
+                          </div>
+                          {(schedule.teamVariations ?? []).map((variation, vIndex) => (
+                            <div key={vIndex} className="flex flex-wrap items-end gap-2">
+                              <div className="w-28 space-y-1">
+                                <Label className="text-xs">Nº de pessoas</Label>
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  max="50"
+                                  step="1"
+                                  value={variation.teamSize > 0 ? String(variation.teamSize) : ""}
+                                  onChange={(e) => {
+                                    const value = Number.parseInt(e.target.value, 10);
+                                    setSchedules((current) =>
+                                      current.map((s, i) =>
+                                        i === index
+                                          ? {
+                                              ...s,
+                                              teamVariations: (s.teamVariations ?? []).map((v, j) =>
+                                                j === vIndex ? { ...v, teamSize: Number.isNaN(value) ? 0 : value } : v,
+                                              ),
+                                            }
+                                          : s,
+                                      ),
+                                    );
+                                  }}
+                                  placeholder="1"
+                                />
+                              </div>
+                              <div className="min-w-[8rem] flex-1 space-y-1">
+                                <Label className="text-xs">Hora de entrada</Label>
+                                <Input
+                                  type="time"
+                                  value={variation.startTime}
+                                  onChange={(e) =>
+                                    setSchedules((current) =>
+                                      current.map((s, i) =>
+                                        i === index
+                                          ? {
+                                              ...s,
+                                              teamVariations: (s.teamVariations ?? []).map((v, j) =>
+                                                j === vIndex ? { ...v, startTime: e.target.value } : v,
+                                              ),
+                                            }
+                                          : s,
+                                      ),
+                                    )
+                                  }
+                                />
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                aria-label="Remover entrada alternativa"
+                                onClick={() =>
+                                  setSchedules((current) =>
+                                    current.map((s, i) =>
+                                      i === index
+                                        ? { ...s, teamVariations: (s.teamVariations ?? []).filter((_, j) => j !== vIndex) }
+                                        : s,
+                                    ),
+                                  )
+                                }
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              setSchedules((current) =>
+                                current.map((s, i) =>
+                                  i === index
+                                    ? {
+                                        ...s,
+                                        teamVariations: [...(s.teamVariations ?? []), { teamSize: 1, startTime: "" }],
+                                      }
+                                    : s,
+                                ),
+                              )
+                            }
+                          >
+                            <Plus className="mr-1 h-4 w-4" /> Adicionar entrada por nº de pessoas
+                          </Button>
                         </div>
                       </div>
                     ))}
