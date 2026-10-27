@@ -124,7 +124,7 @@ function ManagerDashboard() {
 
   const cards = [
     { label: t("Pendentes"), value: counts.pendente, icon: ClipboardList, tone: "text-info", status: "pendente" as const },
-    { label: t("Em andamento"), value: counts.em_andamento, icon: Clock, tone: "text-primary", status: "em_andamento" as const },
+    { label: t("Em andamento"), value: counts.em_andamento, icon: Clock, tone: "text-progress", status: "em_andamento" as const },
     { label: t("Concluídas"), value: counts.concluido, icon: CheckCircle2, tone: "text-success", status: "concluido" as const },
     { label: t("Atrasadas"), value: counts.atrasada, icon: AlertTriangle, tone: "text-destructive", status: "atrasadas" as const },
     { label: t("Ausentes"), value: counts.ausente, icon: UserX, tone: "text-warning", status: "ausente" as const },

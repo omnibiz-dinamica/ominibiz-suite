@@ -48,7 +48,7 @@ export const Route = createRootRoute({
       { name: "twitter:description", content: "Plataforma SaaS modular para gestão operacional: tarefas, ponto, notificações e mais." },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/09fbc8cf-0012-4b66-bdad-be5e3a43b4d2" },
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/09fbc8cf-0012-4b66-bdad-be5e3a43b4d2" },
-      { name: "theme-color", content: "#0F172A" },
+      { name: "theme-color", content: "#536F2F" },
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
