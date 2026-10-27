@@ -41,7 +41,7 @@ export const STATUS_LABELS: Record<TaskStatus, string> = {
 export const STATUS_TONE: Record<TaskStatus, string> = {
   pendente: "bg-info/15 text-info",
   autorizado: "bg-warning/15 text-warning-foreground",
-  em_andamento: "bg-primary/15 text-primary",
+  em_andamento: "bg-progress/15 text-progress",
   concluido: "bg-success/15 text-success",
   cancelado: "bg-muted text-muted-foreground",
   ausente: "bg-destructive/15 text-destructive",
