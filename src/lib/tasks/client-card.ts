@@ -25,7 +25,12 @@ export function describeClientSchedule(client: ClientCardScheduleData): string[]
       : null;
     const load = contractedMinutes != null ? formatScheduleMinutes(contractedMinutes) : null;
     const cycle = schedule.frequency === "cycle" ? `Semana ${(schedule.cyclePosition ?? 0) + 1}` : null;
-    return [schedule.label, cycle, `Horário: ${mode}`, days, time, load].filter(Boolean).join(" · ");
+    const teams = schedule.teamVariations?.length
+      ? schedule.teamVariations
+          .map((v) => `${v.teamSize} ${v.teamSize === 1 ? "pessoa" : "pessoas"}: entrada ${v.startTime}`)
+          .join(", ")
+      : null;
+    return [schedule.label, cycle, `Horário: ${mode}`, days, time, load, teams].filter(Boolean).join(" · ");
   });
 }
 

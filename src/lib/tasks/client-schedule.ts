@@ -1,5 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
-import { addWallMinutes, calculateWallDurationMinutes, isOvernightTimeRange } from "@/lib/tasks/contracted-hours";
+import {
+  addWallMinutes,
+  calculateWallDurationMinutes,
+  distributeContractedMinutes,
+  isOvernightTimeRange,
+} from "@/lib/tasks/contracted-hours";
 import { scheduleRuleAppliesToDate } from "@/lib/tasks/client-schedule-rules";
 
 /**
@@ -9,6 +14,13 @@ import { scheduleRuleAppliesToDate } from "@/lib/tasks/client-schedule-rules";
  * entidades operacionais e não devem aparecer como um segundo horário do
  * cliente quando já existe uma configuração habitual.
  */
+
+/**
+ * Hora de ENTRADA alternativa conforme o número de pessoas na tarefa
+ * (ex.: 2 pessoas entram às 08:30; 1 pessoa entra às 07:30). A carga do
+ * serviço não muda: o fim continua a ser entrada + parte da carga de cada um.
+ */
+export type TeamStartVariation = { teamSize: number; startTime: string };
 
 export type ClientScheduleSlot = {
   id: string;
@@ -32,6 +44,8 @@ export type ClientScheduleSlot = {
   cycleLengthWeeks?: number | null;
   cyclePosition?: number | null;
   cycleAnchorDate?: string | null;
+  /** Entrada alternativa por número de pessoas (opcional). */
+  teamVariations?: TeamStartVariation[];
 };
 
 export type ClientHabitualSchedule = {
@@ -53,6 +67,8 @@ export type ClientHabitualSchedule = {
   cycleAnchorDate?: string | null;
   active?: boolean;
   sortOrder?: number;
+  /** Entrada alternativa por número de pessoas (opcional). */
+  teamVariations?: TeamStartVariation[];
 };
 
 const WEEKDAY_LONG = [
@@ -87,6 +103,48 @@ function normaliseDate(value: unknown): string | null {
   return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
 }
 
+export function parseTeamVariations(value: unknown): TeamStartVariation[] {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<number>();
+  const out: TeamStartVariation[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object") continue;
+    const row = item as Record<string, unknown>;
+    const teamSize = positiveInteger(row.team_size);
+    const startTime = typeof row.start_time === "string" ? toHHMM(row.start_time) : null;
+    if (teamSize == null || !startTime || seen.has(teamSize)) continue;
+    seen.add(teamSize);
+    out.push({ teamSize, startTime });
+  }
+  return out.sort((a, b) => a.teamSize - b.teamSize);
+}
+
+/** Entrada definida para esta quantidade de pessoas, ou null se não houver variação. */
+export function teamStartTimeFor(
+  slot: { teamVariations?: TeamStartVariation[] } | null | undefined,
+  teamSize: number,
+): string | null {
+  if (!slot?.teamVariations?.length || !Number.isInteger(teamSize) || teamSize <= 0) return null;
+  return slot.teamVariations.find((v) => v.teamSize === teamSize)?.startTime ?? null;
+}
+
+/**
+ * Horário a sugerir na tarefa para uma programação e um número de pessoas.
+ * Sem variação para esse número, devolve o horário normal da programação.
+ * Com variação, a entrada muda e o fim = entrada + parte da carga de cada um.
+ */
+export function slotTimesForTeam(
+  slot: Pick<ClientScheduleSlot, "startTime" | "endTime" | "contractedMinutes" | "teamVariations">,
+  teamSize: number,
+): { startTime: string | null; endTime: string | null; adjusted: boolean } {
+  const variation = teamStartTimeFor(slot, teamSize);
+  if (!variation) return { startTime: slot.startTime, endTime: slot.endTime, adjusted: false };
+  const share = distributeContractedMinutes(slot.contractedMinutes, teamSize)[0] ?? null;
+  // Sem hora de fim na programação, o sistema não inventa uma (fim é opcional).
+  const endTime = slot.endTime ? (share != null ? addMinutes(variation, share) : slot.endTime) : null;
+  return { startTime: variation, endTime, adjusted: variation !== slot.startTime };
+}
+
 export function parseHabitualSchedule(value: unknown): ClientHabitualSchedule[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((item) => {
@@ -118,6 +176,7 @@ export function parseHabitualSchedule(value: unknown): ClientHabitualSchedule[] 
         : 0
       : null;
     const contractedMinutes = positiveInteger(row.contracted_minutes);
+    const teamVariations = parseTeamVariations(row.team_variations);
     return [{
       id: typeof row.id === "string" ? row.id : undefined,
       label: typeof row.label === "string" ? row.label : null,
@@ -145,6 +204,7 @@ export function parseHabitualSchedule(value: unknown): ClientHabitualSchedule[] 
       cycleAnchorDate: normaliseDate(row.cycle_anchor_date),
       active: row.active !== false,
       sortOrder: Number.isInteger(row.sort_order) ? (row.sort_order as number) : undefined,
+      ...(teamVariations.length > 0 ? { teamVariations } : {}),
     }];
   });
 }
@@ -203,6 +263,7 @@ export async function fetchClientSchedule(clientId: string): Promise<ClientSched
     cycleLengthWeeks: slot.cycleLengthWeeks,
     cyclePosition: slot.cyclePosition,
     cycleAnchorDate: slot.cycleAnchorDate,
+    ...(slot.teamVariations?.length ? { teamVariations: slot.teamVariations } : {}),
   } satisfies ClientScheduleSlot));
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -266,5 +327,8 @@ export function describeSlot(slot: ClientScheduleSlot): string {
     ? ` • semana ${(slot.cyclePosition ?? 0) + 1}/${slot.cycleLengthWeeks}`
     : "";
   const load = slot.contractedMinutes ? ` • ${Math.floor(slot.contractedMinutes / 60)}h${slot.contractedMinutes % 60 ? String(slot.contractedMinutes % 60).padStart(2, "0") : ""}` : "";
-  return `${slot.title} • ${days} • ${window} • ${mode}${load}${cycle}`;
+  const teams = slot.teamVariations?.length
+    ? ` • ${slot.teamVariations.map((v) => `${v.teamSize} ${v.teamSize === 1 ? "pessoa" : "pessoas"}: entrada ${v.startTime}`).join(", ")}`
+    : "";
+  return `${slot.title} • ${days} • ${window} • ${mode}${load}${cycle}${teams}`;
 }
