@@ -359,9 +359,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
         {/* Fixed header */}
         <div className="flex h-16 shrink-0 items-center justify-between border-b border-sidebar-border px-5">
           <Link to="/app" className="flex items-center gap-2">
-            <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-primary-foreground font-display font-bold">
-              O
-            </div>
+            <img src="/logo-mark.png" alt="Dinâmica Solução" className="h-8 w-auto" />
             <span className="font-display text-lg font-semibold tracking-tight">OmniBiz</span>
           </Link>
           <button className="md:hidden" onClick={() => setOpen(false)} aria-label={t("Fechar menu")}>
