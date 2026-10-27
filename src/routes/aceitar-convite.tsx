@@ -141,9 +141,7 @@ function AcceptInvite() {
     <div className="grid min-h-screen place-items-center bg-background p-4">
       <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-lg">
         <div className="mb-6 inline-flex items-center gap-2">
-          <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground font-display font-bold">
-            O
-          </div>
+          <img src="/logo-mark.png" alt="Dinâmica Solução" className="h-8 w-auto" />
           <span className="font-display text-xl font-semibold">OmniBiz</span>
         </div>
         <h1 className="font-display text-2xl font-semibold">

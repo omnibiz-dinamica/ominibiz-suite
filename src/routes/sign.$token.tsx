@@ -126,9 +126,7 @@ function SignPage() {
       <div className="mx-auto max-w-3xl px-4">
         <header className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground font-display font-bold">
-              O
-            </div>
+            <img src="/logo-mark.png" alt="Dinâmica Solução" className="h-8 w-auto" />
             <span className="font-display text-lg font-semibold">OmniBiz</span>
           </div>
           <Button variant="outline" size="sm" onClick={downloadPDF}>

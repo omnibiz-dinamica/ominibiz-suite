@@ -34,7 +34,7 @@ function Landing() {
     <div className="min-h-screen bg-background text-foreground">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
         <div className="flex items-center gap-2">
-          <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground font-display text-lg font-bold">O</div>
+          <img src="/logo-mark.png" alt="Dinâmica Solução" className="h-8 w-auto" />
           <span className="font-display text-xl font-semibold tracking-tight">OmniBiz</span>
         </div>
         <div className="flex items-center gap-2">
