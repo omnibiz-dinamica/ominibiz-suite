@@ -33,7 +33,7 @@ const todayBR = () =>
 
 const safeHex = (c?: string | null): [number, number, number] => {
   const m = /^#?([0-9a-f]{6})$/i.exec(c ?? "");
-  if (!m) return [59, 130, 246]; // fallback OmniBiz blue
+  if (!m) return [83, 111, 47]; // fallback: verde Dinâmica (#536F2F)
   const v = m[1];
   return [
     parseInt(v.slice(0, 2), 16),
