@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ModalSection } from "@/components/ui/dialog";
 import { EMPLOYEE_PAYMENT_TYPES, PAYMENT_TYPE_LABEL, type PaymentType } from "@/lib/compensation";
 import { lastNameLabel, splitFullName, useCompanyCountry } from "@/lib/person-name";
+import { EmployeeHistoryTab } from "@/components/equipe/EmployeeHistoryTab";
 
 
 /**
@@ -31,6 +32,8 @@ export interface EmployeeEditorProps {
   currentEmail?: string | null;
   currentRole: Role;
   sectorOptions?: string[];
+  /** Aba aberta ao entrar (ex.: "historico" vindo de um aviso). */
+  initialTab?: string;
   onDone: () => void;
 }
 
@@ -43,6 +46,7 @@ export function EmployeeEditor({
   currentEmail,
   currentRole,
   sectorOptions = [],
+  initialTab,
   onDone,
 }: EmployeeEditorProps) {
   const qc = useQueryClient();
@@ -66,7 +70,7 @@ export function EmployeeEditor({
     },
   });
 
-  const [tab, setTab] = useState("dados");
+  const [tab, setTab] = useState(initialTab ?? "dados");
   const [saving, setSaving] = useState(false);
 
   /** Footer submit target per tab (tabs without a form keep their inline actions). */
@@ -105,18 +109,20 @@ export function EmployeeEditor({
     toast.success(msg);
     qc.invalidateQueries({ queryKey: ["employee-profile", userId] });
     qc.invalidateQueries({ queryKey: ["team-members"] });
+    qc.invalidateQueries({ queryKey: ["employee-history"] });
   };
 
   return (
     <Tabs value={tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col">
       <ModalTabsBar>
-        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6">
+        <TabsList className="grid h-auto w-full grid-cols-3 sm:grid-cols-7">
           <TabsTrigger value="dados">Dados</TabsTrigger>
           <TabsTrigger value="rh">Contabilidade/RH</TabsTrigger>
           <TabsTrigger value="docs">Documentos</TabsTrigger>
           <TabsTrigger value="fin">Financeiro</TabsTrigger>
           <TabsTrigger value="sig">Assinaturas</TabsTrigger>
           <TabsTrigger value="anx">Anexos</TabsTrigger>
+          <TabsTrigger value="historico">Histórico</TabsTrigger>
         </TabsList>
       </ModalTabsBar>
 
@@ -149,6 +155,9 @@ export function EmployeeEditor({
         </TabsContent>
         <TabsContent value="anx" className="mt-0 space-y-4">
           <TabAnexos userId={userId} companyId={companyId} />
+        </TabsContent>
+        <TabsContent value="historico" className="mt-0 space-y-4">
+          <EmployeeHistoryTab userId={userId} companyId={companyId} />
         </TabsContent>
       </ModalBody>
 
