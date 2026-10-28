@@ -142,7 +142,7 @@ export function EmployeeHistoryTab({ userId, companyId }: { userId: string; comp
                       <div key={line.key} className="flex flex-wrap gap-x-1.5">
                         <dt className="font-medium">{line.key}:</dt>
                         {"value" in line ? (
-                          <dd className="break-words">{line.value}</dd>
+                          <dd className="whitespace-pre-line break-words">{line.value}</dd>
                         ) : (
                           <dd className="break-words">
                             <span className="text-muted-foreground line-through">
