@@ -19,7 +19,7 @@ type EventRow = {
   changes: Record<string, unknown> | null;
 };
 
-const ROLE_LABEL: Record<string, string> = {
+export const ROLE_LABEL: Record<string, string> = {
   super_admin: "Super Admin",
   owner: "Proprietário",
   manager: "Gestor",
@@ -50,7 +50,7 @@ function formatDetailValue(value: unknown, locale: string): string {
 }
 
 /** Linhas de detalhe: "Campo: antes → depois" ou "Campo: valor". */
-function detailLines(changes: Record<string, unknown> | null, locale: string) {
+export function detailLines(changes: Record<string, unknown> | null, locale: string) {
   if (!changes || typeof changes !== "object") return [];
   return Object.entries(changes).map(([key, value]) => {
     if (value && typeof value === "object" && !Array.isArray(value) && ("de" in value || "para" in value)) {
