@@ -17,8 +17,9 @@ import { cn } from "@/lib/utils";
  *
  * Recursos:
  *   • Debounce de 180 ms no campo de busca.
- *   • Pesquisa por: Nome (`full_name`), Cargo (`job_title`), Equipe (`team`),
- *     Email (`email`) — cada campo é opcional; ausência não quebra a busca.
+ *   • Pesquisa por: Nome (`full_name`), Cargo (`job_title`), Setor (`sector`),
+ *     Equipe (`team`), Email (`email`) — cada campo é opcional; ausência não
+ *     quebra a busca.
  *   • Janela virtual "leve" (slice + limite visível). Ativa-se automaticamente
  *     quando a lista filtrada excede `virtualThreshold` (default: 60).
  *   • Contrato de dados aberto: aceita qualquer objeto que expuser `id` e
@@ -32,6 +33,8 @@ export type EmployeeOption = {
   full_name: string | null;
   email?: string | null;
   job_title?: string | null;
+  /** Setor do cadastro do funcionário (ex.: Coifas, Tobaco). */
+  sector?: string | null;
   team?: string | null;
 };
 
@@ -106,6 +109,7 @@ export function EmployeePicker({
         normalize(e.full_name),
         normalize(e.email),
         normalize(e.job_title),
+        normalize(e.sector),
         normalize(e.team),
       ].join(" ");
       return tokens.every((t) => haystack.includes(t));
@@ -154,7 +158,7 @@ export function EmployeePicker({
               ref={inputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar por nome, cargo, equipe…"
+              placeholder="Buscar por nome, cargo, setor, equipe…"
               className="h-9 pl-8"
               aria-label="Buscar funcionário"
             />
@@ -172,7 +176,7 @@ export function EmployeePicker({
           ) : (
             visible.map((e) => {
               const isSelected = e.id === value;
-              const secondary = [e.job_title, e.team, e.email]
+              const secondary = [e.job_title, e.sector, e.team, e.email]
                 .filter(Boolean)
                 .join(" · ");
               return (
@@ -257,7 +261,13 @@ export function EmployeeMultiPicker({
     if (!q) return employees;
     const tokens = q.split(/\s+/g).filter(Boolean);
     return employees.filter((e) => {
-      const haystack = [normalize(e.full_name), normalize(e.email), normalize(e.job_title), normalize(e.team)].join(" ");
+      const haystack = [
+        normalize(e.full_name),
+        normalize(e.email),
+        normalize(e.job_title),
+        normalize(e.sector),
+        normalize(e.team),
+      ].join(" ");
       return tokens.every((token) => haystack.includes(token));
     });
   }, [employees, debounced]);
@@ -296,7 +306,7 @@ export function EmployeeMultiPicker({
         <div className="border-b border-border p-2">
           <div className="relative">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-            <Input ref={inputRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar por nome, cargo, equipe…" className="h-9 pl-8" aria-label="Buscar funcionários" />
+            <Input ref={inputRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar por nome, cargo, setor, equipe…" className="h-9 pl-8" aria-label="Buscar funcionários" />
           </div>
         </div>
         <ul role="listbox" aria-multiselectable="true" className="max-h-72 overflow-y-auto py-1" aria-label="Funcionários">
@@ -304,7 +314,7 @@ export function EmployeeMultiPicker({
             <li className="px-3 py-6 text-center text-sm text-muted-foreground">{emptyText}</li>
           ) : filtered.map((e) => {
             const isSelected = selectedIds.has(e.id);
-            const secondary = [e.job_title, e.team, e.email].filter(Boolean).join(" · ");
+            const secondary = [e.job_title, e.sector, e.team, e.email].filter(Boolean).join(" · ");
             return (
               <li key={e.id} role="option" aria-selected={isSelected}>
                 <button type="button" onClick={() => toggle(e.id)} className={cn("flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-accent focus-visible:bg-accent focus-visible:outline-none", isSelected && "bg-accent/50")}>
