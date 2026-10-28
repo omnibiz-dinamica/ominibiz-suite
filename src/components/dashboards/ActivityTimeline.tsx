@@ -34,6 +34,10 @@ function formatDetailValue(value: unknown, locale: string): string {
   if (typeof value === "boolean") return value ? "Sim" : "Não";
   if (Array.isArray(value)) {
     const items = value.map((v) => formatDetailValue(v, locale));
+    // Listas de linhas completas (ex.: "29/10/2026 08:30–10:00 · Tarefa · Funcionário"): uma por linha.
+    if (items.some((item) => item.includes(" · "))) {
+      return items.length > 20 ? `${items.slice(0, 20).join("\n")}\ne mais ${items.length - 20}` : items.join("\n");
+    }
     return items.length > 20 ? `${items.slice(0, 20).join(", ")} e mais ${items.length - 20}` : items.join(", ");
   }
   if (typeof value === "object") return JSON.stringify(value);
@@ -298,7 +302,7 @@ export function ActivityTimeline({ companyId }: { companyId: string }) {
                         <div key={l.key} className="flex flex-wrap gap-x-1.5">
                           <dt className="font-medium">{l.key}:</dt>
                           {"value" in l ? (
-                            <dd className="break-words">{l.value}</dd>
+                            <dd className="whitespace-pre-line break-words">{l.value}</dd>
                           ) : (
                             <dd className="break-words">
                               <span className="text-muted-foreground line-through">{l.before}</span> →{" "}
