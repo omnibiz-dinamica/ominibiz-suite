@@ -217,7 +217,7 @@ type ApprovedVacation = {
 };
 type CalendarMode = "day" | "week" | "month" | "year";
 
-type TaskMember = { id: string; full_name: string | null; job_title?: string | null };
+type TaskMember = { id: string; full_name: string | null; job_title?: string | null; sector?: string | null };
 
 /**
  * 29092026-001 — nome COMPLETO (primeiro nome + apelido) em qualquer lugar que
@@ -488,6 +488,43 @@ function TasksPage() {
     },
     enabled: !!currentCompanyId,
   });
+
+  /**
+   * SUP-2026-000305 — setor do cadastro do funcionário (ex.: Coifas, Tobaco) para
+   * pesquisar e mostrar nas listas de funcionários. Consulta separada e tolerante:
+   * se falhar, as pesquisas ficam exatamente como antes (só nome/cargo).
+   */
+  const memberIdsKey = (members ?? []).map((m) => m.id).sort().join(",");
+  const { data: memberSectors } = useQuery({
+    queryKey: ["members-sectors", currentCompanyId, memberIdsKey],
+    queryFn: async (): Promise<Record<string, string>> => {
+      const map: Record<string, string> = {};
+      const ids = (members ?? []).map((m) => m.id);
+      if (ids.length === 0) return map;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data, error } = await (supabase.from("profiles" as never) as any).select("id, sector").in("id", ids);
+        if (error) return map;
+        for (const row of (data ?? []) as { id: string; sector: string | null }[]) {
+          const sector = row.sector?.trim();
+          if (sector) map[row.id] = sector;
+        }
+      } catch {
+        // sem setor: pesquisa só por nome/cargo
+      }
+      return map;
+    },
+    enabled: !!currentCompanyId && isManager && (members ?? []).length > 0,
+    staleTime: 60 * 1000,
+    retry: false,
+  });
+  /** Junta cargo e setor (quando conhecidos) a uma lista de funcionários. */
+  const withMemberDetails = (list: TaskMember[]): TaskMember[] =>
+    list.map((m) => ({
+      ...m,
+      job_title: m.job_title ?? (members ?? []).find((x) => x.id === m.id)?.job_title ?? null,
+      sector: m.sector ?? memberSectors?.[m.id] ?? null,
+    }));
 
   // Tipo A — telas de NOVA atribuição: só funcionários ATIVOS, filtrados no servidor.
   const { data: activeMembers } = useQuery({
@@ -1309,7 +1346,7 @@ function TasksPage() {
                 />
                 <TaskForm
                   formId="task-form-create"
-                  members={activeMembers ?? []}
+                  members={withMemberDetails(activeMembers ?? [])}
                   clients={clientsList ?? []}
                   companyId={currentCompanyId}
                   userId={user!.id}
@@ -1350,12 +1387,12 @@ function TasksPage() {
             <TaskForm
               formId="task-form-edit"
               initial={editing}
-              members={[
+              members={withMemberDetails([
                 ...(activeMembers ?? []),
                 ...(members ?? []).filter(
                   (m) => m.id === editing.assigned_to && !(activeMembers ?? []).some((active) => active.id === m.id),
                 ),
-              ]}
+              ])}
               clients={clientsList ?? []}
               companyId={editing.company_id}
               userId={user!.id}
@@ -1717,6 +1754,7 @@ function TasksPage() {
                 id: m.id,
                 full_name: taskMemberName(members ?? [], m.id, "Funcionário"),
                 job_title: (m as { job_title?: string | null }).job_title ?? null,
+                sector: memberSectors?.[m.id] ?? null,
               }))}
               values={selectedEmployeeIds}
               onValuesChange={setEmployeeFilter}
@@ -3616,7 +3654,7 @@ function TaskForm({
   onDraftDiscard,
 }: {
   formId: string;
-  members: { id: string; full_name: string | null; email?: string | null }[];
+  members: { id: string; full_name: string | null; email?: string | null; job_title?: string | null; sector?: string | null }[];
   clients: {
     id: string;
     name: string;
@@ -3691,7 +3729,17 @@ function TaskForm({
             .normalize("NFD")
             .replace(/[\u0300-\u036f]/g, "");
           const email = (m.email ?? "").toLocaleLowerCase("pt-BR");
-          return name.includes(q) || email.includes(q);
+          // SUP-2026-000305 — também pesquisa pelo setor e cargo do funcionário.
+          const details = [m.sector, m.job_title]
+            .join(" ")
+            .toLocaleLowerCase("pt-BR")
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "");
+          const haystack = `${name} ${email} ${details}`;
+          return q
+            .split(/\s+/)
+            .filter(Boolean)
+            .every((token) => haystack.includes(token));
         });
     // Selecionados primeiro, depois ordem alfabética (mesma regra da ficha do cliente).
     return [...base].sort((a, b) => {
@@ -4907,7 +4955,7 @@ function TaskForm({
                       id="task-assignee-search"
                       value={assigneeQuery}
                       onChange={(e) => setAssigneeQuery(e.target.value)}
-                      placeholder="Pesquisar funcionário"
+                      placeholder="Pesquisar por nome ou setor"
                       aria-label="Pesquisar funcionário"
                       className="h-9 pl-8"
                     />
@@ -4935,6 +4983,9 @@ function TaskForm({
                           <span className="truncate" title={taskMemberName(members, m.id, "Funcionário")}>
                             {taskMemberName(members, m.id, "Funcionário")}
                           </span>
+                          {m.sector && (
+                            <span className="ml-auto shrink-0 truncate text-xs text-muted-foreground">{m.sector}</span>
+                          )}
                         </label>
                       );
                     })}
