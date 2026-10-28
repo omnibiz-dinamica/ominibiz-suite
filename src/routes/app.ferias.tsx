@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { RecordHistoryMenu } from "@/components/history/RecordHistoryMenu";
 import {
   Calendar as CalendarIcon,
   Check,
@@ -1039,7 +1040,8 @@ function FeriasPage() {
           </h2>
           <ul className="divide-y divide-border">
             {awaitingTheirConfirm.map((r) => (
-              <li key={r.id} data-vacation-id={r.id} className="flex items-center justify-between gap-3 py-2">
+              <RecordHistoryMenu key={r.id} entityType="vacation" entityId={r.id}>
+              <li data-vacation-id={r.id} className="flex items-center justify-between gap-3 py-2">
                 <div>
                   <div className="font-medium">{nameOf(r.user_id)}</div>
                   <div className="text-sm text-muted-foreground">
@@ -1066,6 +1068,7 @@ function FeriasPage() {
                   </Button>
                 </div>
               </li>
+              </RecordHistoryMenu>
             ))}
           </ul>
         </section>
@@ -1253,7 +1256,8 @@ function FeriasPage() {
             {pending
               .filter((r) => r.user_id === user?.id)
               .map((r) => (
-                <li key={r.id} data-vacation-id={r.id} className="flex items-center justify-between py-2">
+                <RecordHistoryMenu key={r.id} entityType="vacation" entityId={r.id}>
+                <li data-vacation-id={r.id} className="flex items-center justify-between py-2">
                   <div>
                     <div className="font-medium">
                       {fmt(r.start_date)} → {fmt(r.end_date)}
@@ -1283,6 +1287,7 @@ function FeriasPage() {
                     </Button>
                   </div>
                 </li>
+                </RecordHistoryMenu>
               ))}
           </ul>
         </section>
@@ -1298,7 +1303,8 @@ function FeriasPage() {
         ) : (
           <ul className="divide-y divide-border">
             {history.map((r) => (
-              <li key={r.id} data-vacation-id={r.id} className="flex items-center justify-between gap-3 py-2">
+              <RecordHistoryMenu key={r.id} entityType="vacation" entityId={r.id}>
+              <li data-vacation-id={r.id} className="flex items-center justify-between gap-3 py-2">
                 <div>
                   <div className="font-medium">
                     {isManager ? nameOf(r.user_id) : "Você"} — {fmt(r.start_date)} → {fmt(r.end_date)}
@@ -1311,6 +1317,7 @@ function FeriasPage() {
                   {STATUS_LABEL[r.status]}
                 </span>
               </li>
+              </RecordHistoryMenu>
             ))}
           </ul>
         )}

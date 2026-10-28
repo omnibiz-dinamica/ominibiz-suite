@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, ModalHeader, ModalBody } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { RecordHistoryMenu } from "@/components/history/RecordHistoryMenu";
 import { Check, Copy, Landmark, MailCheck, Trash2, Pencil, Power, Send, UserCog, X } from "lucide-react";
 import { RoleGuard } from "@/components/RoleGuard";
 import { sendTransactionalEmail } from "@/lib/email/send";
@@ -659,7 +660,8 @@ function TeamPage() {
             const email = m.profile?.email?.trim() || null;
             const shouldShowEmailAside = email && email !== displayName;
             return (
-              <li key={m.user_id + m.role} className="flex flex-wrap items-center justify-between gap-3 py-3">
+              <RecordHistoryMenu key={m.user_id + m.role} entityType="employee" entityId={m.user_id} title={getMemberDisplayName(m)}>
+              <li className="flex flex-wrap items-center justify-between gap-3 py-3">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 font-medium">
                     <span className="truncate">{displayName}</span>
@@ -721,6 +723,7 @@ function TeamPage() {
                   </div>
                 )}
               </li>
+              </RecordHistoryMenu>
             );
           })}
           {(members ?? []).length === 0 && (

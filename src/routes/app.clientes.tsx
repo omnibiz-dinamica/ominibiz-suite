@@ -43,6 +43,7 @@ import { ClientGeoEditor, validateClientGeo, type ClientGeoValue } from "@/compo
 import { getMapProvider } from "@/lib/maps";
 import { invalidateClientsCache } from "@/lib/cache/clients";
 import { parseHabitualSchedule, type ClientHabitualSchedule } from "@/lib/tasks/client-schedule";
+import { RecordHistoryMenu } from "@/components/history/RecordHistoryMenu";
 import {
   calculateWallDurationMinutes,
   formatContractedMinutes,
@@ -609,7 +610,8 @@ function ClientsPage() {
           {filteredClients.map((c) => {
             const team = assigneesByClient[c.id] ?? [];
             return (
-              <li key={c.id} className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4">
+              <RecordHistoryMenu key={c.id} entityType="client" entityId={c.id} title={c.name}>
+              <li className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <h3 className="truncate font-medium">{c.name}</h3>
@@ -702,6 +704,7 @@ function ClientsPage() {
                   </div>
                 )}
               </li>
+              </RecordHistoryMenu>
             );
           })}
         </ul>

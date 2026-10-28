@@ -62,6 +62,7 @@ import { isEmployeeActive } from "@/lib/employee-status";
 import { classifyEventStatus, type GeoPointRow } from "@/lib/punch/geo-view";
 import { exportToExcel, exportToPdf, type ExportColumn } from "@/lib/exports";
 import { toast } from "sonner";
+import { RecordHistoryMenu } from "@/components/history/RecordHistoryMenu";
 import { formatCivilDate, type TaskOperationalNote } from "@/lib/ponto/task-notes";
 
 export const Route = createFileRoute("/app/ponto_/gestao")({ component: Page });
@@ -882,7 +883,8 @@ function GestaoPonto() {
                 </TableRow>
               )}
               {(result?.rows ?? []).map((r) => (
-                <TableRow key={r.id}>
+                <RecordHistoryMenu key={r.id} entityType={isVacation(r) ? "vacation" : "punch"} entityId={r.id}>
+                <TableRow>
                   <TableCell className="font-medium">{r.profiles?.full_name ?? r.user_id.slice(0, 8)}</TableCell>
                   <TableCell className="max-w-[260px] truncate">
                     {isVacation(r) ? "Férias" : (r.tasks?.title ?? "—")}
@@ -995,6 +997,7 @@ function GestaoPonto() {
                     )}
                   </TableCell>
                 </TableRow>
+                </RecordHistoryMenu>
               ))}
             </TableBody>
           </Table>

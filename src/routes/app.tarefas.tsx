@@ -47,6 +47,7 @@ import {
   type TeamStartVariation,
 } from "@/lib/tasks/client-schedule";
 import { clientTeamType } from "@/lib/tasks/client-team";
+import { RecordHistoryMenu } from "@/components/history/RecordHistoryMenu";
 import {
   addWallMinutes,
   isOvernightTimeRange,
@@ -2677,6 +2678,7 @@ function MiniTaskChip({ task, startedAt, onClick }: { task: TaskRow; startedAt?:
   const start = formatWallTime(task.scheduled_for);
   const lateMinutes = startedLateMinutes(task, startedAt);
   return (
+    <RecordHistoryMenu entityType="task" entityId={task.id} related={[{ type: "recurrence", id: task.recurrence_id }]} title={task.title}>
     <button
       data-task-id={task.id}
       type="button"
@@ -2696,6 +2698,7 @@ function MiniTaskChip({ task, startedAt, onClick }: { task: TaskRow; startedAt?:
       ) : null}
       {taskHeading(task)}
     </button>
+    </RecordHistoryMenu>
   );
 }
 
@@ -2895,6 +2898,7 @@ function CalendarTaskCard({
   const [actionsOpen, setActionsOpen] = useState(false);
 
   return (
+    <RecordHistoryMenu entityType="task" entityId={task.id} related={[{ type: "recurrence", id: task.recurrence_id }]} title={task.title}>
     <li
       data-task-id={task.id}
       className="space-y-2 px-3 py-3"
@@ -3102,6 +3106,7 @@ function CalendarTaskCard({
         </div>
       )}
     </li>
+    </RecordHistoryMenu>
   );
 }
 
@@ -3313,6 +3318,7 @@ function TaskRowItem({
   const lateStartMinutes = startedLateMinutes(t, taskPunch?.started_at);
 
   return (
+    <RecordHistoryMenu entityType="task" entityId={t.id} related={[{ type: "recurrence", id: t.recurrence_id }]} title={t.title}>
     <li data-task-id={t.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 flex-1 items-start gap-2">
         {isManager && onToggleTaskSelection && (
@@ -3570,6 +3576,7 @@ function TaskRowItem({
         ))}
       </div>
     </li>
+    </RecordHistoryMenu>
   );
 }
 

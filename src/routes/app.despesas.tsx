@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EmployeePicker } from "@/components/common/EmployeePicker";
 import { toast } from "sonner";
+import { RecordHistoryMenu } from "@/components/history/RecordHistoryMenu";
 import { exportToExcel, exportToPdf, type ExportColumn } from "@/lib/exports";
 import {
   CreditCard,
@@ -1141,7 +1142,8 @@ function DespesasPage() {
         ) : (
           <ul className="divide-y divide-border">
             {(isManager ? decided : filtered).map((r) => (
-              <li key={r.id} data-expense-id={r.id} className="flex items-center justify-between gap-3 py-3">
+              <RecordHistoryMenu key={r.id} entityType="expense" entityId={r.id} title={r.reason}>
+              <li data-expense-id={r.id} className="flex items-center justify-between gap-3 py-3">
                 <div className="min-w-0">
                   <div className="font-medium">
                     {isManager ? (names[r.user_id] ?? "Colaborador") : "Você"} · {fmtEur(r.amount)}
@@ -1230,6 +1232,7 @@ function DespesasPage() {
                   )}
                 </div>
               </li>
+              </RecordHistoryMenu>
             ))}
           </ul>
         )}
@@ -1376,6 +1379,7 @@ function PendingRow({
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
   return (
+    <RecordHistoryMenu entityType="expense" entityId={row.id} title={row.reason}>
     <li data-expense-id={row.id} className="rounded-lg border border-border bg-card p-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
@@ -1427,5 +1431,6 @@ function PendingRow({
         </div>
       )}
     </li>
+    </RecordHistoryMenu>
   );
 }
