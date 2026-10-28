@@ -24,6 +24,12 @@ import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
 import { invalidateSupportCache } from "@/lib/cache/support";
 import { DuplicateClustersPanel } from "@/components/support/DuplicateClustersPanel";
 import { PlatformSupportSettingsCard } from "@/components/support/PlatformSupportSettingsCard";
+import {
+  DESTINATION_EMOJI,
+  destinationLabel,
+  fetchSupportDestinations,
+  supportDestinationsQueryKey,
+} from "@/lib/support/destinations";
 
 
 export const Route = createFileRoute("/app/admin/suporte")({
@@ -38,6 +44,7 @@ type Row = {
   id: string;
   ticket_number: string;
   company_id: string;
+  destination_code: string | null;
   type: SupportTicketType;
   priority: SupportTicketPriority;
   status: SupportTicketStatus;
@@ -64,17 +71,19 @@ function SupportAdminPage() {
   const [priority, setPriority] = useState<"" | SupportTicketPriority>("");
   const [type, setType] = useState<"" | SupportTicketType>("");
   const [companyId, setCompanyId] = useState<string>("");
+  // Destino (fila) do ticket: Suporte / Desenvolvimento, Secretaria, Contabilidade…
+  const [destination, setDestination] = useState<string>("");
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
   const [q, setQ] = useState("");
 
   const { data = [], isLoading } = useQuery<Row[]>({
-    queryKey: ["support-tickets", "admin-global", status, priority, type, companyId, dateFrom, dateTo],
+    queryKey: ["support-tickets", "admin-global", status, priority, type, companyId, destination, dateFrom, dateTo],
     queryFn: async () => {
       let query = supabase
         .from("support_tickets")
         .select(
-          "id, ticket_number, company_id, type, priority, status, title, description, module, first_response_at, resolved_at, created_at, updated_at, companies(name)",
+          "id, ticket_number, company_id, destination_code, type, priority, status, title, description, module, first_response_at, resolved_at, created_at, updated_at, companies(name)",
         )
         .order("created_at", { ascending: false })
         .limit(1000);
@@ -82,6 +91,7 @@ function SupportAdminPage() {
       if (priority) query = query.eq("priority", priority);
       if (type) query = query.eq("type", type);
       if (companyId) query = query.eq("company_id", companyId);
+      if (destination) query = query.eq("destination_code", destination);
       if (dateFrom) query = query.gte("created_at", new Date(dateFrom).toISOString());
       if (dateTo) {
         const end = new Date(dateTo);
@@ -92,6 +102,12 @@ function SupportAdminPage() {
       if (error) throw error;
       return (data ?? []) as unknown as Row[];
     },
+  });
+
+  const { data: destinations = [] } = useQuery({
+    queryKey: supportDestinationsQueryKey,
+    queryFn: fetchSupportDestinations,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: companies = [] } = useQuery<CompanyRow[]>({
@@ -221,6 +237,7 @@ function SupportAdminPage() {
     setPriority("");
     setType("");
     setCompanyId("");
+    setDestination("");
     setDateFrom("");
     setDateTo("");
     setQ("");
@@ -432,6 +449,19 @@ function SupportAdminPage() {
             ))}
           </SelectContent>
         </Select>
+        <Select value={destination || "all"} onValueChange={(v) => setDestination(v === "all" ? "" : v)}>
+          <SelectTrigger className="w-56" aria-label="Destino">
+            <SelectValue placeholder="Destino" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os destinos</SelectItem>
+            {destinations.map((d) => (
+              <SelectItem key={d.code} value={d.code}>
+                {d.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Input
           type="date"
           value={dateFrom}
@@ -446,7 +476,7 @@ function SupportAdminPage() {
           className="w-40"
           aria-label="Data final"
         />
-        {(status || priority || type || companyId || dateFrom || dateTo || q) && (
+        {(status || priority || type || companyId || destination || dateFrom || dateTo || q) && (
           <Button variant="ghost" size="sm" onClick={clearFilters}>
             <X className="mr-1 h-3 w-3" /> Limpar
           </Button>
@@ -482,6 +512,10 @@ function SupportAdminPage() {
                     </span>
                     <span className="text-muted-foreground">
                       {TICKET_TYPE_LABEL[t.type as keyof typeof TICKET_TYPE_LABEL] ?? t.type}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {(DESTINATION_EMOJI[t.destination_code ?? ""] ?? "→") + " "}
+                      {destinationLabel(t.destination_code, destinations)}
                     </span>
                     {t.companies?.name && (
                       <span className="rounded bg-secondary px-1.5 py-0.5 text-secondary-foreground">
