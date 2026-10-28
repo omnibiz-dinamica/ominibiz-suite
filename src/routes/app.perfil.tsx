@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { SignatureVistoCard } from "@/components/perfil/SignatureVistoCard";
+import { BankDetailsCard } from "@/components/perfil/BankDetailsCard";
 import { MailCheck } from "lucide-react";
 import { submitEmailChangeRequest } from "@/lib/user-email";
 import { isValidEmailChangeReason, isValidUserEmail, normalizeUserEmail } from "@/lib/user-email-security";
@@ -225,6 +226,8 @@ function ProfilePage() {
           {save.isPending ? "Salvando..." : "Salvar"}
         </Button>
       </form>
+
+      {currentCompanyId && <BankDetailsCard />}
 
       <SignatureVistoCard />
 

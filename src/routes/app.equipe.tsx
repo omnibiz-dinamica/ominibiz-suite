@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -9,13 +9,22 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, ModalHeader, ModalBody } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Check, Copy, MailCheck, Trash2, Pencil, Power, Send, UserCog, X } from "lucide-react";
+import { Check, Copy, Landmark, MailCheck, Trash2, Pencil, Power, Send, UserCog, X } from "lucide-react";
 import { RoleGuard } from "@/components/RoleGuard";
 import { sendTransactionalEmail } from "@/lib/email/send";
 import { buildAppUrl } from "@/lib/app-url";
 import { EmployeeEditor } from "@/components/equipe/EmployeeEditor";
 import { decideEmailChangeRequest } from "@/lib/user-email";
 import { isEmployeeActive } from "@/lib/employee-status";
+import { formatIban, type BankChangeRequest } from "@/lib/employee-history";
+
+const FOCUS_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Aberto por aviso: ?bank=<pedido>&employee=<funcionário> (só UUIDs válidos). */
+interface EquipeSearch {
+  bank?: string;
+  employee?: string;
+}
 
 interface MemberRow {
   user_id: string;
@@ -69,6 +78,10 @@ function getMemberDisplayName(member: MemberRow) {
 }
 
 export const Route = createFileRoute("/app/equipe")({
+  validateSearch: (raw: Record<string, unknown>): EquipeSearch => ({
+    bank: typeof raw.bank === "string" && FOCUS_UUID.test(raw.bank) ? raw.bank : undefined,
+    employee: typeof raw.employee === "string" && FOCUS_UUID.test(raw.employee) ? raw.employee : undefined,
+  }),
   component: () => (
     <RoleGuard allow={["manager", "owner", "super_admin"]}>
       <TeamPage />
@@ -164,6 +177,57 @@ function TeamPage() {
   });
 
   const [editing, setEditing] = useState<MemberRow | null>(null);
+  const [editingTab, setEditingTab] = useState<string | undefined>(undefined);
+  const focusSearch = Route.useSearch();
+
+  // Pedidos de alteração de NIB/IBAN feitos pelos funcionários (decididos pelo gestor).
+  const { data: bankChangeRequests = [] } = useQuery({
+    queryKey: ["bank-change-requests", currentCompanyId, "pending"],
+    enabled: !!currentCompanyId && isManager,
+    queryFn: async () => {
+      // Tabela nova: os tipos gerados podem ainda não a conhecer.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.from("employee_bank_change_requests" as never) as any)
+        .select("id, company_id, user_id, iban, swift, note, status, created_at, decided_by, decided_at, decision_reason")
+        .eq("company_id", currentCompanyId!)
+        .eq("status", "pendente")
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as BankChangeRequest[];
+    },
+  });
+
+  const decideBankRequest = useMutation({
+    mutationFn: async (input: { requestId: string; approve: boolean; reason?: string }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.rpc as any)("employee_bank_change_decide", {
+        _request_id: input.requestId,
+        _approve: input.approve,
+        _reason: input.reason ?? null,
+      });
+      if (error) throw new Error(error.message);
+      return input;
+    },
+    onSuccess: async (input) => {
+      toast.success(input.approve ? "Novo IBAN aprovado e gravado na ficha." : "Pedido rejeitado.");
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["bank-change-requests", currentCompanyId] }),
+        qc.invalidateQueries({ queryKey: ["employee-history"] }),
+        qc.invalidateQueries({ queryKey: ["employee-profile"] }),
+        qc.invalidateQueries({ queryKey: ["notifications"] }),
+      ]);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // Vindo de um aviso de pedido de NIB/IBAN: leva até à secção dos pedidos.
+  useEffect(() => {
+    if (!focusSearch.bank) return;
+    const id = window.setTimeout(() => {
+      document.getElementById("pedidos-nib")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 300);
+    return () => window.clearTimeout(id);
+  }, [focusSearch.bank, bankChangeRequests.length]);
   const [showInactive, setShowInactive] = useState(false);
   const [memberSearch, setMemberSearch] = useState("");
   const [memberSort, setMemberSort] = useState<"az" | "za">("az");
@@ -479,6 +543,30 @@ function TeamPage() {
         </form>
       </div>
 
+      <BankChangeRequestsSection
+        members={members ?? []}
+        requests={bankChangeRequests}
+        highlightId={focusSearch.bank ?? null}
+        savingId={decideBankRequest.isPending ? (decideBankRequest.variables?.requestId ?? null) : null}
+        onApprove={(request) => {
+          if (!window.confirm(`Aprovar e gravar na ficha o IBAN ${formatIban(request.iban)}?`)) return;
+          decideBankRequest.mutate({ requestId: request.id, approve: true });
+        }}
+        onReject={(request) => {
+          const reason = window.prompt("Motivo da rejeição (obrigatório):", "");
+          if (reason === null) return;
+          if (reason.trim().length < 3) {
+            toast.error("Indique o motivo da rejeição.");
+            return;
+          }
+          decideBankRequest.mutate({ requestId: request.id, approve: false, reason: reason.trim() });
+        }}
+        onOpenHistory={(member) => {
+          setEditingTab("historico");
+          setEditing(member);
+        }}
+      />
+
       <EmailChangeRequestsSection
         members={members ?? []}
         requests={emailChangeRequests}
@@ -597,7 +685,15 @@ function TeamPage() {
                 </div>
                 {m.role !== "super_admin" && (
                   <div className="flex shrink-0 gap-1">
-                    <Button size="icon" variant="ghost" title="Editar" onClick={() => setEditing(m)}>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      title="Editar"
+                      onClick={() => {
+                        setEditingTab(undefined);
+                        setEditing(m);
+                      }}
+                    >
                       <Pencil className="h-4 w-4" />
                     </Button>
                     <Button
@@ -648,6 +744,7 @@ function TeamPage() {
                 currentRole={editing.role}
                 currentEmail={editing.profile?.email ?? null}
                 sectorOptions={sectorOptions}
+                initialTab={editingTab}
                 onDone={() => {
                   setEditing(null);
                   qc.invalidateQueries({ queryKey: ["team-members"] });
@@ -658,6 +755,99 @@ function TeamPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function BankChangeRequestsSection({
+  highlightId,
+  members,
+  onApprove,
+  onOpenHistory,
+  onReject,
+  requests,
+  savingId,
+}: {
+  highlightId: string | null;
+  members: MemberRow[];
+  onApprove: (request: BankChangeRequest) => void;
+  onOpenHistory: (member: MemberRow) => void;
+  onReject: (request: BankChangeRequest) => void;
+  requests: BankChangeRequest[];
+  savingId: string | null;
+}) {
+  return (
+    <section id="pedidos-nib" className="scroll-mt-20 rounded-2xl border border-border bg-card p-4 sm:p-6">
+      <div className="flex items-start gap-3">
+        <Landmark className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+        <div>
+          <h2 className="font-display text-lg font-semibold">Pedidos de alteração de NIB/IBAN</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Enviados pelos funcionários no Perfil. Ao aprovar, o IBAN é gravado na ficha e tudo fica no histórico.
+          </p>
+        </div>
+      </div>
+
+      {requests.length === 0 ? (
+        <p className="mt-4 rounded-lg border border-dashed border-border px-3 py-4 text-sm text-muted-foreground">
+          Nenhum pedido pendente.
+        </p>
+      ) : (
+        <ul className="mt-4 divide-y divide-border">
+          {requests.map((request) => {
+            const member = members.find((item) => item.user_id === request.user_id);
+            const displayName = member ? getMemberDisplayName(member) : "Funcionário";
+            const highlighted = highlightId === request.id;
+            return (
+              <li
+                key={request.id}
+                className={`grid gap-3 py-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center ${highlighted ? "-mx-2 rounded-lg bg-primary/5 px-2" : ""}`}
+              >
+                <div className="min-w-0 space-y-1">
+                  <p className="font-medium">{displayName}</p>
+                  <p className="break-all font-mono text-sm">{formatIban(request.iban)}</p>
+                  {request.swift && <p className="text-sm text-muted-foreground">SWIFT/BIC: {request.swift}</p>}
+                  {request.note && <p className="text-sm">Observação: {request.note}</p>}
+                  <p className="text-xs text-muted-foreground">
+                    Pedido em {new Date(request.created_at).toLocaleString("pt-PT")}
+                  </p>
+                </div>
+                <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+                  {member && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="flex-1 sm:flex-none"
+                      onClick={() => onOpenHistory(member)}
+                    >
+                      Ver histórico
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1 sm:flex-none"
+                    disabled={savingId === request.id}
+                    onClick={() => onReject(request)}
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Rejeitar
+                  </Button>
+                  <Button
+                    type="button"
+                    className="flex-1 sm:flex-none"
+                    disabled={savingId === request.id}
+                    onClick={() => onApprove(request)}
+                  >
+                    <Check className="mr-2 h-4 w-4" />
+                    Aprovar
+                  </Button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
   );
 }
 
