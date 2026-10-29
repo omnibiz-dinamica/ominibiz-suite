@@ -74,6 +74,7 @@ import { MarkAbsentDialog } from "@/components/tasks/MarkAbsentDialog";
 import { fetchOpenEntrySelf } from "@/lib/punch/recovery";
 import { defaultRecoveryEndInput } from "@/lib/punch/recovery-time";
 import { isEmployeeCancelledTask } from "@/lib/task-refusal-view";
+import { managerUpcomingFilter } from "@/lib/punch/manager-queue";
 import { RefuseTaskDialog, type RefusalSubmitPayload } from "@/components/tasks/RefuseTaskDialog";
 
 export const Route = createFileRoute("/app/ponto")({ component: PontoPage });
@@ -226,6 +227,9 @@ function PontoPage() {
       // Funcionário: vê apenas as suas.
       if (isManager || isSuperAdmin) {
         if (currentCompanyId) q = q.eq("company_id", currentCompanyId);
+        // SUP-2026-000092: só de hoje em diante (ou em andamento); as antigas
+        // por resolver ficam em Tarefas e em Ponto · Gestão.
+        q = q.or(managerUpcomingFilter());
       } else {
         q = q.eq("assigned_to", user.id);
       }
