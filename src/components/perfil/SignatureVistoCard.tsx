@@ -14,6 +14,7 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Eraser, PenLine, Trash2, Upload } from "lucide-react";
+import { cleanSignatureFile } from "@/lib/signature-image";
 
 type Kind = "signature" | "initials";
 
@@ -113,14 +114,15 @@ function Pad({
       toast.error("Envie uma imagem.");
       return;
     }
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("Imagem demasiado grande (máx. 2 MB).");
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("Imagem demasiado grande (máx. 8 MB).");
       return;
     }
     setBusy(true);
     try {
-      await persist(file);
-      toast.success("Imagem guardada.");
+      // Fundo removido automaticamente: fica só o traço, em PNG transparente.
+      await persist(await cleanSignatureFile(file));
+      toast.success("Imagem guardada sem fundo.");
       onSaved();
     } catch (e) {
       toast.error((e as Error).message);
