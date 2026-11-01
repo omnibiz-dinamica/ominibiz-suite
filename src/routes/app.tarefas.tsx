@@ -3907,19 +3907,45 @@ function TaskForm({
     (schedule) => Boolean(schedule.label) && schedule.id.startsWith("client-habitual:"),
   );
   const scheduleName = selectedSchedule?.label?.trim() || null;
-  const contractedMinutes = selectedSchedule?.contractedMinutes ?? selectedClient?.contracted_minutes ?? null;
+  const clientContractedMinutes = selectedSchedule?.contractedMinutes ?? selectedClient?.contracted_minutes ?? null;
+  /**
+   * SUP-2026-000315 — sem carga no cadastro do cliente, o total a dividir é o
+   * horário da própria tarefa (início → fim). Ex.: 08:00–11:00 para 2 pessoas
+   * = 1h30 cada (08:00–09:30). Só na criação: a edição divide depois de gravar.
+   */
+  const taskTotalMinutes =
+    !initial && startTime && endTime ? dailyShiftDurationMinutes(startTime, endTime) || null : null;
+  const contractedMinutes = clientContractedMinutes ?? taskTotalMinutes;
+  const splitFromTaskTimes = clientContractedMinutes == null && contractedMinutes != null;
+  // A hora de fim digitada só bloqueia a divisão quando a carga vem do cadastro;
+  // sem cadastro, é precisamente essa hora que define o total a dividir.
+  const endTypedByManager = manualEndOverride && !splitFromTaskTimes;
   const distributedMinutes = useMemo(
     () => distributeContractedMinutes(contractedMinutes, assignees.length),
     [contractedMinutes, assignees.length],
   );
   // Prévia, no próprio formulário, do horário de cada funcionário quando as horas contratadas
   // são divididas (mesma regra usada ao gravar: mesmo início, cada um com a sua parte).
+  /**
+   * SUP-2026-000315 — na edição, a divisão é feita no banco quando muda o nº de
+   * pessoas (task_group_edit_occurrence). Prévia com a mesma regra: carga do
+   * cliente; sem carga, ao acrescentar, horário da tarefa × pessoas que já estavam.
+   */
+  const editSplitTotal = (() => {
+    const count = new Set(assignees).size;
+    if (!initial || !startTime || !endTime || count === groupAssignees.length) return null;
+    if (selectedClient?.contracted_minutes) return selectedClient.contracted_minutes;
+    if (count < groupAssignees.length) return null;
+    const minutes = dailyShiftDurationMinutes(startTime, endTime);
+    return minutes > 0 ? minutes * Math.max(groupAssignees.length, 1) : null;
+  })();
   const perEmployeeSchedule = (() => {
     const unique = [...new Set(assignees)];
-    if (contractedMinutes == null || manualEndOverride || !startDate || !startTime || !endTime || unique.length < 2) {
+    const total = initial ? editSplitTotal : endTypedByManager ? null : contractedMinutes;
+    if (total == null || !startDate || !startTime || !endTime || unique.length < 2) {
       return [] as { id: string; name: string; end: string; duration: string }[];
     }
-    const shares = distributeContractedMinutes(contractedMinutes, unique.length);
+    const shares = distributeContractedMinutes(total, unique.length);
     return unique.map((id, index) => {
       const minutes = shares[index] ?? shares[0] ?? 0;
       const end = addWallMinutes(startDate, startTime, minutes);
@@ -4308,7 +4334,7 @@ function TaskForm({
               // que o gestor JÁ registou. Sem hora de fim digitada, nada é derivado.
               const useContractedSchedule =
                 contractedMinutes != null &&
-                !manualEndOverride &&
+                !endTypedByManager &&
                 startDate !== "" &&
                 startTime !== "" &&
                 endTime !== "";
@@ -4514,6 +4540,20 @@ function TaskForm({
                   _apply_schedule_to_group: applyToGroup,
                 });
                 error = res.error;
+                // SUP-2026-000315 — divisão das horas feita no banco ao mudar o nº de pessoas.
+                const split = (res.data ?? null) as {
+                  split_count?: number;
+                  split_people?: number;
+                  split_minutes?: number | null;
+                  split_skipped?: string | null;
+                } | null;
+                if (!error && split?.split_count && split.split_minutes) {
+                  toast.info(
+                    `Horas divididas por ${split.split_people} pessoas: ${formatContractedMinutes(split.split_minutes)} cada.`,
+                  );
+                } else if (!error && split?.split_skipped === "started") {
+                  toast.warning("As horas não foram divididas porque alguém desta tarefa já começou ou tem ponto.");
+                }
               } else if (recurrence.enabled) {
                 // Horario e duracao da recorrencia sao derivados do topo do formulario.
                 // Sem horario, a recorrencia fica por dia; nunca materializa 00:00.
@@ -4806,7 +4846,11 @@ function TaskForm({
             )}
             {!initial && (clientSchedule.length > 0 || contractedMinutes != null) && (
               <div className="rounded-lg border border-border bg-muted/40 p-3 text-xs">
-                <p className="font-medium text-foreground">Configuração do cliente</p>
+                <p className="font-medium text-foreground">
+                  {clientSchedule.length > 0 || clientContractedMinutes != null
+                    ? "Configuração do cliente"
+                    : "Divisão do horário"}
+                </p>
                 {clientSchedule.length > 0 && (
                   <ul className="mt-1 space-y-0.5 text-muted-foreground">
                     {clientSchedule.map((s) => (
@@ -4816,7 +4860,7 @@ function TaskForm({
                 )}
                 {contractedMinutes != null && (
                   <p className="mt-1 text-muted-foreground">
-                    Carga total contratada:{" "}
+                    {splitFromTaskTimes ? "Carga total (horário da tarefa):" : "Carga total contratada:"}{" "}
                     <span className="font-medium text-foreground">{formatContractedMinutes(contractedMinutes)}</span>
                   </p>
                 )}
