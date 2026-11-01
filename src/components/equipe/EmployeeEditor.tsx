@@ -1,3 +1,4 @@
+import { cleanSignatureFile } from "@/lib/signature-image";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -885,9 +886,12 @@ function TabAssinaturas({
   const upload = async (kind: "sig" | "ini", file: File) => {
     setBusy(kind);
     try {
-      const ext = file.name.split(".").pop() || "png";
-      const path = `${companyId}/${userId}/${kind === "sig" ? "signature" : "initials"}-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("employee-signatures").upload(path, file, { upsert: true });
+      // Fundo removido automaticamente: guarda-se só o traço, em PNG transparente.
+      const clean = await cleanSignatureFile(file);
+      const path = `${companyId}/${userId}/${kind === "sig" ? "signature" : "initials"}-${Date.now()}.png`;
+      const { error } = await supabase.storage
+        .from("employee-signatures")
+        .upload(path, clean, { upsert: true, contentType: "image/png" });
       if (error) throw error;
       const patch = kind === "sig" ? { signature_url: path } : { initials_url: path };
       await onSave(patch, "Imagem salva");
@@ -903,7 +907,8 @@ function TabAssinaturas({
   return (
     <div className="space-y-6">
       <p className="text-xs text-muted-foreground">
-        Preparado para uso futuro em folha de ponto, relatórios, recibos e contratos. Envie PNG com fundo transparente.
+        Usados na folha de ponto (assinatura no fim, visto em cada linha). O fundo da imagem é removido
+        automaticamente ao enviar.
       </p>
       <SignatureSlot
         label="Assinatura digital"
