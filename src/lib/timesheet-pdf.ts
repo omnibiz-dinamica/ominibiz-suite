@@ -9,6 +9,7 @@ import {
   type TimesheetSnapshot,
 } from "@/lib/timesheet";
 import { isDayVisto } from "@/lib/timesheet-signature";
+import { cleanSignatureImage, fitInBox, type CleanImage } from "@/lib/signature-image";
 import { formatWallDate } from "@/lib/wall-clock";
 import { PAYMENT_TYPE_LABEL, type PaymentType } from "@/lib/compensation";
 
@@ -34,8 +35,8 @@ function payLabel(type: string | null | undefined) {
 }
 
 /**
- * Visto: marca vetorial (✓) desenhada — as fontes padrão do PDF não têm o
- * glifo, e a assinatura manuscrita nunca é repetida por linha (ADR-059).
+ * Visto: marca vetorial (✓) — usada só quando o funcionário não tem o visto
+ * (rubrica) cadastrado. A assinatura completa nunca é repetida por linha.
  */
 function drawCheck(doc: jsPDF, x: number, y: number) {
   const prevW = doc.getLineWidth();
@@ -56,6 +57,8 @@ export async function generateTimesheetPdf(
     signedAt?: string | null;
     /** Assinatura canónica da versão (ADR-059). Sem ela, nada é assinado. */
     signatureUrl?: string | null;
+    /** Visto (rubrica) da versão: desenhado em cada linha vistada. */
+    initialsUrl?: string | null;
   } = {},
 ): Promise<Uint8Array> {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
@@ -68,7 +71,21 @@ export async function generateTimesheetPdf(
     opts.embedSignatures === false || !opts.signedAt
       ? null
       : opts.signatureUrl ?? snapshot.employee.signature_url;
-  const sigData = await signatureDataUrl(signaturePath);
+  const initialsPath =
+    opts.embedSignatures === false || !opts.signedAt
+      ? null
+      : opts.initialsUrl ?? snapshot.employee.initials_url;
+  // Assinatura e visto vão sempre sem fundo e recortados ao traço.
+  const clean = async (path: string | null | undefined): Promise<CleanImage | null> => {
+    const raw = await signatureDataUrl(path);
+    if (!raw) return null;
+    try {
+      return await cleanSignatureImage(raw);
+    } catch {
+      return null;
+    }
+  };
+  const [sigImg, initialsImg] = await Promise.all([clean(signaturePath), clean(initialsPath)]);
 
 
   const header = () => {
@@ -182,7 +199,18 @@ export async function generateTimesheetPdf(
         // Coluna Visto (ADR-059): confirmação do dia OU versão validada pelo
         // funcionário — a validação do documento cobre todas as suas linhas.
         // Marca simples: a assinatura manuscrita aparece só no fim do documento.
-        if (isDayVisto(d, { signedAt: opts.signedAt })) drawCheck(doc, x + 2, y - 1);
+        if (isDayVisto(d, { signedAt: opts.signedAt })) {
+          if (initialsImg) {
+            const fit = fitInBox(initialsImg.width, initialsImg.height, cols[i].w - 6, 15);
+            try {
+              doc.addImage(initialsImg.dataUrl, "PNG", x, y - 10, fit.w, fit.h);
+            } catch {
+              drawCheck(doc, x + 2, y - 1);
+            }
+          } else {
+            drawCheck(doc, x + 2, y - 1);
+          }
+        }
       } else {
         doc.text(String(value), x, y + 1);
       }
@@ -246,9 +274,10 @@ export async function generateTimesheetPdf(
   y = Math.max(y + 30, A4.h - 150);
   const colW = (contentW - 30) / 2;
 
-  if (sigData) {
+  if (sigImg) {
     try {
-      doc.addImage(sigData, "PNG", MARGIN + 8, y - 46, 150, 42);
+      const fit = fitInBox(sigImg.width, sigImg.height, 170, 44);
+      doc.addImage(sigImg.dataUrl, "PNG", MARGIN + 8, y - 2 - fit.h, fit.w, fit.h);
     } catch {
       /* assinatura inválida: mantém linha em branco */
     }

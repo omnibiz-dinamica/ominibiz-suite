@@ -24,13 +24,14 @@ export async function timesheetRowToPdf(
   const version = row.current_version > 0 ? await getVersion(row.period_id, row.current_version) : null;
 
   if (version?.snapshot) {
-    const { signatureUrl } = resolveVersionSignature(version, version.snapshot, {
+    const { signatureUrl, initialsUrl } = resolveVersionSignature(version, version.snapshot, {
       signedAt: version.signed_at ?? row.signed_at,
     });
     return generateTimesheetPdf(version.snapshot, {
       versionLabel: `Versão ${version.version}`,
       signedAt: version.signed_at ?? row.signed_at,
       signatureUrl,
+      initialsUrl,
     });
   }
 
