@@ -996,7 +996,7 @@ function FeriasPage() {
               onClick={() => mgrCreate.mutate()}
               disabled={mgrCreate.isPending || !mgrTargetUser || !mgrStart || !mgrEnd}
             >
-              Agendar — pendente de confirmação
+              Agendar
             </Button>
           </div>
         </section>
@@ -1041,33 +1041,33 @@ function FeriasPage() {
           <ul className="divide-y divide-border">
             {awaitingTheirConfirm.map((r) => (
               <RecordHistoryMenu key={r.id} entityType="vacation" entityId={r.id}>
-              <li data-vacation-id={r.id} className="flex items-center justify-between gap-3 py-2">
-                <div>
-                  <div className="font-medium">{nameOf(r.user_id)}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {fmt(r.start_date)} → {fmt(r.end_date)}
+                <li data-vacation-id={r.id} className="flex items-center justify-between gap-3 py-2">
+                  <div>
+                    <div className="font-medium">{nameOf(r.user_id)}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {fmt(r.start_date)} → {fmt(r.end_date)}
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_TONE.pendente_confirmacao}`}>
-                    {STATUS_LABEL.pendente_confirmacao}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() =>
-                      setCancelTarget({
-                        id: r.id,
-                        employeeName: nameOf(r.user_id),
-                        periodLabel: `${fmt(r.start_date)} → ${fmt(r.end_date)}`,
-                        statusLabel: STATUS_LABEL[r.status],
-                      })
-                    }
-                  >
-                    Cancelar
-                  </Button>
-                </div>
-              </li>
+                  <div className="flex items-center gap-2">
+                    <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_TONE.pendente_confirmacao}`}>
+                      {STATUS_LABEL.pendente_confirmacao}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() =>
+                        setCancelTarget({
+                          id: r.id,
+                          employeeName: nameOf(r.user_id),
+                          periodLabel: `${fmt(r.start_date)} → ${fmt(r.end_date)}`,
+                          statusLabel: STATUS_LABEL[r.status],
+                        })
+                      }
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                </li>
               </RecordHistoryMenu>
             ))}
           </ul>
@@ -1257,36 +1257,36 @@ function FeriasPage() {
               .filter((r) => r.user_id === user?.id)
               .map((r) => (
                 <RecordHistoryMenu key={r.id} entityType="vacation" entityId={r.id}>
-                <li data-vacation-id={r.id} className="flex items-center justify-between py-2">
-                  <div>
-                    <div className="font-medium">
-                      {fmt(r.start_date)} → {fmt(r.end_date)}
+                  <li data-vacation-id={r.id} className="flex items-center justify-between py-2">
+                    <div>
+                      <div className="font-medium">
+                        {fmt(r.start_date)} → {fmt(r.end_date)}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Aprovador: {r.assigned_approver_id ? nameOf(r.assigned_approver_id) : "Não definido"}
+                      </div>
+                      {r.note && <div className="text-xs text-muted-foreground">{r.note}</div>}
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      Aprovador: {r.assigned_approver_id ? nameOf(r.assigned_approver_id) : "Não definido"}
+                    <div className="flex items-center gap-2">
+                      <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_TONE.pendente}`}>
+                        Aguardando aprovação
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() =>
+                          setCancelTarget({
+                            id: r.id,
+                            employeeName: "Você",
+                            periodLabel: `${fmt(r.start_date)} → ${fmt(r.end_date)}`,
+                            statusLabel: STATUS_LABEL[r.status],
+                          })
+                        }
+                      >
+                        Cancelar
+                      </Button>
                     </div>
-                    {r.note && <div className="text-xs text-muted-foreground">{r.note}</div>}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_TONE.pendente}`}>
-                      Aguardando aprovação
-                    </span>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() =>
-                        setCancelTarget({
-                          id: r.id,
-                          employeeName: "Você",
-                          periodLabel: `${fmt(r.start_date)} → ${fmt(r.end_date)}`,
-                          statusLabel: STATUS_LABEL[r.status],
-                        })
-                      }
-                    >
-                      Cancelar
-                    </Button>
-                  </div>
-                </li>
+                  </li>
                 </RecordHistoryMenu>
               ))}
           </ul>
@@ -1304,19 +1304,19 @@ function FeriasPage() {
           <ul className="divide-y divide-border">
             {history.map((r) => (
               <RecordHistoryMenu key={r.id} entityType="vacation" entityId={r.id}>
-              <li data-vacation-id={r.id} className="flex items-center justify-between gap-3 py-2">
-                <div>
-                  <div className="font-medium">
-                    {isManager ? nameOf(r.user_id) : "Você"} — {fmt(r.start_date)} → {fmt(r.end_date)}
+                <li data-vacation-id={r.id} className="flex items-center justify-between gap-3 py-2">
+                  <div>
+                    <div className="font-medium">
+                      {isManager ? nameOf(r.user_id) : "Você"} — {fmt(r.start_date)} → {fmt(r.end_date)}
+                    </div>
+                    {r.decision_reason && (
+                      <div className="text-xs text-muted-foreground">Motivo: {r.decision_reason}</div>
+                    )}
                   </div>
-                  {r.decision_reason && (
-                    <div className="text-xs text-muted-foreground">Motivo: {r.decision_reason}</div>
-                  )}
-                </div>
-                <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_TONE[r.status]}`}>
-                  {STATUS_LABEL[r.status]}
-                </span>
-              </li>
+                  <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_TONE[r.status]}`}>
+                    {STATUS_LABEL[r.status]}
+                  </span>
+                </li>
               </RecordHistoryMenu>
             ))}
           </ul>
