@@ -240,7 +240,7 @@ function PeriodDetail({
           const sig = resolveVersionSignature(v, v.snapshot, {
             signedAt: v.signed_at ?? period!.signed_at,
           });
-          return { snapshot: v.snapshot, signatureUrl: sig.signatureUrl };
+          return { snapshot: v.snapshot, signatureUrl: sig.signatureUrl, initialsUrl: sig.initialsUrl };
         }
       }
       const built = await buildSnapshot({
@@ -250,7 +250,7 @@ function PeriodDetail({
         month: period!.period_month,
       });
       void logAccess(period!.id, "REPORT_VIEWED");
-      return { snapshot: built, signatureUrl: null as string | null };
+      return { snapshot: built, signatureUrl: null as string | null, initialsUrl: null as string | null };
     },
   });
 
@@ -264,12 +264,14 @@ function PeriodDetail({
     setBusy(true);
     try {
       const version = await signPeriod(period.id);
+      const sig = resolveVersionSignature(version, version.snapshot, {
+        signedAt: version.signed_at,
+      });
       const bytes = await generateTimesheetPdf(version.snapshot, {
         versionLabel: `Versão ${version.version}`,
         signedAt: version.signed_at,
-        signatureUrl: resolveVersionSignature(version, version.snapshot, {
-          signedAt: version.signed_at,
-        }).signatureUrl,
+        signatureUrl: sig.signatureUrl,
+        initialsUrl: sig.initialsUrl,
       });
 
       const path = pdfPath({
@@ -318,6 +320,7 @@ function PeriodDetail({
       versionLabel: period.current_version > 0 ? `Versão ${period.current_version}` : "Prévia",
       signedAt: period.signed_at,
       signatureUrl: snap.data.signatureUrl,
+      initialsUrl: snap.data.initialsUrl,
     });
 
     void logAccess(period.id, "REPORT_DOWNLOADED");
