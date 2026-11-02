@@ -7,13 +7,14 @@ import {
   shouldAskGroupScheduleScope,
 } from "../src/lib/tasks/group-edit.ts";
 import { canOpenNotification, resolveNotificationDestination } from "../src/lib/notification-actions.ts";
+import { tasksPageSource } from "./helpers/tasks-page-source";
 
 const migDir = new URL("../drizzle/migrations/", import.meta.url);
 const migration = readdirSync(migDir)
   .filter((f) => f.includes("sup253_sup66_sup224"))
   .map((f) => readFileSync(new URL(f, migDir), "utf8"))
   .join("\n");
-const form = readFileSync(new URL("../src/routes/app.tarefas.tsx", import.meta.url), "utf8");
+const form = tasksPageSource();
 
 test("SUP-253: aviso só quando outra pessoa altera, 1 por salvamento, link /app/ponto", () => {
   assert.match(migration, /ADD VALUE IF NOT EXISTS 'punch_adjusted'/);

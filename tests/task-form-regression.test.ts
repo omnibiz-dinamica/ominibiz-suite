@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { isDateKeyWithinInclusiveRange } from "../src/lib/tasks/recurrence-date.ts";
+import { tasksPageSource } from "./helpers/tasks-page-source";
 
-const taskForm = readFileSync(new URL("../src/routes/app.tarefas.tsx", import.meta.url), "utf8");
+const taskForm = tasksPageSource();
 const clientForm = readFileSync(new URL("../src/routes/app.clientes.tsx", import.meta.url), "utf8");
 const clientSchedule = readFileSync(new URL("../src/lib/tasks/client-schedule.ts", import.meta.url), "utf8");
 const recurrenceForm = readFileSync(new URL("../src/components/tasks/RecurrenceForm.tsx", import.meta.url), "utf8");
@@ -63,7 +64,7 @@ test("task employee lookup uses the canonical profile name projection", () => {
 });
 
 test("client select keeps the full list and adds an optional search [12092026-002a]", () => {
-  const source = readFileSync(new URL("../src/routes/app.tarefas.tsx", import.meta.url), "utf8");
+  const source = tasksPageSource();
   assert.match(source, /placeholder="Buscar cliente\.\.\."/);
   assert.match(source, /const filteredClients = useMemo\(/);
   assert.match(source, /if \(!q\) return clients;/);

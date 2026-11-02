@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
+import { tasksPageSource } from "./helpers/tasks-page-source";
 
-const taskForm = readFileSync(new URL("../src/routes/app.tarefas.tsx", import.meta.url), "utf8");
+const taskForm = tasksPageSource();
 
 const migrationsDir = new URL("../supabase/migrations/", import.meta.url);
 const softDelete = readdirSync(migrationsDir)

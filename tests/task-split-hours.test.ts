@@ -3,8 +3,9 @@ import { readFileSync } from "node:fs";
 
 import { addWallMinutes, distributeContractedMinutes } from "../src/lib/tasks/contracted-hours";
 import { dailyShiftDurationMinutes, taskDurationMinutes, LONG_STANDALONE_TASK_MINUTES } from "../src/lib/tasks/daily-shift-duration";
+import { tasksPageSource } from "./helpers/tasks-page-source";
 
-const form = readFileSync(new URL("../src/routes/app.tarefas.tsx", import.meta.url), "utf8");
+const form = tasksPageSource();
 
 // SUP-2026-000315 — sem carga no cadastro do cliente, divide o horário da própria tarefa.
 test("08:00–11:00 para 2 pessoas = 1h30 cada; para 3 = 1h cada", () => {

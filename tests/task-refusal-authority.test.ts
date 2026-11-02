@@ -7,9 +7,10 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { currentTaskCancellation, currentTaskRefusal, formatRequestedTime } from "../src/lib/task-refusal-view.ts";
+import { tasksPageSource } from "./helpers/tasks-page-source";
 
 const tasksLib = readFileSync(new URL("../src/lib/tasks.ts", import.meta.url), "utf8");
-const tasksPage = readFileSync(new URL("../src/routes/app.tarefas.tsx", import.meta.url), "utf8");
+const tasksPage = tasksPageSource();
 const punchPage = readFileSync(new URL("../src/routes/app.ponto.tsx", import.meta.url), "utf8");
 const refuseDialog = readFileSync(new URL("../src/components/tasks/RefuseTaskDialog.tsx", import.meta.url), "utf8");
 

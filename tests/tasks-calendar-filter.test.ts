@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { filterCalendarData, tasksForCalendarDay } from "../src/lib/tasks/calendar-filter.ts";
+import { tasksPageSource } from "./helpers/tasks-page-source";
 
-const tasksPage = readFileSync(new URL("../src/routes/app.tarefas.tsx", import.meta.url), "utf8");
+const tasksPage = tasksPageSource();
 
 const tasks = [
   { id: "task-veronica", assigned_to: "veronica" },

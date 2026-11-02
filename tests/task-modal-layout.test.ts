@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { modalShell, modalBodyChrome, modalFooterChrome, modalHeaderChrome } from "../src/components/ui/dialog";
+import { tasksPageSource } from "./helpers/tasks-page-source";
 
-const page = readFileSync("src/routes/app.tarefas.tsx", "utf8");
+const page = tasksPageSource();
 
 describe("layout do modal Nova tarefa", () => {
   test("shell é coluna flex com altura máxima e não rolável", () => {

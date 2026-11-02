@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { tasksPageSource } from "./helpers/tasks-page-source";
 
 const helper = readFileSync(new URL("../src/lib/tasks/task-documents.ts", import.meta.url), "utf8");
-const createRoute = readFileSync(new URL("../src/routes/app.tarefas.tsx", import.meta.url), "utf8");
+const createRoute = tasksPageSource();
 const editor = readFileSync(new URL("../src/components/tasks/TaskDocuments.tsx", import.meta.url), "utf8");
 const migration = readFileSync(
   new URL("../supabase/migrations/20260904150000_sup_2026_000140_task_documents_tenant_guard.sql", import.meta.url),

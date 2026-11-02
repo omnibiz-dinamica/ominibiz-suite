@@ -6,8 +6,9 @@ import {
   distributeContractedMinutes,
   formatContractedMinutes,
 } from "../src/lib/tasks/contracted-hours.ts";
+import { tasksPageSource } from "./helpers/tasks-page-source";
 
-const taskForm = readFileSync(new URL("../src/routes/app.tarefas.tsx", import.meta.url), "utf8");
+const taskForm = tasksPageSource();
 
 test("carga total do serviço é apenas redistribuída pela quantidade selecionada", () => {
   assert.deepEqual(distributeContractedMinutes(180, 2), [90, 90]);
