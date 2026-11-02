@@ -8,6 +8,7 @@ import {
   Building2,
   Briefcase,
   Sparkles,
+  MessageSquare,
   FileText,
   UserCircle,
   ListChecks,
@@ -264,7 +265,7 @@ function managerGroups(args: { superAdminOperating: boolean; vertical: BusinessV
     {
       id: "inteligencia",
       label: "Inteligência",
-      items: [{ to: "/app/assistente", label: "Assistente IA", icon: Sparkles, module: "whatsapp_ai", soon: true }],
+      items: [{ to: "/app/assistente", label: "Mensagens", icon: MessageSquare, module: "whatsapp_ai" }],
     },
     {
       id: "suporte",
