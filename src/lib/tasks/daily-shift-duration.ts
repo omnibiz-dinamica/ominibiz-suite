@@ -1,3 +1,6 @@
+import { wallDateTimeToISO } from "../wall-clock";
+import { resolveWallEndDate } from "./contracted-hours";
+
 /**
  * Duração (min) de uma ocorrência de série: SOMENTE hora início → hora fim do
  * turno diário. Nunca usa as datas da série. Turno que passa da meia-noite soma
@@ -21,3 +24,19 @@ export function dailyShiftDurationMinutes(startTime: string, endTime: string): n
 }
 
 export const LONG_STANDALONE_TASK_MINUTES = 1440;
+
+/** Séries usam o turno diário; tarefas avulsas incluem todas as datas do intervalo. */
+export function taskDurationMinutes(
+  startDate: string,
+  startTime: string,
+  endDate: string,
+  endTime: string,
+  recurring: boolean,
+): number | null {
+  if (recurring) return dailyShiftDurationMinutes(startTime, endTime) || null;
+  const start = wallDateTimeToISO(startDate, startTime);
+  const end = wallDateTimeToISO(resolveWallEndDate(startDate, startTime, endTime, endDate), endTime);
+  if (!start || !end) return null;
+  const minutes = Math.round((Date.parse(end) - Date.parse(start)) / 60_000);
+  return Number.isFinite(minutes) && minutes > 0 ? minutes : null;
+}

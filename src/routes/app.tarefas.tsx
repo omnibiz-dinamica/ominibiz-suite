@@ -163,7 +163,7 @@ import {
   formatWallTime,
   formatLocalTime,
 } from "@/lib/wall-clock";
-import { dailyShiftDurationMinutes, LONG_STANDALONE_TASK_MINUTES } from "@/lib/tasks/daily-shift-duration";
+import { dailyShiftDurationMinutes, taskDurationMinutes, LONG_STANDALONE_TASK_MINUTES } from "@/lib/tasks/daily-shift-duration";
 
 // Filtros aceitos via search-params. `atrasadas` e `canceladas` são filtros
 // derivados e compartilham as regras canônicas do dashboard.
@@ -237,6 +237,14 @@ function taskMemberFirstName(members: readonly TaskMember[], id: string | null) 
 }
 
 export const Route = createFileRoute("/app/tarefas")({
+  head: () => ({ meta: [
+    { title: "Tarefas | OmniBiz Suite" },
+    { name: "description", content: "Gestão de tarefas, horários e equipas no OmniBiz Suite." },
+    { property: "og:title", content: "Tarefas | OmniBiz Suite" },
+    { property: "og:description", content: "Gestão de tarefas, horários e equipas no OmniBiz Suite." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: TasksPage,
   validateSearch: (raw): TasksSearch => {
     const s = raw as Record<string, unknown>;
@@ -3914,7 +3922,9 @@ function TaskForm({
    * = 1h30 cada (08:00–09:30). Só na criação: a edição divide depois de gravar.
    */
   const taskTotalMinutes =
-    !initial && startTime && endTime ? dailyShiftDurationMinutes(startTime, endTime) || null : null;
+    !initial && startTime && endTime
+      ? taskDurationMinutes(startDate, startTime, endDate, endTime, recurrence.enabled)
+      : null;
   const contractedMinutes = clientContractedMinutes ?? taskTotalMinutes;
   const splitFromTaskTimes = clientContractedMinutes == null && contractedMinutes != null;
   // A hora de fim digitada só bloqueia a divisão quando a carga vem do cadastro;
@@ -4376,7 +4386,7 @@ function TaskForm({
               // Tarefa avulsa com mais de 24 h: confirmação simples, sem bloquear.
               if (
                 !recurrence.enabled &&
-                !useContractedSchedule &&
+                (!useContractedSchedule || splitFromTaskTimes) &&
                 manualDurationMinutes > LONG_STANDALONE_TASK_MINUTES &&
                 !confirmedConflictsRef.current &&
                 !window.confirm(tt("Esta tarefa dura mais de 24 horas. Confirmar?"))
