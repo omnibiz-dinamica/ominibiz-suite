@@ -18,6 +18,7 @@ import {
 } from "@/lib/locale";
 import { resolveAvailableNavigation, type NavGroup } from "@/lib/navigation";
 import { getAppVersion } from "@/lib/app-version";
+import { appReleaseLabel, appVersionDetails } from "@/lib/app-release";
 import { useT } from "@/i18n";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { latestChangeId } from "@/lib/change-log";
@@ -82,7 +83,7 @@ function DeploymentDiagnostics() {
     <div className="flex flex-wrap items-center justify-between gap-2 font-mono">
       <span className="font-sans">OmniBiz · Diagnóstico</span>
       <span>
-        v1 · build {version.buildId} · commit {version.shortCommitSha} · env {env} · host {host} · {browser}{" "}
+        {appReleaseLabel()} · build {version.buildId} · commit {version.shortCommitSha} · env {env} · host {host} · {browser}{" "}
         {browserVersion} · pwa {isStandalone ? "on" : "off"} · sw{" "}
         {swCount === null ? "?" : swCount === -1 ? "err" : swCount}
       </span>
@@ -361,6 +362,14 @@ export function AppLayout({ children }: { children?: ReactNode }) {
           <Link to="/app" className="flex items-center gap-2">
             <img src="/logo-mark.png" alt="Dinâmica Solução" className="h-8 w-auto" />
             <span className="font-display text-lg font-semibold tracking-tight">OmniBiz</span>
+            {/* Versão visível a todos; build, data e commit nos detalhes (app-release.ts). */}
+            <span
+              className="mt-1 font-mono text-[10px] text-muted-foreground"
+              title={appVersionDetails(getAppVersion())}
+              data-testid="app-release"
+            >
+              {appReleaseLabel()}
+            </span>
           </Link>
           <button className="md:hidden" onClick={() => setOpen(false)} aria-label={t("Fechar menu")}>
             <X className="h-5 w-5" />
