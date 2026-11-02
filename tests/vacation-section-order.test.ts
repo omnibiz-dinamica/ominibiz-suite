@@ -24,5 +24,5 @@ test("vacation management sections keep the requested visual order", () => {
     [10, 20, 30, 40, 50],
   );
   assert.ok(page.includes("/> Nova Solicitação"));
-  assert.ok(page.includes("/> Agendar Férias para um colaborador"));
+  assert.ok(page.includes("/> Marcar férias a um colaborador")); // SUP-2026-000314
 });
