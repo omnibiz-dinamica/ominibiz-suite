@@ -1077,6 +1077,70 @@ export type Database = {
           },
         ]
       }
+      employee_bank_change_requests: {
+        Row: {
+          company_id: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_reason: string | null
+          iban: string
+          id: string
+          note: string | null
+          status: string
+          swift: string | null
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_reason?: string | null
+          iban: string
+          id?: string
+          note?: string | null
+          status?: string
+          swift?: string | null
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_reason?: string | null
+          iban?: string
+          id?: string
+          note?: string | null
+          status?: string
+          swift?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_bank_change_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_bank_change_requests_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_bank_change_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_document_alerts: {
         Row: {
           company_id: string
@@ -4653,10 +4717,31 @@ export type Database = {
       }
       _activity_iso: { Args: { _ts: string }; Returns: string }
       _activity_name: { Args: { _uid: string }; Returns: string }
+      _activity_names_text: { Args: { _names: string[] }; Returns: string }
       _activity_role: {
         Args: { _company: string; _uid: string }
         Returns: string
       }
+      _activity_row_diff: {
+        Args: { _labels: Json; _new: Json; _old: Json; _skip: string[] }
+        Returns: Json
+      }
+      _activity_task_when: {
+        Args: { _end: string; _start: string }
+        Returns: string
+      }
+      _employee_emit: {
+        Args: {
+          _action: string
+          _actor: string
+          _changes: Json
+          _company: string
+          _summary: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
+      _employee_mask: { Args: { _value: string }; Returns: string }
       _extra_work_days_label: {
         Args: { _extra_work_id: string }
         Returns: string
@@ -4677,6 +4762,7 @@ export type Database = {
         Args: { _company_id: string; _days: Json; _user_id: string }
         Returns: Record<string, unknown>
       }
+      _iban_normalize: { Args: { _iban: string }; Returns: string }
       _notification_is_manager_copy: {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
@@ -4756,6 +4842,7 @@ export type Database = {
           status: string
         }[]
       }
+      _swift_normalize: { Args: { _swift: string }; Returns: string }
       _work_item_can_manage: {
         Args: { _company: string; _uid: string }
         Returns: boolean
@@ -5027,6 +5114,23 @@ export type Database = {
       effective_minutes_round: {
         Args: { _pause_seconds: number; _total_seconds: number }
         Returns: number
+      }
+      employee_bank_change_cancel: {
+        Args: { _request_id: string }
+        Returns: undefined
+      }
+      employee_bank_change_decide: {
+        Args: { _approve: boolean; _reason?: string; _request_id: string }
+        Returns: undefined
+      }
+      employee_bank_change_submit: {
+        Args: {
+          _company_id: string
+          _iban: string
+          _note?: string
+          _swift?: string
+        }
+        Returns: string
       }
       enqueue_ticket_whatsapp: {
         Args: { _event: string; _payload?: Json; _ticket_id: string }
@@ -7054,6 +7158,67 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      task_update_absence: {
+        Args: { _justified: boolean; _reason: string; _task_id: string }
+        Returns: {
+          absence_grace_minutes: number
+          absence_justified: boolean | null
+          absence_reason: string | null
+          absence_source: string | null
+          archived_at: string | null
+          archived_by: string | null
+          assigned_to: string | null
+          authorized_at: string | null
+          authorized_by: string | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          client_id: string | null
+          company_id: string
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          deleted_at: string | null
+          deleted_by: string | null
+          description: string | null
+          due_at: string | null
+          id: string
+          late_notified_at: string | null
+          location: string | null
+          marked_absent_at: string | null
+          marked_absent_by: string | null
+          no_start_reason: string | null
+          no_start_reason_at: string | null
+          no_start_reason_by: string | null
+          notes: string | null
+          priority: Database["public"]["Enums"]["task_priority"]
+          punch_mode_override: Database["public"]["Enums"]["punch_mode"] | null
+          recurrence_date: string | null
+          recurrence_id: string | null
+          refusal_reason: string | null
+          refused_at: string | null
+          refused_by: string | null
+          schedule_change_needs_reassignment: boolean | null
+          schedule_change_requested_date: string | null
+          schedule_change_requested_time: string | null
+          schedule_change_suggested_employee_id: string | null
+          schedule_change_suggested_employee_name: string | null
+          schedule_name: string | null
+          scheduled_end: string | null
+          scheduled_for: string | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["task_status"]
+          task_group_id: string | null
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tasks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       tasks_sweep_absent: { Args: { _company_id?: string }; Returns: number }
       tasks_timing_modes: {
         Args: { _task_ids: string[] }
@@ -7740,6 +7905,8 @@ export type Database = {
         | "extra_work_declined"
         | "extra_work_filled"
         | "task_deleted"
+        | "bank_change_requested"
+        | "bank_change_decided"
       notification_priority: "baixa" | "media" | "alta" | "urgente"
       notification_state:
         | "nova"
@@ -8074,6 +8241,8 @@ export const Constants = {
         "extra_work_declined",
         "extra_work_filled",
         "task_deleted",
+        "bank_change_requested",
+        "bank_change_decided",
       ],
       notification_priority: ["baixa", "media", "alta", "urgente"],
       notification_state: [
