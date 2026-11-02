@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-import { distributeContractedMinutes } from "../src/lib/tasks/contracted-hours";
-import { dailyShiftDurationMinutes } from "../src/lib/tasks/daily-shift-duration";
+import { addWallMinutes, distributeContractedMinutes } from "../src/lib/tasks/contracted-hours";
+import { dailyShiftDurationMinutes, taskDurationMinutes, LONG_STANDALONE_TASK_MINUTES } from "../src/lib/tasks/daily-shift-duration";
 
 const form = readFileSync(new URL("../src/routes/app.tarefas.tsx", import.meta.url), "utf8");
 
@@ -19,11 +19,39 @@ test("criação: carga do cliente primeiro; sem ela, o horário da tarefa", () =
   expect(form).toMatch(
     /const clientContractedMinutes = selectedSchedule\?\.contractedMinutes \?\? selectedClient\?\.contracted_minutes \?\? null;/,
   );
-  expect(form).toMatch(/!initial && startTime && endTime \? dailyShiftDurationMinutes\(startTime, endTime\) \|\| null : null/);
+  expect(form).toMatch(/taskDurationMinutes\(startDate, startTime, endDate, endTime, recurrence.enabled\)/);
   expect(form).toMatch(/const contractedMinutes = clientContractedMinutes \?\? taskTotalMinutes;/);
   // A hora de fim digitada só bloqueia a divisão quando a carga vem do cadastro.
   expect(form).toMatch(/const endTypedByManager = manualEndOverride && !splitFromTaskTimes;/);
   expect(form).toMatch(/contractedMinutes != null &&\s+!endTypedByManager &&/);
+});
+
+test("avulsa 01/12 08:00 → 03/12 17:00 mantém 3420 minutos e o fim para uma pessoa", () => {
+  const total = taskDurationMinutes("2026-12-01", "08:00", "2026-12-03", "17:00", false);
+  expect(total).toBe(3420);
+  const shares = distributeContractedMinutes(total, 1);
+  expect(shares).toEqual([3420]);
+  expect(addWallMinutes("2026-12-01", "08:00", shares[0])).toEqual({ date: "2026-12-03", time: "17:00" });
+  expect(total !== null && total > LONG_STANDALONE_TASK_MINUTES).toBe(true);
+  expect(form).toMatch(/\(!useContractedSchedule \|\| splitFromTaskTimes\) &&\s+manualDurationMinutes > LONG_STANDALONE_TASK_MINUTES/);
+});
+
+test("avulsa de vários dias divide a duração completa por duas pessoas", () => {
+  const total = taskDurationMinutes("2026-12-01", "08:00", "2026-12-03", "17:00", false);
+  const shares = distributeContractedMinutes(total, 2);
+  expect(shares).toEqual([1710, 1710]);
+  expect(addWallMinutes("2026-12-01", "08:00", shares[0])).toEqual({ date: "2026-12-02", time: "12:30" });
+});
+
+test("série no mesmo intervalo continua a dividir somente as 9 horas diárias", () => {
+  const total = taskDurationMinutes("2026-12-01", "08:00", "2026-12-03", "17:00", true);
+  expect(total).toBe(540);
+  expect(distributeContractedMinutes(total, 2)).toEqual([270, 270]);
+});
+
+test("avulsa noturna mantém o dia seguinte e sem hora de fim não deriva duração", () => {
+  expect(taskDurationMinutes("2026-12-01", "22:00", "2026-12-01", "06:00", false)).toBe(480);
+  expect(taskDurationMinutes("2026-12-01", "08:00", "2026-12-03", "", false)).toBeNull();
 });
 
 test("edição: a divisão vem do banco e o gestor é avisado", () => {
