@@ -1,11 +1,12 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { tasksPageSource } from "./helpers/tasks-page-source";
 
 const picker = readFileSync(
   new URL("../src/components/common/EmployeePicker.tsx", import.meta.url),
   "utf8",
 );
-const tasks = readFileSync(new URL("../src/routes/app.tarefas.tsx", import.meta.url), "utf8");
+const tasks = tasksPageSource();
 
 // SUP-2026-000305 — pesquisa de funcionários nas tarefas também pelo setor (ex.: Coifas, Tobaco).
 test("o seletor de funcionários pesquisa e mostra o setor", () => {

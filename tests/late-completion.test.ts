@@ -2,9 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { defaultRecoveryEndInput } from "../src/lib/punch/recovery-time.ts";
+import { tasksPageSource } from "./helpers/tasks-page-source";
 
 const pointSource = readFileSync(new URL("../src/routes/app.ponto.tsx", import.meta.url), "utf8");
-const tasksSource = readFileSync(new URL("../src/routes/app.tarefas.tsx", import.meta.url), "utf8");
+const tasksSource = tasksPageSource();
 
 test("regularizacao sugere a data real da entrada para tarefa do dia anterior", () => {
   assert.equal(

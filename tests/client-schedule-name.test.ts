@@ -2,8 +2,9 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
 import { parseHabitualSchedule } from "../src/lib/tasks/client-schedule";
+import { tasksPageSource } from "./helpers/tasks-page-source";
 
-const tasksPage = readFileSync("src/routes/app.tarefas.tsx", "utf8");
+const tasksPage = tasksPageSource();
 
 describe("programação do cliente como etiqueta da tarefa", () => {
   test("o nome dado pelo gestor é preservado na leitura do cadastro", () => {

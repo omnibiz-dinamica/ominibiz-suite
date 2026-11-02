@@ -7,8 +7,9 @@ import {
   teamStartTimeFor,
 } from "../src/lib/tasks/client-schedule";
 import { describeClientSchedule } from "../src/lib/tasks/client-card";
+import { tasksPageSource } from "./helpers/tasks-page-source";
 
-const tasksPage = readFileSync(new URL("../src/routes/app.tarefas.tsx", import.meta.url), "utf8");
+const tasksPage = tasksPageSource();
 const clientsPage = readFileSync(new URL("../src/routes/app.clientes.tsx", import.meta.url), "utf8");
 
 const slotJson = {

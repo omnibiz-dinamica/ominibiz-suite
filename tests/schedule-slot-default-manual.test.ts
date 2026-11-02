@@ -3,8 +3,9 @@ import { readFileSync } from "node:fs";
 import { recurrenceFromScheduleSlot, disableAutoRecurrence, scheduleSlotSummary } from "../src/lib/tasks/schedule-recurrence";
 import { emptyRecurrence } from "../src/components/tasks/RecurrenceForm";
 import type { ClientScheduleSlot } from "../src/lib/tasks/client-schedule";
+import { tasksPageSource } from "./helpers/tasks-page-source";
 
-const page = readFileSync("src/routes/app.tarefas.tsx", "utf8");
+const page = tasksPageSource();
 const form = readFileSync("src/components/tasks/RecurrenceForm.tsx", "utf8");
 const klein: ClientScheduleSlot = {
   id: "client-habitual:c1:k", title: "Klein", label: "Klein", weekdays: [6], startTime: "10:00", endTime: "13:00",

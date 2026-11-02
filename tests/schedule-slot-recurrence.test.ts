@@ -4,8 +4,9 @@ import { recurrenceFromScheduleSlot, disableAutoRecurrence } from "../src/lib/ta
 import { emptyRecurrence } from "../src/components/tasks/RecurrenceForm";
 import { cyclePositionForDate } from "../src/lib/tasks/client-schedule-rules";
 import type { ClientScheduleSlot } from "../src/lib/tasks/client-schedule";
+import { tasksPageSource } from "./helpers/tasks-page-source";
 
-const page = readFileSync("src/routes/app.tarefas.tsx", "utf8");
+const page = tasksPageSource();
 const anchor = "2026-10-03";
 const slot = (label: string, pos: number): ClientScheduleSlot => ({
   id: `client-habitual:c1:${label}`, title: label, label, weekdays: [6], startTime: "13:20", endTime: "15:20",

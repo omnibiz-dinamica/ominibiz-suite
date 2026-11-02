@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
+import { tasksPageSource } from "./helpers/tasks-page-source";
 
-const tasksPage = readFileSync(new URL("../src/routes/app.tarefas.tsx", import.meta.url), "utf8");
+const tasksPage = tasksPageSource();
 const recurrencesPage = readFileSync(
   new URL("../src/routes/app.tarefas_.recorrentes.tsx", import.meta.url),
   "utf8",

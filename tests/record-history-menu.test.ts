@@ -2,8 +2,11 @@ import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
 import { historyRefsFilter } from "../src/components/history/RecordHistoryMenu";
+import { tasksPageSource } from "./helpers/tasks-page-source";
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
+// O ecrã de Tarefas foi dividido em módulos (prompt 09): lê a rota e os módulos.
+const sourceOf = (path: string) => (path.endsWith("app.tarefas.tsx") ? tasksPageSource() : read(path));
 const menu = read("../src/components/history/RecordHistoryMenu.tsx");
 
 // SUP-2026-000312 — "quem e quando" com o botão direito em todo o programa.
@@ -43,9 +46,9 @@ test("o menu está nas tarefas, clientes, despesas, férias, equipa e ponto", ()
       /entityType=\{isVacation\(r\) \? "vacation" : "punch"\}/,
     ],
   ];
-  for (const [path, re] of uses) expect(read(path)).toMatch(re);
+  for (const [path, re] of uses) expect(sourceOf(path)).toMatch(re);
   expect(
-    (read("../src/routes/app.tarefas.tsx").match(/<RecordHistoryMenu entityType="task"/g) ?? [])
+    (tasksPageSource().match(/<RecordHistoryMenu entityType="task"/g) ?? [])
       .length,
   ).toBe(3);
 });

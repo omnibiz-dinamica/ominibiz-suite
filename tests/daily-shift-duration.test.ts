@@ -3,10 +3,11 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dailyShiftDurationMinutes } from "../src/lib/tasks/daily-shift-duration.ts";
 import { notificationOpenLink, canOpenNotification } from "../src/lib/notification-actions.ts";
+import { tasksPageSource } from "./helpers/tasks-page-source";
 
 test("série 15:30→19:30 de 07/10 a 30/10 grava 240 min (datas da série ignoradas)", () => {
   assert.equal(dailyShiftDurationMinutes("15:30", "19:30"), 240);
-  const form = readFileSync(new URL("../src/routes/app.tarefas.tsx", import.meta.url), "utf8");
+  const form = tasksPageSource();
   assert.match(form, /dailyShiftDurationMinutes\(startTime, endTime\)/);
 });
 
