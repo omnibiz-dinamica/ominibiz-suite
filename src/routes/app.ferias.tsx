@@ -464,7 +464,8 @@ function FeriasPage() {
       }
     },
     onSuccess: () => {
-      toast.success("Férias agendadas — aguardando confirmação do funcionário");
+      // SUP-2026-000314: férias marcadas pelo gestor ficam logo aprovadas (o banco decide).
+      toast.success("Férias marcadas e aprovadas — o colaborador foi notificado");
       setMgrTargetUser("");
       setMgrStart("");
       setMgrEnd("");
@@ -950,10 +951,11 @@ function FeriasPage() {
       {isManager && (
         <section className="order-50 rounded-2xl border border-border bg-card p-5">
           <h2 className="mb-3 flex items-center gap-2 font-semibold">
-            <Plus className="h-4 w-4" /> Agendar Férias para um colaborador
+            <Plus className="h-4 w-4" /> Marcar férias a um colaborador
           </h2>
           <p className="mb-3 text-xs text-muted-foreground">
-            O colaborador receberá uma notificação para confirmar ou solicitar alteração.
+            As férias ficam aprovadas de imediato. O colaborador recebe uma notificação e um e-mail a
+            informar quem as marcou e o período.
           </p>
           <div className="grid gap-3 md:grid-cols-4">
             <div className="md:col-span-2">

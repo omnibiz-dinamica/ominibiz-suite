@@ -60,6 +60,7 @@ type NotificationEvent =
   | "vacation_confirmation_required"
   | "vacation_confirmed"
   | "vacation_declined"
+  | "vacation_created_by_manager"
   | "expense_created"
   | "expense_approved"
   | "expense_rejected"
@@ -377,6 +378,7 @@ const EVENT_LABEL: Record<NotificationEvent, string> = {
   vacation_confirmation_required: "Férias — confirmar",
   vacation_confirmed: "Férias — confirmadas",
   vacation_declined: "Férias — recusadas",
+  vacation_created_by_manager: "Férias — marcadas pelo gestor",
   expense_created: "Despesa — solicitação",
   expense_approved: "Despesa — aprovada",
   expense_rejected: "Despesa — rejeitada",
