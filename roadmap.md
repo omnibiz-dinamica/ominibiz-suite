@@ -1,6 +1,6 @@
 # Roadmap
 - [ ] Verificar emails de férias; desbloqueio depende da correção DNS pelo responsável do domínio.
-- [ ] Corrigir e testar a duração de tarefas avulsas de vários dias sem perder a divisão por funcionários.
+- [x] Corrigir e testar a duração de tarefas avulsas de vários dias sem perder a divisão por funcionários (25 testes focados e formulário autenticado; sem gravar dados).
 - [x] Corrigir e verificar a preservação do ponto manual ao salvar o cliente.
 - [x] Corrigir e verificar salvamento imediato de endereço e localização de cliente.
 - [x] Cleanup TESTE-LOTE-% (170 tasks, 677 notifications + 508 audit rows via cascade)
