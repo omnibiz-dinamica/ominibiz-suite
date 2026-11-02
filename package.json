@@ -16,6 +16,8 @@
     "test:task-refusals": "node --experimental-strip-types --test tests/task-refusal-view.test.ts",
     "test:user-email": "node --experimental-strip-types --test tests/user-email-security.test.ts",
     "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "lint:typed": "eslint --config eslint.typed.config.mjs .",
     "format": "prettier --write ."
   },
   "dependencies": {
