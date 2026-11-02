@@ -56,6 +56,7 @@ export const enNavigation: Record<string, string> = {
   Empresa: "Company",
   Inteligência: "Intelligence",
   "Assistente IA": "AI Assistant",
+  "Mensagens": "Messages",
   "Central de Suporte": "Support Center",
   Outros: "Other",
   Notas: "Notes",
