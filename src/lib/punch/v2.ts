@@ -9,6 +9,7 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import type { PunchGeoReading, PunchGeoErrorCode } from "@/hooks/use-punch-geolocation";
+import { isNetworkFailureMessage } from "@/lib/punch/offline-queue";
 
 export type PunchV2Op = "start" | "stop" | "pause" | "resume" | "arrival" | "departure";
 
@@ -31,6 +32,8 @@ export interface PunchV2Response<T = Record<string, unknown>> {
   code: string;
   message?: string | null;
   data?: T | null;
+  /** true quando o pedido não chegou ao servidor (sem rede). */
+  network?: boolean;
 }
 
 const RPC_NAME: Record<PunchV2Op, string> = {
@@ -121,6 +124,7 @@ export async function callPunchV2<T = Record<string, unknown>>(
       code: (error as { code?: string }).code ?? "RPC_ERROR",
       message: `${GENERIC_PUNCH_ERROR} Codigo: ${correlationId}`,
       data: null,
+      network: isNetworkFailureMessage(error.message),
     };
   }
   const raw = (data ?? {}) as PunchV2Response<T>;
