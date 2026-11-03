@@ -21,7 +21,6 @@ import {
   fillMonthDays,
   hasOffSchedule,
   isWeekendKey,
-  offScheduleText,
   weekdayLetter,
 } from "@/lib/timesheet-view";
 import { PAYMENT_TYPE_LABEL, type PaymentType } from "@/lib/compensation";
@@ -202,13 +201,9 @@ export async function generateTimesheetPdf(
   doc.setFontSize(9);
   for (const d of days) {
     const flags = dayFlags(d);
-    const off = flags.start || flags.end || flags.over6h;
+    // Só a observação do funcionário vai por baixo da linha (o vermelho fica nas células).
     const extraLines: { text: string; red: boolean }[] = [];
     doc.setFontSize(7.5);
-    if (off) {
-      for (const line of doc.splitTextToSize(offScheduleText(d), contentW - 12) as string[])
-        extraLines.push({ text: line, red: true });
-    }
     for (const n of d.task_notes ?? []) {
       const txt = `Obs. (${n.client_name ?? n.title ?? "tarefa"}): ${n.note}`;
       for (const line of doc.splitTextToSize(txt, contentW - 12) as string[])
