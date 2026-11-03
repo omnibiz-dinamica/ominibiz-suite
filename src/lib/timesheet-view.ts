@@ -14,6 +14,7 @@ import {
   buildSnapshot,
   formatDayTime,
   type SnapshotDay,
+  type SnapshotEntry,
   type TimesheetSnapshot,
 } from "@/lib/timesheet";
 
@@ -81,7 +82,11 @@ export function fillMonthDays(snapshot: Pick<TimesheetSnapshot, "days" | "period
 /** O snapshot é anterior ao SUP-301 (falta cliente ou marcação vermelha em algum dia). */
 export function snapshotNeedsLiveExtras(snapshot: Pick<TimesheetSnapshot, "days">): boolean {
   return (snapshot.days ?? []).some(
-    (d) => d.clients === undefined || d.schedule_flags === undefined || d.time_zone === undefined,
+    (d) =>
+      d.clients === undefined ||
+      d.schedule_flags === undefined ||
+      d.time_zone === undefined ||
+      d.entries === undefined,
   );
 }
 
@@ -114,6 +119,10 @@ export function mergeLiveExtras(
       next.time_zone = l.time_zone;
       next.first_in_local = formatTimeInZone(d.first_in, l.time_zone);
       next.last_out_local = formatTimeInZone(d.last_out, l.time_zone);
+      merged = true;
+    }
+    if (d.entries === undefined && l.entries !== undefined) {
+      next.entries = l.entries;
       merged = true;
     }
     return next;
@@ -171,6 +180,60 @@ export function dayInText(d: SnapshotDay): string {
 export function dayOutText(d: SnapshotDay): string {
   if (d.last_out_local !== undefined) return d.last_out_local ?? "—";
   return formatDayTime(d.last_out);
+}
+
+/** Pontos do dia para mostrar em linhas próprias (só quando há mais de um). */
+export function dayEntryRows(d: SnapshotDay): SnapshotEntry[] {
+  return (d.entries ?? []).length > 1 ? (d.entries ?? []) : [];
+}
+
+/** "Retificada pela gestão em DD/MM/AAAA HH:MM por Nome — motivo". */
+export function revisionText(s: Pick<TimesheetSnapshot, "revision">): string | null {
+  const r = s.revision;
+  if (!r) return null;
+  const when = new Date(r.at).toLocaleString("pt-PT", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  return `Retificada pela gestão em ${when}${r.by_name ? ` por ${r.by_name}` : ""} — ${r.reason}. Assinatura do funcionário mantida.`;
+}
+
+/**
+ * "YYYY-MM-DDTHH:MM" na hora de um fuso -> instante ISO (UTC).
+ * Sem fuso válido usa o do dispositivo.
+ */
+export function zonedLocalToIso(local: string, timeZone?: string | null): string | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(local);
+  if (!m) return null;
+  const [y, mo, d, h, mi] = m.slice(1).map(Number);
+  if (!timeZone) return new Date(y, mo - 1, d, h, mi).toISOString();
+  const target = Date.UTC(y, mo - 1, d, h, mi);
+  const offsetAt = (ms: number) => {
+    try {
+      const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23",
+      }).formatToParts(new Date(ms));
+      const g = (t: string) => Number(parts.find((p) => p.type === t)?.value);
+      return Date.UTC(g("year"), g("month") - 1, g("day"), g("hour"), g("minute")) - ms;
+    } catch {
+      return null;
+    }
+  };
+  const off = offsetAt(target);
+  if (off === null) return new Date(y, mo - 1, d, h, mi).toISOString();
+  let ms = target - off;
+  const off2 = offsetAt(ms);
+  if (off2 !== null && off2 !== off) ms = target - off2;
+  return new Date(ms).toISOString();
 }
 
 export function dayClients(d: SnapshotDay): string {

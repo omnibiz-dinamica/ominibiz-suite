@@ -14,6 +14,7 @@ import {
   AFTER_SIGNATURE_NOTICE,
   OFF_SCHEDULE_LEGEND,
   dayClients,
+  dayEntryRows,
   dayFlags,
   dayInText,
   dayOutText,
@@ -21,6 +22,7 @@ import {
   fillMonthDays,
   hasOffSchedule,
   isWeekendKey,
+  revisionText,
   weekdayLetter,
 } from "@/lib/timesheet-view";
 import { PAYMENT_TYPE_LABEL, type PaymentType } from "@/lib/compensation";
@@ -210,7 +212,9 @@ export async function generateTimesheetPdf(
         extraLines.push({ text: line, red: false });
     }
     doc.setFontSize(9);
-    const rowH = 18 + extraLines.length * 9;
+    // Vários pontos no dia: uma linha por ponto (data, situação e visto só na primeira).
+    const [first, ...rest] = dayEntryRows(d);
+    const rowH = 18 + rest.length * 13 + extraLines.length * 9;
     if (y + rowH > A4.h - 90) newPage(true);
 
     if (isWeekendKey(d.work_date)) {
@@ -221,15 +225,17 @@ export async function generateTimesheetPdf(
     const empty = !!d.placeholder;
     const cells = [
       `${formatWallDate(d.work_date) || d.work_date}  ${weekdayLetter(d.work_date)}`,
-      empty ? "" : fit(dayClients(d) || "—", cols[1].w - 6),
-      empty ? "" : dayInText(d),
-      empty ? "" : dayOutText(d),
-      empty ? "" : formatMinutes(d.break_minutes),
-      empty ? "" : formatMinutes(d.worked_minutes),
+      empty ? "" : fit(first ? (first.client_name ?? "—") : dayClients(d) || "—", cols[1].w - 6),
+      empty ? "" : first ? (first.first_in_local ?? "—") : dayInText(d),
+      empty ? "" : first ? (first.last_out_local ?? "—") : dayOutText(d),
+      empty ? "" : formatMinutes(first ? first.break_minutes : d.break_minutes),
+      empty ? "" : formatMinutes(first ? first.worked_minutes : d.worked_minutes),
       fit(dayStatusText(d), cols[6].w - 6),
       "",
     ];
-    const redCell = [false, false, flags.start, flags.end, false, flags.over6h, false, false];
+    const redCell = first
+      ? [false, false, first.start_off, first.end_off, false, first.over_6h, false, false]
+      : [false, false, flags.start, flags.end, false, flags.over6h, false, false];
     if (empty) doc.setTextColor(150);
     cells.forEach((value, i) => {
       if (i === VISTO) {
@@ -263,7 +269,34 @@ export async function generateTimesheetPdf(
     });
     doc.setTextColor(25);
 
-    let ly = y + 10;
+    // Restantes pontos do dia
+    let ry = y;
+    for (const e of rest) {
+      ry += 13;
+      const vals = [
+        fit(e.client_name ?? e.task_title ?? "—", cols[1].w - 6),
+        e.first_in_local ?? "—",
+        e.last_out_local ?? "—",
+        formatMinutes(e.break_minutes),
+        formatMinutes(e.worked_minutes),
+      ];
+      const reds = [false, e.start_off, e.end_off, false, e.over_6h];
+      let ex = MARGIN + 6 + cols[0].w;
+      vals.forEach((v, i) => {
+        if (reds[i]) {
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(...RED);
+        }
+        doc.text(String(v), ex, ry + 1);
+        if (reds[i]) {
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(25);
+        }
+        ex += cols[i + 1].w;
+      });
+    }
+
+    let ly = ry + 10;
     if (extraLines.length) {
       doc.setFontSize(7.5);
       for (const l of extraLines) {
@@ -285,6 +318,8 @@ export async function generateTimesheetPdf(
   const notices: { text: string; red: boolean }[] = [];
   if (hasOffSchedule(days)) notices.push({ text: OFF_SCHEDULE_LEGEND, red: true });
   if (opts.extrasLive) notices.push({ text: AFTER_SIGNATURE_NOTICE, red: false });
+  const revision = revisionText(snapshot);
+  if (revision) notices.push({ text: revision, red: false });
   if (notices.length) {
     doc.setFontSize(7.5);
     for (const n of notices) {

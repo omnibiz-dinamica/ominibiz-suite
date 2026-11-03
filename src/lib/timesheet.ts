@@ -91,6 +91,31 @@ export type SnapshotDay = {
   first_in_local?: string | null;
   last_out_local?: string | null;
   time_zone?: string | null;
+  /** SUP-301: cada ponto do dia (uma linha por ponto quando há mais de um). */
+  entries?: SnapshotEntry[];
+};
+
+export type SnapshotEntry = {
+  time_entry_id: string;
+  task_id: string | null;
+  task_title: string | null;
+  client_id: string | null;
+  client_name: string | null;
+  entry_kind: string | null;
+  started_at: string;
+  ended_at: string | null;
+  time_zone: string | null;
+  /** "YYYY-MM-DDTHH:MI" na hora do sítio onde se marcou (para editar). */
+  started_local: string | null;
+  ended_local: string | null;
+  first_in_local: string | null;
+  last_out_local: string | null;
+  break_minutes: number;
+  worked_minutes: number;
+  effective_minutes: number;
+  start_off: boolean;
+  end_off: boolean;
+  over_6h: boolean;
 };
 
 export type SnapshotTaskNote = {
@@ -139,6 +164,15 @@ export type TimesheetSnapshot = {
     currency: string;
   };
   generated_at: string;
+  /** SUP-301: versão criada por correção do gestor (mantém a assinatura). */
+  revision?: {
+    at: string;
+    by: string;
+    by_name: string | null;
+    reason: string;
+    from_version: number;
+    original_signed_at: string | null;
+  };
 };
 
 export type TimesheetPeriod = {
