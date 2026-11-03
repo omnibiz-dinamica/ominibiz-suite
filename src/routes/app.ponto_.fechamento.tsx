@@ -304,6 +304,8 @@ function Closing() {
         year={year}
         month={month}
         onClose={() => setViewing(null)}
+        canEdit
+        onChanged={invalidate}
       />
     </div>
   );
