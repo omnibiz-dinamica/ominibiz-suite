@@ -4,11 +4,12 @@
  */
 import { Fragment, type ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
-import { formatMinutes, type TimesheetSnapshot } from "@/lib/timesheet";
+import { formatMinutes, type SnapshotEntry, type TimesheetSnapshot } from "@/lib/timesheet";
 import {
   AFTER_SIGNATURE_NOTICE,
   OFF_SCHEDULE_LEGEND,
   dayClients,
+  dayEntryRows,
   dayInText,
   dayOutText,
   dayFlags,
@@ -16,12 +17,26 @@ import {
   hasOffSchedule,
   isWeekendKey,
   offScheduleText,
+  revisionText,
   weekdayLetter,
   type ViewDay,
 } from "@/lib/timesheet-view";
 import { formatWallDate } from "@/lib/wall-clock";
 
 const RED = "font-semibold text-destructive";
+
+/** Células de um ponto (cliente, entrada, saída, pausa, total), com o vermelho do próprio ponto. */
+function EntryCells({ e }: { e: SnapshotEntry }) {
+  return (
+    <>
+      <td className="px-3 py-2">{e.client_name ?? e.task_title ?? "—"}</td>
+      <td className={`px-3 py-2 ${e.start_off ? RED : ""}`}>{e.first_in_local ?? "—"}</td>
+      <td className={`px-3 py-2 ${e.end_off ? RED : ""}`}>{e.last_out_local ?? "—"}</td>
+      <td className="px-3 py-2">{formatMinutes(e.break_minutes)}</td>
+      <td className={`px-3 py-2 ${e.over_6h ? RED : ""}`}>{formatMinutes(e.worked_minutes)}</td>
+    </>
+  );
+}
 
 export function TimesheetDaysTable({
   snapshot,
@@ -38,6 +53,11 @@ export function TimesheetDaysTable({
 
   return (
     <div className="space-y-2">
+      {revisionText(snapshot) && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          {revisionText(snapshot)}
+        </div>
+      )}
       {extrasLive && (
         <div className="rounded-xl border border-sky-300 bg-sky-50 px-3 py-2 text-xs text-sky-900">
           {AFTER_SIGNATURE_NOTICE}
@@ -64,6 +84,9 @@ export function TimesheetDaysTable({
               const letter = weekdayLetter(d.work_date);
               const weekend = isWeekendKey(d.work_date);
               const notes = d.task_notes ?? [];
+              // Vários pontos no dia: uma linha por ponto (data e visto só na primeira).
+              const [first, ...rest] = dayEntryRows(d);
+              const span = 1 + rest.length;
               return (
                 <Fragment key={d.work_date}>
                   <tr
@@ -78,20 +101,26 @@ export function TimesheetDaysTable({
                         {letter}
                       </span>
                     </td>
-                    <td className="px-3 py-2">{d.placeholder ? "" : dayClients(d) || "—"}</td>
-                    <td className={`px-3 py-2 ${f.start ? RED : ""}`}>
-                      {d.placeholder ? "" : dayInText(d)}
-                    </td>
-                    <td className={`px-3 py-2 ${f.end ? RED : ""}`}>
-                      {d.placeholder ? "" : dayOutText(d)}
-                    </td>
-                    <td className="px-3 py-2">
-                      {d.placeholder ? "" : formatMinutes(d.break_minutes)}
-                    </td>
-                    <td className={`px-3 py-2 ${f.over6h ? RED : ""}`}>
-                      {d.placeholder ? "" : formatMinutes(d.worked_minutes)}
-                    </td>
-                    <td className="px-3 py-2">
+                    {first ? (
+                      <EntryCells e={first} />
+                    ) : (
+                      <>
+                        <td className="px-3 py-2">{d.placeholder ? "" : dayClients(d) || "—"}</td>
+                        <td className={`px-3 py-2 ${f.start ? RED : ""}`}>
+                          {d.placeholder ? "" : dayInText(d)}
+                        </td>
+                        <td className={`px-3 py-2 ${f.end ? RED : ""}`}>
+                          {d.placeholder ? "" : dayOutText(d)}
+                        </td>
+                        <td className="px-3 py-2">
+                          {d.placeholder ? "" : formatMinutes(d.break_minutes)}
+                        </td>
+                        <td className={`px-3 py-2 ${f.over6h ? RED : ""}`}>
+                          {d.placeholder ? "" : formatMinutes(d.worked_minutes)}
+                        </td>
+                      </>
+                    )}
+                    <td className="px-3 py-2 align-top" rowSpan={span}>
                       {d.placeholder ? (
                         "—"
                       ) : d.attendance_status === "absence" ||
@@ -124,8 +153,16 @@ export function TimesheetDaysTable({
                         "Trabalhado"
                       )}
                     </td>
-                    <td className="px-3 py-2">{d.placeholder ? "" : renderVisto(d)}</td>
+                    <td className="px-3 py-2 align-top" rowSpan={span}>
+                      {d.placeholder ? "" : renderVisto(d)}
+                    </td>
                   </tr>
+                  {rest.map((e) => (
+                    <tr key={e.time_entry_id} className={weekend ? "bg-muted/30" : ""}>
+                      <td className="px-3 py-1" />
+                      <EntryCells e={e} />
+                    </tr>
+                  ))}
                   {off && (
                     <tr className="text-xs text-destructive">
                       <td className="px-3 pb-2" colSpan={8}>

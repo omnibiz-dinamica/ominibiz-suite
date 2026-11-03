@@ -2,10 +2,12 @@
  * OmniBiz · Visualizador de Folha de Ponto (ADR-038) — somente leitura.
  * Usado pelo Gestor e pelo Contabilista. Nunca altera ponto nem remuneração.
  */
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { TimesheetCorrectionEditor } from "@/components/ponto/TimesheetCorrectionEditor";
 import { Dialog, DialogContent, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, FileText, Printer } from "lucide-react";
+import { Download, FileText, Pencil, Printer } from "lucide-react";
 import {
   TIMESHEET_STATUS_LABEL,
   buildSnapshot,
@@ -28,26 +30,48 @@ export function TimesheetViewerDialog({
   year,
   month,
   onClose,
+  canEdit = false,
+  onChanged,
 }: {
   row: TimesheetListRow | null;
   companyId: string;
   year: number;
   month: number;
   onClose: () => void;
+  /** Gestor no Fechamento: pode corrigir horas/datas/cliente no próprio modal. */
+  canEdit?: boolean;
+  /** Depois de gravar uma correção (ex.: atualizar a lista). */
+  onChanged?: () => void;
 }) {
+  const [editing, setEditing] = useState(false);
+  // Depois de uma correção numa folha assinada há uma versão nova: mostra essa.
+  const [versionOverride, setVersionOverride] = useState<{
+    period: string;
+    version: number;
+  } | null>(null);
+  const currentVersion =
+    row && versionOverride?.period === row.period_id
+      ? versionOverride.version
+      : (row?.current_version ?? 0);
+  const viewRow = row ? { ...row, current_version: currentVersion } : null;
+
   const snap = useQuery({
-    queryKey: ["timesheet-view", row?.period_id, row?.current_version],
+    queryKey: ["timesheet-view", row?.period_id, currentVersion],
     enabled: !!row,
     queryFn: async () => {
       void logAccess(row!.period_id, "REPORT_VIEWED");
-      if (row!.current_version > 0) {
-        const v = await getVersion(row!.period_id, row!.current_version);
+      if (currentVersion > 0) {
+        const v = await getVersion(row!.period_id, currentVersion);
         if (v?.snapshot) {
           const sig = resolveVersionSignature(v, v.snapshot, {
             signedAt: v.signed_at ?? row!.signed_at,
           });
           const view = await withLiveExtras(v.snapshot);
-          return { snapshot: view.snapshot, extrasLive: view.extrasLive, signatureUrl: sig.signatureUrl };
+          return {
+            snapshot: view.snapshot,
+            extrasLive: view.extrasLive,
+            signatureUrl: sig.signatureUrl,
+          };
         }
       }
       const snapshot = await buildSnapshot({
@@ -60,11 +84,10 @@ export function TimesheetViewerDialog({
     },
   });
 
-
   const exportPdf = async (mode: "print" | "download") => {
     if (!row) return;
     try {
-      const bytes = await timesheetRowToPdf(row, { companyId, year, month });
+      const bytes = await timesheetRowToPdf(viewRow ?? row, { companyId, year, month });
       void logAccess(row.period_id, "REPORT_DOWNLOADED");
       if (mode === "print") printBytes(bytes);
       else
@@ -78,7 +101,15 @@ export function TimesheetViewerDialog({
   };
 
   return (
-    <Dialog open={!!row} onOpenChange={(v) => !v && onClose()}>
+    <Dialog
+      open={!!row}
+      onOpenChange={(v) => {
+        if (!v) {
+          setEditing(false);
+          onClose();
+        }
+      }}
+    >
       <DialogContent size="xl">
         <ModalHeader
           icon={FileText}
@@ -101,6 +132,29 @@ export function TimesheetViewerDialog({
                   </div>
                 ) : null;
               })()}
+              {canEdit &&
+                row &&
+                (editing ? (
+                  <TimesheetCorrectionEditor
+                    periodId={row.period_id}
+                    companyId={companyId}
+                    employeeId={row.employee_id}
+                    year={year}
+                    month={month}
+                    onCancel={() => setEditing(false)}
+                    onSaved={(version) => {
+                      if (version > 0) setVersionOverride({ period: row.period_id, version });
+                      void snap.refetch();
+                      onChanged?.();
+                    }}
+                  />
+                ) : (
+                  <div className="flex justify-end">
+                    <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+                      <Pencil className="h-4 w-4" /> Corrigir pontos
+                    </Button>
+                  </div>
+                ))}
               <TimesheetDaysTable
                 snapshot={snap.data.snapshot}
                 extrasLive={snap.data.extrasLive}
@@ -113,7 +167,9 @@ export function TimesheetViewerDialog({
               <div className="grid gap-2 rounded-xl border border-border bg-card/60 p-4 text-sm sm:grid-cols-4">
                 <div>
                   <div className="text-xs uppercase text-muted-foreground">Horas</div>
-                  <div className="font-medium">{formatMinutes(snap.data.snapshot.summary.worked_minutes)}</div>
+                  <div className="font-medium">
+                    {formatMinutes(snap.data.snapshot.summary.worked_minutes)}
+                  </div>
                 </div>
                 <div>
                   <div className="text-xs uppercase text-muted-foreground">Dias</div>
@@ -121,14 +177,16 @@ export function TimesheetViewerDialog({
                 </div>
                 <div>
                   <div className="text-xs uppercase text-muted-foreground">Tipo</div>
-                  <div className="font-medium">{snap.data.snapshot.summary.payment_type_used ?? "—"}</div>
+                  <div className="font-medium">
+                    {snap.data.snapshot.summary.payment_type_used ?? "—"}
+                  </div>
                 </div>
                 <div>
                   <div className="text-xs uppercase text-muted-foreground">Total</div>
                   <div className="font-medium">
                     {snap.data.snapshot.summary.payment_type_used === "monthly"
-                      ? snap.data.snapshot.summary.monthly_amount ?? "—"
-                      : snap.data.snapshot.summary.calculated_amount ?? "—"}{" "}
+                      ? (snap.data.snapshot.summary.monthly_amount ?? "—")
+                      : (snap.data.snapshot.summary.calculated_amount ?? "—")}{" "}
                     {snap.data.snapshot.summary.currency}
                   </div>
                 </div>
