@@ -75,6 +75,11 @@ import { fetchOpenEntrySelf } from "@/lib/punch/recovery";
 import { defaultRecoveryEndInput } from "@/lib/punch/recovery-time";
 import { isEmployeeCancelledTask } from "@/lib/task-refusal-view";
 import { managerUpcomingFilter } from "@/lib/punch/manager-queue";
+import { useOfflinePunch } from "@/hooks/use-offline-punch";
+import { OfflinePunchBanner } from "@/components/ponto/OfflinePunchBanner";
+import { OffDayPunchDialog } from "@/components/ponto/OffDayPunchDialog";
+import { offDayInfo } from "@/lib/punch/off-day";
+import { applyLocalEvent, isLocalEntryId, type OfflinePunchEvent } from "@/lib/punch/offline-queue";
 import { RefuseTaskDialog, type RefusalSubmitPayload } from "@/components/tasks/RefuseTaskDialog";
 
 export const Route = createFileRoute("/app/ponto")({ component: PontoPage });
@@ -124,7 +129,26 @@ function PontoPage() {
   const [absenceTarget, setAbsenceTarget] = useState<TaskRow | null>(null);
   // ADR-062 — o funcionário recusa (nunca cancela) a tarefa atribuída.
   const [refuseTarget, setRefuseTarget] = useState<TaskRow | null>(null);
-  const punch = usePunchFlow();
+  // Ponto offline: só atua quando a empresa tem o interruptor ligado e não há rede.
+  const offline = useOfflinePunch(user?.id, currentCompanyId, () => {
+    void qc.invalidateQueries({ queryKey: ["punch-open"] });
+    void qc.invalidateQueries({ queryKey: ["punch-open-task"] });
+    void qc.invalidateQueries({ queryKey: ["punch-history"] });
+    void qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
+    void qc.invalidateQueries({ queryKey: ["tasks"] });
+  });
+  const punch = usePunchFlow(offline);
+
+  /** Depois de uma marcação guardada sem rede, mostra logo o novo estado do ponto. */
+  function applyOfflineToScreen(res: PunchV2Response, task?: TaskRow | null) {
+    if (res.code !== "OFFLINE_QUEUED" || !user) return false;
+    const ev = (res.data as { event?: OfflinePunchEvent } | null)?.event;
+    if (!ev) return false;
+    const current = qc.getQueryData<TimeEntryRow | null>(["punch-open", user.id]) ?? null;
+    qc.setQueryData(["punch-open", user.id], applyLocalEvent(current, ev));
+    if (ev.op === "start" && task) qc.setQueryData(["punch-open-task", task.id], task);
+    return true;
+  }
 
   // Detalhe do ponto aberto (tarefa, cliente, tempo em aberto) para o modal
   // de Recuperação de Ponto Aberto.
@@ -383,6 +407,7 @@ function PontoPage() {
       });
       handleV2Toast(res);
       if (!res.success) throw new Error(res.code);
+      applyOfflineToScreen(res);
       return res;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["punch-open"] }),
@@ -397,6 +422,7 @@ function PontoPage() {
       });
       handleV2Toast(res);
       if (!res.success) throw new Error(res.code);
+      applyOfflineToScreen(res);
       return res;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["punch-open"] }),
@@ -405,9 +431,15 @@ function PontoPage() {
     mutationFn: async ({ note }: { note: string }) => {
       if (!openEntry || !openTask) throw new Error("Sem tarefa em andamento.");
       // 1) Fecha o time_entry via v2 (grava geopoint + política de geofencing).
-      const res = await punch.run({ op: "stop", entryId: openEntry.id });
+      const res = await punch.run({
+        op: "stop",
+        entryId: openEntry.id,
+        offlineExtra: { complete_task: true, completion_note: note },
+      });
       handleV2Toast(res);
       if (!res.success) throw new Error(res.code);
+      // Sem rede: o fim, a conclusão da tarefa e a observação seguem juntos na fila.
+      if (applyOfflineToScreen(res)) return { res, noteSaved: true };
       // 2) Auditoria pós-parada (não bloqueia).
       void punch.run({ op: "departure", entryId: openEntry.id, neverBlockOnGps: true });
       // 3) Transiciona a tarefa (regra de tarefa continua em `task_transition`).
@@ -460,6 +492,7 @@ function PontoPage() {
       }
       handleV2Toast(res);
       if (!res.success) throw new Error(res.message ?? res.code);
+      applyOfflineToScreen(res, (upcoming ?? []).find((t) => t.id === taskId) ?? null);
       return res;
     },
     onSuccess: () => {
@@ -502,6 +535,9 @@ function PontoPage() {
       if (!openEntry) {
         throw new Error("Sem ponto aberto.");
       }
+      if (isLocalEntryId(entryId)) {
+        throw new Error("Este ponto foi iniciado sem rede. Conclua-o pelo botão de concluir; o envio é feito quando a rede voltar.");
+      }
       const entry = await punchEmployeeManualEnd(entryId, localInputToIso(endedAt), true, reason);
       let noteSaved = true;
       if (note.trim() && openTask) {
@@ -543,7 +579,17 @@ function PontoPage() {
   const liveSec = openEntry ? effectiveSecondsNow(openEntry) : 0;
 
   // Decide qual ação executar ao clicar em "Iniciar/Bater entrada".
+  // Aviso: bater o ponto numa tarefa que não é de hoje (dia anterior ou posterior).
+  const [offDayTask, setOffDayTask] = useState<TaskRow | null>(null);
   const handleStart = (t: TaskRow) => {
+    if (offDayInfo(t)) {
+      setOffDayTask(t);
+      return;
+    }
+    startAfterChecks(t);
+  };
+
+  const startAfterChecks = (t: TaskRow) => {
     const mode = effectiveMode(t);
     if (mode === "ambos") {
       setModeChoice(t);
@@ -586,6 +632,21 @@ function PontoPage() {
           </Button>
         )}
       </div>
+
+      <OfflinePunchBanner offline={offline} />
+
+      <OffDayPunchDialog
+        info={offDayTask ? offDayInfo(offDayTask) : null}
+        taskLabel={
+          (offDayTask?.client_id ? clientsMap?.[offDayTask.client_id] : undefined) || offDayTask?.title || "Tarefa"
+        }
+        onCancel={() => setOffDayTask(null)}
+        onConfirm={() => {
+          const t = offDayTask;
+          setOffDayTask(null);
+          if (t) startAfterChecks(t);
+        }}
+      />
 
       {/* === CENTRAL OPERACIONAL === */}
       {openEntry && openTask ? (

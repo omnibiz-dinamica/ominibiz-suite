@@ -64,6 +64,7 @@ import { exportToExcel, exportToPdf, type ExportColumn } from "@/lib/exports";
 import { toast } from "sonner";
 import { RecordHistoryMenu } from "@/components/history/RecordHistoryMenu";
 import { formatCivilDate, type TaskOperationalNote } from "@/lib/ponto/task-notes";
+import { fetchOfflineEntryIds } from "@/lib/punch/offline-flags";
 
 export const Route = createFileRoute("/app/ponto_/gestao")({ component: Page });
 
@@ -346,6 +347,13 @@ function GestaoPonto() {
     queryFn: () => fetchPausesByEntry(pauseEntryIds),
   });
 
+  // Ponto offline: que pontos desta página foram feitos sem rede (selo "Offline").
+  const { data: offlineIds } = useQuery({
+    queryKey: ["punch-admin-offline", currentCompanyId, pauseEntryIds.join(",")],
+    enabled: !!currentCompanyId && pauseEntryIds.length > 0,
+    queryFn: () => fetchOfflineEntryIds(pauseEntryIds),
+  });
+
   const totalPages = useMemo(() => Math.max(1, Math.ceil((result?.total ?? 0) / PAGE_SIZE)), [result?.total]);
   const clientsMap = useMemo(() => {
     const m: Record<string, string> = {};
@@ -544,7 +552,8 @@ function GestaoPonto() {
       if (r.absence_origin === "manager") return "Gestor";
       return "Origem não identificada";
     }
-    return ORIGIN_LABEL[r.origin] ?? r.origin;
+    const label = ORIGIN_LABEL[r.origin] ?? r.origin;
+    return offlineIds?.has(r.id) ? `${label} · Offline` : label;
   };
   const getRowNoteItems = (r: Row): DisplayNote[] => {
     const notes: DisplayNote[] = [];
