@@ -24,6 +24,7 @@ import {
 import { wallISOToInput } from "@/lib/wall-clock";
 import { validatePauseList, type TimeEntryPauseRow } from "@/lib/punch/pause";
 import { formatDuration } from "@/lib/tasks";
+import { OfflineEntryNote } from "@/components/ponto/OfflineEntryNote";
 import { ClockPlus, Pencil, Users, Clock, FileText, Coffee, Plus, Trash2 } from "lucide-react";
 
 type Mode = "create" | "edit";
@@ -547,6 +548,7 @@ function PunchEditorSession({
               <div>
                 <span className="text-muted-foreground">Origem:</span> {ORIGIN_LABEL[entry.origin]}
               </div>
+              <OfflineEntryNote entryId={entry.id} />
               {entry.last_edited_at && (
                 <div>
                   <span className="text-muted-foreground">Última edição:</span>{" "}
