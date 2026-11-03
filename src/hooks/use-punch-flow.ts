@@ -18,6 +18,8 @@ import {
   type PunchV2Payload,
   type PunchV2Response,
 } from "@/lib/punch/v2";
+import { isLocalEntryId, type OfflineOp, type OfflinePunchEvent } from "@/lib/punch/offline-queue";
+import type { NewOfflineEvent } from "@/hooks/use-offline-punch";
 
 export type PunchFlowPhase =
   | "idle"
@@ -44,7 +46,17 @@ interface RunInput {
   taskId?: string;
   /** true = ignora falha de GPS silenciosamente (pause/resume/arrival/departure). */
   neverBlockOnGps?: boolean;
+  /** Só para o ponto offline (stop): concluir a tarefa e a observação da conclusão. */
+  offlineExtra?: { complete_task?: boolean; completion_note?: string | null };
 }
+
+/** Ponto offline (empresa com o interruptor ligado). Sem isto, o fluxo é o de sempre. */
+export interface PunchFlowOffline {
+  enabled: boolean;
+  enqueue: (ev: NewOfflineEvent) => Promise<OfflinePunchEvent | null>;
+}
+
+const OFFLINE_OPS: PunchV2Op[] = ["start", "pause", "resume", "stop"];
 
 export interface UsePunchFlowApi {
   state: PunchFlowState;
@@ -62,7 +74,7 @@ const INITIAL: PunchFlowState = {
   needsReasonMessage: null,
 };
 
-export function usePunchFlow(): UsePunchFlowApi {
+export function usePunchFlow(offline?: PunchFlowOffline): UsePunchFlowApi {
   const geo = usePunchGeolocation();
   const [state, setState] = useState<PunchFlowState>(INITIAL);
 
@@ -91,7 +103,8 @@ export function usePunchFlow(): UsePunchFlowApi {
   }, []);
 
   const run = useCallback<UsePunchFlowApi["run"]>(
-    async ({ op, entryId, taskId, neverBlockOnGps }) => {
+    async ({ op, entryId, taskId, neverBlockOnGps, offlineExtra }) => {
+      const clickedAt = new Date().toISOString();
       setState({ ...INITIAL, phase: "capturing_gps", op });
 
       // ---- 1. Captura GPS única ----
@@ -122,8 +135,50 @@ export function usePunchFlow(): UsePunchFlowApi {
         device_fingerprint: deviceFingerprint(),
       };
 
-      // ---- 2. Envio ----
+      // ---- 2. Envio (ou fila no telemóvel, se não houver rede) ----
+      const queueOffline = async (): Promise<PunchV2Response> => {
+        if (!OFFLINE_OPS.includes(op)) {
+          // Chegada/saída são só auditoria de localização: sem rede, não se guardam.
+          return finalize({ success: true, code: "OFFLINE_SKIPPED", message: null, data: null }, op);
+        }
+        const ev = await offline!.enqueue({
+          op: op as OfflineOp,
+          captured_at: clickedAt,
+          task_id: taskId ?? null,
+          time_entry_id: entryId && !isLocalEntryId(entryId) ? entryId : null,
+          lat: basePayload.lat ?? null,
+          lng: basePayload.lng ?? null,
+          accuracy_m: basePayload.accuracy_m ?? null,
+          gps_status: basePayload.gps_status,
+          device_fingerprint: basePayload.device_fingerprint ?? {},
+          complete_task: offlineExtra?.complete_task,
+          completion_note: offlineExtra?.completion_note ?? null,
+        });
+        if (!ev) {
+          return finalize(
+            { success: false, code: "OFFLINE_QUEUE_ERROR", message: "Não foi possível guardar a marcação no telemóvel.", data: null },
+            op,
+          );
+        }
+        const at = new Date(clickedAt).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
+        return finalize(
+          {
+            success: true,
+            code: "OFFLINE_QUEUED",
+            message: `Sem rede: marcação guardada no telemóvel às ${at}. Será enviada quando a rede voltar.`,
+            data: { event: ev },
+          },
+          op,
+        );
+      };
+
+      if (offline?.enabled && typeof navigator !== "undefined" && navigator.onLine === false) {
+        return queueOffline();
+      }
       const first = await send(op, basePayload);
+      if (offline?.enabled && first.network) {
+        return queueOffline();
+      }
 
       // ---- 3. Justificativa (se solicitada) ----
       if (first.code === "NEEDS_JUSTIFICATION") {
@@ -142,7 +197,7 @@ export function usePunchFlow(): UsePunchFlowApi {
 
       return finalize(first, op);
     },
-    [geo, send, finalize],
+    [geo, send, finalize, offline],
   );
 
   const submitJustification = useCallback(
