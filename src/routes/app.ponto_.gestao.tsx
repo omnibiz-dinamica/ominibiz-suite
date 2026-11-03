@@ -65,6 +65,7 @@ import { toast } from "sonner";
 import { RecordHistoryMenu } from "@/components/history/RecordHistoryMenu";
 import { formatCivilDate, type TaskOperationalNote } from "@/lib/ponto/task-notes";
 import { fetchOfflineEntryIds } from "@/lib/punch/offline-flags";
+import { entryScheduleFlags, fetchEntryTimeZones } from "@/lib/punch/off-schedule";
 
 export const Route = createFileRoute("/app/ponto_/gestao")({ component: Page });
 
@@ -221,6 +222,10 @@ const fmtGeoStatus = (p?: GeoPoint) => {
 
 const hasWallTime = (iso: string | null | undefined) => !!iso && formatWallTime(iso) !== "00:00";
 
+/** Célula fora do padrão marcado na tarefa: realce vermelho (SUP-2026-000301). */
+const offCellClass = (off: boolean | undefined) =>
+  off ? "rounded bg-destructive/10 px-1 font-semibold text-destructive" : "";
+
 /**
  * "Previsto" — data + horário planejado da tarefa.
  * Nunca exibe 00:00 como horário: quando não há horário definido,
@@ -354,12 +359,40 @@ function GestaoPonto() {
     queryFn: () => fetchOfflineEntryIds(pauseEntryIds),
   });
 
+  // Fora do padrão (vermelho): fuso do telemóvel na marcação de cada ponto desta página.
+  const { data: entryTimeZones } = useQuery({
+    queryKey: ["punch-admin-tz", currentCompanyId, pauseEntryIds.join(",")],
+    enabled: !!currentCompanyId && pauseEntryIds.length > 0,
+    queryFn: () => fetchEntryTimeZones(pauseEntryIds),
+  });
+
   const totalPages = useMemo(() => Math.max(1, Math.ceil((result?.total ?? 0) / PAGE_SIZE)), [result?.total]);
   const clientsMap = useMemo(() => {
     const m: Record<string, string> = {};
     for (const c of clients ?? []) m[c.id] = c.name;
     return m;
   }, [clients]);
+
+  // Fora do padrão (vermelho): mesma regra da folha de ponto, por ponto desta página.
+  const offByRow = useMemo(() => {
+    const m = new Map<string, ReturnType<typeof entryScheduleFlags>>();
+    // Ausência/férias/tarefa operacional não mostram horas, por isso a marca não aparece.
+    for (const r of result?.rows ?? []) {
+      m.set(
+        r.id,
+        entryScheduleFlags({
+          started_at: r.started_at,
+          ended_at: r.ended_at,
+          effective_minutes: r.effective_minutes,
+          scheduled_for: r.tasks?.scheduled_for,
+          scheduled_end: r.tasks?.scheduled_end,
+          clientName: r.tasks?.client_id ? clientsMap[r.tasks.client_id] : null,
+          timeZone: entryTimeZones?.get(r.id),
+        }),
+      );
+    }
+    return m;
+  }, [result?.rows, clientsMap, entryTimeZones]);
 
   const resetFilters = () => {
     setFilters(emptyFilters);
@@ -918,19 +951,35 @@ function GestaoPonto() {
                     </span>
                   </TableCell>
                   <TableCell className="text-sm">
-                    {isNonWork(r) ? "—" : new Date(r.started_at).toLocaleString()}
+                    {isNonWork(r) ? (
+                      "—"
+                    ) : (
+                      <span className={offCellClass(offByRow.get(r.id)?.start)}>
+                        {new Date(r.started_at).toLocaleString()}
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell className="text-sm">
                     {isNonWork(r) ? (
                       "—"
                     ) : r.ended_at ? (
-                      new Date(r.ended_at).toLocaleString()
+                      <span className={offCellClass(offByRow.get(r.id)?.end)}>
+                        {new Date(r.ended_at).toLocaleString()}
+                      </span>
                     ) : (
                       <span className="text-warning">em aberto</span>
                     )}
                   </TableCell>
                   <TableCell className="text-right font-mono">
-                    {isNonWork(r) ? "—" : r.effective_minutes != null ? formatDuration(r.effective_minutes) : "—"}
+                    {isNonWork(r) ? (
+                      "—"
+                    ) : r.effective_minutes != null ? (
+                      <span className={offCellClass(offByRow.get(r.id)?.over6h)}>
+                        {formatDuration(r.effective_minutes)}
+                      </span>
+                    ) : (
+                      "—"
+                    )}
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-sm">{formatPause(r)}</TableCell>
                   <TableCell>

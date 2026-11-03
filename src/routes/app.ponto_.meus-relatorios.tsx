@@ -38,7 +38,6 @@ import {
   buildSnapshot,
   confirmDay,
   ensurePeriod,
-  formatDayTime,
   formatMinutes,
   getVersion,
   listMyPeriods,
@@ -54,8 +53,9 @@ import {
   type TimesheetStatus,
 } from "@/lib/timesheet";
 import { downloadBytes, generateTimesheetPdf, printBytes } from "@/lib/timesheet-pdf";
+import { withLiveExtras } from "@/lib/timesheet-view";
+import { TimesheetDaysTable } from "@/components/ponto/TimesheetDaysTable";
 import { isDayVisto, resolveVersionSignature, signatureNotice } from "@/lib/timesheet-signature";
-import { formatWallDate } from "@/lib/wall-clock";
 
 export const Route = createFileRoute("/app/ponto_/meus-relatorios")({ component: Page });
 
@@ -240,7 +240,13 @@ function PeriodDetail({
           const sig = resolveVersionSignature(v, v.snapshot, {
             signedAt: v.signed_at ?? period!.signed_at,
           });
-          return { snapshot: v.snapshot, signatureUrl: sig.signatureUrl, initialsUrl: sig.initialsUrl };
+          const view = await withLiveExtras(v.snapshot);
+          return {
+            snapshot: view.snapshot,
+            extrasLive: view.extrasLive,
+            signatureUrl: sig.signatureUrl,
+            initialsUrl: sig.initialsUrl,
+          };
         }
       }
       const built = await buildSnapshot({
@@ -250,7 +256,12 @@ function PeriodDetail({
         month: period!.period_month,
       });
       void logAccess(period!.id, "REPORT_VIEWED");
-      return { snapshot: built, signatureUrl: null as string | null, initialsUrl: null as string | null };
+      return {
+        snapshot: built,
+        extrasLive: false,
+        signatureUrl: null as string | null,
+        initialsUrl: null as string | null,
+      };
     },
   });
 
@@ -321,6 +332,7 @@ function PeriodDetail({
       signedAt: period.signed_at,
       signatureUrl: snap.data.signatureUrl,
       initialsUrl: snap.data.initialsUrl,
+      extrasLive: snap.data.extrasLive,
     });
 
     void logAccess(period.id, "REPORT_DOWNLOADED");
@@ -355,90 +367,34 @@ function PeriodDetail({
                   </div>
                 ) : null;
               })()}
-              <div className="overflow-x-auto rounded-xl border border-border">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
-                    <tr>
-                      <th className="px-3 py-2 text-left">Data</th>
-                      <th className="px-3 py-2 text-left">Entrada</th>
-                      <th className="px-3 py-2 text-left">Saída</th>
-                      <th className="px-3 py-2 text-left">Pausas</th>
-                      <th className="px-3 py-2 text-left">Total</th>
-                      <th className="px-3 py-2 text-left">Situação</th>
-                      <th className="px-3 py-2 text-left">Visto</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {snap.data.snapshot.days.map((d) => (
-                      <tr key={d.work_date} className="border-t border-border">
-                        <td className="px-3 py-2">{formatWallDate(d.work_date) || d.work_date}</td>
-                        <td className="px-3 py-2">{formatDayTime(d.first_in)}</td>
-                        <td className="px-3 py-2">{formatDayTime(d.last_out)}</td>
-                        <td className="px-3 py-2">{formatMinutes(d.break_minutes)}</td>
-                        <td className="px-3 py-2">{formatMinutes(d.worked_minutes)}</td>
-                        <td className="px-3 py-2">
-                          {d.attendance_status === "absence" || d.attendance_status === "vacation_absence" ? (
-                            <div className="space-y-1">
-                              <Badge variant="destructive">FALTA</Badge>
-                              <div className="text-xs text-muted-foreground">
-                                {d.absence_task_count ?? 0} tarefa(s): {d.absence_tasks?.map((t) => t.title).join(", ")}
-                              </div>
-                              {d.attendance_status === "vacation_absence" && (
-                                <div className="text-xs text-amber-700">Também há férias aprovadas</div>
-                              )}
-                            </div>
-                          ) : d.attendance_status === "mixed" ? (
-                            <div className="space-y-1">
-                              <Badge variant="destructive">Trabalhado + falta</Badge>
-                              <div className="text-xs text-muted-foreground">
-                                {d.absence_task_count ?? 0} tarefa(s) sem realização
-                              </div>
-                            </div>
-                          ) : d.day_type === "vacation" ? (
-                            <div className="space-y-1">
-                              <Badge variant="secondary">Férias</Badge>
-                              {d.first_in && <div className="text-xs text-amber-700">Conflito com ponto</div>}
-                            </div>
-                          ) : (
-                            "Trabalhado"
-                          )}
-                        </td>
-                        <td className="px-3 py-2">
-                          {isDayVisto(d, { signedAt: period!.signed_at }) ? (
-                            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                              <CheckCircle2 className="h-3.5 w-3.5" /> confirmado
-                            </span>
-                          ) : locked || period!.current_version > 0 ? (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          ) : (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={async () => {
-                                try {
-                                  await confirmDay(period!.company_id, d.work_date, true);
-                                  await snap.refetch();
-                                } catch (e) {
-                                  toast.error((e as Error).message);
-                                }
-                              }}
-                            >
-                              Confirmar
-                            </Button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                    {snap.data.snapshot.days.length === 0 && (
-                      <tr>
-                        <td className="px-3 py-4 text-sm text-muted-foreground" colSpan={7}>
-                          Sem registos de ponto neste mês.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+              <TimesheetDaysTable
+                snapshot={snap.data.snapshot}
+                extrasLive={snap.data.extrasLive}
+                renderVisto={(d) =>
+                  isDayVisto(d, { signedAt: period!.signed_at }) ? (
+                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                      <CheckCircle2 className="h-3.5 w-3.5" /> confirmado
+                    </span>
+                  ) : locked || period!.current_version > 0 ? (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          await confirmDay(period!.company_id, d.work_date, true);
+                          await snap.refetch();
+                        } catch (e) {
+                          toast.error((e as Error).message);
+                        }
+                      }}
+                    >
+                      Confirmar
+                    </Button>
+                  )
+                }
+              />
 
               <div className="grid gap-2 rounded-xl border border-border bg-card/60 p-4 text-sm sm:grid-cols-3">
                 <div>
