@@ -25,6 +25,7 @@ import { wallISOToInput } from "@/lib/wall-clock";
 import { validatePauseList, type TimeEntryPauseRow } from "@/lib/punch/pause";
 import { formatDuration } from "@/lib/tasks";
 import { OfflineEntryNote } from "@/components/ponto/OfflineEntryNote";
+import { ChangeTaskClient } from "@/components/ponto/ChangeTaskClient";
 import { ClockPlus, Pencil, Users, Clock, FileText, Coffee, Plus, Trash2 } from "lucide-react";
 
 type Mode = "create" | "edit";
@@ -542,9 +543,17 @@ function PunchEditorSession({
               <div>
                 <span className="text-muted-foreground">Tarefa:</span> {entryTaskTitle ?? entry.task_id}
               </div>
-              <div>
-                <span className="text-muted-foreground">Cliente:</span> {entryClientName ?? "Sem cliente"}
-              </div>
+              {entry.task_id ? (
+                <ChangeTaskClient
+                  entryId={entry.id}
+                  companyId={companyId}
+                  clientName={entryClientName}
+                />
+              ) : (
+                <div>
+                  <span className="text-muted-foreground">Cliente:</span> {entryClientName ?? "Sem cliente"}
+                </div>
+              )}
               <div>
                 <span className="text-muted-foreground">Origem:</span> {ORIGIN_LABEL[entry.origin]}
               </div>
