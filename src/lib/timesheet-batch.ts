@@ -16,6 +16,7 @@ import {
 } from "@/lib/timesheet";
 import { generateTimesheetPdf, mergePdfs } from "@/lib/timesheet-pdf";
 import { resolveVersionSignature } from "@/lib/timesheet-signature";
+import { withLiveExtras } from "@/lib/timesheet-view";
 
 export async function timesheetRowToPdf(
   row: TimesheetListRow,
@@ -27,9 +28,12 @@ export async function timesheetRowToPdf(
     const { signatureUrl, initialsUrl } = resolveVersionSignature(version, version.snapshot, {
       signedAt: version.signed_at ?? row.signed_at,
     });
-    return generateTimesheetPdf(version.snapshot, {
+    // Folha assinada antes do SUP-301: acrescenta os dados atuais (com aviso no PDF).
+    const view = await withLiveExtras(version.snapshot);
+    return generateTimesheetPdf(view.snapshot, {
       versionLabel: `Versão ${version.version}`,
       signedAt: version.signed_at ?? row.signed_at,
+      extrasLive: view.extrasLive,
       signatureUrl,
       initialsUrl,
     });

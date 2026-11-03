@@ -80,6 +80,39 @@ export type SnapshotDay = {
     work_date: string;
   }[];
   attendance_status?: "work" | "vacation" | "absence" | "mixed" | "vacation_absence";
+  /** SUP-301: clientes dos pontos do dia (snapshots novos; ausente nos antigos). */
+  clients?: string[];
+  /** SUP-301: observações que o funcionário escreveu ao concluir a tarefa. */
+  task_notes?: SnapshotTaskNote[];
+  /** SUP-301: horas diferentes das marcadas na tarefa (vermelho na folha). */
+  schedule_flags?: { start_off: boolean; end_off: boolean; over_6h: boolean };
+  schedule_issues?: SnapshotScheduleIssue[];
+  /** SUP-301: entrada/saída na hora do sítio onde o funcionário marcou ("HH:MI"). */
+  first_in_local?: string | null;
+  last_out_local?: string | null;
+  time_zone?: string | null;
+};
+
+export type SnapshotTaskNote = {
+  task_id: string;
+  title: string | null;
+  client_name: string | null;
+  note: string;
+  created_at: string;
+};
+
+export type SnapshotScheduleIssue = {
+  task_id: string;
+  client_name: string | null;
+  is_coifa: boolean;
+  planned_start_hhmm: string | null;
+  planned_end_hhmm: string | null;
+  actual_start_hhmm: string | null;
+  actual_end_hhmm: string | null;
+  effective_minutes: number;
+  start_off: boolean;
+  end_off: boolean;
+  over_6h: boolean;
 };
 
 export type TimesheetSnapshot = {

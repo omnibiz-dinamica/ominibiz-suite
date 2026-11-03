@@ -2,7 +2,6 @@ import jsPDF from "jspdf";
 import { PDFDocument } from "pdf-lib";
 import {
   MONTH_LABELS,
-  formatDayTime,
   formatMinutes,
   monthLabel,
   signatureDataUrl,
@@ -11,6 +10,20 @@ import {
 import { isDayVisto } from "@/lib/timesheet-signature";
 import { cleanSignatureImage, fitInBox, type CleanImage } from "@/lib/signature-image";
 import { formatWallDate } from "@/lib/wall-clock";
+import {
+  AFTER_SIGNATURE_NOTICE,
+  OFF_SCHEDULE_LEGEND,
+  dayClients,
+  dayFlags,
+  dayInText,
+  dayOutText,
+  dayStatusText,
+  fillMonthDays,
+  hasOffSchedule,
+  isWeekendKey,
+  offScheduleText,
+  weekdayLetter,
+} from "@/lib/timesheet-view";
 import { PAYMENT_TYPE_LABEL, type PaymentType } from "@/lib/compensation";
 
 /**
@@ -59,6 +72,8 @@ export async function generateTimesheetPdf(
     signatureUrl?: string | null;
     /** Visto (rubrica) da versão: desenhado em cada linha vistada. */
     initialsUrl?: string | null;
+    /** SUP-301: cliente/observação/vermelho vieram dos dados atuais (folha assinada antes). */
+    extrasLive?: boolean;
   } = {},
 ): Promise<Uint8Array> {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
@@ -122,15 +137,26 @@ export async function generateTimesheetPdf(
     y += 8;
   };
 
+  // SUP-301: todos os dias do mês, letra do dia, cliente, observação e vermelho.
   const cols = [
-    { key: "date", label: "Data", w: 70 },
-    { key: "in", label: "Entrada", w: 70 },
-    { key: "out", label: "Saída", w: 70 },
-    { key: "break", label: "Pausas", w: 70 },
-    { key: "total", label: "Total horas", w: 90 },
-    { key: "status", label: "Situação", w: 85 },
-    { key: "visto", label: "Visto", w: contentW - 455 },
+    { key: "date", label: "Data", w: 72 },
+    { key: "client", label: "Cliente", w: 112 },
+    { key: "in", label: "Entrada", w: 46 },
+    { key: "out", label: "Saída", w: 46 },
+    { key: "break", label: "Pausas", w: 44 },
+    { key: "total", label: "Total", w: 44 },
+    { key: "status", label: "Situação", w: 90 },
+    { key: "visto", label: "Visto", w: contentW - 454 },
   ];
+  const VISTO = cols.length - 1;
+  const RED: [number, number, number] = [200, 30, 30];
+  const fit = (text: string, w: number) => {
+    if (!text || doc.getTextWidth(text) <= w) return text;
+    let t = text;
+    while (t.length > 1 && doc.getTextWidth(`${t}…`) > w) t = t.slice(0, -1);
+    return `${t}…`;
+  };
+  const days = fillMonthDays(snapshot);
 
   const tableHead = () => {
     doc.setFillColor(243, 244, 246);
@@ -174,36 +200,52 @@ export async function generateTimesheetPdf(
   tableHead();
 
   doc.setFontSize(9);
-  for (const d of snapshot.days) {
-    if (y > A4.h - 120) newPage(true);
+  for (const d of days) {
+    const flags = dayFlags(d);
+    const off = flags.start || flags.end || flags.over6h;
+    const extraLines: { text: string; red: boolean }[] = [];
+    doc.setFontSize(7.5);
+    if (off) {
+      for (const line of doc.splitTextToSize(offScheduleText(d), contentW - 12) as string[])
+        extraLines.push({ text: line, red: true });
+    }
+    for (const n of d.task_notes ?? []) {
+      const txt = `Obs. (${n.client_name ?? n.title ?? "tarefa"}): ${n.note}`;
+      for (const line of doc.splitTextToSize(txt, contentW - 12) as string[])
+        extraLines.push({ text: line, red: false });
+    }
+    doc.setFontSize(9);
+    const rowH = 18 + extraLines.length * 9;
+    if (y + rowH > A4.h - 90) newPage(true);
+
+    if (isWeekendKey(d.work_date)) {
+      doc.setFillColor(248, 248, 250);
+      doc.rect(MARGIN, y - 11, contentW, 17, "F");
+    }
     let x = MARGIN + 6;
+    const empty = !!d.placeholder;
     const cells = [
-      formatWallDate(d.work_date) || d.work_date,
-      formatDayTime(d.first_in),
-      formatDayTime(d.last_out),
-      formatMinutes(d.break_minutes),
-      formatMinutes(d.worked_minutes),
-      d.attendance_status === "absence" || d.attendance_status === "vacation_absence"
-        ? `Falta (${d.absence_task_count ?? 0} tarefa(s))`
-        : d.attendance_status === "mixed"
-          ? `Trabalhado + falta (${d.absence_task_count ?? 0})`
-          : d.day_type === "vacation"
-            ? d.first_in
-              ? "Férias + ponto"
-              : "Férias"
-            : "Trabalhado",
+      `${formatWallDate(d.work_date) || d.work_date}  ${weekdayLetter(d.work_date)}`,
+      empty ? "" : fit(dayClients(d) || "—", cols[1].w - 6),
+      empty ? "" : dayInText(d),
+      empty ? "" : dayOutText(d),
+      empty ? "" : formatMinutes(d.break_minutes),
+      empty ? "" : formatMinutes(d.worked_minutes),
+      fit(dayStatusText(d), cols[6].w - 6),
       "",
     ];
+    const redCell = [false, false, flags.start, flags.end, false, flags.over6h, false, false];
+    if (empty) doc.setTextColor(150);
     cells.forEach((value, i) => {
-      if (i === 6) {
+      if (i === VISTO) {
         // Coluna Visto (ADR-059): confirmação do dia OU versão validada pelo
         // funcionário — a validação do documento cobre todas as suas linhas.
         // Marca simples: a assinatura manuscrita aparece só no fim do documento.
-        if (isDayVisto(d, { signedAt: opts.signedAt })) {
+        if (!empty && isDayVisto(d, { signedAt: opts.signedAt })) {
           if (initialsImg) {
-            const fit = fitInBox(initialsImg.width, initialsImg.height, cols[i].w - 6, 15);
+            const box = fitInBox(initialsImg.width, initialsImg.height, cols[i].w - 6, 15);
             try {
-              doc.addImage(initialsImg.dataUrl, "PNG", x, y - 10, fit.w, fit.h);
+              doc.addImage(initialsImg.dataUrl, "PNG", x, y - 10, box.w, box.h);
             } catch {
               drawCheck(doc, x + 2, y - 1);
             }
@@ -212,21 +254,56 @@ export async function generateTimesheetPdf(
           }
         }
       } else {
+        if (redCell[i]) {
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(...RED);
+        }
         doc.text(String(value), x, y + 1);
+        if (redCell[i]) {
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(empty ? 150 : 25);
+        }
       }
       x += cols[i].w;
     });
+    doc.setTextColor(25);
+
+    let ly = y + 10;
+    if (extraLines.length) {
+      doc.setFontSize(7.5);
+      for (const l of extraLines) {
+        if (l.red) doc.setTextColor(...RED);
+        else doc.setTextColor(95);
+        doc.text(l.text, MARGIN + 10, ly + 1);
+        ly += 9;
+      }
+      doc.setFontSize(9);
+      doc.setTextColor(25);
+    }
 
     doc.setDrawColor(232);
-    doc.line(MARGIN, y + 6, A4.w - MARGIN, y + 6);
-    y += 18;
+    doc.line(MARGIN, y + rowH - 12, A4.w - MARGIN, y + rowH - 12);
+    y += rowH;
   }
 
-  if (snapshot.days.length === 0) {
-    doc.setTextColor(130);
-    doc.text("Sem registos de ponto neste mês.", MARGIN + 6, y + 1);
+  // Avisos da tabela
+  const notices: { text: string; red: boolean }[] = [];
+  if (hasOffSchedule(days)) notices.push({ text: OFF_SCHEDULE_LEGEND, red: true });
+  if (opts.extrasLive) notices.push({ text: AFTER_SIGNATURE_NOTICE, red: false });
+  if (notices.length) {
+    doc.setFontSize(7.5);
+    for (const n of notices) {
+      const lines = doc.splitTextToSize(n.text, contentW) as string[];
+      if (y + lines.length * 9 > A4.h - 90) newPage(true);
+      if (n.red) doc.setTextColor(...RED);
+      else doc.setTextColor(90);
+      for (const line of lines) {
+        doc.text(line, MARGIN, y);
+        y += 9;
+      }
+    }
+    doc.setFontSize(9);
     doc.setTextColor(25);
-    y += 20;
   }
 
   // ---------- Resumo do mês ----------
