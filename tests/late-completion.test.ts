@@ -31,7 +31,8 @@ test("conclusao normal tardia usa o stop atual e nao a recuperacao", () => {
   assert.doesNotMatch(pointSource, /recoverOpenEntry/);
   assert.doesNotMatch(pointSource, /Finalizar com hora correta/);
   assert.match(pointSource, /onComplete=\{\(\) => \(isManualOpenTask \? openManualEndDialog\(\) : setCompletionDialogOpen\(true\)\)\}/);
-  assert.match(pointSource, /punch\.run\(\{ op: "stop", entryId: openEntry\.id \}\)/);
+  // Ponto offline: a mesma chamada de stop leva também offlineExtra (só usado sem rede).
+  assert.match(pointSource, /punch\.run\(\{\s*op: "stop",\s*entryId: openEntry\.id,/);
   assert.match(pointSource, /Observação da conclusão \(opcional\)/);
   assert.match(tasksSource, /const isOtherUser = isManager && task\.assigned_to !== user\?\.id;/);
   assert.match(tasksSource, /if \(isOtherUser\) \{/);
