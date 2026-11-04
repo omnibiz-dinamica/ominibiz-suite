@@ -1,5 +1,4 @@
-import { cleanSignatureFile } from "@/lib/signature-image";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ModalBody, ModalFooter, ModalTabsBar } from "@/components/ui/dialog";
@@ -11,18 +10,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
-import { Check, ChevronDown, Download, Plus, Trash2, Upload, IdCard, Building2, MapPin } from "lucide-react";
+import { Check, ChevronDown, FileSpreadsheet, Loader2, Plus, IdCard, Building2, MapPin } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ModalSection } from "@/components/ui/dialog";
 import { EMPLOYEE_PAYMENT_TYPES, PAYMENT_TYPE_LABEL, type PaymentType } from "@/lib/compensation";
 import { lastNameLabel, splitFullName, useCompanyCountry } from "@/lib/person-name";
 import { EmployeeHistoryTab } from "@/components/equipe/EmployeeHistoryTab";
+import { EmployeeAttachmentsTab } from "@/components/equipe/EmployeeAttachmentsTab";
+import { exportEmployees } from "@/lib/employee-export";
 
 
 /**
- * Tabbed employee editor (Aba 1-6) for the Equipe module.
+ * Tabbed employee editor for the Equipe module.
  * Uses partial updates on `profiles` and a separate table `employee_attachments`
- * + Supabase Storage buckets `employee-docs` and `employee-signatures`.
+ * + Supabase Storage bucket `employee-docs`.
+ * A assinatura e o visto do funcionário não aparecem aqui: só ele os gere, no Perfil
+ * (a folha de ponto continua a usá-los).
  */
 
 type Role = "manager" | "employee" | "owner" | "super_admin";
@@ -73,6 +76,23 @@ export function EmployeeEditor({
 
   const [tab, setTab] = useState(initialTab ?? "dados");
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const runExport = async () => {
+    setExporting(true);
+    try {
+      const r = await exportEmployees({ companyId, profileId: userId });
+      toast.success(
+        r.attachments || r.failed
+          ? `Exportado com ${r.attachments} anexo(s)${r.failed ? ` · ${r.failed} não foi possível baixar` : ""}.`
+          : "Exportado.",
+      );
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   /** Footer submit target per tab (tabs without a form keep their inline actions). */
   const TAB_FORMS: Record<string, { id: string; label: string }> = {
@@ -116,12 +136,11 @@ export function EmployeeEditor({
   return (
     <Tabs value={tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col">
       <ModalTabsBar>
-        <TabsList className="grid h-auto w-full grid-cols-3 sm:grid-cols-7">
+        <TabsList className="grid h-auto w-full grid-cols-3 sm:grid-cols-6">
           <TabsTrigger value="dados">Dados</TabsTrigger>
           <TabsTrigger value="rh">Contabilidade/RH</TabsTrigger>
           <TabsTrigger value="docs">Documentos</TabsTrigger>
           <TabsTrigger value="fin">Financeiro</TabsTrigger>
-          <TabsTrigger value="sig">Assinaturas</TabsTrigger>
           <TabsTrigger value="anx">Anexos</TabsTrigger>
           <TabsTrigger value="historico">Histórico</TabsTrigger>
         </TabsList>
@@ -151,11 +170,8 @@ export function EmployeeEditor({
         <TabsContent value="fin" className="mt-0 space-y-4">
           <TabFinanceiro profile={profile} onSave={save} />
         </TabsContent>
-        <TabsContent value="sig" className="mt-0 space-y-4">
-          <TabAssinaturas profile={profile} userId={userId} companyId={companyId} onSave={save} />
-        </TabsContent>
         <TabsContent value="anx" className="mt-0 space-y-4">
-          <TabAnexos userId={userId} companyId={companyId} />
+          <EmployeeAttachmentsTab userId={userId} companyId={companyId} />
         </TabsContent>
         <TabsContent value="historico" className="mt-0 space-y-4">
           <EmployeeHistoryTab userId={userId} companyId={companyId} />
@@ -163,6 +179,17 @@ export function EmployeeEditor({
       </ModalBody>
 
       <ModalFooter>
+        <Button
+          type="button"
+          variant="ghost"
+          className="sm:mr-auto"
+          disabled={exporting}
+          onClick={() => void runExport()}
+          title="Baixar os dados deste funcionário em Excel, com os anexos"
+        >
+          {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
+          {exporting ? "A exportar…" : "Exportar Excel"}
+        </Button>
         <Button type="button" variant="outline" onClick={onDone}>
           Fechar
         </Button>
@@ -864,286 +891,6 @@ function TabFinanceiro({
 
     </form>
   );
-}
-
-/* --------------------------- Aba 5 ---------------------------------- */
-
-function TabAssinaturas({
-  profile,
-  userId,
-  companyId,
-  onSave,
-}: {
-  profile: ProfileRow;
-  userId: string;
-  companyId: string;
-  onSave: (p: Record<string, unknown>, msg?: string) => Promise<void>;
-}) {
-  const [signatureUrl, setSignatureUrl] = useState(str(profile.signature_url));
-  const [initialsUrl, setInitialsUrl] = useState(str(profile.initials_url));
-  const [busy, setBusy] = useState<"sig" | "ini" | null>(null);
-
-  const upload = async (kind: "sig" | "ini", file: File) => {
-    setBusy(kind);
-    try {
-      // Fundo removido automaticamente: guarda-se só o traço, em PNG transparente.
-      const clean = await cleanSignatureFile(file);
-      const path = `${companyId}/${userId}/${kind === "sig" ? "signature" : "initials"}-${Date.now()}.png`;
-      const { error } = await supabase.storage
-        .from("employee-signatures")
-        .upload(path, clean, { upsert: true, contentType: "image/png" });
-      if (error) throw error;
-      const patch = kind === "sig" ? { signature_url: path } : { initials_url: path };
-      await onSave(patch, "Imagem salva");
-      if (kind === "sig") setSignatureUrl(path);
-      else setInitialsUrl(path);
-    } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      <p className="text-xs text-muted-foreground">
-        Usados na folha de ponto (assinatura no fim, visto em cada linha). O fundo da imagem é removido
-        automaticamente ao enviar.
-      </p>
-      <SignatureSlot
-        label="Assinatura digital"
-        path={signatureUrl}
-        loading={busy === "sig"}
-        onPick={(f) => upload("sig", f)}
-      />
-      <SignatureSlot
-        label="Visto digital (rubrica)"
-        path={initialsUrl}
-        loading={busy === "ini"}
-        onPick={(f) => upload("ini", f)}
-      />
-    </div>
-  );
-}
-
-function SignatureSlot({
-  label,
-  path,
-  loading,
-  onPick,
-}: {
-  label: string;
-  path: string;
-  loading: boolean;
-  onPick: (f: File) => void;
-}) {
-  const [preview, setPreview] = useState<string>("");
-  useEffect(() => {
-    let revoked = false;
-    (async () => {
-      if (!path) {
-        setPreview("");
-        return;
-      }
-      const { data } = await supabase.storage.from("employee-signatures").createSignedUrl(path, 60 * 10);
-      if (!revoked) setPreview(data?.signedUrl ?? "");
-    })();
-    return () => {
-      revoked = true;
-    };
-  }, [path]);
-  return (
-    <div className="rounded-xl border border-border p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <div className="text-sm font-medium">{label}</div>
-        <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border px-3 py-1 text-xs hover:bg-muted">
-          <Upload className="h-3 w-3" /> {loading ? "Enviando…" : "Enviar"}
-          <input
-            type="file"
-            accept="image/png,image/jpeg"
-            hidden
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) onPick(f);
-              e.currentTarget.value = "";
-            }}
-          />
-        </label>
-      </div>
-      <div className="flex h-24 items-center justify-center rounded-md bg-muted/30">
-        {preview ? (
-          <img src={preview} alt={label} className="max-h-20 object-contain" />
-        ) : (
-          <span className="text-xs text-muted-foreground">— sem imagem —</span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/* --------------------------- Aba 6 ---------------------------------- */
-
-const ATTACH_CATEGORIES = [
-  { v: "cc", l: "Cartão de Cidadão" },
-  { v: "tr", l: "Título de Residência" },
-  { v: "passport", l: "Passaporte" },
-  { v: "driver_license", l: "Carta de Condução" },
-  { v: "a1", l: "A1" },
-  { v: "work_contract", l: "Contrato de Trabalho" },
-  { v: "health_card", l: "Cartão Saúde" },
-  { v: "other", l: "Outro" },
-];
-
-function TabAnexos({ userId, companyId }: { userId: string; companyId: string }) {
-  const qc = useQueryClient();
-  const [category, setCategory] = useState("cc");
-  const [busy, setBusy] = useState(false);
-
-  const { data: items = [] } = useQuery({
-    queryKey: ["employee-attachments", userId],
-    queryFn: async () => {
-      const { data, error } = await (
-        supabase.from("employee_attachments" as never) as unknown as {
-          select: (s: string) => {
-            eq: (
-              c: string,
-              v: string,
-            ) => {
-              order: (
-                c: string,
-                opt: { ascending: boolean },
-              ) => Promise<{ data: AttachmentRow[] | null; error: { message: string } | null }>;
-            };
-          };
-        }
-      )
-        .select("*")
-        .eq("profile_id", userId)
-        .order("uploaded_at", { ascending: false });
-      if (error) throw new Error(error.message);
-      return data ?? [];
-    },
-  });
-
-  const onPick = async (file: File) => {
-    setBusy(true);
-    try {
-      const safe = file.name.replace(/[^a-zA-Z0-9._-]+/g, "_");
-      const path = `${companyId}/${userId}/${Date.now()}-${safe}`;
-      const up = await supabase.storage.from("employee-docs").upload(path, file);
-      if (up.error) throw up.error;
-      const { error } = await (
-        supabase.from("employee_attachments" as never) as unknown as {
-          insert: (p: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
-        }
-      ).insert({
-        profile_id: userId,
-        company_id: companyId,
-        category,
-        file_name: file.name,
-        storage_path: path,
-        mime_type: file.type,
-        size_bytes: file.size,
-      });
-      if (error) throw new Error(error.message);
-      toast.success("Anexo adicionado");
-      qc.invalidateQueries({ queryKey: ["employee-attachments", userId] });
-    } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const onDownload = async (it: AttachmentRow) => {
-    const { data } = await supabase.storage.from("employee-docs").createSignedUrl(it.storage_path, 60);
-    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
-  };
-
-  const onDelete = async (it: AttachmentRow) => {
-    if (!confirm(`Remover "${it.file_name}"?`)) return;
-    await supabase.storage.from("employee-docs").remove([it.storage_path]);
-    const { error } = await (
-      supabase.from("employee_attachments" as never) as unknown as {
-        delete: () => { eq: (c: string, v: string) => Promise<{ error: { message: string } | null }> };
-      }
-    )
-      .delete()
-      .eq("id", it.id);
-    if (error) toast.error(error.message);
-    else {
-      toast.success("Removido");
-      qc.invalidateQueries({ queryKey: ["employee-attachments", userId] });
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-end gap-3 rounded-xl border border-dashed border-border p-4">
-        <Field label="Categoria">
-          <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger className="w-[220px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {ATTACH_CATEGORIES.map((c) => (
-                <SelectItem key={c.v} value={c.v}>
-                  {c.l}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
-        <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border bg-primary px-4 py-2 text-sm text-primary-foreground hover:opacity-90">
-          <Upload className="h-4 w-4" /> {busy ? "Enviando…" : "Enviar arquivo"}
-          <input
-            type="file"
-            hidden
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) onPick(f);
-              e.currentTarget.value = "";
-            }}
-          />
-        </label>
-      </div>
-      <ul className="divide-y divide-border rounded-xl border border-border">
-        {items.length === 0 && <li className="py-6 text-center text-sm text-muted-foreground">Nenhum anexo.</li>}
-        {items.map((it) => (
-          <li key={it.id} className="flex items-center justify-between gap-3 px-4 py-2 text-sm">
-            <div className="min-w-0">
-              <div className="truncate font-medium">{it.file_name}</div>
-              <div className="text-xs text-muted-foreground">
-                {labelForCategory(it.category)} · {new Date(it.uploaded_at).toLocaleDateString("pt-PT")}
-              </div>
-            </div>
-            <div className="flex shrink-0 gap-1">
-              <Button size="icon" variant="ghost" onClick={() => onDownload(it)} title="Baixar">
-                <Download className="h-4 w-4" />
-              </Button>
-              <Button size="icon" variant="ghost" onClick={() => onDelete(it)} title="Remover">
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-type AttachmentRow = {
-  id: string;
-  profile_id: string;
-  company_id: string;
-  category: string;
-  file_name: string;
-  storage_path: string;
-  uploaded_at: string;
-};
-
-function labelForCategory(v: string): string {
-  return ATTACH_CATEGORIES.find((c) => c.v === v)?.l ?? v;
 }
 
 /* --------------------------- shared --------------------------------- */

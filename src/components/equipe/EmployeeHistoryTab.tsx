@@ -4,6 +4,8 @@ import { History, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EmployeeNotesPanel } from "@/components/equipe/EmployeeNotesPanel";
 import {
   Select,
   SelectContent,
@@ -23,10 +25,31 @@ const LOCALE = "pt-PT";
 const ALL = "__all__";
 
 /**
- * Aba "Histórico" da ficha do funcionário: tudo o que mudou nos dados dele,
- * com data/hora, quem alterou e "antes → depois". Só leitura (auditoria).
+ * Aba "Histórico" da ficha: duas sub-abas — o histórico gerado pelo sistema
+ * (auditoria, só leitura) e as anotações manuais do gestor.
  */
 export function EmployeeHistoryTab({ userId, companyId }: { userId: string; companyId: string }) {
+  return (
+    <Tabs defaultValue="sistema" className="space-y-4">
+      <TabsList className="grid w-full grid-cols-2 sm:w-auto sm:inline-grid">
+        <TabsTrigger value="sistema">Histórico do sistema</TabsTrigger>
+        <TabsTrigger value="notas">Anotações</TabsTrigger>
+      </TabsList>
+      <TabsContent value="sistema" className="mt-0">
+        <SystemHistoryPanel userId={userId} companyId={companyId} />
+      </TabsContent>
+      <TabsContent value="notas" className="mt-0">
+        <EmployeeNotesPanel userId={userId} companyId={companyId} />
+      </TabsContent>
+    </Tabs>
+  );
+}
+
+/**
+ * Histórico gerado pelo sistema: tudo o que mudou nos dados dele,
+ * com data/hora, quem alterou e "antes → depois". Só leitura (auditoria).
+ */
+function SystemHistoryPanel({ userId, companyId }: { userId: string; companyId: string }) {
   const [field, setField] = useState<string>(ALL);
 
   const history = useInfiniteQuery({
