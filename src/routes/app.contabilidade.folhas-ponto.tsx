@@ -18,7 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Download, Printer } from "lucide-react";
+import { Download, FileSpreadsheet, Loader2, Printer } from "lucide-react";
+import { exportEmployees } from "@/lib/employee-export";
 import { toast } from "sonner";
 import {
   MONTH_LABELS,
@@ -49,6 +50,25 @@ function AccountingTimesheets() {
   const [month, setMonth] = useState(now.getUTCMonth() + 1);
   const [viewing, setViewing] = useState<TimesheetListRow | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
+  const [exportingTeam, setExportingTeam] = useState(false);
+
+  // Dados de todos os funcionários (Excel) com os anexos, para a contabilidade.
+  const exportTeam = async () => {
+    if (!currentCompanyId) return;
+    setExportingTeam(true);
+    try {
+      const r = await exportEmployees({ companyId: currentCompanyId });
+      toast.success(
+        `Exportados ${r.employees} funcionário(s)${r.attachments ? ` com ${r.attachments} anexo(s)` : ""}` +
+          (r.failed ? ` · ${r.failed} anexo(s) não foi possível baixar` : "") +
+          ".",
+      );
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setExportingTeam(false);
+    }
+  };
 
   const list = useQuery({
     queryKey: ["timesheet-accounting", currentCompanyId, year, month],
@@ -86,11 +106,17 @@ function AccountingTimesheets() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-3xl font-semibold tracking-tight">Folhas de Ponto</h1>
-        <p className="mt-1 text-muted-foreground">
-          Documentos assinados e liberados pela gestão — {monthLabel(month, year)}.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">Folhas de Ponto</h1>
+          <p className="mt-1 text-muted-foreground">
+            Documentos assinados e liberados pela gestão — {monthLabel(month, year)}.
+          </p>
+        </div>
+        <Button variant="outline" disabled={exportingTeam || !currentCompanyId} onClick={() => void exportTeam()}>
+          {exportingTeam ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
+          {exportingTeam ? "A exportar…" : "Funcionários (Excel)"}
+        </Button>
       </div>
 
       <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-3">

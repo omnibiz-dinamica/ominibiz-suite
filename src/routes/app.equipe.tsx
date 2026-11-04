@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, ModalHeader, ModalBody } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { RecordHistoryMenu } from "@/components/history/RecordHistoryMenu";
-import { Check, Copy, Landmark, MailCheck, Trash2, Pencil, Power, Send, UserCog, X } from "lucide-react";
+import { Check, Copy, FileSpreadsheet, Landmark, Loader2, MailCheck, Trash2, Pencil, Power, Send, UserCog, X } from "lucide-react";
 import { RoleGuard } from "@/components/RoleGuard";
 import { sendTransactionalEmail } from "@/lib/email/send";
 import { buildAppUrl } from "@/lib/app-url";
@@ -18,6 +18,7 @@ import { EmployeeEditor } from "@/components/equipe/EmployeeEditor";
 import { decideEmailChangeRequest } from "@/lib/user-email";
 import { isEmployeeActive } from "@/lib/employee-status";
 import { formatIban, type BankChangeRequest } from "@/lib/employee-history";
+import { exportEmployees } from "@/lib/employee-export";
 
 const FOCUS_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -229,6 +230,36 @@ function TeamPage() {
     }, 300);
     return () => window.clearTimeout(id);
   }, [focusSearch.bank, bankChangeRequests.length]);
+  // Vindo de um aviso de documento assinado (?employee=… sem ?bank): abre a ficha nos Anexos.
+  const openedFromNotice = useRef<string | null>(null);
+  useEffect(() => {
+    const target = focusSearch.employee;
+    if (!target || focusSearch.bank || openedFromNotice.current === target) return;
+    const member = (members ?? []).find((m) => m.user_id === target);
+    if (!member) return;
+    openedFromNotice.current = target;
+    setEditingTab("anx");
+    setEditing(member);
+  }, [focusSearch.employee, focusSearch.bank, members]);
+
+  const [exportingAll, setExportingAll] = useState(false);
+  const exportAll = async () => {
+    if (!currentCompanyId) return;
+    setExportingAll(true);
+    try {
+      const r = await exportEmployees({ companyId: currentCompanyId });
+      toast.success(
+        `Exportados ${r.employees} funcionário(s)${r.attachments ? ` com ${r.attachments} anexo(s)` : ""}` +
+          (r.failed ? ` · ${r.failed} anexo(s) não foi possível baixar` : "") +
+          ".",
+      );
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setExportingAll(false);
+    }
+  };
+
   const [showInactive, setShowInactive] = useState(false);
   const [memberSearch, setMemberSearch] = useState("");
   const [memberSort, setMemberSort] = useState<"az" | "za">("az");
@@ -485,9 +516,15 @@ function TeamPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="font-display text-3xl font-semibold tracking-tight">Equipe</h1>
-        <p className="mt-1 text-muted-foreground">Convide funcionários e gestores para sua empresa.</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">Equipe</h1>
+          <p className="mt-1 text-muted-foreground">Convide funcionários e gestores para sua empresa.</p>
+        </div>
+        <Button variant="outline" disabled={exportingAll || !currentCompanyId} onClick={() => void exportAll()}>
+          {exportingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
+          {exportingAll ? "A exportar…" : "Exportar todos (Excel)"}
+        </Button>
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-6">
