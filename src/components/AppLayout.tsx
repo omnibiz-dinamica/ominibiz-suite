@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { NewTicketDialog } from "@/components/support/NewTicketDialog";
+import { PendingDocumentsModal } from "@/components/perfil/PendingDocumentsModal";
 import {
   DEFAULT_ENABLED_MODULES,
   isModuleEnabled,
@@ -618,6 +619,9 @@ export function AppLayout({ children }: { children?: ReactNode }) {
       {user?.id && !isManager && isModuleEnabled(enabledModules, "extra_work") && (
         <ExtraWorkInviteModal userId={user.id} />
       )}
+
+      {/* Documentos que o gestor marcou para o funcionário ler ou assinar. */}
+      {user?.id && currentCompanyId && <PendingDocumentsModal userId={user.id} companyId={currentCompanyId} />}
 
       <NewTicketDialog
         open={reportDialogOpen}
