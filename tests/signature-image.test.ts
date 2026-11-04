@@ -62,7 +62,8 @@ test("PDF usa o visto cadastrado em cada linha e a assinatura sem fundo", () => 
   // sem documento validado não há assinatura nem visto gráfico
   expect(pdf).toMatch(/opts\.embedSignatures === false \|\| !opts\.signedAt\s+\? null\s+: opts\.initialsUrl/);
   expect(read("../src/lib/timesheet-batch.ts")).toMatch(/initialsUrl,\n\s+\}\);/);
-  // os dois sítios de envio removem o fundo
+  // o envio (só pelo próprio funcionário, no Perfil) remove o fundo
   expect(read("../src/components/perfil/SignatureVistoCard.tsx")).toMatch(/cleanSignatureFile\(file\)/);
-  expect(read("../src/components/equipe/EmployeeEditor.tsx")).toMatch(/cleanSignatureFile\(file\)/);
+  // a ficha do gestor já não mostra nem envia assinatura/visto
+  expect(read("../src/components/equipe/EmployeeEditor.tsx")).not.toMatch(/employee-signatures/);
 });
