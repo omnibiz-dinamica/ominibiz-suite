@@ -20,6 +20,14 @@ import {
   type SupportTicketPriority,
   type SupportTicketStatus,
 } from "@/lib/support/constants";
+import {
+  SUPPORT_SORT_OPTIONS,
+  SUPPORT_SORT_KEY_GLOBAL,
+  loadSupportSort,
+  saveSupportSort,
+  sortSupportTickets,
+  type SupportSortOrder,
+} from "@/lib/support/sort";
 import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
 import { invalidateSupportCache } from "@/lib/cache/support";
 import { DuplicateClustersPanel } from "@/components/support/DuplicateClustersPanel";
@@ -76,6 +84,12 @@ function SupportAdminPage() {
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
   const [q, setQ] = useState("");
+  // Ordenação escolhida pela pessoa (fica no navegador dela).
+  const [sortOrder, setSortOrder] = useState<SupportSortOrder>(() => loadSupportSort(SUPPORT_SORT_KEY_GLOBAL));
+  const changeSort = (v: SupportSortOrder) => {
+    setSortOrder(v);
+    saveSupportSort(SUPPORT_SORT_KEY_GLOBAL, v);
+  };
 
   const { data = [], isLoading } = useQuery<Row[]>({
     queryKey: ["support-tickets", "admin-global", status, priority, type, companyId, destination, dateFrom, dateTo],
@@ -176,11 +190,9 @@ function SupportAdminPage() {
         })
       : data;
 
-    // Ordenação: urgente → alta → normal → baixa; dentro, mais antigas primeiro (FIFO operacional).
-    return [...arr].sort((a, b) => {
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-    });
-  }, [data, q]);
+    // Ordenação escolhida no seletor "Ordenar" (padrão: mais recentes).
+    return sortSupportTickets(arr, sortOrder);
+  }, [data, q, sortOrder]);
 
   const kpis = useMemo(() => {
     const now = Date.now();
@@ -462,6 +474,18 @@ function SupportAdminPage() {
             ))}
           </SelectContent>
         </Select>
+        <Select value={sortOrder} onValueChange={(v) => changeSort(v as SupportSortOrder)}>
+          <SelectTrigger className="w-60" aria-label="Ordenar">
+            <SelectValue placeholder="Ordenar" />
+          </SelectTrigger>
+          <SelectContent>
+            {SUPPORT_SORT_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Input
           type="date"
           value={dateFrom}
@@ -492,7 +516,12 @@ function SupportAdminPage() {
       ) : (
         <ul className="space-y-2">
           <li className="px-1 text-xs text-muted-foreground">
-            {filtered.length} ticket{filtered.length !== 1 ? "s" : ""} - ordenados por data de abertura
+            {filtered.length} ticket{filtered.length !== 1 ? "s" : ""} - ordenados por{" "}
+            {sortOrder === "recent"
+              ? "data de abertura"
+              : sortOrder === "priority_desc"
+                ? "prioridade (urgente → baixa)"
+                : "prioridade (baixa → urgente)"}
           </li>
           {filtered.map((t) => (
             <li key={t.id}>

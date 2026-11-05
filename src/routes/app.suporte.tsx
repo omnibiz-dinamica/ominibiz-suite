@@ -20,6 +20,14 @@ import {
   type SupportTicketStatus,
   type SupportTicketType,
 } from "@/lib/support/constants";
+import {
+  SUPPORT_SORT_OPTIONS,
+  SUPPORT_SORT_KEY_COMPANY,
+  loadSupportSort,
+  saveSupportSort,
+  sortSupportTickets,
+  type SupportSortOrder,
+} from "@/lib/support/sort";
 import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
 import { invalidateSupportCache } from "@/lib/cache/support";
 import {
@@ -65,6 +73,14 @@ function SupportListPage() {
   const [destinationFilter, setDestinationFilter] = useState<string>("");
   const [showArchived, setShowArchived] = useState(false);
   const [q, setQ] = useState("");
+  // Ordenação escolhida pela pessoa (fica no navegador dela).
+  const [sortOrder, setSortOrder] = useState<SupportSortOrder>(() =>
+    loadSupportSort(SUPPORT_SORT_KEY_COMPANY),
+  );
+  const changeSort = (v: SupportSortOrder) => {
+    setSortOrder(v);
+    saveSupportSort(SUPPORT_SORT_KEY_COMPANY, v);
+  };
 
   const destinationsQ = useQuery({
     queryKey: supportDestinationsQueryKey,
@@ -107,12 +123,15 @@ function SupportListPage() {
   });
 
   const filtered = useMemo(() => {
-    if (!q.trim()) return tickets;
     const lower = q.trim().toLowerCase();
-    return tickets.filter(
-      (t) => t.title.toLowerCase().includes(lower) || t.ticket_number.toLowerCase().includes(lower),
-    );
-  }, [tickets, q]);
+    const found = lower
+      ? tickets.filter(
+          (t) =>
+            t.title.toLowerCase().includes(lower) || t.ticket_number.toLowerCase().includes(lower),
+        )
+      : tickets;
+    return sortSupportTickets(found, sortOrder);
+  }, [tickets, q, sortOrder]);
 
   return (
     <div className="space-y-6">
@@ -170,6 +189,18 @@ function SupportListPage() {
             {destinations.map((d) => (
               <SelectItem key={d.code} value={d.code}>
                 {d.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={sortOrder} onValueChange={(v) => changeSort(v as SupportSortOrder)}>
+          <SelectTrigger className="w-60" aria-label="Ordenar">
+            <SelectValue placeholder="Ordenar" />
+          </SelectTrigger>
+          <SelectContent>
+            {SUPPORT_SORT_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
               </SelectItem>
             ))}
           </SelectContent>
