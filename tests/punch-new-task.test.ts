@@ -18,7 +18,7 @@ mock.module("@/integrations/supabase/client", () => ({
   },
 }));
 
-const { NEW_TASK_OPTION, punchAdminCreateWithTask } = await import("../src/lib/punch-admin");
+const { punchAdminCreateWithTask } = await import("../src/lib/punch-admin");
 
 test("ticket 247: ponto com tarefa nova vai numa só chamada ao banco", async () => {
   const r = await punchAdminCreateWithTask(
@@ -57,17 +57,35 @@ test("erro do banco (tarefa igual, sem permissão) chega ao gestor", async () =>
   ).rejects.toMatchObject({ message: expect.stringContaining("Já existe uma tarefa") });
 });
 
-test("editor: opção escrever tarefa nova, nome e cliente obrigatórios, hora de parede do ponto", () => {
+test("Adicionar ponto: sem vincular tarefa; cliente, nome opcional e fim obrigatório", () => {
   const d = readFileSync(
     new URL("../src/components/ponto/PunchEditorDrawer.tsx", import.meta.url),
     "utf8",
   );
-  expect(NEW_TASK_OPTION).toBe("__new_task__");
-  expect(d).toMatch(/<SelectItem value=\{NEW_TASK_OPTION\}>\+ Escrever tarefa nova<\/SelectItem>/);
-  expect(d).toMatch(/Escreva o nome da tarefa nova/);
-  expect(d).toMatch(/Escolha o cliente da tarefa nova/);
+  // fluxo do botão do topo: nunca escolhe tarefa existente
+  expect(d).toMatch(
+    /const writingNewTask = mode === "create" && !regularizeTaskAbsence && form\.entry_kind === "work";/,
+  );
+  expect(d).not.toMatch(/Escrever tarefa nova/);
+  expect(d).not.toMatch(/punch-admin-user-tasks/);
+  expect(d).toMatch(/<Label>Cliente \*<\/Label>/);
+  expect(d).toMatch(/Nome da tarefa \(opcional\)/);
+  expect(d).toMatch(/`Atendimento - \$\{newTaskClientName\}`/);
+  expect(d).toMatch(/Informe o fim do ponto: a tarefa é criada já concluída/);
+  expect(d).toMatch(/writingNewTask \? "Fim \*" : "Fim"/);
   expect(d).toMatch(/scheduled_for_wall: form\.started_at\.slice\(0, 16\)/);
   expect(d).toMatch(/\.eq\("status", "ativo"\)/);
-  // as tarefas existentes continuam na lista
-  expect(d).toMatch(/\(userTasks \?\? \[\]\)\.map/);
+  // regularização de falta continua ligada à tarefa da falta
+  expect(d).toMatch(
+    /if \(regularizeTaskAbsence\) \{\s*return punchAbsenceRegularize\(\s*form\.task_id/,
+  );
+});
+
+test("o painel só abre no clique: rascunho não reabre sozinho", () => {
+  const d = readFileSync(
+    new URL("../src/components/ponto/PunchEditorDrawer.tsx", import.meta.url),
+    "utf8",
+  );
+  expect(d).not.toMatch(/onOpenChange\(true\)/);
+  expect(d).not.toMatch(/reopenedRef/);
 });

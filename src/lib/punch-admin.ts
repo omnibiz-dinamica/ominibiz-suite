@@ -71,9 +71,6 @@ export async function punchAdminCreate(payload: PunchCreatePayload, reason: stri
   return data as AdminTimeEntry;
 }
 
-/** Valor do seletor de tarefa para "escrever tarefa nova" (ticket 247). */
-export const NEW_TASK_OPTION = "__new_task__";
-
 export interface NewTaskForPunch {
   company_id: string;
   title: string;
