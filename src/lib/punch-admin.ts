@@ -71,6 +71,38 @@ export async function punchAdminCreate(payload: PunchCreatePayload, reason: stri
   return data as AdminTimeEntry;
 }
 
+/** Valor do seletor de tarefa para "escrever tarefa nova" (ticket 247). */
+export const NEW_TASK_OPTION = "__new_task__";
+
+export interface NewTaskForPunch {
+  company_id: string;
+  title: string;
+  client_id: string;
+  /** Hora de parede do ponto (como as outras tarefas), "YYYY-MM-DDTHH:MM". */
+  scheduled_for_wall: string;
+  scheduled_end_wall?: string | null;
+}
+
+/**
+ * Ponto manual com uma tarefa nova escrita pelo gestor: o banco cria a tarefa
+ * (concluída se o ponto tem fim) e o ponto numa só transação, sem aviso ao
+ * funcionário e sem duplicar tarefas iguais.
+ */
+export async function punchAdminCreateWithTask(
+  payload: Omit<PunchCreatePayload, "task_id">,
+  task: NewTaskForPunch,
+  reason: string,
+): Promise<AdminTimeEntry> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("punch_admin_create_with_task", {
+    _payload: payload,
+    _task: task,
+    _reason: reason,
+  });
+  if (error) throw error;
+  return data as AdminTimeEntry;
+}
+
 /** Regulariza uma falta existente com o horário real informado pelo gestor. */
 export async function punchAbsenceRegularize(
   taskId: string,

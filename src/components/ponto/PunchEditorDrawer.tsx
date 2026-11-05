@@ -12,7 +12,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import {
+  NEW_TASK_OPTION,
   punchAdminCreate,
+  punchAdminCreateWithTask,
   punchAbsenceRegularize,
   punchAdminUpdate,
   punchPaidLeaveCreate,
@@ -60,6 +62,9 @@ interface FormState {
   resumed_at: string;
   notes: string;
   reason: string;
+  /** Ticket 247: tarefa nova escrita pelo gestor (quando task_id = NEW_TASK_OPTION). */
+  new_task_title?: string;
+  new_task_client_id?: string;
 }
 
 const emptyForm = (entryKind: "work" | "paid_leave" = "work"): FormState => ({
@@ -261,6 +266,23 @@ function PunchEditorSession({
     },
   });
 
+  // Clientes ativos (para a tarefa nova escrita pelo gestor)
+  const writingNewTask = mode === "create" && form.entry_kind === "work" && form.task_id === NEW_TASK_OPTION;
+  const { data: activeClients } = useQuery({
+    queryKey: ["punch-admin-active-clients", companyId],
+    enabled: open && writingNewTask && !!companyId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("clients")
+        .select("id, name")
+        .eq("company_id", companyId)
+        .eq("status", "ativo")
+        .order("name");
+      if (error) throw error;
+      return (data ?? []) as { id: string; name: string }[];
+    },
+  });
+
   // Tarefas do usuário escolhido (para modo create)
   const { data: userTasks } = useQuery({
     queryKey: ["punch-admin-user-tasks", companyId, form.user_id],
@@ -396,6 +418,27 @@ function PunchEditorSession({
         );
       }
 
+      if (form.task_id === NEW_TASK_OPTION) {
+        return punchAdminCreateWithTask(
+          {
+            user_id: form.user_id,
+            started_at: fromLocalInput(form.started_at)!,
+            ended_at: fromLocalInput(form.ended_at),
+            paused_at: fromLocalInput(form.paused_at),
+            resumed_at: fromLocalInput(form.resumed_at),
+            notes: form.notes || null,
+          },
+          {
+            company_id: companyId,
+            title: (form.new_task_title ?? "").trim(),
+            client_id: form.new_task_client_id ?? "",
+            scheduled_for_wall: form.started_at.slice(0, 16),
+            scheduled_end_wall: form.ended_at ? form.ended_at.slice(0, 16) : null,
+          },
+          form.reason,
+        );
+      }
+
       return punchAdminCreate(
         {
           task_id: form.task_id,
@@ -485,6 +528,16 @@ function PunchEditorSession({
       if (!form.user_id || !form.task_id || !form.started_at) {
         toast.error("Funcionário, tarefa e início são obrigatórios");
         return;
+      }
+      if (form.task_id === NEW_TASK_OPTION) {
+        if ((form.new_task_title ?? "").trim().length < 2) {
+          toast.error("Escreva o nome da tarefa nova");
+          return;
+        }
+        if (!form.new_task_client_id) {
+          toast.error("Escolha o cliente da tarefa nova");
+          return;
+        }
       }
       if (regularizeTaskAbsence && form.reason.trim().length < 3) {
         toast.error("Informe o motivo da regularização");
@@ -626,6 +679,7 @@ function PunchEditorSession({
                       <SelectValue placeholder={form.user_id ? "Selecione" : "Escolha o funcionário primeiro"} />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value={NEW_TASK_OPTION}>+ Escrever tarefa nova</SelectItem>
                       {(userTasks ?? []).map((t) => (
                         <SelectItem key={t.id} value={t.id}>
                           {t.title}
@@ -634,6 +688,42 @@ function PunchEditorSession({
                       ))}
                     </SelectContent>
                   </Select>
+                  {writingNewTask && (
+                    <div className="mt-3 space-y-3 rounded-lg border border-dashed border-border p-3">
+                      <div>
+                        <Label htmlFor="punch-new-task-title">Nome da tarefa nova</Label>
+                        <Input
+                          id="punch-new-task-title"
+                          maxLength={200}
+                          value={form.new_task_title ?? ""}
+                          onChange={(e) => setForm({ ...form, new_task_title: e.target.value })}
+                          placeholder="Ex.: Limpeza extra da cozinha"
+                        />
+                      </div>
+                      <div>
+                        <Label>Cliente</Label>
+                        <Select
+                          value={form.new_task_client_id ?? ""}
+                          onValueChange={(v) => setForm({ ...form, new_task_client_id: v })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o cliente" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(activeClients ?? []).map((c) => (
+                              <SelectItem key={c.id} value={c.id}>
+                                {c.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        A tarefa é criada já com este ponto (concluída se tiver fim), com o horário do ponto. O
+                        funcionário não recebe aviso. Se já existir uma tarefa igual, escolha-a na lista.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </ModalSection>
