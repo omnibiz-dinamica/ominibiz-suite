@@ -89,5 +89,5 @@ test("Gestão de Ponto marca entrada, fim e efetivo a vermelho", () => {
 test("folha impressa: sem a linha vermelha de explicação; observação do funcionário fica", () => {
   const pdf = readFileSync(new URL("../src/lib/timesheet-pdf.ts", import.meta.url), "utf8");
   expect(pdf).not.toMatch(/offScheduleText/);
-  expect(pdf).toMatch(/Obs\. \(/);
+  expect(pdf).toMatch(/tr\("Obs\."\)\} \(/);
 });

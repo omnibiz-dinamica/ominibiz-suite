@@ -3,7 +3,6 @@ import { PDFDocument } from "pdf-lib";
 import {
   MONTH_LABELS,
   formatMinutes,
-  monthLabel,
   signatureDataUrl,
   type TimesheetSnapshot,
 } from "@/lib/timesheet";
@@ -26,6 +25,7 @@ import {
   weekdayLetter,
 } from "@/lib/timesheet-view";
 import { PAYMENT_TYPE_LABEL, type PaymentType } from "@/lib/compensation";
+import { currentLanguage, dateLocale, translator, type AppLanguage } from "@/i18n";
 
 /**
  * Gerador do PDF "Folha de Ponto Individual de Trabalho" (ADR-038).
@@ -43,9 +43,17 @@ function money(value: number | null | undefined, currency: string) {
   return `${symbol}${Number(value).toFixed(2)}`;
 }
 
-function payLabel(type: string | null | undefined) {
+function payLabel(type: string | null | undefined, tr: (k: string) => string) {
   if (!type) return "—";
-  return PAYMENT_TYPE_LABEL[type as PaymentType] ?? type;
+  const label = PAYMENT_TYPE_LABEL[type as PaymentType];
+  return label ? tr(label) : type;
+}
+
+/** "Versão 3" / "Prévia" (vêm das telas em português) na língua do PDF. */
+function versionText(label: string, tr: (k: string, o?: Record<string, unknown>) => string) {
+  const m = /^Versão (\d+)$/.exec(label);
+  if (m) return tr("Versão {{n}}", { n: m[1] });
+  return tr(label);
 }
 
 /**
@@ -62,7 +70,6 @@ function drawCheck(doc: jsPDF, x: number, y: number) {
   doc.setLineWidth(prevW);
 }
 
-
 export async function generateTimesheetPdf(
   snapshot: TimesheetSnapshot,
   opts: {
@@ -75,8 +82,14 @@ export async function generateTimesheetPdf(
     initialsUrl?: string | null;
     /** SUP-301: cliente/observação/vermelho vieram dos dados atuais (folha assinada antes). */
     extrasLive?: boolean;
+    /** Língua do PDF; por omissão, a língua escolhida por quem o gera. */
+    language?: AppLanguage;
   } = {},
 ): Promise<Uint8Array> {
+  const lang = opts.language ?? currentLanguage();
+  const tr = translator(lang);
+  const locale = dateLocale(lang);
+  const monthName = (m: number) => tr(MONTH_LABELS[Math.min(Math.max(m, 1), 12) - 1]);
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const contentW = A4.w - MARGIN * 2;
   let y = MARGIN;
@@ -103,7 +116,6 @@ export async function generateTimesheetPdf(
   };
   const [sigImg, initialsImg] = await Promise.all([clean(signaturePath), clean(initialsPath)]);
 
-
   const header = () => {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
@@ -117,16 +129,16 @@ export async function generateTimesheetPdf(
 
     doc.setTextColor(20);
     doc.setFontSize(15);
-    doc.text("FOLHA DE PONTO INDIVIDUAL DE TRABALHO", MARGIN, y);
+    doc.text(tr("FOLHA DE PONTO INDIVIDUAL DE TRABALHO"), MARGIN, y);
     y += 20;
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
     const rows: [string, string][] = [
-      ["Nome do empregado", snapshot.employee.full_name ?? "—"],
-      ["Função", snapshot.employee.job_title ?? "—"],
-      ["Local de trabalho", snapshot.employee.work_location ?? "—"],
-      ["Mês / Ano", `${MONTH_LABELS[snapshot.period.month - 1]} / ${snapshot.period.year}`],
+      [tr("Nome do empregado"), snapshot.employee.full_name ?? "—"],
+      [tr("Função"), snapshot.employee.job_title ?? "—"],
+      [tr("Local de trabalho"), snapshot.employee.work_location ?? "—"],
+      [tr("Mês / Ano"), `${monthName(snapshot.period.month)} / ${snapshot.period.year}`],
     ];
     for (const [k, v] of rows) {
       doc.setTextColor(120);
@@ -140,14 +152,14 @@ export async function generateTimesheetPdf(
 
   // SUP-301: todos os dias do mês, letra do dia, cliente, observação e vermelho.
   const cols = [
-    { key: "date", label: "Data", w: 72 },
-    { key: "client", label: "Cliente", w: 112 },
-    { key: "in", label: "Entrada", w: 46 },
-    { key: "out", label: "Saída", w: 46 },
-    { key: "break", label: "Pausas", w: 44 },
-    { key: "total", label: "Total", w: 44 },
-    { key: "status", label: "Situação", w: 90 },
-    { key: "visto", label: "Visto", w: contentW - 454 },
+    { key: "date", label: tr("Data"), w: 72 },
+    { key: "client", label: tr("Cliente"), w: 112 },
+    { key: "in", label: tr("Entrada"), w: 46 },
+    { key: "out", label: tr("Saída"), w: 46 },
+    { key: "break", label: tr("Pausas"), w: 44 },
+    { key: "total", label: tr("Total"), w: 44 },
+    { key: "status", label: tr("Situação"), w: 90 },
+    { key: "visto", label: tr("Visto"), w: contentW - 454 },
   ];
   const VISTO = cols.length - 1;
   const RED: [number, number, number] = [200, 30, 30];
@@ -183,10 +195,9 @@ export async function generateTimesheetPdf(
     doc.setFontSize(9);
     doc.setTextColor(110);
     doc.text(
-      `${(snapshot.company.name ?? "OmniBiz").toUpperCase()} — Folha de Ponto ${monthLabel(
+      `${(snapshot.company.name ?? "OmniBiz").toUpperCase()} — ${tr("Folha de Ponto")} ${monthName(
         snapshot.period.month,
-        snapshot.period.year,
-      )}${continuation ? " (continuação)" : ""}`,
+      )}/${snapshot.period.year}${continuation ? ` ${tr("(continuação)")}` : ""}`,
       MARGIN,
       y,
     );
@@ -207,7 +218,7 @@ export async function generateTimesheetPdf(
     const extraLines: { text: string; red: boolean }[] = [];
     doc.setFontSize(7.5);
     for (const n of d.task_notes ?? []) {
-      const txt = `Obs. (${n.client_name ?? n.title ?? "tarefa"}): ${n.note}`;
+      const txt = `${tr("Obs.")} (${n.client_name ?? n.title ?? tr("tarefa")}): ${n.note}`;
       for (const line of doc.splitTextToSize(txt, contentW - 12) as string[])
         extraLines.push({ text: line, red: false });
     }
@@ -224,13 +235,13 @@ export async function generateTimesheetPdf(
     let x = MARGIN + 6;
     const empty = !!d.placeholder;
     const cells = [
-      `${formatWallDate(d.work_date) || d.work_date}  ${weekdayLetter(d.work_date)}`,
+      `${formatWallDate(d.work_date) || d.work_date}  ${weekdayLetter(d.work_date, lang)}`,
       empty ? "" : fit(first ? (first.client_name ?? "—") : dayClients(d) || "—", cols[1].w - 6),
       empty ? "" : first ? (first.first_in_local ?? "—") : dayInText(d),
       empty ? "" : first ? (first.last_out_local ?? "—") : dayOutText(d),
       empty ? "" : formatMinutes(first ? first.break_minutes : d.break_minutes),
       empty ? "" : formatMinutes(first ? first.worked_minutes : d.worked_minutes),
-      fit(dayStatusText(d), cols[6].w - 6),
+      fit(dayStatusText(d, tr), cols[6].w - 6),
       "",
     ];
     const redCell = first
@@ -316,9 +327,9 @@ export async function generateTimesheetPdf(
 
   // Avisos da tabela
   const notices: { text: string; red: boolean }[] = [];
-  if (hasOffSchedule(days)) notices.push({ text: OFF_SCHEDULE_LEGEND, red: true });
-  if (opts.extrasLive) notices.push({ text: AFTER_SIGNATURE_NOTICE, red: false });
-  const revision = revisionText(snapshot);
+  if (hasOffSchedule(days)) notices.push({ text: tr(OFF_SCHEDULE_LEGEND), red: true });
+  if (opts.extrasLive) notices.push({ text: tr(AFTER_SIGNATURE_NOTICE), red: false });
+  const revision = revisionText(snapshot, tr, locale);
   if (revision) notices.push({ text: revision, red: false });
   if (notices.length) {
     doc.setFontSize(7.5);
@@ -341,7 +352,7 @@ export async function generateTimesheetPdf(
   y += 18;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
-  doc.text("RESUMO DO MÊS", MARGIN, y);
+  doc.text(tr("RESUMO DO MÊS"), MARGIN, y);
   y += 6;
   doc.setDrawColor(210);
   doc.line(MARGIN, y, A4.w - MARGIN, y);
@@ -350,20 +361,23 @@ export async function generateTimesheetPdf(
   const s = snapshot.summary;
   const type = s.payment_type_used as PaymentType | null;
   const summaryRows: [string, string][] = [
-    ["Total de horas", formatMinutes(s.worked_minutes)],
-    ["Dias com registo", String(s.paid_days ?? 0)],
-    ["Tipo de pagamento", payLabel(s.payment_type_used)],
+    [tr("Total de horas"), formatMinutes(s.worked_minutes)],
+    [tr("Dias com registo"), String(s.paid_days ?? 0)],
+    [tr("Tipo de pagamento"), payLabel(s.payment_type_used, tr)],
   ];
   if (type === "hourly") {
-    summaryRows.push(["Valor hora aplicado", money(s.rate_used, s.currency)]);
-    summaryRows.push(["Total do mês", money(s.calculated_amount, s.currency)]);
+    summaryRows.push([tr("Valor hora aplicado"), money(s.rate_used, s.currency)]);
+    summaryRows.push([tr("Total do mês"), money(s.calculated_amount, s.currency)]);
   } else if (type === "daily") {
-    summaryRows.push(["Valor dia aplicado", money(s.rate_used, s.currency)]);
-    summaryRows.push(["Total do mês", money(s.calculated_amount, s.currency)]);
+    summaryRows.push([tr("Valor dia aplicado"), money(s.rate_used, s.currency)]);
+    summaryRows.push([tr("Total do mês"), money(s.calculated_amount, s.currency)]);
   } else if (type === "monthly") {
-    summaryRows.push(["Remuneração mensal", money(s.monthly_amount ?? s.rate_used, s.currency)]);
+    summaryRows.push([
+      tr("Remuneração mensal"),
+      money(s.monthly_amount ?? s.rate_used, s.currency),
+    ]);
   } else if (s.calculated_amount != null) {
-    summaryRows.push(["Total do mês", money(s.calculated_amount, s.currency)]);
+    summaryRows.push([tr("Total do mês"), money(s.calculated_amount, s.currency)]);
   }
 
   doc.setFont("helvetica", "normal");
@@ -395,15 +409,15 @@ export async function generateTimesheetPdf(
   y += 13;
   doc.setFontSize(9);
   doc.setTextColor(90);
-  doc.text("Assinatura do Colaborador", MARGIN, y);
-  doc.text("Assinatura do Responsável / Carimbo", MARGIN + colW + 30, y);
+  doc.text(tr("Assinatura do Colaborador"), MARGIN, y);
+  doc.text(tr("Assinatura do Responsável / Carimbo"), MARGIN + colW + 30, y);
   y += 22;
 
   doc.setFontSize(8);
   doc.setTextColor(130);
   doc.text(
-    `Gerado em ${new Date(snapshot.generated_at).toLocaleString("pt-PT")}${
-      opts.versionLabel ? ` · ${opts.versionLabel}` : ""
+    `${tr("Gerado em")} ${new Date(snapshot.generated_at).toLocaleString(locale)}${
+      opts.versionLabel ? ` · ${versionText(opts.versionLabel, tr)}` : ""
     } · OmniBiz Suite`,
     MARGIN,
     y,
@@ -415,7 +429,9 @@ export async function generateTimesheetPdf(
     doc.setPage(i);
     doc.setFontSize(8);
     doc.setTextColor(150);
-    doc.text(`Página ${i} de ${total}`, A4.w - MARGIN, A4.h - 24, { align: "right" });
+    doc.text(tr("Página {{i}} de {{total}}", { i, total }), A4.w - MARGIN, A4.h - 24, {
+      align: "right",
+    });
   }
   void page;
 

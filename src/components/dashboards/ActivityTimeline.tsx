@@ -6,7 +6,7 @@ import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { useT } from "@/i18n";
+import { useT, dateLocale } from "@/i18n";
 
 type Tab = "gestao" | "execucao";
 type EventRow = {
@@ -260,7 +260,7 @@ export function ActivityTimeline({ companyId }: { companyId: string }) {
           <li className="py-8 text-center text-sm text-muted-foreground">{tr("Ainda não há atividade registada.")}</li>
         )}
         {rows.map((e) => {
-          const locale = lang === "en" ? "en-GB" : "pt-PT";
+          const locale = dateLocale(lang);
           const isOpen = openEventId === e.id;
           const lines = isOpen ? detailLines(e.changes, locale) : [];
           return (

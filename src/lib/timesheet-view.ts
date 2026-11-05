@@ -21,6 +21,19 @@ import {
 /** getUTCDay(): 0 = domingo. Segunda S, terça T, quarta Q, quinta Q, sexta S, sábado S, domingo D. */
 const WEEKDAY_LETTERS = ["D", "S", "T", "Q", "Q", "S", "S"] as const;
 
+/** Letras do dia (0 = domingo) por língua; sem língua conhecida, português. */
+const WEEKDAY_LETTERS_BY_LANG: Record<string, readonly string[]> = {
+  "pt-BR": WEEKDAY_LETTERS,
+  en: ["S", "M", "T", "W", "T", "F", "S"],
+  "nl-BE": ["Z", "M", "D", "W", "D", "V", "Z"],
+  "fr-BE": ["D", "L", "M", "M", "J", "V", "S"],
+};
+
+/** Tradutor (chave = texto em português). Sem tradutor: o próprio português. */
+export type Tr = (key: string, vars?: Record<string, unknown>) => string;
+export const ptTr: Tr = (key, vars) =>
+  key.replace(/\{\{(\w+)\}\}/g, (_, k: string) => String(vars?.[k] ?? ""));
+
 export type ViewDay = SnapshotDay & {
   /** Dia sem registo, acrescentado só para mostrar o mês inteiro. */
   placeholder?: boolean;
@@ -35,11 +48,12 @@ export const OFF_SCHEDULE_LEGEND =
 const pad = (n: number) => String(n).padStart(2, "0");
 
 /** "2026-10-05" -> "S" (segunda). Data inválida -> "". */
-export function weekdayLetter(dateKey: string | null | undefined): string {
+export function weekdayLetter(dateKey: string | null | undefined, lang?: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateKey ?? "");
   if (!m) return "";
   const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
-  return WEEKDAY_LETTERS[d.getUTCDay()] ?? "";
+  const letters = (lang && WEEKDAY_LETTERS_BY_LANG[lang]) || WEEKDAY_LETTERS;
+  return letters[d.getUTCDay()] ?? "";
 }
 
 /** Sábado ou domingo. */
@@ -188,17 +202,29 @@ export function dayEntryRows(d: SnapshotDay): SnapshotEntry[] {
 }
 
 /** "Retificada pela gestão em DD/MM/AAAA HH:MM por Nome — motivo". */
-export function revisionText(s: Pick<TimesheetSnapshot, "revision">): string | null {
+export function revisionText(
+  s: Pick<TimesheetSnapshot, "revision">,
+  tr: Tr = ptTr,
+  locale = "pt-PT",
+): string | null {
   const r = s.revision;
   if (!r) return null;
-  const when = new Date(r.at).toLocaleString("pt-PT", {
+  const when = new Date(r.at).toLocaleString(locale, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
   });
-  return `Retificada pela gestão em ${when}${r.by_name ? ` por ${r.by_name}` : ""} — ${r.reason}. Assinatura do funcionário mantida.`;
+  return r.by_name
+    ? tr(
+        "Retificada pela gestão em {{when}} por {{name}} — {{reason}}. Assinatura do funcionário mantida.",
+        { when, name: r.by_name, reason: r.reason },
+      )
+    : tr("Retificada pela gestão em {{when}} — {{reason}}. Assinatura do funcionário mantida.", {
+        when,
+        reason: r.reason,
+      });
 }
 
 /**
@@ -295,11 +321,12 @@ export function offScheduleText(d: SnapshotDay): string {
 }
 
 /** Situação do dia (texto), igual à tela e ao PDF. */
-export function dayStatusText(d: ViewDay): string {
+export function dayStatusText(d: ViewDay, tr: Tr = ptTr): string {
   if (d.placeholder) return "—";
   if (d.attendance_status === "absence" || d.attendance_status === "vacation_absence")
-    return `Falta (${d.absence_task_count ?? 0} tarefa(s))`;
-  if (d.attendance_status === "mixed") return `Trabalhado + falta (${d.absence_task_count ?? 0})`;
-  if (d.day_type === "vacation") return d.first_in ? "Férias + ponto" : "Férias";
-  return "Trabalhado";
+    return tr("Falta ({{n}} tarefa(s))", { n: d.absence_task_count ?? 0 });
+  if (d.attendance_status === "mixed")
+    return tr("Trabalhado + falta ({{n}})", { n: d.absence_task_count ?? 0 });
+  if (d.day_type === "vacation") return d.first_in ? tr("Férias + ponto") : tr("Férias");
+  return tr("Trabalhado");
 }

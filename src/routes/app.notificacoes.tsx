@@ -40,6 +40,8 @@ import {
 import { taskRejectionNotificationDetails } from "@/lib/task-refusal-view";
 import { taskCancellationNotificationDetails } from "@/lib/task-cancellation-notification";
 import { ticketNotificationDisplay, type TicketNotificationIdentity } from "@/lib/support/ticket-notification";
+import { translateNotificationTitle } from "@/lib/notification-i18n";
+import { useT } from "@/i18n";
 
 type NotificationEvent =
   | "task_created"
@@ -401,6 +403,7 @@ export const Route = createFileRoute("/app/notificacoes")({
 
 function NotificationsPage() {
   const { user, currentCompanyId, isManager, isSuperAdmin } = useAuth();
+  const { t } = useT();
   const qc = useQueryClient();
   const nav = useNavigate();
   const [tab, setTab] = useState<TabKey>("ativas");
@@ -871,20 +874,22 @@ function NotificationsPage() {
                           PRIORITY_TONE[n.priority]
                         }
                       >
-                        {EVENT_LABEL[n.event]}
+                        {t(EVENT_LABEL[n.event])}
                       </span>
                       <span
                         className={
                           "rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide " + STATE_TONE[state]
                         }
                       >
-                        {STATE_LABEL[state]}
+                        {t(STATE_LABEL[state])}
                         {handlerName ? ` por ${handlerName}` : ""}
                         {state === "encaminhada" && n.forwarded_to ? ` · ${n.forwarded_to}` : ""}
                       </span>
                       <span className="text-xs text-muted-foreground">{new Date(n.created_at).toLocaleString()}</span>
                     </div>
-                    <p className="mt-1 font-medium">{ticketDisplay?.title ?? n.title}</p>
+                    <p className="mt-1 font-medium">
+                      {ticketDisplay?.title ?? translateNotificationTitle(n.title, t)}
+                    </p>
                     {refusal ? (
                       <div className="mt-2 space-y-1 border-l-2 border-destructive/30 pl-3 text-sm">
                         <p className="text-muted-foreground">
