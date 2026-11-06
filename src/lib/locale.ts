@@ -56,11 +56,13 @@ export type ModuleKey =
   | "building_materials_sales"
   | "building_materials_customers"
   | "building_materials_deliveries"
-  | "building_materials_finance";
+  | "building_materials_finance"
+  // Vertical Lojas (retail) — Etapa 1: lojas, produtos, categorias e estoque.
+  | "retail_core";
 
 /** ADR-027 / ADR-033 — Ramo de atividade da empresa (business vertical). */
 export type BusinessVertical =
-  "cleaning_services" | "restaurant_delivery" | "building_materials" | "hospitality" | "auto_repair" | "generic";
+  "cleaning_services" | "restaurant_delivery" | "building_materials" | "hospitality" | "auto_repair" | "retail" | "generic";
 
 /** De momento apenas Limpeza está disponível (decisão 2026-09-28). */
 export const BUSINESS_VERTICALS: { value: BusinessVertical; label: string }[] = [
@@ -73,6 +75,7 @@ const KNOWN_VERTICALS: BusinessVertical[] = [
   "building_materials",
   "hospitality",
   "auto_repair",
+  "retail",
   "generic",
 ];
 
@@ -351,6 +354,12 @@ export const MODULE_CATALOG: Record<
     addonMonthly: 0,
     included: false,
   },
+  retail_core: {
+    label: "Lojas: PDV, estoque e produtos",
+    description: "Lojas da empresa, equipa por loja, produtos, categorias e estoque por loja.",
+    addonMonthly: 0,
+    included: false,
+  },
 };
 
 /** Plano base (decisão 2026-09-28): Notas passa a ser padrão; adicionais ficam desmarcados. */
@@ -440,6 +449,7 @@ export const MODULE_TABS: Array<{
       "bi_advanced",
       "ai_automations",
       "finance",
+      "retail_core",
     ],
   },
   {
@@ -493,6 +503,7 @@ export const ROUTE_MODULES: Array<{ prefix: string; module: ModuleKey }> = [
   { prefix: "/app/assistente", module: "whatsapp_ai" },
   { prefix: "/app/notas", module: "notes" },
   { prefix: "/app/suporte", module: "support" },
+  { prefix: "/app/lojas", module: "retail_core" },
 ];
 
 export const RESTAURANT_ROUTE_MODULES: Array<{ prefix: string; module: ModuleKey }> = [
