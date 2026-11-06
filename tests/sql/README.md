@@ -1,6 +1,6 @@
 # Testes SQL das migrações de Lojas (sem Lovable, sem chaves)
 
-Correm as migrações `0007` e `0008` num Postgres 16 local, com stubs mínimos do
+Correm as migrações `0007` e da Etapa 2 num Postgres 16 local, com stubs mínimos do
 Supabase/OmniBiz (`auth.uid()`, `companies`, `profiles`, `user_roles` e os helpers
 `is_super_admin`, `is_company_member`, `is_company_manager`, `company_module_enabled`,
 `touch_updated_at`). Os stubs só imitam o comportamento usado pelas migrações de Lojas.
@@ -9,7 +9,7 @@ Supabase/OmniBiz (`auth.uid()`, `companies`, `profiles`, `user_roles` e os helpe
 createdb omni_test
 psql -d omni_test -v ON_ERROR_STOP=1 -f tests/sql/supabase-stubs.sql
 psql -d omni_test -v ON_ERROR_STOP=1 -f drizzle/migrations/0007_retail_core_stage1.sql
-psql -d omni_test -v ON_ERROR_STOP=1 -f drizzle/migrations/0008_retail_pos_cash_stage2.sql
+psql -d omni_test -v ON_ERROR_STOP=1 -f docs/sql/retail_stage2_pos_cash.sql
 psql -d omni_test -q -f tests/sql/retail-pos-stage2.sql   # imprime PASS/FAIL por cenário e TOTAL
 dropdb omni_test
 ```

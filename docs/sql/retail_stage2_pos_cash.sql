@@ -1,3 +1,6 @@
+-- SQL da Etapa 2 de Lojas (Caixa e PDV). NÃO é lido pelo Drizzle: deve ser aplicado pela
+-- ferramenta de migração do Lovable ("aplique o SQL de docs/sql/retail_stage2_pos_cash.sql"),
+-- que gera a migração oficial em drizzle/migrations. É idempotente (pode correr mais de uma vez).
 -- ETAPA 2: VERTICAL LOJAS (RETAIL) — CAIXA E PDV
 -- Aditiva e IDEMPOTENTE (pode ser executada mais de uma vez sem erro): não altera tabelas nem regras fora do retail. Toda a escrita passa por RPC
 -- SECURITY DEFINER; o frontend só lê (RLS por empresa, módulo e loja).
