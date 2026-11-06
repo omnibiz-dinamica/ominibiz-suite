@@ -61,6 +61,11 @@ function UnitsPage() {
       const row: Record<string, unknown> = { name, code };
       for (const f of FIELDS) if (f.key !== "name" && f.key !== "code") row[f.key] = (u[f.key] as string | null)?.toString().trim() || null;
       row.country = (u.country ?? "").trim().toUpperCase() || country;
+      if (u.max_discount_pct !== undefined && String(u.max_discount_pct).trim() !== "") {
+        const pct = Number(String(u.max_discount_pct).replace(",", "."));
+        if (!Number.isFinite(pct) || pct < 0 || pct > 100) throw new Error("O desconto máximo deve estar entre 0 e 100%.");
+        row.max_discount_pct = pct;
+      }
       const q = u.id
         ? rdb("company_units").update(row).eq("id", u.id)
         : rdb("company_units").insert({ ...row, company_id: currentCompanyId });
@@ -168,6 +173,15 @@ function UnitsPage() {
             <label className="space-y-1 text-sm">
               <span className="text-muted-foreground">País</span>
               <Input maxLength={2} value={edit?.country ?? ""} onChange={(e) => setEdit({ ...edit, country: e.target.value.toUpperCase() })} />
+            </label>
+            <label className="space-y-1 text-sm">
+              <span className="text-muted-foreground">Desconto máximo do funcionário no PDV (%)</span>
+              <Input
+                inputMode="decimal"
+                placeholder="10"
+                value={edit?.max_discount_pct ?? ""}
+                onChange={(e) => setEdit({ ...edit, max_discount_pct: e.target.value as unknown as number })}
+              />
             </label>
           </div>
           <DialogFooter>

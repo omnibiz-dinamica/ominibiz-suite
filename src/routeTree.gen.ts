@@ -47,9 +47,12 @@ import { Route as AppComercialTemplatesRouteImport } from './routes/app.comercia
 import { Route as AppContabilidadeFolhasPontoRouteImport } from './routes/app.contabilidade.folhas-ponto'
 import { Route as AppFrotaCartoesRouteImport } from './routes/app.frota.cartoes'
 import { Route as AppLojasIndexRouteImport } from './routes/app.lojas.index'
+import { Route as AppLojasCaixaRouteImport } from './routes/app.lojas.caixa'
 import { Route as AppLojasCategoriasRouteImport } from './routes/app.lojas.categorias'
 import { Route as AppLojasEstoqueRouteImport } from './routes/app.lojas.estoque'
+import { Route as AppLojasPdvRouteImport } from './routes/app.lojas.pdv'
 import { Route as AppLojasProdutosRouteImport } from './routes/app.lojas.produtos'
+import { Route as AppLojasVendasRouteImport } from './routes/app.lojas.vendas'
 import { Route as AppMaterialConstrucaoIndexRouteImport } from './routes/app.material-construcao.index'
 import { Route as AppMaterialConstrucaoCategoriasRouteImport } from './routes/app.material-construcao.categorias'
 import { Route as AppMaterialConstrucaoClientesRouteImport } from './routes/app.material-construcao.clientes'
@@ -278,6 +281,11 @@ const AppLojasIndexRoute = AppLojasIndexRouteImport.update({
   path: '/lojas/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppLojasCaixaRoute = AppLojasCaixaRouteImport.update({
+  id: '/lojas/caixa',
+  path: '/lojas/caixa',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppLojasCategoriasRoute = AppLojasCategoriasRouteImport.update({
   id: '/lojas/categorias',
   path: '/lojas/categorias',
@@ -288,9 +296,19 @@ const AppLojasEstoqueRoute = AppLojasEstoqueRouteImport.update({
   path: '/lojas/estoque',
   getParentRoute: () => AppRoute,
 } as any)
+const AppLojasPdvRoute = AppLojasPdvRouteImport.update({
+  id: '/lojas/pdv',
+  path: '/lojas/pdv',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppLojasProdutosRoute = AppLojasProdutosRouteImport.update({
   id: '/lojas/produtos',
   path: '/lojas/produtos',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppLojasVendasRoute = AppLojasVendasRouteImport.update({
+  id: '/lojas/vendas',
+  path: '/lojas/vendas',
   getParentRoute: () => AppRoute,
 } as any)
 const AppMaterialConstrucaoIndexRoute =
@@ -516,9 +534,12 @@ export interface FileRoutesByFullPath {
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/contabilidade/folhas-ponto': typeof AppContabilidadeFolhasPontoRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
+  '/app/lojas/caixa': typeof AppLojasCaixaRoute
   '/app/lojas/categorias': typeof AppLojasCategoriasRoute
   '/app/lojas/estoque': typeof AppLojasEstoqueRoute
+  '/app/lojas/pdv': typeof AppLojasPdvRoute
   '/app/lojas/produtos': typeof AppLojasProdutosRoute
+  '/app/lojas/vendas': typeof AppLojasVendasRoute
   '/app/material-construcao/categorias': typeof AppMaterialConstrucaoCategoriasRoute
   '/app/material-construcao/clientes': typeof AppMaterialConstrucaoClientesRoute
   '/app/material-construcao/compras': typeof AppMaterialConstrucaoComprasRoute
@@ -590,9 +611,12 @@ export interface FileRoutesByTo {
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/contabilidade/folhas-ponto': typeof AppContabilidadeFolhasPontoRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
+  '/app/lojas/caixa': typeof AppLojasCaixaRoute
   '/app/lojas/categorias': typeof AppLojasCategoriasRoute
   '/app/lojas/estoque': typeof AppLojasEstoqueRoute
+  '/app/lojas/pdv': typeof AppLojasPdvRoute
   '/app/lojas/produtos': typeof AppLojasProdutosRoute
+  '/app/lojas/vendas': typeof AppLojasVendasRoute
   '/app/material-construcao/categorias': typeof AppMaterialConstrucaoCategoriasRoute
   '/app/material-construcao/clientes': typeof AppMaterialConstrucaoClientesRoute
   '/app/material-construcao/compras': typeof AppMaterialConstrucaoComprasRoute
@@ -668,9 +692,12 @@ export interface FileRoutesById {
   '/app/comercial/templates': typeof AppComercialTemplatesRoute
   '/app/contabilidade/folhas-ponto': typeof AppContabilidadeFolhasPontoRoute
   '/app/frota/cartoes': typeof AppFrotaCartoesRoute
+  '/app/lojas/caixa': typeof AppLojasCaixaRoute
   '/app/lojas/categorias': typeof AppLojasCategoriasRoute
   '/app/lojas/estoque': typeof AppLojasEstoqueRoute
+  '/app/lojas/pdv': typeof AppLojasPdvRoute
   '/app/lojas/produtos': typeof AppLojasProdutosRoute
+  '/app/lojas/vendas': typeof AppLojasVendasRoute
   '/app/material-construcao/categorias': typeof AppMaterialConstrucaoCategoriasRoute
   '/app/material-construcao/clientes': typeof AppMaterialConstrucaoClientesRoute
   '/app/material-construcao/compras': typeof AppMaterialConstrucaoComprasRoute
@@ -747,9 +774,12 @@ export interface FileRouteTypes {
     | '/app/comercial/templates'
     | '/app/contabilidade/folhas-ponto'
     | '/app/frota/cartoes'
+    | '/app/lojas/caixa'
     | '/app/lojas/categorias'
     | '/app/lojas/estoque'
+    | '/app/lojas/pdv'
     | '/app/lojas/produtos'
+    | '/app/lojas/vendas'
     | '/app/material-construcao/categorias'
     | '/app/material-construcao/clientes'
     | '/app/material-construcao/compras'
@@ -821,9 +851,12 @@ export interface FileRouteTypes {
     | '/app/comercial/templates'
     | '/app/contabilidade/folhas-ponto'
     | '/app/frota/cartoes'
+    | '/app/lojas/caixa'
     | '/app/lojas/categorias'
     | '/app/lojas/estoque'
+    | '/app/lojas/pdv'
     | '/app/lojas/produtos'
+    | '/app/lojas/vendas'
     | '/app/material-construcao/categorias'
     | '/app/material-construcao/clientes'
     | '/app/material-construcao/compras'
@@ -898,9 +931,12 @@ export interface FileRouteTypes {
     | '/app/comercial/templates'
     | '/app/contabilidade/folhas-ponto'
     | '/app/frota/cartoes'
+    | '/app/lojas/caixa'
     | '/app/lojas/categorias'
     | '/app/lojas/estoque'
+    | '/app/lojas/pdv'
     | '/app/lojas/produtos'
+    | '/app/lojas/vendas'
     | '/app/material-construcao/categorias'
     | '/app/material-construcao/clientes'
     | '/app/material-construcao/compras'
@@ -1226,6 +1262,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLojasIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/lojas/caixa': {
+      id: '/app/lojas/caixa'
+      path: '/lojas/caixa'
+      fullPath: '/app/lojas/caixa'
+      preLoaderRoute: typeof AppLojasCaixaRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/lojas/categorias': {
       id: '/app/lojas/categorias'
       path: '/lojas/categorias'
@@ -1240,11 +1283,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLojasEstoqueRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/lojas/pdv': {
+      id: '/app/lojas/pdv'
+      path: '/lojas/pdv'
+      fullPath: '/app/lojas/pdv'
+      preLoaderRoute: typeof AppLojasPdvRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/lojas/produtos': {
       id: '/app/lojas/produtos'
       path: '/lojas/produtos'
       fullPath: '/app/lojas/produtos'
       preLoaderRoute: typeof AppLojasProdutosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/lojas/vendas': {
+      id: '/app/lojas/vendas'
+      path: '/lojas/vendas'
+      fullPath: '/app/lojas/vendas'
+      preLoaderRoute: typeof AppLojasVendasRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/material-construcao/': {
@@ -1592,9 +1649,12 @@ interface AppRouteChildren {
   AppTrabalhoExtraRoute: typeof AppTrabalhoExtraRoute
   AppIndexRoute: typeof AppIndexRoute
   AppContabilidadeFolhasPontoRoute: typeof AppContabilidadeFolhasPontoRoute
+  AppLojasCaixaRoute: typeof AppLojasCaixaRoute
   AppLojasCategoriasRoute: typeof AppLojasCategoriasRoute
   AppLojasEstoqueRoute: typeof AppLojasEstoqueRoute
+  AppLojasPdvRoute: typeof AppLojasPdvRoute
   AppLojasProdutosRoute: typeof AppLojasProdutosRoute
+  AppLojasVendasRoute: typeof AppLojasVendasRoute
   AppMaterialConstrucaoCategoriasRoute: typeof AppMaterialConstrucaoCategoriasRoute
   AppMaterialConstrucaoClientesRoute: typeof AppMaterialConstrucaoClientesRoute
   AppMaterialConstrucaoComprasRoute: typeof AppMaterialConstrucaoComprasRoute
@@ -1642,9 +1702,12 @@ const AppRouteChildren: AppRouteChildren = {
   AppTrabalhoExtraRoute: AppTrabalhoExtraRoute,
   AppIndexRoute: AppIndexRoute,
   AppContabilidadeFolhasPontoRoute: AppContabilidadeFolhasPontoRoute,
+  AppLojasCaixaRoute: AppLojasCaixaRoute,
   AppLojasCategoriasRoute: AppLojasCategoriasRoute,
   AppLojasEstoqueRoute: AppLojasEstoqueRoute,
+  AppLojasPdvRoute: AppLojasPdvRoute,
   AppLojasProdutosRoute: AppLojasProdutosRoute,
+  AppLojasVendasRoute: AppLojasVendasRoute,
   AppMaterialConstrucaoCategoriasRoute: AppMaterialConstrucaoCategoriasRoute,
   AppMaterialConstrucaoClientesRoute: AppMaterialConstrucaoClientesRoute,
   AppMaterialConstrucaoComprasRoute: AppMaterialConstrucaoComprasRoute,

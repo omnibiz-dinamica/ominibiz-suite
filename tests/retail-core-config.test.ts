@@ -29,12 +29,27 @@ describe("retail_core · configuração", () => {
   test("menu Lojas oculto sem o módulo e visível para manager/owner com o módulo", () => {
     expect(lojas(base)).toBeUndefined();
     const on = { ...base, enabledModules: ["core", "retail_core"] as NavContext["enabledModules"] };
-    expect(lojas(on)?.items.map((i) => i.to)).toEqual(["/app/lojas", "/app/lojas/produtos", "/app/lojas/categorias", "/app/lojas/estoque"]);
+    expect(lojas(on)?.items.map((i) => i.to)).toEqual([
+      "/app/lojas",
+      "/app/lojas/produtos",
+      "/app/lojas/categorias",
+      "/app/lojas/estoque",
+      "/app/lojas/pdv",
+      "/app/lojas/caixa",
+      "/app/lojas/vendas",
+    ]);
     expect(lojas({ ...on, effectiveRole: "owner" })).toBeDefined();
   });
-  test("employee e contabilista não veem Lojas nesta etapa", () => {
+  test("Etapa 2: funcionário vê só PDV, Caixa e Vendas; contabilista não vê Lojas", () => {
     const on = { ...base, enabledModules: ["core", "retail_core"] as NavContext["enabledModules"] };
-    expect(lojas({ ...on, effectiveRole: "employee" })).toBeUndefined();
+    expect(lojas({ ...on, effectiveRole: "employee" })?.items.map((i) => i.to)).toEqual([
+      "/app/lojas/pdv",
+      "/app/lojas/caixa",
+      "/app/lojas/vendas",
+    ]);
     expect(lojas({ ...on, effectiveRole: "accountant" })).toBeUndefined();
+  });
+  test("funcionário sem o módulo não vê o grupo Loja", () => {
+    expect(lojas({ ...base, effectiveRole: "employee" })).toBeUndefined();
   });
 });

@@ -31,6 +31,8 @@ import {
   Factory,
   ShoppingCart,
   Store,
+  Wallet,
+  ReceiptText,
 } from "lucide-react";
 import { isModuleEnabled, type BusinessVertical, type ModuleKey } from "@/lib/locale";
 import type { AppRole } from "@/lib/auth";
@@ -160,6 +162,13 @@ function superAdminGlobalGroups(): NavGroup[] {
   ];
 }
 
+/** Operação de loja (Etapa 2), partilhada por gestores e funcionários. */
+const RETAIL_OPERATION_ITEMS: NavItem[] = [
+  { to: "/app/lojas/pdv", label: "PDV", icon: ShoppingCart, module: "retail_core" },
+  { to: "/app/lojas/caixa", label: "Caixa", icon: Wallet, module: "retail_core" },
+  { to: "/app/lojas/vendas", label: "Vendas", icon: ReceiptText, module: "retail_core" },
+];
+
 function employeeGroups(employeeHasVehicle: boolean): NavGroup[] {
   const groups: NavGroup[] = [
     {
@@ -184,6 +193,8 @@ function employeeGroups(employeeHasVehicle: boolean): NavGroup[] {
       ],
     },
   ];
+  // Lojas · Etapa 2: o funcionário opera PDV, Caixa e Vendas (só das lojas a que está vinculado — RLS/RPC).
+  groups.push({ id: "lojas", label: "Loja", items: [...RETAIL_OPERATION_ITEMS] });
   if (employeeHasVehicle) {
     groups.push({
       id: "frota",
@@ -263,7 +274,7 @@ function managerGroups(args: { superAdminOperating: boolean; vertical: BusinessV
     },
     { id: "administracao", label: "Administração", items: [{ to: "/app/empresa", label: "Empresa", icon: Building2 }] },
     { id: "frota", label: "Frota", items: [{ to: "/app/frota", label: "Frota", icon: Car, module: "fleet" }] },
-    // Vertical Lojas — Etapa 1 só para manager/owner/super_admin (employee ganha PDV na Etapa 2).
+    // Vertical Lojas — gestão (Etapa 1) + operação de caixa e PDV (Etapa 2).
     {
       id: "lojas",
       label: "Lojas",
@@ -272,6 +283,7 @@ function managerGroups(args: { superAdminOperating: boolean; vertical: BusinessV
         { to: "/app/lojas/produtos", label: "Produtos", icon: Package, module: "retail_core" },
         { to: "/app/lojas/categorias", label: "Categorias", icon: Tags, module: "retail_core" },
         { to: "/app/lojas/estoque", label: "Estoque", icon: Warehouse, module: "retail_core" },
+        ...RETAIL_OPERATION_ITEMS,
       ],
     },
     {
