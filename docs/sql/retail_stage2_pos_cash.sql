@@ -1,5 +1,8 @@
+-- SQL da Etapa 2 de Lojas (Caixa e PDV). NÃO é lido pelo Drizzle: deve ser aplicado pela
+-- ferramenta de migração do Lovable ("aplique o SQL de docs/sql/retail_stage2_pos_cash.sql"),
+-- que gera a migração oficial em drizzle/migrations. É idempotente (pode correr mais de uma vez).
 -- ETAPA 2: VERTICAL LOJAS (RETAIL) — CAIXA E PDV
--- Aditiva: não altera tabelas nem regras fora do retail. Toda a escrita passa por RPC
+-- Aditiva e IDEMPOTENTE (pode ser executada mais de uma vez sem erro): não altera tabelas nem regras fora do retail. Toda a escrita passa por RPC
 -- SECURITY DEFINER; o frontend só lê (RLS por empresa, módulo e loja).
 
 -- 1. Limite de desconto por loja (funcionário). Gestor/owner/super admin não têm limite.
@@ -16,7 +19,7 @@ ALTER TABLE public.retail_stock_movements ADD COLUMN IF NOT EXISTS sale_id uuid;
 CREATE INDEX IF NOT EXISTS idx_retail_stock_movements_sale ON public.retail_stock_movements(sale_id);
 
 -- 3. Sessões de caixa (uma aberta por loja)
-CREATE TABLE public.retail_cash_sessions (
+CREATE TABLE IF NOT EXISTS public.retail_cash_sessions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   company_id uuid NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
   unit_id uuid NOT NULL REFERENCES public.company_units(id) ON DELETE NO ACTION,
@@ -37,16 +40,16 @@ CREATE TABLE public.retail_cash_sessions (
     (status = 'aberta' AND closed_at IS NULL) OR (status = 'fechada' AND closed_at IS NOT NULL AND counted_cash IS NOT NULL)
   )
 );
-CREATE UNIQUE INDEX uq_retail_cash_sessions_one_open ON public.retail_cash_sessions(unit_id) WHERE status = 'aberta';
-CREATE INDEX idx_retail_cash_sessions_company_opened ON public.retail_cash_sessions(company_id, opened_at DESC);
-CREATE INDEX idx_retail_cash_sessions_unit ON public.retail_cash_sessions(unit_id, opened_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_retail_cash_sessions_one_open ON public.retail_cash_sessions(unit_id) WHERE status = 'aberta';
+CREATE INDEX IF NOT EXISTS idx_retail_cash_sessions_company_opened ON public.retail_cash_sessions(company_id, opened_at DESC);
+CREATE INDEX IF NOT EXISTS idx_retail_cash_sessions_unit ON public.retail_cash_sessions(unit_id, opened_at DESC);
 GRANT SELECT ON public.retail_cash_sessions TO authenticated;
 GRANT ALL ON public.retail_cash_sessions TO service_role;
-CREATE TRIGGER trg_retail_cash_sessions_updated BEFORE UPDATE ON public.retail_cash_sessions
+CREATE OR REPLACE TRIGGER trg_retail_cash_sessions_updated BEFORE UPDATE ON public.retail_cash_sessions
 FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
 
 -- 4. Sangrias e suprimentos (imutáveis)
-CREATE TABLE public.retail_cash_movements (
+CREATE TABLE IF NOT EXISTS public.retail_cash_movements (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   company_id uuid NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
   unit_id uuid NOT NULL REFERENCES public.company_units(id) ON DELETE NO ACTION,
@@ -58,14 +61,14 @@ CREATE TABLE public.retail_cash_movements (
   idempotency_key text,
   created_at timestamptz NOT NULL DEFAULT now()
 );
-CREATE UNIQUE INDEX uq_retail_cash_movements_idempotency ON public.retail_cash_movements(company_id, idempotency_key) WHERE idempotency_key IS NOT NULL;
-CREATE INDEX idx_retail_cash_movements_session ON public.retail_cash_movements(session_id);
-CREATE INDEX idx_retail_cash_movements_company ON public.retail_cash_movements(company_id, created_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_retail_cash_movements_idempotency ON public.retail_cash_movements(company_id, idempotency_key) WHERE idempotency_key IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_retail_cash_movements_session ON public.retail_cash_movements(session_id);
+CREATE INDEX IF NOT EXISTS idx_retail_cash_movements_company ON public.retail_cash_movements(company_id, created_at DESC);
 GRANT SELECT ON public.retail_cash_movements TO authenticated;
 GRANT ALL ON public.retail_cash_movements TO service_role;
 
 -- 5. Numeração de vendas por loja e ano (não fiscal)
-CREATE TABLE public.retail_unit_counters (
+CREATE TABLE IF NOT EXISTS public.retail_unit_counters (
   unit_id uuid NOT NULL REFERENCES public.company_units(id) ON DELETE CASCADE,
   year int NOT NULL,
   last_number int NOT NULL DEFAULT 0 CHECK (last_number >= 0),
@@ -75,7 +78,7 @@ GRANT ALL ON public.retail_unit_counters TO service_role;
 -- authenticated não tem acesso: só a RPC lê/escreve.
 
 -- 6. Vendas
-CREATE TABLE public.retail_sales (
+CREATE TABLE IF NOT EXISTS public.retail_sales (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   company_id uuid NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
   unit_id uuid NOT NULL REFERENCES public.company_units(id) ON DELETE NO ACTION,
@@ -103,21 +106,22 @@ CREATE TABLE public.retail_sales (
     (status = 'concluida' AND cancelled_at IS NULL) OR (status = 'cancelada' AND cancelled_at IS NOT NULL AND length(trim(COALESCE(cancel_reason,''))) > 0)
   )
 );
-CREATE UNIQUE INDEX uq_retail_sales_unit_year_number ON public.retail_sales(unit_id, year, number);
-CREATE UNIQUE INDEX uq_retail_sales_idempotency ON public.retail_sales(company_id, idempotency_key) WHERE idempotency_key IS NOT NULL;
-CREATE INDEX idx_retail_sales_company_created ON public.retail_sales(company_id, created_at DESC);
-CREATE INDEX idx_retail_sales_unit_created ON public.retail_sales(unit_id, created_at DESC);
-CREATE INDEX idx_retail_sales_session ON public.retail_sales(session_id);
-CREATE INDEX idx_retail_sales_seller ON public.retail_sales(seller_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_retail_sales_unit_year_number ON public.retail_sales(unit_id, year, number);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_retail_sales_idempotency ON public.retail_sales(company_id, idempotency_key) WHERE idempotency_key IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_retail_sales_company_created ON public.retail_sales(company_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_retail_sales_unit_created ON public.retail_sales(unit_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_retail_sales_session ON public.retail_sales(session_id);
+CREATE INDEX IF NOT EXISTS idx_retail_sales_seller ON public.retail_sales(seller_id);
 GRANT SELECT ON public.retail_sales TO authenticated;
 GRANT ALL ON public.retail_sales TO service_role;
-CREATE TRIGGER trg_retail_sales_updated BEFORE UPDATE ON public.retail_sales
+CREATE OR REPLACE TRIGGER trg_retail_sales_updated BEFORE UPDATE ON public.retail_sales
 FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
 
+ALTER TABLE public.retail_stock_movements DROP CONSTRAINT IF EXISTS retail_stock_movements_sale_fk;
 ALTER TABLE public.retail_stock_movements
   ADD CONSTRAINT retail_stock_movements_sale_fk FOREIGN KEY (sale_id) REFERENCES public.retail_sales(id) ON DELETE NO ACTION;
 
-CREATE TABLE public.retail_sale_items (
+CREATE TABLE IF NOT EXISTS public.retail_sale_items (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   company_id uuid NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
   unit_id uuid NOT NULL REFERENCES public.company_units(id) ON DELETE NO ACTION,
@@ -129,13 +133,13 @@ CREATE TABLE public.retail_sale_items (
   unit_price numeric(12,2) NOT NULL CHECK (unit_price >= 0),
   line_total numeric(12,2) NOT NULL CHECK (line_total >= 0)
 );
-CREATE INDEX idx_retail_sale_items_sale ON public.retail_sale_items(sale_id);
-CREATE INDEX idx_retail_sale_items_product ON public.retail_sale_items(product_id);
-CREATE INDEX idx_retail_sale_items_company ON public.retail_sale_items(company_id);
+CREATE INDEX IF NOT EXISTS idx_retail_sale_items_sale ON public.retail_sale_items(sale_id);
+CREATE INDEX IF NOT EXISTS idx_retail_sale_items_product ON public.retail_sale_items(product_id);
+CREATE INDEX IF NOT EXISTS idx_retail_sale_items_company ON public.retail_sale_items(company_id);
 GRANT SELECT ON public.retail_sale_items TO authenticated;
 GRANT ALL ON public.retail_sale_items TO service_role;
 
-CREATE TABLE public.retail_sale_payments (
+CREATE TABLE IF NOT EXISTS public.retail_sale_payments (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   company_id uuid NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
   unit_id uuid NOT NULL REFERENCES public.company_units(id) ON DELETE NO ACTION,
@@ -143,8 +147,8 @@ CREATE TABLE public.retail_sale_payments (
   method text NOT NULL CHECK (method IN ('dinheiro','cartao_debito','cartao_credito','pix','mbway','multibanco','transferencia','outro')),
   amount numeric(12,2) NOT NULL CHECK (amount > 0)
 );
-CREATE INDEX idx_retail_sale_payments_sale ON public.retail_sale_payments(sale_id);
-CREATE INDEX idx_retail_sale_payments_company ON public.retail_sale_payments(company_id);
+CREATE INDEX IF NOT EXISTS idx_retail_sale_payments_sale ON public.retail_sale_payments(sale_id);
+CREATE INDEX IF NOT EXISTS idx_retail_sale_payments_company ON public.retail_sale_payments(company_id);
 GRANT SELECT ON public.retail_sale_payments TO authenticated;
 GRANT ALL ON public.retail_sale_payments TO service_role;
 
@@ -161,11 +165,11 @@ BEGIN
   END IF;
   RETURN OLD;
 END $$;
-CREATE TRIGGER trg_retail_sale_items_immutable BEFORE UPDATE OR DELETE ON public.retail_sale_items
+CREATE OR REPLACE TRIGGER trg_retail_sale_items_immutable BEFORE UPDATE OR DELETE ON public.retail_sale_items
 FOR EACH ROW EXECUTE FUNCTION public.trg_retail_immutable_rows();
-CREATE TRIGGER trg_retail_sale_payments_immutable BEFORE UPDATE OR DELETE ON public.retail_sale_payments
+CREATE OR REPLACE TRIGGER trg_retail_sale_payments_immutable BEFORE UPDATE OR DELETE ON public.retail_sale_payments
 FOR EACH ROW EXECUTE FUNCTION public.trg_retail_immutable_rows();
-CREATE TRIGGER trg_retail_cash_movements_immutable BEFORE UPDATE OR DELETE ON public.retail_cash_movements
+CREATE OR REPLACE TRIGGER trg_retail_cash_movements_immutable BEFORE UPDATE OR DELETE ON public.retail_cash_movements
 FOR EACH ROW EXECUTE FUNCTION public.trg_retail_immutable_rows();
 
 CREATE OR REPLACE FUNCTION public.trg_retail_sales_guard()
@@ -188,7 +192,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END $$;
-CREATE TRIGGER trg_retail_sales_guard BEFORE UPDATE OR DELETE ON public.retail_sales
+CREATE OR REPLACE TRIGGER trg_retail_sales_guard BEFORE UPDATE OR DELETE ON public.retail_sales
 FOR EACH ROW EXECUTE FUNCTION public.trg_retail_sales_guard();
 
 -- 8. Integridade entre empresas (defesa extra além das RPCs)
@@ -202,15 +206,15 @@ BEGIN
   END IF;
   RETURN NEW;
 END $$;
-CREATE TRIGGER trg_retail_cash_sessions_company BEFORE INSERT ON public.retail_cash_sessions
+CREATE OR REPLACE TRIGGER trg_retail_cash_sessions_company BEFORE INSERT ON public.retail_cash_sessions
 FOR EACH ROW EXECUTE FUNCTION public.trg_retail_unit_company_check();
-CREATE TRIGGER trg_retail_cash_movements_company BEFORE INSERT ON public.retail_cash_movements
+CREATE OR REPLACE TRIGGER trg_retail_cash_movements_company BEFORE INSERT ON public.retail_cash_movements
 FOR EACH ROW EXECUTE FUNCTION public.trg_retail_unit_company_check();
-CREATE TRIGGER trg_retail_sales_company BEFORE INSERT ON public.retail_sales
+CREATE OR REPLACE TRIGGER trg_retail_sales_company BEFORE INSERT ON public.retail_sales
 FOR EACH ROW EXECUTE FUNCTION public.trg_retail_unit_company_check();
-CREATE TRIGGER trg_retail_sale_items_company BEFORE INSERT ON public.retail_sale_items
+CREATE OR REPLACE TRIGGER trg_retail_sale_items_company BEFORE INSERT ON public.retail_sale_items
 FOR EACH ROW EXECUTE FUNCTION public.trg_retail_unit_company_check();
-CREATE TRIGGER trg_retail_sale_payments_company BEFORE INSERT ON public.retail_sale_payments
+CREATE OR REPLACE TRIGGER trg_retail_sale_payments_company BEFORE INSERT ON public.retail_sale_payments
 FOR EACH ROW EXECUTE FUNCTION public.trg_retail_unit_company_check();
 
 -- 9. RLS: leitura por empresa + módulo; gestor vê todas as lojas, funcionário só as dele.
@@ -221,22 +225,27 @@ ALTER TABLE public.retail_sales ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.retail_sale_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.retail_sale_payments ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS retail_cash_sessions_select ON public.retail_cash_sessions;
 CREATE POLICY retail_cash_sessions_select ON public.retail_cash_sessions FOR SELECT TO authenticated
 USING (public.is_super_admin(auth.uid()) OR (public.company_module_enabled(company_id,'retail_core') AND (
   public.is_company_manager(auth.uid(), company_id)
   OR (public.is_company_member(auth.uid(), company_id) AND public.is_unit_member(auth.uid(), unit_id)))));
+DROP POLICY IF EXISTS retail_cash_movements_select ON public.retail_cash_movements;
 CREATE POLICY retail_cash_movements_select ON public.retail_cash_movements FOR SELECT TO authenticated
 USING (public.is_super_admin(auth.uid()) OR (public.company_module_enabled(company_id,'retail_core') AND (
   public.is_company_manager(auth.uid(), company_id)
   OR (public.is_company_member(auth.uid(), company_id) AND public.is_unit_member(auth.uid(), unit_id)))));
+DROP POLICY IF EXISTS retail_sales_select ON public.retail_sales;
 CREATE POLICY retail_sales_select ON public.retail_sales FOR SELECT TO authenticated
 USING (public.is_super_admin(auth.uid()) OR (public.company_module_enabled(company_id,'retail_core') AND (
   public.is_company_manager(auth.uid(), company_id)
   OR (public.is_company_member(auth.uid(), company_id) AND public.is_unit_member(auth.uid(), unit_id)))));
+DROP POLICY IF EXISTS retail_sale_items_select ON public.retail_sale_items;
 CREATE POLICY retail_sale_items_select ON public.retail_sale_items FOR SELECT TO authenticated
 USING (public.is_super_admin(auth.uid()) OR (public.company_module_enabled(company_id,'retail_core') AND (
   public.is_company_manager(auth.uid(), company_id)
   OR (public.is_company_member(auth.uid(), company_id) AND public.is_unit_member(auth.uid(), unit_id)))));
+DROP POLICY IF EXISTS retail_sale_payments_select ON public.retail_sale_payments;
 CREATE POLICY retail_sale_payments_select ON public.retail_sale_payments FOR SELECT TO authenticated
 USING (public.is_super_admin(auth.uid()) OR (public.company_module_enabled(company_id,'retail_core') AND (
   public.is_company_manager(auth.uid(), company_id)
