@@ -17,6 +17,8 @@ export type RetailUnit = {
   phone: string | null;
   email: string | null;
   active: boolean;
+  /** Etapa 2: desconto máximo (%) que um funcionário pode dar no PDV. */
+  max_discount_pct?: number;
 };
 export type RetailCategory = { id: string; company_id: string; name: string; active: boolean };
 export type RetailProduct = {
@@ -94,8 +96,8 @@ export function formatQty(value: number | null | undefined, locale: string) {
 export function retailErrorMessage(err: unknown): string {
   const e = err as { code?: string; message?: string } | null;
   if (!e) return "Erro desconhecido";
-  if (e.code === "23503" && /retail_stock_(movements|balances)/.test(e.message ?? ""))
-    return "Este registo tem histórico de estoque e não pode ser excluído. Desative-o.";
+  if (e.code === "23503" && /retail_(stock_movements|stock_balances|cash_sessions|cash_movements|sales|sale_items|sale_payments)/.test(e.message ?? ""))
+    return "Este registo tem histórico (estoque, caixa ou vendas) e não pode ser excluído. Desative-o.";
   if (e.code === "23505") return "Já existe um registo com este código, nome, SKU ou código de barras.";
   if (e.code === "42501") return e.message || "Sem permissão.";
   return e.message || "Erro ao gravar";
@@ -203,3 +205,216 @@ export async function retailStockMove(args: {
 }
 
 export const RETAIL_ROLES = ["manager", "owner", "super_admin"] as const;
+
+// ---------------------------------------------------------------------------
+// Etapa 2 · Caixa e PDV. Toda a escrita passa pelas RPCs retail_cash_* e
+// retail_sale_*; o preço vem sempre do cadastro (o cliente não envia preços).
+// ---------------------------------------------------------------------------
+
+/** Quem opera PDV/Caixa/Vendas: gestores e funcionários vinculados à loja (RLS/RPC decidem a loja). */
+export const RETAIL_OPERATOR_ROLES = ["manager", "owner", "super_admin", "employee"] as const;
+
+export type PaymentMethod =
+  | "dinheiro"
+  | "cartao_debito"
+  | "cartao_credito"
+  | "pix"
+  | "mbway"
+  | "multibanco"
+  | "transferencia"
+  | "outro";
+
+export const PAYMENT_LABEL: Record<PaymentMethod, string> = {
+  dinheiro: "Dinheiro",
+  cartao_debito: "Cartão de débito",
+  cartao_credito: "Cartão de crédito",
+  pix: "PIX",
+  mbway: "MB WAY",
+  multibanco: "Multibanco",
+  transferencia: "Transferência",
+  outro: "Outro",
+};
+
+/** Formas de pagamento oferecidas por país (o banco aceita todas). */
+export function paymentMethodsFor(country: string): PaymentMethod[] {
+  return country === "BR"
+    ? ["dinheiro", "pix", "cartao_debito", "cartao_credito", "transferencia", "outro"]
+    : ["dinheiro", "cartao_debito", "cartao_credito", "mbway", "multibanco", "transferencia", "outro"];
+}
+
+export type CashSession = {
+  id: string;
+  company_id: string;
+  unit_id: string;
+  status: "aberta" | "fechada";
+  opening_amount: number;
+  opened_by: string | null;
+  opened_at: string;
+  closed_by: string | null;
+  closed_at: string | null;
+  expected_cash: number | null;
+  counted_cash: number | null;
+  difference: number | null;
+  totals: CashTotals | null;
+  notes: string | null;
+};
+export type CashTotals = {
+  opening_amount: number;
+  sales_count: number;
+  sales_total: number;
+  cancelled_count: number;
+  by_method: Partial<Record<PaymentMethod, number>>;
+  change_total: number;
+  sangria_total: number;
+  suprimento_total: number;
+  expected_cash: number;
+};
+export type CashMovement = {
+  id: string;
+  session_id: string;
+  kind: "sangria" | "suprimento";
+  amount: number;
+  reason: string;
+  user_id: string | null;
+  created_at: string;
+};
+export type RetailSale = {
+  id: string;
+  company_id: string;
+  unit_id: string;
+  session_id: string;
+  number: number;
+  code: string;
+  seller_id: string | null;
+  customer_name: string | null;
+  customer_phone: string | null;
+  customer_email: string | null;
+  customer_tax_id: string | null;
+  subtotal: number;
+  discount: number;
+  total: number;
+  paid_total: number;
+  change_amount: number;
+  status: "concluida" | "cancelada";
+  cancelled_at: string | null;
+  cancel_reason: string | null;
+  created_at: string;
+};
+export type RetailSaleItem = {
+  id: string;
+  sale_id: string;
+  product_id: string;
+  product_name: string;
+  product_unit: string;
+  quantity: number;
+  unit_price: number;
+  line_total: number;
+};
+export type RetailSalePayment = { id: string; sale_id: string; method: PaymentMethod; amount: number };
+
+const num = (v: unknown) => (v == null ? null : Number(v));
+
+/** Caixa aberto de uma loja (ou null). */
+export function useOpenCashSession(unitId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["retail-open-session", unitId],
+    enabled: !!unitId,
+    queryFn: async () => {
+      const { data, error } = await rdb("retail_cash_sessions")
+        .select("*")
+        .eq("unit_id", unitId!)
+        .eq("status", "aberta")
+        .maybeSingle();
+      if (error) throw error;
+      return data ? normalizeSession(data as CashSession) : null;
+    },
+  });
+}
+
+export function normalizeSession(s: CashSession): CashSession {
+  return {
+    ...s,
+    opening_amount: Number(s.opening_amount),
+    expected_cash: num(s.expected_cash),
+    counted_cash: num(s.counted_cash),
+    difference: num(s.difference),
+  };
+}
+
+async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)(fn, args);
+  if (error) throw error;
+  return data as T;
+}
+
+export const retailCashOpen = (unitId: string, openingAmount: number, notes?: string) =>
+  rpc<{ success: boolean; session_id: string }>("retail_cash_open", { _unit_id: unitId, _opening_amount: openingAmount, _notes: notes ?? null });
+
+export const retailCashMove = (args: { sessionId: string; kind: "sangria" | "suprimento"; amount: number; reason: string; idempotencyKey: string }) =>
+  rpc<{ success: boolean; idempotent_replay: boolean }>("retail_cash_move", {
+    _session_id: args.sessionId,
+    _kind: args.kind,
+    _amount: args.amount,
+    _reason: args.reason,
+    _idempotency_key: args.idempotencyKey,
+  });
+
+export const retailCashTotals = (sessionId: string) => rpc<CashTotals>("retail_cash_session_totals", { _session_id: sessionId });
+
+export const retailCashClose = (sessionId: string, countedCash: number, notes?: string) =>
+  rpc<{ success: boolean; expected_cash: number; counted_cash: number; difference: number; totals: CashTotals }>("retail_cash_close", {
+    _session_id: sessionId,
+    _counted_cash: countedCash,
+    _notes: notes ?? null,
+  });
+
+export type SaleCartLine = { productId: string; quantity: number };
+export type SalePaymentInput = { method: PaymentMethod; amount: number };
+export type SaleCustomer = { name?: string; phone?: string; email?: string; tax_id?: string };
+
+export const retailSaleCreate = (args: {
+  unitId: string;
+  lines: SaleCartLine[];
+  payments: SalePaymentInput[];
+  discount: number;
+  customer?: SaleCustomer | null;
+  idempotencyKey: string;
+}) =>
+  rpc<{ success: boolean; idempotent_replay: boolean; sale_id: string; code?: string; total?: number; change_amount?: number }>("retail_sale_create", {
+    _unit_id: args.unitId,
+    _items: args.lines.map((l) => ({ product_id: l.productId, quantity: l.quantity })),
+    _payments: args.payments.map((p) => ({ method: p.method, amount: p.amount })),
+    _discount: args.discount,
+    _customer: args.customer ?? null,
+    _idempotency_key: args.idempotencyKey,
+  });
+
+export const retailSaleCancel = (saleId: string, reason: string) =>
+  rpc<{ success: boolean; already_cancelled: boolean }>("retail_sale_cancel", { _sale_id: saleId, _reason: reason });
+
+/** Arredonda a 2 casas como o banco (evita 0.1 + 0.2). */
+export const round2 = (v: number) => Math.round((v + Number.EPSILON) * 100) / 100;
+
+/**
+ * Cálculo do carrinho igual ao do banco (`retail_sale_create`), só para mostrar na tela.
+ * O valor que vale é sempre o devolvido pela RPC.
+ */
+export function computeCart(
+  lines: Array<{ quantity: number; price: number }>,
+  discount: number,
+  payments: SalePaymentInput[],
+) {
+  const subtotal = round2(lines.reduce((s, l) => s + round2(l.quantity * l.price), 0));
+  const d = round2(Math.max(0, discount || 0));
+  const total = round2(Math.max(0, subtotal - d));
+  const paid = round2(payments.reduce((s, p) => s + (p.amount > 0 ? p.amount : 0), 0));
+  const cash = round2(payments.filter((p) => p.method === "dinheiro").reduce((s, p) => s + (p.amount > 0 ? p.amount : 0), 0));
+  const change = round2(Math.max(0, paid - total));
+  const problems: string[] = [];
+  if (!lines.length) problems.push("Adicione pelo menos um produto.");
+  if (d > subtotal) problems.push("O desconto não pode ser maior que o subtotal.");
+  if (paid < total) problems.push("Falta pagar " + round2(total - paid).toFixed(2) + ".");
+  if (change > cash) problems.push("O troco só pode sair do pagamento em dinheiro.");
+  return { subtotal, discount: d, total, paid, cash, change, problems, ok: problems.length === 0 };
+}

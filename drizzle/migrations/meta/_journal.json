@@ -57,6 +57,13 @@
       "when": 1793988705715,
       "tag": "0007_retail_core_stage1",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793991965086,
+      "tag": "0008_retail_pos_cash_stage2",
+      "breakpoints": true
     }
   ]
 }
