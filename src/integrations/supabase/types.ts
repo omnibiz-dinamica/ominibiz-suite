@@ -643,6 +643,68 @@ export type Database = {
           },
         ]
       }
+      company_units: {
+        Row: {
+          active: boolean
+          address: string | null
+          city: string | null
+          code: string
+          company_id: string
+          country: string | null
+          created_at: string
+          email: string | null
+          id: string
+          legal_name: string | null
+          name: string
+          phone: string | null
+          postal_code: string | null
+          tax_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          address?: string | null
+          city?: string | null
+          code: string
+          company_id: string
+          country?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          legal_name?: string | null
+          name: string
+          phone?: string | null
+          postal_code?: string | null
+          tax_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          address?: string | null
+          city?: string | null
+          code?: string
+          company_id?: string
+          country?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          legal_name?: string | null
+          name?: string
+          phone?: string | null
+          postal_code?: string | null
+          tax_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_units_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_audit_events: {
         Row: {
           actor_id: string | null
@@ -3299,6 +3361,237 @@ export type Database = {
           },
         ]
       }
+      retail_product_categories: {
+        Row: {
+          active: boolean
+          company_id: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          company_id: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          company_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retail_product_categories_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      retail_products: {
+        Row: {
+          active: boolean
+          barcode: string | null
+          category_id: string | null
+          company_id: string
+          cost: number | null
+          created_at: string
+          id: string
+          name: string
+          price: number
+          sku: string | null
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          barcode?: string | null
+          category_id?: string | null
+          company_id: string
+          cost?: number | null
+          created_at?: string
+          id?: string
+          name: string
+          price?: number
+          sku?: string | null
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          barcode?: string | null
+          category_id?: string | null
+          company_id?: string
+          cost?: number | null
+          created_at?: string
+          id?: string
+          name?: string
+          price?: number
+          sku?: string | null
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retail_products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "retail_product_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retail_products_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      retail_stock_balances: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          product_id: string
+          quantity: number
+          unit_id: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          product_id: string
+          quantity?: number
+          unit_id: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          product_id?: string
+          quantity?: number
+          unit_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retail_stock_balances_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retail_stock_balances_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "retail_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retail_stock_balances_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "company_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      retail_stock_movements: {
+        Row: {
+          balance_after: number | null
+          company_id: string
+          created_at: string
+          id: string
+          idempotency_key: string | null
+          kind: string
+          product_id: string
+          quantity: number
+          reason: string
+          related_unit_id: string | null
+          transfer_group_id: string | null
+          unit_id: string
+          user_id: string | null
+        }
+        Insert: {
+          balance_after?: number | null
+          company_id: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string | null
+          kind: string
+          product_id: string
+          quantity: number
+          reason: string
+          related_unit_id?: string | null
+          transfer_group_id?: string | null
+          unit_id: string
+          user_id?: string | null
+        }
+        Update: {
+          balance_after?: number | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string | null
+          kind?: string
+          product_id?: string
+          quantity?: number
+          reason?: string
+          related_unit_id?: string | null
+          transfer_group_id?: string | null
+          unit_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retail_stock_movements_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retail_stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "retail_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retail_stock_movements_related_unit_id_fkey"
+            columns: ["related_unit_id"]
+            isOneToOne: false
+            referencedRelation: "company_units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retail_stock_movements_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "company_units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retail_stock_movements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_destinations: {
         Row: {
           code: string
@@ -5342,6 +5635,58 @@ export type Database = {
           },
         ]
       }
+      user_unit_assignments: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          is_primary: boolean
+          unit_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          unit_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          unit_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_unit_assignments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_unit_assignments_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "company_units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_unit_assignments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vacation_audit: {
         Row: {
           action: string
@@ -6425,6 +6770,10 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_unit_member: {
+        Args: { _unit_id: string; _user_id: string }
+        Returns: boolean
+      }
       manager_request_information: {
         Args: { _message: string; _ticket_id: string }
         Returns: undefined
@@ -7534,6 +7883,18 @@ export type Database = {
       resolve_vacation_approver: {
         Args: { _company_id: string; _user_id: string }
         Returns: string
+      }
+      retail_stock_move: {
+        Args: {
+          _idempotency_key?: string
+          _kind: string
+          _product_id: string
+          _quantity: number
+          _reason: string
+          _related_unit_id?: string
+          _unit_id: string
+        }
+        Returns: Json
       }
       return_support_ticket_to_manager: {
         Args: { _reason: string; _ticket_id: string }
