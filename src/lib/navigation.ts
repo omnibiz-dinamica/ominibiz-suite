@@ -30,6 +30,7 @@ import {
   Tags,
   Factory,
   ShoppingCart,
+  Store,
 } from "lucide-react";
 import { isModuleEnabled, type BusinessVertical, type ModuleKey } from "@/lib/locale";
 import type { AppRole } from "@/lib/auth";
@@ -262,6 +263,17 @@ function managerGroups(args: { superAdminOperating: boolean; vertical: BusinessV
     },
     { id: "administracao", label: "Administração", items: [{ to: "/app/empresa", label: "Empresa", icon: Building2 }] },
     { id: "frota", label: "Frota", items: [{ to: "/app/frota", label: "Frota", icon: Car, module: "fleet" }] },
+    // Vertical Lojas — Etapa 1 só para manager/owner/super_admin (employee ganha PDV na Etapa 2).
+    {
+      id: "lojas",
+      label: "Lojas",
+      items: [
+        { to: "/app/lojas", label: "Lojas", icon: Store, module: "retail_core" },
+        { to: "/app/lojas/produtos", label: "Produtos", icon: Package, module: "retail_core" },
+        { to: "/app/lojas/categorias", label: "Categorias", icon: Tags, module: "retail_core" },
+        { to: "/app/lojas/estoque", label: "Estoque", icon: Warehouse, module: "retail_core" },
+      ],
+    },
     {
       id: "inteligencia",
       label: "Inteligência",
