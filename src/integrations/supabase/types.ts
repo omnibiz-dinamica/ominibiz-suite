@@ -230,6 +230,7 @@ export type Database = {
           hourly_rate: number | null
           id: string
           instructions: string | null
+          is_foreign: boolean
           mixed_base_fixed: number | null
           mixed_extra_hour_rate: number | null
           mixed_included_minutes: number | null
@@ -260,6 +261,7 @@ export type Database = {
           hourly_rate?: number | null
           id?: string
           instructions?: string | null
+          is_foreign?: boolean
           mixed_base_fixed?: number | null
           mixed_extra_hour_rate?: number | null
           mixed_included_minutes?: number | null
@@ -290,6 +292,7 @@ export type Database = {
           hourly_rate?: number | null
           id?: string
           instructions?: string | null
+          is_foreign?: boolean
           mixed_base_fixed?: number | null
           mixed_extra_hour_rate?: number | null
           mixed_included_minutes?: number | null
@@ -560,6 +563,8 @@ export type Database = {
           geo_required_stop: boolean
           manager_approver_kind: Database["public"]["Enums"]["manager_approver_kind"]
           manager_approver_user_id: string | null
+          offline_punch_enabled: boolean
+          offline_punch_max_hours: number
           overtime_multiplier: number
           overtime_threshold_minutes: number
           updated_at: string
@@ -590,6 +595,8 @@ export type Database = {
           geo_required_stop?: boolean
           manager_approver_kind?: Database["public"]["Enums"]["manager_approver_kind"]
           manager_approver_user_id?: string | null
+          offline_punch_enabled?: boolean
+          offline_punch_max_hours?: number
           overtime_multiplier?: number
           overtime_threshold_minutes?: number
           updated_at?: string
@@ -620,6 +627,8 @@ export type Database = {
           geo_required_stop?: boolean
           manager_approver_kind?: Database["public"]["Enums"]["manager_approver_kind"]
           manager_approver_user_id?: string | null
+          offline_punch_enabled?: boolean
+          offline_punch_max_hours?: number
           overtime_multiplier?: number
           overtime_threshold_minutes?: number
           updated_at?: string
@@ -1019,46 +1028,70 @@ export type Database = {
           category: string
           company_id: string
           created_at: string
+          employee_action: string
+          employee_status: string
+          employee_visible: boolean
           file_name: string
           id: string
           mime_type: string | null
           notes: string | null
           profile_id: string
+          signature_placement: Json | null
+          signature_source: string | null
+          signed_at: string | null
+          signed_storage_path: string | null
           size_bytes: number | null
           storage_path: string
           updated_at: string
           uploaded_at: string
           uploaded_by: string | null
+          viewed_at: string | null
         }
         Insert: {
           category: string
           company_id: string
           created_at?: string
+          employee_action?: string
+          employee_status?: string
+          employee_visible?: boolean
           file_name: string
           id?: string
           mime_type?: string | null
           notes?: string | null
           profile_id: string
+          signature_placement?: Json | null
+          signature_source?: string | null
+          signed_at?: string | null
+          signed_storage_path?: string | null
           size_bytes?: number | null
           storage_path: string
           updated_at?: string
           uploaded_at?: string
           uploaded_by?: string | null
+          viewed_at?: string | null
         }
         Update: {
           category?: string
           company_id?: string
           created_at?: string
+          employee_action?: string
+          employee_status?: string
+          employee_visible?: boolean
           file_name?: string
           id?: string
           mime_type?: string | null
           notes?: string | null
           profile_id?: string
+          signature_placement?: Json | null
+          signature_source?: string | null
+          signed_at?: string | null
+          signed_storage_path?: string | null
           size_bytes?: number | null
           storage_path?: string
           updated_at?: string
           uploaded_at?: string
           uploaded_by?: string | null
+          viewed_at?: string | null
         }
         Relationships: [
           {
@@ -1203,6 +1236,10 @@ export type Database = {
           paid_at: string | null
           paid_by: string | null
           payment_status: string | null
+          payroll_included_at: string | null
+          payroll_included_by: string | null
+          payroll_month: number | null
+          payroll_year: number | null
           reason: string
           status: string
           updated_at: string
@@ -1224,6 +1261,10 @@ export type Database = {
           paid_at?: string | null
           paid_by?: string | null
           payment_status?: string | null
+          payroll_included_at?: string | null
+          payroll_included_by?: string | null
+          payroll_month?: number | null
+          payroll_year?: number | null
           reason: string
           status?: string
           updated_at?: string
@@ -1245,6 +1286,10 @@ export type Database = {
           paid_at?: string | null
           paid_by?: string | null
           payment_status?: string | null
+          payroll_included_at?: string | null
+          payroll_included_by?: string | null
+          payroll_month?: number | null
+          payroll_year?: number | null
           reason?: string
           status?: string
           updated_at?: string
@@ -1256,6 +1301,54 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_notes: {
+        Row: {
+          body: string
+          company_id: string
+          created_at: string
+          created_by: string
+          created_by_name: string | null
+          id: string
+          profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          company_id: string
+          created_at?: string
+          created_by?: string
+          created_by_name?: string | null
+          id?: string
+          profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          created_by_name?: string | null
+          id?: string
+          profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_notes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_notes_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1870,6 +1963,717 @@ export type Database = {
           },
         ]
       }
+      msg_automations: {
+        Row: {
+          clicks_count: number
+          company_id: string
+          created_at: string
+          deleted_at: string | null
+          folder: string | null
+          id: string
+          kind: string
+          name: string
+          runs_count: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          clicks_count?: number
+          company_id: string
+          created_at?: string
+          deleted_at?: string | null
+          folder?: string | null
+          id?: string
+          kind?: string
+          name: string
+          runs_count?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          clicks_count?: number
+          company_id?: string
+          created_at?: string
+          deleted_at?: string | null
+          folder?: string | null
+          id?: string
+          kind?: string
+          name?: string
+          runs_count?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "msg_automations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      msg_channels: {
+        Row: {
+          company_id: string
+          created_at: string
+          external_id: string | null
+          id: string
+          name: string
+          settings: Json
+          status: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          external_id?: string | null
+          id?: string
+          name: string
+          settings?: Json
+          status?: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          external_id?: string | null
+          id?: string
+          name?: string
+          settings?: Json
+          status?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "msg_channels_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      msg_contact_channels: {
+        Row: {
+          channel_id: string
+          company_id: string
+          contact_id: string
+          created_at: string
+          external_user_id: string
+          id: string
+          updated_at: string
+          window_expires_at: string | null
+        }
+        Insert: {
+          channel_id: string
+          company_id: string
+          contact_id: string
+          created_at?: string
+          external_user_id: string
+          id?: string
+          updated_at?: string
+          window_expires_at?: string | null
+        }
+        Update: {
+          channel_id?: string
+          company_id?: string
+          contact_id?: string
+          created_at?: string
+          external_user_id?: string
+          id?: string
+          updated_at?: string
+          window_expires_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "msg_contact_channels_company_id_channel_id_fkey"
+            columns: ["company_id", "channel_id"]
+            isOneToOne: false
+            referencedRelation: "msg_channels"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "msg_contact_channels_company_id_contact_id_fkey"
+            columns: ["company_id", "contact_id"]
+            isOneToOne: false
+            referencedRelation: "msg_contacts"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "msg_contact_channels_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      msg_contact_tags: {
+        Row: {
+          company_id: string
+          contact_id: string
+          created_at: string
+          tag_id: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          contact_id: string
+          created_at?: string
+          tag_id: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          contact_id?: string
+          created_at?: string
+          tag_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "msg_contact_tags_company_id_contact_id_fkey"
+            columns: ["company_id", "contact_id"]
+            isOneToOne: false
+            referencedRelation: "msg_contacts"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "msg_contact_tags_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "msg_contact_tags_company_id_tag_id_fkey"
+            columns: ["company_id", "tag_id"]
+            isOneToOne: false
+            referencedRelation: "msg_tags"
+            referencedColumns: ["company_id", "id"]
+          },
+        ]
+      }
+      msg_contacts: {
+        Row: {
+          avatar_url: string | null
+          company_id: string
+          created_at: string
+          email: string | null
+          id: string
+          last_interaction_at: string | null
+          name: string
+          opted_in: boolean
+          phone: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          company_id: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          last_interaction_at?: string | null
+          name: string
+          opted_in?: boolean
+          phone?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          company_id?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          last_interaction_at?: string | null
+          name?: string
+          opted_in?: boolean
+          phone?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "msg_contacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      msg_conversations: {
+        Row: {
+          assigned_to: string | null
+          automations_paused_until: string | null
+          channel_id: string
+          company_id: string
+          contact_id: string
+          created_at: string
+          id: string
+          status: string
+          unread: boolean
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          automations_paused_until?: string | null
+          channel_id: string
+          company_id: string
+          contact_id: string
+          created_at?: string
+          id?: string
+          status?: string
+          unread?: boolean
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          automations_paused_until?: string | null
+          channel_id?: string
+          company_id?: string
+          contact_id?: string
+          created_at?: string
+          id?: string
+          status?: string
+          unread?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "msg_conversations_company_id_channel_id_fkey"
+            columns: ["company_id", "channel_id"]
+            isOneToOne: false
+            referencedRelation: "msg_channels"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "msg_conversations_company_id_contact_id_fkey"
+            columns: ["company_id", "contact_id"]
+            isOneToOne: false
+            referencedRelation: "msg_contacts"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "msg_conversations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      msg_custom_fields: {
+        Row: {
+          archived_at: string | null
+          company_id: string
+          created_at: string
+          id: string
+          name: string
+          scope: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          name: string
+          scope?: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          scope?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "msg_custom_fields_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      msg_edges: {
+        Row: {
+          automation_id: string
+          company_id: string
+          created_at: string
+          from_node_id: string
+          from_port: string | null
+          id: string
+          to_node_id: string
+          updated_at: string
+        }
+        Insert: {
+          automation_id: string
+          company_id: string
+          created_at?: string
+          from_node_id: string
+          from_port?: string | null
+          id?: string
+          to_node_id: string
+          updated_at?: string
+        }
+        Update: {
+          automation_id?: string
+          company_id?: string
+          created_at?: string
+          from_node_id?: string
+          from_port?: string | null
+          id?: string
+          to_node_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "msg_edges_company_id_automation_id_fkey"
+            columns: ["company_id", "automation_id"]
+            isOneToOne: false
+            referencedRelation: "msg_automations"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "msg_edges_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "msg_edges_company_id_from_node_id_fkey"
+            columns: ["company_id", "from_node_id"]
+            isOneToOne: false
+            referencedRelation: "msg_nodes"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "msg_edges_company_id_to_node_id_fkey"
+            columns: ["company_id", "to_node_id"]
+            isOneToOne: false
+            referencedRelation: "msg_nodes"
+            referencedColumns: ["company_id", "id"]
+          },
+        ]
+      }
+      msg_executions: {
+        Row: {
+          automation_id: string
+          company_id: string
+          contact_id: string | null
+          created_at: string
+          current_node_id: string | null
+          id: string
+          started_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          automation_id: string
+          company_id: string
+          contact_id?: string | null
+          created_at?: string
+          current_node_id?: string | null
+          id?: string
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          automation_id?: string
+          company_id?: string
+          contact_id?: string | null
+          created_at?: string
+          current_node_id?: string | null
+          id?: string
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "msg_executions_company_id_automation_id_fkey"
+            columns: ["company_id", "automation_id"]
+            isOneToOne: false
+            referencedRelation: "msg_automations"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "msg_executions_company_id_contact_id_fkey"
+            columns: ["company_id", "contact_id"]
+            isOneToOne: false
+            referencedRelation: "msg_contacts"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "msg_executions_company_id_current_node_id_fkey"
+            columns: ["company_id", "current_node_id"]
+            isOneToOne: false
+            referencedRelation: "msg_nodes"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "msg_executions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      msg_field_values: {
+        Row: {
+          company_id: string
+          contact_id: string | null
+          created_at: string
+          field_id: string
+          id: string
+          updated_at: string
+          value: string | null
+        }
+        Insert: {
+          company_id: string
+          contact_id?: string | null
+          created_at?: string
+          field_id: string
+          id?: string
+          updated_at?: string
+          value?: string | null
+        }
+        Update: {
+          company_id?: string
+          contact_id?: string | null
+          created_at?: string
+          field_id?: string
+          id?: string
+          updated_at?: string
+          value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "msg_field_values_company_id_contact_id_fkey"
+            columns: ["company_id", "contact_id"]
+            isOneToOne: false
+            referencedRelation: "msg_contacts"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "msg_field_values_company_id_field_id_fkey"
+            columns: ["company_id", "field_id"]
+            isOneToOne: false
+            referencedRelation: "msg_custom_fields"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "msg_field_values_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      msg_messages: {
+        Row: {
+          company_id: string
+          content: Json
+          conversation_id: string
+          created_at: string
+          direction: string
+          id: string
+          sender: string
+          sent_at: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          content?: Json
+          conversation_id: string
+          created_at?: string
+          direction: string
+          id?: string
+          sender: string
+          sent_at?: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          content?: Json
+          conversation_id?: string
+          created_at?: string
+          direction?: string
+          id?: string
+          sender?: string
+          sent_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "msg_messages_company_id_conversation_id_fkey"
+            columns: ["company_id", "conversation_id"]
+            isOneToOne: false
+            referencedRelation: "msg_conversations"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "msg_messages_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      msg_nodes: {
+        Row: {
+          automation_id: string
+          company_id: string
+          config: Json
+          created_at: string
+          id: string
+          position_x: number
+          position_y: number
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          automation_id: string
+          company_id: string
+          config?: Json
+          created_at?: string
+          id?: string
+          position_x?: number
+          position_y?: number
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          automation_id?: string
+          company_id?: string
+          config?: Json
+          created_at?: string
+          id?: string
+          position_x?: number
+          position_y?: number
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "msg_nodes_company_id_automation_id_fkey"
+            columns: ["company_id", "automation_id"]
+            isOneToOne: false
+            referencedRelation: "msg_automations"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "msg_nodes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      msg_tags: {
+        Row: {
+          archived_at: string | null
+          company_id: string
+          created_at: string
+          folder: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          company_id: string
+          created_at?: string
+          folder?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          company_id?: string
+          created_at?: string
+          folder?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "msg_tags_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      msg_triggers: {
+        Row: {
+          automation_id: string
+          company_id: string
+          config: Json
+          created_at: string
+          id: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          automation_id: string
+          company_id: string
+          config?: Json
+          created_at?: string
+          id?: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          automation_id?: string
+          company_id?: string
+          config?: Json
+          created_at?: string
+          id?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "msg_triggers_company_id_automation_id_fkey"
+            columns: ["company_id", "automation_id"]
+            isOneToOne: false
+            referencedRelation: "msg_automations"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "msg_triggers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           body: string | null
@@ -1962,6 +2766,173 @@ export type Database = {
           {
             foreignKeyName: "notifications_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payroll_adjustments: {
+        Row: {
+          amount: number
+          company_id: string
+          created_at: string
+          created_by: string
+          employee_id: string
+          id: string
+          kind: string
+          origin_label: string | null
+          reason: string
+          target_month: number
+          target_year: number
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          amount: number
+          company_id: string
+          created_at?: string
+          created_by: string
+          employee_id: string
+          id?: string
+          kind: string
+          origin_label?: string | null
+          reason: string
+          target_month: number
+          target_year: number
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          amount?: number
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          employee_id?: string
+          id?: string
+          kind?: string
+          origin_label?: string | null
+          reason?: string
+          target_month?: number
+          target_year?: number
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_adjustments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_adjustments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payroll_audit: {
+        Row: {
+          action: string
+          actor_id: string | null
+          company_id: string
+          created_at: string
+          details: Json
+          employee_id: string | null
+          entity_id: string | null
+          id: string
+          period_month: number | null
+          period_year: number | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          company_id: string
+          created_at?: string
+          details?: Json
+          employee_id?: string | null
+          entity_id?: string | null
+          id?: string
+          period_month?: number | null
+          period_year?: number | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          company_id?: string
+          created_at?: string
+          details?: Json
+          employee_id?: string | null
+          entity_id?: string | null
+          id?: string
+          period_month?: number | null
+          period_year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_audit_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payroll_employee_months: {
+        Row: {
+          advance_amount: number
+          company_id: string
+          created_at: string
+          employee_id: string
+          id: string
+          notes: string | null
+          period_month: number
+          period_year: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          advance_amount?: number
+          company_id: string
+          created_at?: string
+          employee_id: string
+          id?: string
+          notes?: string | null
+          period_month: number
+          period_year: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          advance_amount?: number
+          company_id?: string
+          created_at?: string
+          employee_id?: string
+          id?: string
+          notes?: string | null
+          period_month?: number
+          period_year?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_employee_months_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_employee_months_employee_id_fkey"
+            columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -3470,10 +4441,12 @@ export type Database = {
           entry_kind: string
           geo_policy_version: number | null
           id: string
+          is_offline: boolean
           last_edit_reason: string | null
           last_edited_at: string | null
           last_edited_by: string | null
           notes: string | null
+          offline_synced_at: string | null
           origin: string
           paid_leave_minutes: number | null
           paused_at: string | null
@@ -3506,10 +4479,12 @@ export type Database = {
           entry_kind?: string
           geo_policy_version?: number | null
           id?: string
+          is_offline?: boolean
           last_edit_reason?: string | null
           last_edited_at?: string | null
           last_edited_by?: string | null
           notes?: string | null
+          offline_synced_at?: string | null
           origin?: string
           paid_leave_minutes?: number | null
           paused_at?: string | null
@@ -3542,10 +4517,12 @@ export type Database = {
           entry_kind?: string
           geo_policy_version?: number | null
           id?: string
+          is_offline?: boolean
           last_edit_reason?: string | null
           last_edited_at?: string | null
           last_edited_by?: string | null
           notes?: string | null
+          offline_synced_at?: string | null
           origin?: string
           paid_leave_minutes?: number | null
           paused_at?: string | null
@@ -3736,6 +4713,63 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      time_entry_offline_events: {
+        Row: {
+          captured_at: string
+          company_id: string
+          delay_minutes: number
+          id: string
+          op: string
+          payload: Json
+          received_at: string
+          result_code: string
+          task_id: string | null
+          time_entry_id: string | null
+          user_id: string
+        }
+        Insert: {
+          captured_at: string
+          company_id: string
+          delay_minutes?: number
+          id: string
+          op: string
+          payload?: Json
+          received_at?: string
+          result_code: string
+          task_id?: string | null
+          time_entry_id?: string | null
+          user_id: string
+        }
+        Update: {
+          captured_at?: string
+          company_id?: string
+          delay_minutes?: number
+          id?: string
+          op?: string
+          payload?: Json
+          received_at?: string
+          result_code?: string
+          task_id?: string | null
+          time_entry_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_entry_offline_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entry_offline_events_time_entry_id_fkey"
+            columns: ["time_entry_id"]
+            isOneToOne: false
+            referencedRelation: "time_entries"
             referencedColumns: ["id"]
           },
         ]
@@ -4780,6 +5814,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      _payroll_can_read: {
+        Args: { _company_id: string; _uid: string }
+        Returns: boolean
+      }
+      _payroll_can_write: {
+        Args: { _company_id: string; _uid: string }
+        Returns: boolean
+      }
       _punch_evaluate_geo: {
         Args: {
           p_accuracy_m: number
@@ -5115,6 +6157,19 @@ export type Database = {
         Args: { _pause_seconds: number; _total_seconds: number }
         Returns: number
       }
+      employee_attachment_mark_viewed: {
+        Args: { _attachment_id: string }
+        Returns: Json
+      }
+      employee_attachment_sign: {
+        Args: {
+          _attachment_id: string
+          _placement?: Json
+          _signature_source: string
+          _signed_storage_path: string
+        }
+        Returns: Json
+      }
       employee_bank_change_cancel: {
         Args: { _request_id: string }
         Returns: undefined
@@ -5131,6 +6186,10 @@ export type Database = {
           _swift?: string
         }
         Returns: string
+      }
+      employee_export_profiles: {
+        Args: { _company_id: string; _profile_id?: string }
+        Returns: Json
       }
       enqueue_ticket_whatsapp: {
         Args: { _event: string; _payload?: Json; _ticket_id: string }
@@ -5164,6 +6223,10 @@ export type Database = {
           paid_at: string | null
           paid_by: string | null
           payment_status: string | null
+          payroll_included_at: string | null
+          payroll_included_by: string | null
+          payroll_month: number | null
+          payroll_year: number | null
           reason: string
           status: string
           updated_at: string
@@ -5194,6 +6257,10 @@ export type Database = {
           paid_at: string | null
           paid_by: string | null
           payment_status: string | null
+          payroll_included_at: string | null
+          payroll_included_by: string | null
+          payroll_month: number | null
+          payroll_year: number | null
           reason: string
           status: string
           updated_at: string
@@ -5289,6 +6356,8 @@ export type Database = {
           geo_required_stop: boolean
           manager_approver_kind: Database["public"]["Enums"]["manager_approver_kind"]
           manager_approver_user_id: string | null
+          offline_punch_enabled: boolean
+          offline_punch_max_hours: number
           overtime_multiplier: number
           overtime_threshold_minutes: number
           updated_at: string
@@ -5360,6 +6429,8 @@ export type Database = {
         Args: { _message: string; _ticket_id: string }
         Returns: undefined
       }
+      msg_can_manage: { Args: { _company_id: string }; Returns: boolean }
+      msg_can_view: { Args: { _company_id: string }; Returns: boolean }
       my_task_group_colleagues: {
         Args: { _group_ids: string[] }
         Returns: {
@@ -5390,6 +6461,140 @@ export type Database = {
         Returns: number
       }
       notify_document_expiries: { Args: never; Returns: number }
+      payroll_add_adjustment: {
+        Args: {
+          _amount: number
+          _company_id: string
+          _employee_id: string
+          _kind: string
+          _origin_label?: string
+          _reason: string
+          _target_month: number
+          _target_year: number
+        }
+        Returns: {
+          amount: number
+          company_id: string
+          created_at: string
+          created_by: string
+          employee_id: string
+          id: string
+          kind: string
+          origin_label: string | null
+          reason: string
+          target_month: number
+          target_year: number
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "payroll_adjustments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      payroll_attach_expenses: {
+        Args: {
+          _company_id: string
+          _employee_id?: string
+          _month: number
+          _year: number
+        }
+        Returns: number
+      }
+      payroll_detach_expense: {
+        Args: { _expense_id: string; _reason: string }
+        Returns: {
+          amount: number
+          attachment_mime: string | null
+          attachment_path: string | null
+          attachment_size: number | null
+          company_id: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_reason: string | null
+          expense_date: string
+          id: string
+          notes: string | null
+          paid_at: string | null
+          paid_by: string | null
+          payment_status: string | null
+          payroll_included_at: string | null
+          payroll_included_by: string | null
+          payroll_month: number | null
+          payroll_year: number | null
+          reason: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "employee_expenses"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      payroll_monthly_report: {
+        Args: { _company_id: string; _month: number; _year: number }
+        Returns: Json
+      }
+      payroll_set_advance: {
+        Args: {
+          _amount: number
+          _company_id: string
+          _employee_id: string
+          _month: number
+          _notes?: string
+          _year: number
+        }
+        Returns: {
+          advance_amount: number
+          company_id: string
+          created_at: string
+          employee_id: string
+          id: string
+          notes: string | null
+          period_month: number
+          period_year: number
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "payroll_employee_months"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      payroll_void_adjustment: {
+        Args: { _id: string; _reason: string }
+        Returns: {
+          amount: number
+          company_id: string
+          created_at: string
+          created_by: string
+          employee_id: string
+          id: string
+          kind: string
+          origin_label: string | null
+          reason: string
+          target_month: number
+          target_year: number
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "payroll_adjustments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       payslip_assign: {
         Args: { _id: string; _user_id: string }
         Returns: {
@@ -5446,6 +6651,10 @@ export type Database = {
         Args: { _is_internal: boolean; _message: string; _ticket_id: string }
         Returns: string
       }
+      punch_admin_change_task_client: {
+        Args: { _client_id: string; _reason: string; _time_entry_id: string }
+        Returns: Json
+      }
       punch_admin_create: {
         Args: { _payload: Json; _reason: string }
         Returns: {
@@ -5462,10 +6671,59 @@ export type Database = {
           entry_kind: string
           geo_policy_version: number | null
           id: string
+          is_offline: boolean
           last_edit_reason: string | null
           last_edited_at: string | null
           last_edited_by: string | null
           notes: string | null
+          offline_synced_at: string | null
+          origin: string
+          paid_leave_minutes: number | null
+          paused_at: string | null
+          prior_pause_seconds: number
+          resumed_at: string | null
+          start_geo_reason_code:
+            | Database["public"]["Enums"]["geo_reason_code"]
+            | null
+          start_geo_reason_text: string | null
+          start_geo_status: Database["public"]["Enums"]["geo_status"] | null
+          started_at: string
+          task_id: string | null
+          updated_at: string
+          user_id: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "time_entries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      punch_admin_create_with_task: {
+        Args: { _payload: Json; _reason: string; _task: Json }
+        Returns: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          effective_minutes: number | null
+          end_geo_reason_code:
+            | Database["public"]["Enums"]["geo_reason_code"]
+            | null
+          end_geo_reason_text: string | null
+          end_geo_status: Database["public"]["Enums"]["geo_status"] | null
+          ended_at: string | null
+          entry_kind: string
+          geo_policy_version: number | null
+          id: string
+          is_offline: boolean
+          last_edit_reason: string | null
+          last_edited_at: string | null
+          last_edited_by: string | null
+          notes: string | null
+          offline_synced_at: string | null
           origin: string
           paid_leave_minutes: number | null
           paused_at: string | null
@@ -5507,10 +6765,12 @@ export type Database = {
           entry_kind: string
           geo_policy_version: number | null
           id: string
+          is_offline: boolean
           last_edit_reason: string | null
           last_edited_at: string | null
           last_edited_by: string | null
           notes: string | null
+          offline_synced_at: string | null
           origin: string
           paid_leave_minutes: number | null
           paused_at: string | null
@@ -5552,10 +6812,12 @@ export type Database = {
           entry_kind: string
           geo_policy_version: number | null
           id: string
+          is_offline: boolean
           last_edit_reason: string | null
           last_edited_at: string | null
           last_edited_by: string | null
           notes: string | null
+          offline_synced_at: string | null
           origin: string
           paid_leave_minutes: number | null
           paused_at: string | null
@@ -5597,10 +6859,12 @@ export type Database = {
           entry_kind: string
           geo_policy_version: number | null
           id: string
+          is_offline: boolean
           last_edit_reason: string | null
           last_edited_at: string | null
           last_edited_by: string | null
           notes: string | null
+          offline_synced_at: string | null
           origin: string
           paid_leave_minutes: number | null
           paused_at: string | null
@@ -5668,10 +6932,12 @@ export type Database = {
           entry_kind: string
           geo_policy_version: number | null
           id: string
+          is_offline: boolean
           last_edit_reason: string | null
           last_edited_at: string | null
           last_edited_by: string | null
           notes: string | null
+          offline_synced_at: string | null
           origin: string
           paid_leave_minutes: number | null
           paused_at: string | null
@@ -5713,10 +6979,12 @@ export type Database = {
           entry_kind: string
           geo_policy_version: number | null
           id: string
+          is_offline: boolean
           last_edit_reason: string | null
           last_edited_at: string | null
           last_edited_by: string | null
           notes: string | null
+          offline_synced_at: string | null
           origin: string
           paid_leave_minutes: number | null
           paused_at: string | null
@@ -5763,10 +7031,12 @@ export type Database = {
           entry_kind: string
           geo_policy_version: number | null
           id: string
+          is_offline: boolean
           last_edit_reason: string | null
           last_edited_at: string | null
           last_edited_by: string | null
           notes: string | null
+          offline_synced_at: string | null
           origin: string
           paid_leave_minutes: number | null
           paused_at: string | null
@@ -5808,10 +7078,12 @@ export type Database = {
           entry_kind: string
           geo_policy_version: number | null
           id: string
+          is_offline: boolean
           last_edit_reason: string | null
           last_edited_at: string | null
           last_edited_by: string | null
           notes: string | null
+          offline_synced_at: string | null
           origin: string
           paid_leave_minutes: number | null
           paused_at: string | null
@@ -5853,10 +7125,12 @@ export type Database = {
           entry_kind: string
           geo_policy_version: number | null
           id: string
+          is_offline: boolean
           last_edit_reason: string | null
           last_edited_at: string | null
           last_edited_by: string | null
           notes: string | null
+          offline_synced_at: string | null
           origin: string
           paid_leave_minutes: number | null
           paused_at: string | null
@@ -5882,6 +7156,8 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      punch_offline_settings: { Args: { _company_id: string }; Returns: Json }
+      punch_offline_sync_v1: { Args: { p_input: Json }; Returns: Json }
       punch_open_entries_list: { Args: { _company_id?: string }; Returns: Json }
       punch_open_entry_request_help: {
         Args: {
@@ -5908,10 +7184,12 @@ export type Database = {
           entry_kind: string
           geo_policy_version: number | null
           id: string
+          is_offline: boolean
           last_edit_reason: string | null
           last_edited_at: string | null
           last_edited_by: string | null
           notes: string | null
+          offline_synced_at: string | null
           origin: string
           paid_leave_minutes: number | null
           paused_at: string | null
@@ -5953,10 +7231,12 @@ export type Database = {
           entry_kind: string
           geo_policy_version: number | null
           id: string
+          is_offline: boolean
           last_edit_reason: string | null
           last_edited_at: string | null
           last_edited_by: string | null
           notes: string | null
+          offline_synced_at: string | null
           origin: string
           paid_leave_minutes: number | null
           paused_at: string | null
@@ -6009,10 +7289,12 @@ export type Database = {
           entry_kind: string
           geo_policy_version: number | null
           id: string
+          is_offline: boolean
           last_edit_reason: string | null
           last_edited_at: string | null
           last_edited_by: string | null
           notes: string | null
+          offline_synced_at: string | null
           origin: string
           paid_leave_minutes: number | null
           paused_at: string | null
@@ -7270,6 +8552,10 @@ export type Database = {
         Args: { _period_id: string }
         Returns: undefined
       }
+      timesheet_manager_correct: {
+        Args: { _changes: Json; _period_id: string; _reason: string }
+        Returns: Json
+      }
       timesheet_open_month: {
         Args: { _company_id: string; _month: number; _year: number }
         Returns: number
@@ -7413,6 +8699,7 @@ export type Database = {
           hourly_rate: number | null
           id: string
           instructions: string | null
+          is_foreign: boolean
           mixed_base_fixed: number | null
           mixed_extra_hour_rate: number | null
           mixed_included_minutes: number | null
@@ -7460,6 +8747,8 @@ export type Database = {
           geo_required_stop: boolean
           manager_approver_kind: Database["public"]["Enums"]["manager_approver_kind"]
           manager_approver_user_id: string | null
+          offline_punch_enabled: boolean
+          offline_punch_max_hours: number
           overtime_multiplier: number
           overtime_threshold_minutes: number
           updated_at: string
