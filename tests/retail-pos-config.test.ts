@@ -1,5 +1,13 @@
 import { describe, test, expect } from "bun:test";
-import { computeCart, paymentMethodsFor, round2, RETAIL_OPERATOR_ROLES, RETAIL_ROLES } from "@/lib/retail";
+import {
+  computeCart,
+  MOVEMENT_LABEL,
+  OUTGOING_KINDS,
+  paymentMethodsFor,
+  round2,
+  RETAIL_OPERATOR_ROLES,
+  RETAIL_ROLES,
+} from "@/lib/retail";
 import { buildReceiptHtml, receiptDisclaimer } from "@/lib/retail-receipt";
 import { retailTabsFor } from "@/components/retail/RetailShell";
 import { ROUTE_MODULES } from "@/lib/locale";
@@ -101,5 +109,14 @@ describe("Lojas · Etapa 2 · comprovativo não fiscal", () => {
   test("venda cancelada aparece marcada", () => {
     const html = buildReceiptHtml({ ...base, sale: { ...base.sale, status: "cancelada" }, country: "PT" });
     expect(html).toContain("VENDA CANCELADA");
+  });
+});
+
+describe("Lojas · Etapa 2 · histórico de estoque com vendas", () => {
+  test("venda é saída (−) e cancelamento é entrada (+), ambos com rótulo", () => {
+    expect(OUTGOING_KINDS).toContain("venda");
+    expect(OUTGOING_KINDS).not.toContain("cancelamento_venda");
+    expect(MOVEMENT_LABEL.venda).toBe("Venda");
+    expect(MOVEMENT_LABEL.cancelamento_venda).toBe("Cancelamento de venda");
   });
 });
