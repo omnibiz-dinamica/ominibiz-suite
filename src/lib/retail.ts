@@ -38,7 +38,14 @@ export type RetailMovement = {
   id: string;
   unit_id: string;
   product_id: string;
-  kind: "entrada" | "saida" | "transferencia_saida" | "transferencia_entrada" | "ajuste";
+  kind:
+    | "entrada"
+    | "saida"
+    | "transferencia_saida"
+    | "transferencia_entrada"
+    | "ajuste"
+    | "venda"
+    | "cancelamento_venda";
   quantity: number;
   balance_after: number | null;
   reason: string;
@@ -57,7 +64,16 @@ export const MOVEMENT_LABEL: Record<RetailMovement["kind"], string> = {
   transferencia_saida: "Transferência (saída)",
   transferencia_entrada: "Transferência (entrada)",
   ajuste: "Ajuste",
+  venda: "Venda",
+  cancelamento_venda: "Cancelamento de venda",
 };
+
+/** Movimentos que tiram estoque da loja (mostrados com sinal negativo). */
+export const OUTGOING_KINDS: readonly RetailMovement["kind"][] = [
+  "saida",
+  "transferencia_saida",
+  "venda",
+];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const rdb = (table: string) => (supabase.from as any)(table);

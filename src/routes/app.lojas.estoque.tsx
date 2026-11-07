@@ -14,6 +14,7 @@ import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import {
   MOVEMENT_LABEL,
+  OUTGOING_KINDS,
   formatQty,
   rdb,
   retailErrorMessage,
@@ -47,6 +48,8 @@ const KIND_TONE: Record<RetailMovement["kind"], string> = {
   transferencia_saida: "bg-accent text-accent-foreground",
   transferencia_entrada: "bg-accent text-accent-foreground",
   ajuste: "bg-secondary text-secondary-foreground",
+  venda: "bg-destructive/15 text-destructive",
+  cancelamento_venda: "bg-primary/15 text-primary",
 };
 
 function StockPage() {
@@ -339,6 +342,8 @@ function History() {
             <SelectItem value="saida">Saída</SelectItem>
             <SelectItem value="transferencia">Transferência</SelectItem>
             <SelectItem value="ajuste">Ajuste</SelectItem>
+            <SelectItem value="venda">Venda</SelectItem>
+            <SelectItem value="cancelamento_venda">Cancelamento de venda</SelectItem>
           </SelectContent>
         </Select>
         <Select value={userId} onValueChange={(v) => { setUserId(v); setPage(0); }}>
@@ -374,7 +379,7 @@ function History() {
                   </p>
                 </div>
                 <span className="text-right font-medium">
-                  {m.kind === "ajuste" ? `= ${formatQty(m.balance_after, locale)}` : `${m.kind === "saida" || m.kind === "transferencia_saida" ? "−" : "+"}${formatQty(m.quantity, locale)}`} {p?.unit}
+                  {m.kind === "ajuste" ? `= ${formatQty(m.balance_after, locale)}` : `${OUTGOING_KINDS.includes(m.kind) ? "−" : "+"}${formatQty(m.quantity, locale)}`} {p?.unit}
                 </span>
               </li>
             );
