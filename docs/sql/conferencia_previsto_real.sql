@@ -193,7 +193,7 @@ AS $f$
       AND te.started_at <  (_to::timestamp + interval '3 days') AT TIME ZONE 'UTC'
   ), tk AS (
     SELECT t.id, t.title, t.status::text AS status, t.client_id, cl.name AS client_name,
-           t.scheduled_for, t.scheduled_end,
+           t.scheduled_for, t.scheduled_end, t.recurrence_id,
            COALESCE(t.recurrence_date, (t.scheduled_for AT TIME ZONE 'UTC')::date,
                     (t.due_at AT TIME ZONE 'UTC')::date) AS work_date,
            (t.scheduled_for IS NOT NULL AND t.scheduled_end IS NOT NULL AND t.scheduled_end > t.scheduled_for
@@ -216,7 +216,13 @@ AS $f$
            (SELECT e.id FROM ent e WHERE e.task_id = k.id ORDER BY e.started_at, e.id LIMIT 1) AS first_entry,
            (SELECT to_char(MIN(e.started_at AT TIME ZONE e.tz), 'HH24:MI') FROM ent e WHERE e.task_id = k.id) AS real_start,
            (SELECT to_char(MAX(e.ended_at AT TIME ZONE e.tz), 'HH24:MI') FROM ent e WHERE e.task_id = k.id) AS real_end,
-           CASE WHEN k.has_plan THEN round(EXTRACT(EPOCH FROM (k.scheduled_end - k.scheduled_for)) / 60)::int END AS plan_min
+           -- Recorrências: a hora de fim guarda a data do fim da série; conta só as horas do dia.
+           CASE WHEN NOT k.has_plan THEN NULL
+                WHEN k.recurrence_id IS NOT NULL THEN
+                  ((round(EXTRACT(EPOCH FROM ((k.scheduled_end AT TIME ZONE 'UTC')::time
+                                              - (k.scheduled_for AT TIME ZONE 'UTC')::time)) / 60)::int + 1440) % 1440)
+                ELSE round(EXTRACT(EPOCH FROM (k.scheduled_end - k.scheduled_for)) / 60)::int
+           END AS plan_min
     FROM tk k
   ), task_rows AS (
     SELECT a.*, r.decision, r.planned_minutes AS r_plan, r.real_minutes AS r_real, r.notes AS r_notes,
