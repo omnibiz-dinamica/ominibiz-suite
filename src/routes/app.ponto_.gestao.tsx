@@ -66,6 +66,8 @@ import { RecordHistoryMenu } from "@/components/history/RecordHistoryMenu";
 import { formatCivilDate, type TaskOperationalNote } from "@/lib/ponto/task-notes";
 import { fetchOfflineEntryIds } from "@/lib/punch/offline-flags";
 import { entryScheduleFlags, fetchEntryTimeZones } from "@/lib/punch/off-schedule";
+import { RECONCILIATION_QUERY_KEY, ScheduleReconciliation } from "@/components/ponto/ScheduleReconciliation";
+import { monthRange, type ReconciliationRow } from "@/lib/ponto/reconciliation";
 
 export const Route = createFileRoute("/app/ponto_/gestao")({ component: Page });
 
@@ -258,6 +260,12 @@ function GestaoPonto() {
   const [absenceEditTarget, setAbsenceEditTarget] = useState<TaskRow | null>(null);
   const [taskAuditTarget, setTaskAuditTarget] = useState<Row | null>(null);
   const [manualPointTarget, setManualPointTarget] = useState<Row | null>(null);
+  // Conferência Previsto x Real (pedido da gestora V-Clean, 09/11/2026)
+  const [view, setView] = useState<"lancamentos" | "conferencia">("lancamentos");
+  const [confFilters, setConfFilters] = useState(() => {
+    const now = new Date();
+    return { userId: "", ...monthRange(now.getFullYear(), now.getMonth() + 1) };
+  });
 
   // Membros — tela histórica: inclui inativos (com selo) para filtrar e
   // nomear registros de quem saiu no meio do mês. Novas atribuições em
@@ -439,6 +447,41 @@ function GestaoPonto() {
     setActiveEntry(null);
     setManualPointTarget(r);
     setEditorOpen(true);
+  };
+  // Conferência: "Alterar" abre o mesmo editor do ponto; "Lançar ponto" a regularização da tarefa.
+  const confEmployeeName = (id: string) => members?.find((m) => m.id === id)?.name ?? null;
+  const openConfEdit = async (row: ReconciliationRow) => {
+    if (!row.time_entry_id) return;
+    const { data, error } = await supabase
+      .from("time_entries")
+      .select("*")
+      .eq("id", row.time_entry_id)
+      .maybeSingle();
+    if (error || !data) {
+      toast.error(error?.message ?? "Ponto não encontrado");
+      return;
+    }
+    openEdit({
+      ...(data as object),
+      tasks: row.task_id ? { title: row.task_title ?? "Tarefa", client_id: null } : null,
+      profiles: { full_name: confEmployeeName(confFilters.userId) },
+    } as unknown as Row);
+  };
+  const openConfLaunch = (row: ReconciliationRow) => {
+    if (!row.task_id) return;
+    openManualPoint({
+      id: row.task_id,
+      company_id: currentCompanyId,
+      user_id: confFilters.userId,
+      task_id: row.task_id,
+      tasks: {
+        title: row.task_title ?? "Tarefa",
+        client_id: null,
+        scheduled_for: row.scheduled_for,
+        scheduled_end: row.scheduled_end,
+      },
+      profiles: { full_name: confEmployeeName(confFilters.userId) },
+    } as unknown as Row);
   };
   const openAudit = (r: Row) => {
     setAuditEntryId(r.id);
@@ -786,298 +829,387 @@ function GestaoPonto() {
         </div>
       </div>
 
-      {/* Pontos em aberto */}
-      <OpenPunchPanel companyId={currentCompanyId} />
-
-      {/* Filtros */}
-      <section className="rounded-2xl border border-border bg-card p-4">
-        <div className="mb-3 flex items-center gap-2 text-sm font-medium">
-          <Filter className="h-4 w-4" /> Filtros
-          {(filters.userId !== "all" ||
-            filters.clientId !== "all" ||
-            filters.taskSearch ||
-            filters.status !== "all" ||
-            filters.from ||
-            filters.to) && (
-            <Button variant="ghost" size="sm" className="ml-auto h-7" onClick={resetFilters}>
-              <X className="mr-1 h-3 w-3" /> Limpar
-            </Button>
-          )}
-        </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
-          <div>
-            <Label className="text-xs">Funcionário</Label>
-            <EmployeePicker
-              employees={(members ?? []).map((m) => ({
-                id: m.id,
-                full_name: m.inactive ? `${m.name} (Inativo)` : m.name,
-              }))}
-              value={filters.userId === "all" ? null : filters.userId}
-              onChange={(id: string) => onFilterChange("userId", id || "all")}
-              placeholder="Todos"
-              ariaLabel="Filtrar por funcionário"
-            />
-          </div>
-          <div>
-            <Label className="text-xs">Cliente</Label>
-            <Select value={filters.clientId} onValueChange={(v) => onFilterChange("clientId", v)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {(clients ?? []).map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label className="text-xs">Status</Label>
-            <Select value={filters.status} onValueChange={(v) => onFilterChange("status", v as StatusFilter)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="open">Em aberto</SelectItem>
-                <SelectItem value="closed">Encerrado</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label className="text-xs">De</Label>
-            <Input type="date" value={filters.from} onChange={(e) => onFilterChange("from", e.target.value)} />
-          </div>
-          <div>
-            <Label className="text-xs">Até</Label>
-            <Input type="date" value={filters.to} onChange={(e) => onFilterChange("to", e.target.value)} />
-          </div>
-          <div>
-            <Label className="text-xs">Buscar tarefa</Label>
-            <Input
-              placeholder="Título da tarefa"
-              value={filters.taskSearch}
-              onChange={(e) => onFilterChange("taskSearch", e.target.value)}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Tabela */}
-      <section className="rounded-2xl border border-border bg-card overflow-hidden">
-        <div className="flex items-center justify-between border-b border-border px-4 py-2 text-xs text-muted-foreground">
-          <span>{isError ? "Falha ao carregar registros" : `${result?.total ?? 0} registro(s)`}</span>
-          <span>{PAGE_SIZE} por página</span>
-        </div>
-        {isError && (
-          <div
-            role="alert"
-            className="m-4 flex items-start justify-between gap-4 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive"
+      <div
+        className="inline-flex rounded-xl border border-border bg-card p-1"
+        role="tablist"
+        aria-label="Vista"
+      >
+        {(
+          [
+            ["lancamentos", "Lançamentos"],
+            ["conferencia", "Conferência Previsto x Real"],
+          ] as const
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            role="tab"
+            aria-selected={view === key}
+            onClick={() => setView(key)}
+            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+              view === key
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
           >
-            <div className="flex items-start gap-2">
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-              <div>
-                <p className="font-medium">Não foi possível carregar a Folha de Ponto.</p>
-                <p className="mt-1 text-xs opacity-90">
-                  {error instanceof Error ? error.message : "Erro técnico inesperado."}
-                </p>
-              </div>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {view === "conferencia" && (
+        <section className="space-y-4">
+          <div className="grid grid-cols-1 gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-3">
+            <div>
+              <Label className="text-xs">Funcionário</Label>
+              <EmployeePicker
+                employees={(members ?? []).map((m) => ({
+                  id: m.id,
+                  full_name: m.inactive ? `${m.name} (Inativo)` : m.name,
+                }))}
+                value={confFilters.userId || null}
+                onChange={(id: string) => setConfFilters((f) => ({ ...f, userId: id || "" }))}
+                placeholder="Escolha o funcionário"
+                ariaLabel="Funcionário da conferência"
+              />
             </div>
-            <Button type="button" variant="outline" size="sm" onClick={() => void refetch()}>
-              Tentar novamente
-            </Button>
+            <div>
+              <Label className="text-xs" htmlFor="conf-from">
+                De
+              </Label>
+              <Input
+                id="conf-from"
+                type="date"
+                value={confFilters.from}
+                onChange={(e) =>
+                  e.target.value && setConfFilters((f) => ({ ...f, from: e.target.value }))
+                }
+              />
+            </div>
+            <div>
+              <Label className="text-xs" htmlFor="conf-to">
+                Até
+              </Label>
+              <Input
+                id="conf-to"
+                type="date"
+                value={confFilters.to}
+                onChange={(e) =>
+                  e.target.value && setConfFilters((f) => ({ ...f, to: e.target.value }))
+                }
+              />
+            </div>
           </div>
-        )}
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Funcionário</TableHead>
-                <TableHead>Tarefa</TableHead>
-                <TableHead>Cliente</TableHead>
-                <TableHead>Previsto</TableHead>
-                <TableHead>Situação</TableHead>
-                <TableHead>Início</TableHead>
-                <TableHead>Fim</TableHead>
-                <TableHead className="text-right">Efetivo</TableHead>
-                <TableHead>Pausa</TableHead>
-                <TableHead>Origem</TableHead>
-                <TableHead>Notas</TableHead>
-                <TableHead className="w-10"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading && (
+          <ScheduleReconciliation
+            companyId={currentCompanyId}
+            employeeId={confFilters.userId || null}
+            from={confFilters.from}
+            to={confFilters.to}
+            onEdit={(row) => void openConfEdit(row)}
+            onLaunch={openConfLaunch}
+            onChanged={() => qc.invalidateQueries({ queryKey: ["punch-admin-list"] })}
+          />
+        </section>
+      )}
+
+      {/* Lançamentos: pontos em aberto, filtros e lista (escondidos na conferência) */}
+      <div className={view === "lancamentos" ? "space-y-5" : "hidden"}>
+        {/* Pontos em aberto */}
+        <OpenPunchPanel companyId={currentCompanyId} />
+
+        {/* Filtros */}
+        <section className="rounded-2xl border border-border bg-card p-4">
+          <div className="mb-3 flex items-center gap-2 text-sm font-medium">
+            <Filter className="h-4 w-4" /> Filtros
+            {(filters.userId !== "all" ||
+              filters.clientId !== "all" ||
+              filters.taskSearch ||
+              filters.status !== "all" ||
+              filters.from ||
+              filters.to) && (
+              <Button variant="ghost" size="sm" className="ml-auto h-7" onClick={resetFilters}>
+                <X className="mr-1 h-3 w-3" /> Limpar
+              </Button>
+            )}
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
+            <div>
+              <Label className="text-xs">Funcionário</Label>
+              <EmployeePicker
+                employees={(members ?? []).map((m) => ({
+                  id: m.id,
+                  full_name: m.inactive ? `${m.name} (Inativo)` : m.name,
+                }))}
+                value={filters.userId === "all" ? null : filters.userId}
+                onChange={(id: string) => onFilterChange("userId", id || "all")}
+                placeholder="Todos"
+                ariaLabel="Filtrar por funcionário"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Cliente</Label>
+              <Select value={filters.clientId} onValueChange={(v) => onFilterChange("clientId", v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {(clients ?? []).map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Status</Label>
+              <Select value={filters.status} onValueChange={(v) => onFilterChange("status", v as StatusFilter)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="open">Em aberto</SelectItem>
+                  <SelectItem value="closed">Encerrado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">De</Label>
+              <Input type="date" value={filters.from} onChange={(e) => onFilterChange("from", e.target.value)} />
+            </div>
+            <div>
+              <Label className="text-xs">Até</Label>
+              <Input type="date" value={filters.to} onChange={(e) => onFilterChange("to", e.target.value)} />
+            </div>
+            <div>
+              <Label className="text-xs">Buscar tarefa</Label>
+              <Input
+                placeholder="Título da tarefa"
+                value={filters.taskSearch}
+                onChange={(e) => onFilterChange("taskSearch", e.target.value)}
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Tabela */}
+        <section className="rounded-2xl border border-border bg-card overflow-hidden">
+          <div className="flex items-center justify-between border-b border-border px-4 py-2 text-xs text-muted-foreground">
+            <span>{isError ? "Falha ao carregar registros" : `${result?.total ?? 0} registro(s)`}</span>
+            <span>{PAGE_SIZE} por página</span>
+          </div>
+          {isError && (
+            <div
+              role="alert"
+              className="m-4 flex items-start justify-between gap-4 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive"
+            >
+              <div className="flex items-start gap-2">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <div>
+                  <p className="font-medium">Não foi possível carregar a Folha de Ponto.</p>
+                  <p className="mt-1 text-xs opacity-90">
+                    {error instanceof Error ? error.message : "Erro técnico inesperado."}
+                  </p>
+                </div>
+              </div>
+              <Button type="button" variant="outline" size="sm" onClick={() => void refetch()}>
+                Tentar novamente
+              </Button>
+            </div>
+          )}
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={12} className="text-center py-8 text-sm text-muted-foreground">
-                    Carregando...
-                  </TableCell>
+                  <TableHead>Funcionário</TableHead>
+                  <TableHead>Tarefa</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Previsto</TableHead>
+                  <TableHead>Situação</TableHead>
+                  <TableHead>Início</TableHead>
+                  <TableHead>Fim</TableHead>
+                  <TableHead className="text-right">Efetivo</TableHead>
+                  <TableHead>Pausa</TableHead>
+                  <TableHead>Origem</TableHead>
+                  <TableHead>Notas</TableHead>
+                  <TableHead className="w-10"></TableHead>
                 </TableRow>
-              )}
-              {!isLoading && !isError && (result?.rows ?? []).length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={12} className="text-center py-8 text-sm text-muted-foreground">
-                    Nenhum registro encontrado.
-                  </TableCell>
-                </TableRow>
-              )}
-              {(result?.rows ?? []).map((r) => (
-                <RecordHistoryMenu key={r.id} entityType={isVacation(r) ? "vacation" : "punch"} entityId={r.id}>
-                <TableRow>
-                  <TableCell className="font-medium">{r.profiles?.full_name ?? r.user_id.slice(0, 8)}</TableCell>
-                  <TableCell className="max-w-[260px] truncate">
-                    {isVacation(r) ? "Férias" : (r.tasks?.title ?? "—")}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {r.tasks?.client_id ? (clientsMap[r.tasks.client_id] ?? "—") : "—"}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
-                    {(isVacation(r) ? formatVacationDate(r) : formatPrevisto(r.tasks)) || "—"}
-                  </TableCell>
-                  <TableCell>
-                    <span
-                      className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                        isAbsence(r)
-                          ? "bg-destructive/15 text-destructive"
-                          : isVacation(r)
-                            ? "bg-success/15 text-success"
-                            : "bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      {formatSituation(r)}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {isNonWork(r) ? (
-                      "—"
-                    ) : (
-                      <span className={offCellClass(offByRow.get(r.id)?.start)}>
-                        {new Date(r.started_at).toLocaleString()}
+              </TableHeader>
+              <TableBody>
+                {isLoading && (
+                  <TableRow>
+                    <TableCell colSpan={12} className="text-center py-8 text-sm text-muted-foreground">
+                      Carregando...
+                    </TableCell>
+                  </TableRow>
+                )}
+                {!isLoading && !isError && (result?.rows ?? []).length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={12} className="text-center py-8 text-sm text-muted-foreground">
+                      Nenhum registro encontrado.
+                    </TableCell>
+                  </TableRow>
+                )}
+                {(result?.rows ?? []).map((r) => (
+                  <RecordHistoryMenu key={r.id} entityType={isVacation(r) ? "vacation" : "punch"} entityId={r.id}>
+                  <TableRow>
+                    <TableCell className="font-medium">{r.profiles?.full_name ?? r.user_id.slice(0, 8)}</TableCell>
+                    <TableCell className="max-w-[260px] truncate">
+                      {isVacation(r) ? "Férias" : (r.tasks?.title ?? "—")}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {r.tasks?.client_id ? (clientsMap[r.tasks.client_id] ?? "—") : "—"}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                      {(isVacation(r) ? formatVacationDate(r) : formatPrevisto(r.tasks)) || "—"}
+                    </TableCell>
+                    <TableCell>
+                      <span
+                        className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                          isAbsence(r)
+                            ? "bg-destructive/15 text-destructive"
+                            : isVacation(r)
+                              ? "bg-success/15 text-success"
+                              : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {formatSituation(r)}
                       </span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {isNonWork(r) ? (
-                      "—"
-                    ) : r.ended_at ? (
-                      <span className={offCellClass(offByRow.get(r.id)?.end)}>
-                        {new Date(r.ended_at).toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {isNonWork(r) ? (
+                        "—"
+                      ) : (
+                        <span className={offCellClass(offByRow.get(r.id)?.start)}>
+                          {new Date(r.started_at).toLocaleString()}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {isNonWork(r) ? (
+                        "—"
+                      ) : r.ended_at ? (
+                        <span className={offCellClass(offByRow.get(r.id)?.end)}>
+                          {new Date(r.ended_at).toLocaleString()}
+                        </span>
+                      ) : (
+                        <span className="text-warning">em aberto</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right font-mono">
+                      {isNonWork(r) ? (
+                        "—"
+                      ) : r.effective_minutes != null ? (
+                        <span className={offCellClass(offByRow.get(r.id)?.over6h)}>
+                          {formatDuration(r.effective_minutes)}
+                        </span>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-sm">{formatPause(r)}</TableCell>
+                    <TableCell>
+                      <span
+                        className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${ORIGIN_TONE[r.origin]}`}
+                      >
+                        {formatOrigin(r)}
                       </span>
-                    ) : (
-                      <span className="text-warning">em aberto</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {isNonWork(r) ? (
-                      "—"
-                    ) : r.effective_minutes != null ? (
-                      <span className={offCellClass(offByRow.get(r.id)?.over6h)}>
-                        {formatDuration(r.effective_minutes)}
-                      </span>
-                    ) : (
-                      "—"
-                    )}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap text-sm">{formatPause(r)}</TableCell>
-                  <TableCell>
-                    <span
-                      className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${ORIGIN_TONE[r.origin]}`}
-                    >
-                      {formatOrigin(r)}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <TaskNotesCell
-                      notes={[
-                        ...(formatStartDelay(r)
-                          ? [
-                              {
-                                label: "Início com atraso",
-                                text: formatStartDelay(r),
-                                createdAt: r.started_at,
-                                requestedDate: null,
-                                needsReassignment: null,
-                              },
-                            ]
-                          : []),
-                        ...getRowNoteItems(r),
-                      ]}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    {isOperationalTask(r) || isVacation(r) ? (
-                      <span className="text-muted-foreground">—</span>
-                    ) : (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Ações do registro">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {isAbsence(r) && (
-                            <DropdownMenuItem onClick={() => openManualPoint(r)}>
-                              <ClockPlus className="mr-2 h-4 w-4" /> Lançar ponto manual
+                    </TableCell>
+                    <TableCell>
+                      <TaskNotesCell
+                        notes={[
+                          ...(formatStartDelay(r)
+                            ? [
+                                {
+                                  label: "Início com atraso",
+                                  text: formatStartDelay(r),
+                                  createdAt: r.started_at,
+                                  requestedDate: null,
+                                  needsReassignment: null,
+                                },
+                              ]
+                            : []),
+                          ...getRowNoteItems(r),
+                        ]}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {isOperationalTask(r) || isVacation(r) ? (
+                        <span className="text-muted-foreground">—</span>
+                      ) : (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Ações do registro">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {isAbsence(r) && (
+                              <DropdownMenuItem onClick={() => openManualPoint(r)}>
+                                <ClockPlus className="mr-2 h-4 w-4" /> Lançar ponto manual
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem onClick={() => (isAbsence(r) ? openAbsenceEdit(r) : openEdit(r))}>
+                              <Pencil className="mr-2 h-4 w-4" /> {isAbsence(r) ? "Editar falta" : "Editar"}
                             </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem onClick={() => (isAbsence(r) ? openAbsenceEdit(r) : openEdit(r))}>
-                            <Pencil className="mr-2 h-4 w-4" /> {isAbsence(r) ? "Editar falta" : "Editar"}
-                          </DropdownMenuItem>
-                          {isAbsence(r) ? (
-                            <DropdownMenuItem disabled title="Falta não possui ponto para devolver">
-                              <RotateCcw className="mr-2 h-4 w-4" /> Devolver para refazer
-                            </DropdownMenuItem>
-                          ) : (
-                            !r.voided_at &&
-                            r.entry_kind !== "paid_leave" && (
-                              <DropdownMenuItem onClick={() => requestVoid(r)} disabled={voidMut.isPending}>
+                            {isAbsence(r) ? (
+                              <DropdownMenuItem disabled title="Falta não possui ponto para devolver">
                                 <RotateCcw className="mr-2 h-4 w-4" /> Devolver para refazer
                               </DropdownMenuItem>
-                            )
-                          )}
-                          <DropdownMenuItem onClick={() => (isAbsence(r) ? openTaskAudit(r) : openAudit(r))}>
-                            <History className="mr-2 h-4 w-4" /> Histórico
-                          </DropdownMenuItem>
-                          {isAbsence(r) ? (
-                            <DropdownMenuItem disabled title="Falta não possui geolocalização">
-                              <MapPin className="mr-2 h-4 w-4" /> Geolocalização
+                            ) : (
+                              !r.voided_at &&
+                              r.entry_kind !== "paid_leave" && (
+                                <DropdownMenuItem onClick={() => requestVoid(r)} disabled={voidMut.isPending}>
+                                  <RotateCcw className="mr-2 h-4 w-4" /> Devolver para refazer
+                                </DropdownMenuItem>
+                              )
+                            )}
+                            <DropdownMenuItem onClick={() => (isAbsence(r) ? openTaskAudit(r) : openAudit(r))}>
+                              <History className="mr-2 h-4 w-4" /> Histórico
                             </DropdownMenuItem>
-                          ) : (
-                            <DropdownMenuItem onClick={() => openGeo(r)}>
-                              <MapPin className="mr-2 h-4 w-4" /> Geolocalização
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </TableCell>
-                </TableRow>
-                </RecordHistoryMenu>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-        <div className="flex items-center justify-between border-t border-border px-4 py-2 text-sm">
-          <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>
-            <ChevronLeft className="mr-1 h-4 w-4" /> Anterior
-          </Button>
-          <span className="text-xs text-muted-foreground">
-            Página {page + 1} de {totalPages}
-          </span>
-          <Button variant="outline" size="sm" disabled={page + 1 >= totalPages} onClick={() => setPage((p) => p + 1)}>
-            Próxima <ChevronRight className="ml-1 h-4 w-4" />
-          </Button>
-        </div>
-      </section>
+                            {isAbsence(r) ? (
+                              <DropdownMenuItem disabled title="Falta não possui geolocalização">
+                                <MapPin className="mr-2 h-4 w-4" /> Geolocalização
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem onClick={() => openGeo(r)}>
+                                <MapPin className="mr-2 h-4 w-4" /> Geolocalização
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                  </RecordHistoryMenu>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="flex items-center justify-between border-t border-border px-4 py-2 text-sm">
+            <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>
+              <ChevronLeft className="mr-1 h-4 w-4" /> Anterior
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              Página {page + 1} de {totalPages}
+            </span>
+            <Button variant="outline" size="sm" disabled={page + 1 >= totalPages} onClick={() => setPage((p) => p + 1)}>
+              Próxima <ChevronRight className="ml-1 h-4 w-4" />
+            </Button>
+          </div>
+        </section>
+      </div>
 
       <PunchEditorDrawer
         open={editorOpen}
         onOpenChange={(open) => {
           setEditorOpen(open);
-          if (!open) setManualPointTarget(null);
+          if (!open) {
+            setManualPointTarget(null);
+            qc.invalidateQueries({ queryKey: [RECONCILIATION_QUERY_KEY] });
+          }
         }}
         mode={editorMode}
         companyId={currentCompanyId}

@@ -22,6 +22,8 @@ import { downloadBytes, printBytes } from "@/lib/timesheet-pdf";
 import { isDayVisto, resolveVersionSignature, signatureNotice } from "@/lib/timesheet-signature";
 import { withLiveExtras } from "@/lib/timesheet-view";
 import { TimesheetDaysTable } from "@/components/ponto/TimesheetDaysTable";
+import { ScheduleReconciliation } from "@/components/ponto/ScheduleReconciliation";
+import { monthRange } from "@/lib/ponto/reconciliation";
 import { toast } from "sonner";
 
 export function TimesheetViewerDialog({
@@ -44,6 +46,8 @@ export function TimesheetViewerDialog({
   onChanged?: () => void;
 }) {
   const [editing, setEditing] = useState(false);
+  // "Folha" ou "Conferência Previsto x Real" (gestor no Fechamento e Contabilidade)
+  const [tab, setTab] = useState<"folha" | "conferencia">("folha");
   // Depois de uma correção numa folha assinada há uma versão nova: mostra essa.
   const [versionOverride, setVersionOverride] = useState<{
     period: string;
@@ -106,6 +110,7 @@ export function TimesheetViewerDialog({
       onOpenChange={(v) => {
         if (!v) {
           setEditing(false);
+          setTab("folha");
           onClose();
         }
       }}
@@ -117,7 +122,62 @@ export function TimesheetViewerDialog({
           description={row ? TIMESHEET_STATUS_LABEL[row.status] : ""}
         />
         <ModalBody>
-          {snap.isLoading ? (
+          {row && (
+            <div
+              className="mb-4 inline-flex rounded-xl border border-border bg-card p-1"
+              role="tablist"
+              aria-label="Vista da folha"
+            >
+              {(
+                [
+                  ["folha", "Folha"],
+                  ["conferencia", "Conferência Previsto x Real"],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === key}
+                  onClick={() => setTab(key)}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                    tab === key
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+          {row && tab === "conferencia" ? (
+            <ScheduleReconciliation
+              companyId={companyId}
+              employeeId={row.employee_id}
+              {...monthRange(year, month)}
+              onEdit={
+                canEdit
+                  ? () => {
+                      setTab("folha");
+                      setEditing(true);
+                    }
+                  : undefined
+              }
+              onLaunch={
+                canEdit
+                  ? () => {
+                      setTab("folha");
+                      setEditing(true);
+                    }
+                  : undefined
+              }
+              onChanged={() => {
+                void snap.refetch();
+                onChanged?.();
+              }}
+            />
+          ) : snap.isLoading ? (
             <div className="text-sm text-muted-foreground">Carregando...</div>
           ) : snap.data ? (
             <div className="space-y-4">

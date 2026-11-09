@@ -113,6 +113,8 @@ export type SnapshotEntry = {
   break_minutes: number;
   worked_minutes: number;
   effective_minutes: number;
+  /** Conferência: diferença "Ignorada" — conta o previsto (worked_minutes) e não o real (effective_minutes). */
+  reconciliation_ignored?: boolean;
   start_off: boolean;
   end_off: boolean;
   over_6h: boolean;

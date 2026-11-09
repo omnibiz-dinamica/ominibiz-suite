@@ -33,7 +33,17 @@ function EntryCells({ e }: { e: SnapshotEntry }) {
       <td className={`px-3 py-2 ${e.start_off ? RED : ""}`}>{e.first_in_local ?? "—"}</td>
       <td className={`px-3 py-2 ${e.end_off ? RED : ""}`}>{e.last_out_local ?? "—"}</td>
       <td className="px-3 py-2">{formatMinutes(e.break_minutes)}</td>
-      <td className={`px-3 py-2 ${e.over_6h ? RED : ""}`}>{formatMinutes(e.worked_minutes)}</td>
+      <td className={`px-3 py-2 ${e.over_6h ? RED : ""}`}>
+        {formatMinutes(e.worked_minutes)}
+        {e.reconciliation_ignored && (
+          <span
+            className="block text-xs text-muted-foreground"
+            title={`Real: ${formatMinutes(e.effective_minutes)}`}
+          >
+            previsto (real {formatMinutes(e.effective_minutes)})
+          </span>
+        )}
+      </td>
     </>
   );
 }
