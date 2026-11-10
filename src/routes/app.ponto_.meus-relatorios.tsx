@@ -48,6 +48,7 @@ import {
   requestCorrection,
   sha256Hex,
   signPeriod,
+  timesheetPayLabel,
   uploadTimesheetPdf,
   type TimesheetPeriod,
   type TimesheetStatus,
@@ -407,7 +408,7 @@ function PeriodDetail({
                 </div>
                 <div>
                   <div className="text-xs uppercase text-muted-foreground">Tipo de pagamento</div>
-                  <div className="font-medium">{snap.data.snapshot.summary.payment_type_used ?? "—"}</div>
+                  <div className="font-medium">{timesheetPayLabel(snap.data.snapshot.summary.payment_type_used)}</div>
                 </div>
               </div>
 

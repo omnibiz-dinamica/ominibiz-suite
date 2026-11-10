@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { formatWallTime } from "@/lib/wall-clock";
+import { PAYMENT_TYPE_LABEL, type PaymentType } from "@/lib/compensation";
 
 /**
  * OmniBiz · Fechamento Mensal da Folha de Ponto (ADR-038).
@@ -164,6 +165,8 @@ export type TimesheetSnapshot = {
     calculated_amount: number | null;
     monthly_amount: number | null;
     currency: string;
+    /** 10/11/2026: total por cliente, com a forma de pagamento de cada um. */
+    by_client?: TimesheetClientTotal[];
   };
   generated_at: string;
   /** SUP-301: versão criada por correção do gestor (mantém a assinatura). */
@@ -176,6 +179,25 @@ export type TimesheetSnapshot = {
     original_signed_at: string | null;
   };
 };
+
+/** Linha da "Composição por cliente" da folha (timesheet_build_snapshot). */
+export type TimesheetClientTotal = {
+  client_id: string | null;
+  client_name: string;
+  pay_model: string;
+  unit_rate: number | null;
+  minutes: number;
+  entries: number;
+  days: number;
+  amount: number;
+};
+
+/** Rótulo do tipo de pagamento da folha ("multiple" = formas diferentes por cliente). */
+export function timesheetPayLabel(type: string | null | undefined): string {
+  if (!type) return "—";
+  if (type === "multiple") return "Vários (por cliente)";
+  return PAYMENT_TYPE_LABEL[type as PaymentType] ?? type;
+}
 
 export type TimesheetPeriod = {
   id: string;
@@ -221,7 +243,14 @@ export type TimesheetListRow = {
 };
 
 const rpc = (name: string, args?: Record<string, unknown>) =>
-  (supabase as unknown as { rpc: (n: string, a?: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }> }).rpc(name, args);
+  (
+    supabase as unknown as {
+      rpc: (
+        n: string,
+        a?: Record<string, unknown>,
+      ) => Promise<{ data: unknown; error: { message: string } | null }>;
+    }
+  ).rpc(name, args);
 
 async function call<T>(name: string, args?: Record<string, unknown>): Promise<T> {
   const { data, error } = await rpc(name, args);
@@ -282,7 +311,6 @@ export type TimesheetVersion = {
   signature_source?: string | null;
   signature_linked_at?: string | null;
 };
-
 
 export async function signPeriod(periodId: string): Promise<TimesheetVersion> {
   const data = await call<TimesheetVersion | TimesheetVersion[]>("timesheet_sign", {

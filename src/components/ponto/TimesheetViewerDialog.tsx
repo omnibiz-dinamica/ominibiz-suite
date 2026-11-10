@@ -17,6 +17,7 @@ import {
   getVersion,
   logAccess,
   monthLabel,
+  timesheetPayLabel,
   type TimesheetListRow,
 } from "@/lib/timesheet";
 import { timesheetRowToPdf } from "@/lib/timesheet-batch";
@@ -188,7 +189,7 @@ export function TimesheetViewerDialog({
                 <div>
                   <div className="text-xs uppercase text-muted-foreground">Tipo</div>
                   <div className="font-medium">
-                    {snap.data.snapshot.summary.payment_type_used ?? "—"}
+                    {timesheetPayLabel(snap.data.snapshot.summary.payment_type_used)}
                   </div>
                 </div>
                 <div>
@@ -201,6 +202,46 @@ export function TimesheetViewerDialog({
                   </div>
                 </div>
               </div>
+              {(snap.data.snapshot.summary.by_client?.length ?? 0) > 0 && (
+                <div className="rounded-xl border border-border bg-card/60 p-4 text-sm">
+                  <div className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
+                    Composição por cliente
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[32rem]">
+                      <thead className="text-xs text-muted-foreground">
+                        <tr>
+                          <th className="py-1 text-left font-medium">Cliente</th>
+                          <th className="py-1 text-left font-medium">Forma</th>
+                          <th className="py-1 text-right font-medium">Valor</th>
+                          <th className="py-1 text-right font-medium">Horas</th>
+                          <th className="py-1 text-right font-medium">Dias</th>
+                          <th className="py-1 text-right font-medium">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {snap.data.snapshot.summary.by_client!.map((c) => (
+                          <tr
+                            key={`${c.client_id ?? "sem"}:${c.pay_model}`}
+                            className="border-t border-border"
+                          >
+                            <td className="py-1">{c.client_name}</td>
+                            <td className="py-1">{timesheetPayLabel(c.pay_model)}</td>
+                            <td className="py-1 text-right">
+                              {c.unit_rate != null ? Number(c.unit_rate).toFixed(2) : "—"}
+                            </td>
+                            <td className="py-1 text-right">{formatMinutes(c.minutes)}</td>
+                            <td className="py-1 text-right">{c.days}</td>
+                            <td className="py-1 text-right font-medium">
+                              {Number(c.amount).toFixed(2)} {snap.data.snapshot.summary.currency}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-sm text-destructive">Não foi possível carregar o relatório.</div>

@@ -45,6 +45,7 @@ function money(value: number | null | undefined, currency: string) {
 
 function payLabel(type: string | null | undefined, tr: (k: string) => string) {
   if (!type) return "—";
+  if (type === "multiple") return tr("Vários (por cliente)");
   const label = PAYMENT_TYPE_LABEL[type as PaymentType];
   return label ? tr(label) : type;
 }
@@ -379,10 +380,22 @@ export async function generateTimesheetPdf(
   } else if (s.calculated_amount != null) {
     summaryRows.push([tr("Total do mês"), money(s.calculated_amount, s.currency)]);
   }
+  // 10/11/2026: com mais de um cliente/forma, mostra a composição por cliente.
+  const byClient = s.by_client ?? [];
+  if (byClient.length > 1) {
+    for (const c of byClient) {
+      const name = c.client_name.length > 26 ? `${c.client_name.slice(0, 25)}…` : c.client_name;
+      summaryRows.push([
+        `· ${name}`,
+        `${payLabel(c.pay_model, tr)} · ${formatMinutes(c.minutes)} · ${money(c.amount, s.currency)}`,
+      ]);
+    }
+  }
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   for (const [k, v] of summaryRows) {
+    if (y > A4.h - 60) newPage(false);
     doc.setTextColor(120);
     doc.text(`${k}:`, MARGIN, y);
     doc.setTextColor(20);
