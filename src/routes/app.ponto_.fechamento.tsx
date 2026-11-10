@@ -29,7 +29,7 @@ import {
   formatMinutes,
   listPeriods,
   monthLabel,
-  openMonth,
+  openMonthFor,
   sendToAccounting,
   type TimesheetListRow,
   type TimesheetStatus,
@@ -37,6 +37,7 @@ import {
 import { buildTimesheetPackage } from "@/lib/timesheet-batch";
 import { downloadBytes, printBytes } from "@/lib/timesheet-pdf";
 import { TimesheetViewerDialog } from "@/components/ponto/TimesheetViewerDialog";
+import { OpenMonthDialog } from "@/components/ponto/OpenMonthDialog";
 
 export const Route = createFileRoute("/app/ponto_/fechamento")({ component: Page });
 
@@ -65,6 +66,8 @@ function Closing() {
   const [selected, setSelected] = useState<string[]>([]);
   const [viewing, setViewing] = useState<TimesheetListRow | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
+  // Abrir mês: só para os funcionários escolhidos (nunca todos de uma vez)
+  const [openPicker, setOpenPicker] = useState(false);
 
   const key = ["timesheet-closing", currentCompanyId, year, month] as const;
   const list = useQuery({
@@ -81,10 +84,16 @@ function Closing() {
 
   const invalidate = () => qc.invalidateQueries({ queryKey: key });
 
+  const existingByEmployee = useMemo(
+    () => new Map((list.data ?? []).map((r) => [r.employee_id, r.status] as const)),
+    [list.data],
+  );
+
   const open = useMutation({
-    mutationFn: () => openMonth(currentCompanyId!, year, month),
+    mutationFn: (employeeIds: string[]) => openMonthFor(currentCompanyId!, year, month, employeeIds),
     onSuccess: (n) => {
       toast.success(`${n ?? 0} funcionário(s) notificados para conferência.`);
+      setOpenPicker(false);
       invalidate();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -148,10 +157,22 @@ function Closing() {
             Conferência, fechamento e liberação das folhas de ponto de {monthLabel(month, year)}.
           </p>
         </div>
-        <Button onClick={() => open.mutate()} disabled={open.isPending || !currentCompanyId}>
+        <Button onClick={() => setOpenPicker(true)} disabled={open.isPending || !currentCompanyId}>
           <CalendarPlus className="h-4 w-4" />
-          {open.isPending ? "Abrindo..." : "Abrir mês para conferência"}
+          Abrir mês para conferência
         </Button>
+        {currentCompanyId && (
+          <OpenMonthDialog
+            open={openPicker}
+            onOpenChange={setOpenPicker}
+            companyId={currentCompanyId}
+            year={year}
+            month={month}
+            existing={existingByEmployee}
+            pending={open.isPending}
+            onConfirm={(ids) => open.mutate(ids)}
+          />
+        )}
       </div>
 
       <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-3">

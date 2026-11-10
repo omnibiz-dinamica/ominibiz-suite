@@ -327,11 +327,23 @@ export async function listPeriods(companyId: string, year: number, month: number
   });
 }
 
-export async function openMonth(companyId: string, year: number, month: number) {
-  return call<number>("timesheet_open_month", {
+/**
+ * Abre o mês para conferência SÓ para os funcionários escolhidos (avisa cada um).
+ * A função antiga timesheet_open_month (que avisava todos) foi bloqueada no banco
+ * em 10/11/2026 depois de um envio em massa por engano.
+ */
+export async function openMonthFor(
+  companyId: string,
+  year: number,
+  month: number,
+  employeeIds: string[],
+) {
+  if (employeeIds.length === 0) throw new Error("Selecione ao menos um funcionário.");
+  return call<number>("timesheet_open_month_for", {
     _company_id: companyId,
     _year: year,
     _month: month,
+    _employee_ids: employeeIds,
   });
 }
 
