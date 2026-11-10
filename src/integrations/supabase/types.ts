@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      _omnibiz_fn_backup: {
+        Row: {
+          def: string
+          def_md5: string
+          fn: string
+          id: number
+          saved_at: string
+          tag: string
+        }
+        Insert: {
+          def: string
+          def_md5: string
+          fn: string
+          id?: number
+          saved_at?: string
+          tag: string
+        }
+        Update: {
+          def?: string
+          def_md5?: string
+          fn?: string
+          id?: number
+          saved_at?: string
+          tag?: string
+        }
+        Relationships: []
+      }
       activity_events: {
         Row: {
           action: string
@@ -655,6 +682,7 @@ export type Database = {
           email: string | null
           id: string
           legal_name: string | null
+          max_discount_pct: number
           name: string
           phone: string | null
           postal_code: string | null
@@ -672,6 +700,7 @@ export type Database = {
           email?: string | null
           id?: string
           legal_name?: string | null
+          max_discount_pct?: number
           name: string
           phone?: string | null
           postal_code?: string | null
@@ -689,6 +718,7 @@ export type Database = {
           email?: string | null
           id?: string
           legal_name?: string | null
+          max_discount_pct?: number
           name?: string
           phone?: string | null
           postal_code?: string | null
@@ -3361,6 +3391,160 @@ export type Database = {
           },
         ]
       }
+      retail_cash_movements: {
+        Row: {
+          amount: number
+          company_id: string
+          created_at: string
+          id: string
+          idempotency_key: string | null
+          kind: string
+          reason: string
+          session_id: string
+          unit_id: string
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          company_id: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string | null
+          kind: string
+          reason: string
+          session_id: string
+          unit_id: string
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          company_id?: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string | null
+          kind?: string
+          reason?: string
+          session_id?: string
+          unit_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retail_cash_movements_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retail_cash_movements_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "retail_cash_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retail_cash_movements_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "company_units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retail_cash_movements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      retail_cash_sessions: {
+        Row: {
+          closed_at: string | null
+          closed_by: string | null
+          company_id: string
+          counted_cash: number | null
+          created_at: string
+          difference: number | null
+          expected_cash: number | null
+          id: string
+          notes: string | null
+          opened_at: string
+          opened_by: string | null
+          opening_amount: number
+          status: string
+          totals: Json | null
+          unit_id: string
+          updated_at: string
+        }
+        Insert: {
+          closed_at?: string | null
+          closed_by?: string | null
+          company_id: string
+          counted_cash?: number | null
+          created_at?: string
+          difference?: number | null
+          expected_cash?: number | null
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opened_by?: string | null
+          opening_amount: number
+          status?: string
+          totals?: Json | null
+          unit_id: string
+          updated_at?: string
+        }
+        Update: {
+          closed_at?: string | null
+          closed_by?: string | null
+          company_id?: string
+          counted_cash?: number | null
+          created_at?: string
+          difference?: number | null
+          expected_cash?: number | null
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opened_by?: string | null
+          opening_amount?: number
+          status?: string
+          totals?: Json | null
+          unit_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retail_cash_sessions_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retail_cash_sessions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retail_cash_sessions_opened_by_fkey"
+            columns: ["opened_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retail_cash_sessions_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "company_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       retail_product_categories: {
         Row: {
           active: boolean
@@ -3456,6 +3640,240 @@ export type Database = {
           },
         ]
       }
+      retail_sale_items: {
+        Row: {
+          company_id: string
+          id: string
+          line_total: number
+          product_id: string
+          product_name: string
+          product_unit: string
+          quantity: number
+          sale_id: string
+          unit_id: string
+          unit_price: number
+        }
+        Insert: {
+          company_id: string
+          id?: string
+          line_total: number
+          product_id: string
+          product_name: string
+          product_unit: string
+          quantity: number
+          sale_id: string
+          unit_id: string
+          unit_price: number
+        }
+        Update: {
+          company_id?: string
+          id?: string
+          line_total?: number
+          product_id?: string
+          product_name?: string
+          product_unit?: string
+          quantity?: number
+          sale_id?: string
+          unit_id?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retail_sale_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retail_sale_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "retail_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retail_sale_items_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "retail_sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retail_sale_items_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "company_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      retail_sale_payments: {
+        Row: {
+          amount: number
+          company_id: string
+          id: string
+          method: string
+          sale_id: string
+          unit_id: string
+        }
+        Insert: {
+          amount: number
+          company_id: string
+          id?: string
+          method: string
+          sale_id: string
+          unit_id: string
+        }
+        Update: {
+          amount?: number
+          company_id?: string
+          id?: string
+          method?: string
+          sale_id?: string
+          unit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retail_sale_payments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retail_sale_payments_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "retail_sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retail_sale_payments_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "company_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      retail_sales: {
+        Row: {
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          change_amount: number
+          code: string
+          company_id: string
+          created_at: string
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          customer_tax_id: string | null
+          discount: number
+          id: string
+          idempotency_key: string | null
+          number: number
+          paid_total: number
+          seller_id: string | null
+          session_id: string
+          status: string
+          subtotal: number
+          total: number
+          unit_id: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          change_amount?: number
+          code: string
+          company_id: string
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          customer_tax_id?: string | null
+          discount?: number
+          id?: string
+          idempotency_key?: string | null
+          number: number
+          paid_total: number
+          seller_id?: string | null
+          session_id: string
+          status?: string
+          subtotal: number
+          total: number
+          unit_id: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          change_amount?: number
+          code?: string
+          company_id?: string
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          customer_tax_id?: string | null
+          discount?: number
+          id?: string
+          idempotency_key?: string | null
+          number?: number
+          paid_total?: number
+          seller_id?: string | null
+          session_id?: string
+          status?: string
+          subtotal?: number
+          total?: number
+          unit_id?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retail_sales_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retail_sales_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retail_sales_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retail_sales_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "retail_cash_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retail_sales_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "company_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       retail_stock_balances: {
         Row: {
           company_id: string
@@ -3520,6 +3938,7 @@ export type Database = {
           quantity: number
           reason: string
           related_unit_id: string | null
+          sale_id: string | null
           transfer_group_id: string | null
           unit_id: string
           user_id: string | null
@@ -3535,6 +3954,7 @@ export type Database = {
           quantity: number
           reason: string
           related_unit_id?: string | null
+          sale_id?: string | null
           transfer_group_id?: string | null
           unit_id: string
           user_id?: string | null
@@ -3550,6 +3970,7 @@ export type Database = {
           quantity?: number
           reason?: string
           related_unit_id?: string | null
+          sale_id?: string | null
           transfer_group_id?: string | null
           unit_id?: string
           user_id?: string | null
@@ -3577,6 +3998,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "retail_stock_movements_sale_fk"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "retail_sales"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "retail_stock_movements_unit_id_fkey"
             columns: ["unit_id"]
             isOneToOne: false
@@ -3588,6 +4016,32 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      retail_unit_counters: {
+        Row: {
+          last_number: number
+          unit_id: string
+          year: number
+        }
+        Insert: {
+          last_number?: number
+          unit_id: string
+          year: number
+        }
+        Update: {
+          last_number?: number
+          unit_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retail_unit_counters_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "company_units"
             referencedColumns: ["id"]
           },
         ]
@@ -5489,6 +5943,138 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      timesheet_reconciliation_events: {
+        Row: {
+          action: string
+          actor_user_id: string
+          company_id: string
+          counted_minutes: number | null
+          created_at: string
+          employee_id: string
+          id: number
+          notes: string | null
+          planned_minutes: number | null
+          previous_decision: string | null
+          real_minutes: number | null
+          task_id: string | null
+          time_entry_id: string | null
+          work_date: string
+        }
+        Insert: {
+          action: string
+          actor_user_id: string
+          company_id: string
+          counted_minutes?: number | null
+          created_at?: string
+          employee_id: string
+          id?: number
+          notes?: string | null
+          planned_minutes?: number | null
+          previous_decision?: string | null
+          real_minutes?: number | null
+          task_id?: string | null
+          time_entry_id?: string | null
+          work_date: string
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string
+          company_id?: string
+          counted_minutes?: number | null
+          created_at?: string
+          employee_id?: string
+          id?: number
+          notes?: string | null
+          planned_minutes?: number | null
+          previous_decision?: string | null
+          real_minutes?: number | null
+          task_id?: string | null
+          time_entry_id?: string | null
+          work_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timesheet_reconciliation_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      timesheet_schedule_reconciliations: {
+        Row: {
+          company_id: string
+          counted_minutes: number
+          decided_at: string
+          decided_by: string
+          decision: string
+          employee_id: string
+          id: string
+          notes: string | null
+          planned_minutes: number | null
+          real_minutes: number
+          task_id: string | null
+          time_entry_id: string | null
+          updated_at: string
+          work_date: string
+        }
+        Insert: {
+          company_id: string
+          counted_minutes?: number
+          decided_at?: string
+          decided_by: string
+          decision: string
+          employee_id: string
+          id?: string
+          notes?: string | null
+          planned_minutes?: number | null
+          real_minutes?: number
+          task_id?: string | null
+          time_entry_id?: string | null
+          updated_at?: string
+          work_date: string
+        }
+        Update: {
+          company_id?: string
+          counted_minutes?: number
+          decided_at?: string
+          decided_by?: string
+          decision?: string
+          employee_id?: string
+          id?: string
+          notes?: string | null
+          planned_minutes?: number | null
+          real_minutes?: number
+          task_id?: string | null
+          time_entry_id?: string | null
+          updated_at?: string
+          work_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timesheet_schedule_reconciliations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheet_schedule_reconciliations_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheet_schedule_reconciliations_time_entry_id_fkey"
+            columns: ["time_entry_id"]
+            isOneToOne: false
+            referencedRelation: "time_entries"
             referencedColumns: ["id"]
           },
         ]
@@ -7884,6 +8470,47 @@ export type Database = {
         Args: { _company_id: string; _user_id: string }
         Returns: string
       }
+      retail_assert_unit_operator: {
+        Args: { _require_active?: boolean; _unit_id: string }
+        Returns: Record<string, unknown>
+      }
+      retail_cash_close: {
+        Args: { _counted_cash: number; _notes?: string; _session_id: string }
+        Returns: Json
+      }
+      retail_cash_move: {
+        Args: {
+          _amount: number
+          _idempotency_key?: string
+          _kind: string
+          _reason: string
+          _session_id: string
+        }
+        Returns: Json
+      }
+      retail_cash_open: {
+        Args: { _notes?: string; _opening_amount: number; _unit_id: string }
+        Returns: Json
+      }
+      retail_cash_session_totals: {
+        Args: { _session_id: string }
+        Returns: Json
+      }
+      retail_sale_cancel: {
+        Args: { _reason: string; _sale_id: string }
+        Returns: Json
+      }
+      retail_sale_create: {
+        Args: {
+          _customer?: Json
+          _discount?: number
+          _idempotency_key?: string
+          _items: Json
+          _payments: Json
+          _unit_id: string
+        }
+        Returns: Json
+      }
       retail_stock_move: {
         Args: {
           _idempotency_key?: string
@@ -8977,6 +9604,39 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      timesheet_reconciliation_counted_minutes: {
+        Args: { _time_entry_id: string }
+        Returns: number
+      }
+      timesheet_reconciliation_decide: {
+        Args: {
+          _company_id: string
+          _decision: string
+          _employee_id: string
+          _notes?: string
+          _task_id: string
+          _time_entry_id: string
+        }
+        Returns: Json
+      }
+      timesheet_reconciliation_list: {
+        Args: {
+          _company_id: string
+          _employee_id: string
+          _from: string
+          _to: string
+        }
+        Returns: Json
+      }
+      timesheet_reconciliation_rows: {
+        Args: {
+          _company_id: string
+          _employee_id: string
+          _from: string
+          _to: string
+        }
+        Returns: Json[]
       }
       timesheet_register_pdf: {
         Args: { _content_hash: string; _pdf_path: string; _version_id: string }
