@@ -11,7 +11,15 @@
 import type { SnapshotDay, SnapshotEntry, TimesheetSnapshot } from "@/lib/timesheet";
 import type { ReconciliationRow } from "@/lib/ponto/reconciliation";
 
-export type ClosingRowKind = "reconciliation" | "paid_leave" | "vacation" | "empty";
+export type ClosingRowKind = "reconciliation" | "paid_leave" | "sheet" | "vacation" | "empty";
+
+/** Folga remunerada: ponto do tipo folga OU tarefa do cliente "FOLGA REMUNERADA". */
+export function isPaidLeaveEntry(e: Pick<SnapshotEntry, "entry_kind" | "client_name">): boolean {
+  return (
+    (e.entry_kind ?? "work") === "paid_leave" ||
+    (e.client_name ?? "").trim().toLowerCase() === "folga remunerada"
+  );
+}
 
 export interface ClosingRow {
   key: string;
@@ -63,6 +71,10 @@ export function buildClosingRows(
   const keys = new Set(monthKeys(year, month));
   for (const k of reconByDay.keys()) if (k.startsWith(`${year}-${pad(month)}-`)) keys.add(k);
 
+  // O que a conferência já mostra (o resto da folha aparece à parte, nunca some).
+  const coveredTasks = new Set(recon.map((r) => r.task_id).filter(Boolean) as string[]);
+  const coveredEntries = new Set(recon.map((r) => r.time_entry_id).filter(Boolean) as string[]);
+
   const out: ClosingRow[] = [];
   for (const date of [...keys].sort()) {
     const day = dayByKey.get(date);
@@ -81,13 +93,13 @@ export function buildClosingRows(
           (r.task_id && (day?.task_notes ?? []).find((n) => n.task_id === r.task_id)?.note) || null,
       });
     }
-    // Folga remunerada não entra na conferência: vem da folha.
+    // Folga remunerada (e qualquer ponto que a conferência não cubra) vem da folha.
     for (const e of entries) {
-      if ((e.entry_kind ?? "work") !== "paid_leave") continue;
+      if (e.task_id ? coveredTasks.has(e.task_id) : coveredEntries.has(e.time_entry_id)) continue;
       rows.push({
         key: `l:${e.time_entry_id}`,
         date,
-        kind: "paid_leave",
+        kind: isPaidLeaveEntry(e) ? "paid_leave" : "sheet",
         recon: null,
         entry: e,
         breakMinutes: null,

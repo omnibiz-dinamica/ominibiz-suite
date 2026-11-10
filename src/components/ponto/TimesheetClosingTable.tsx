@@ -281,6 +281,8 @@ export function TimesheetClosingTable({
     if (row.kind === "empty") return <span className="text-muted-foreground">—</span>;
     if (row.kind === "vacation") return "Férias";
     if (row.kind === "paid_leave") return "Folga remunerada";
+    if (row.kind === "sheet")
+      return row.entry?.client_name ?? row.entry?.task_title ?? "Ponto sem tarefa";
     const r = row.recon!;
     return (
       <>
@@ -312,14 +314,18 @@ export function TimesheetClosingTable({
     );
   };
 
-  const entrada = (row: ClosingRow) =>
-    row.recon && row.recon.entries_count > 0 ? (row.recon.real_start ?? "—") : "—";
-  const saida = (row: ClosingRow) =>
-    row.recon && row.recon.entries_count > 0 ? (row.recon.real_end ?? "em curso") : "—";
+  const entrada = (row: ClosingRow) => {
+    if (row.kind === "sheet") return row.entry?.first_in_local ?? "—";
+    return row.recon && row.recon.entries_count > 0 ? (row.recon.real_start ?? "—") : "—";
+  };
+  const saida = (row: ClosingRow) => {
+    if (row.kind === "sheet") return row.entry?.last_out_local ?? "em curso";
+    return row.recon && row.recon.entries_count > 0 ? (row.recon.real_end ?? "em curso") : "—";
+  };
   const pausas = (row: ClosingRow) =>
     row.breakMinutes != null && row.breakMinutes > 0 ? formatHours(row.breakMinutes) : "—";
   const total = (row: ClosingRow) => {
-    if (row.kind === "paid_leave" && row.entry)
+    if ((row.kind === "paid_leave" || row.kind === "sheet") && row.entry)
       return formatHours(row.entry.worked_minutes ?? row.entry.effective_minutes);
     const r = row.recon;
     if (!r || r.entries_count === 0) return "—";
@@ -346,6 +352,7 @@ export function TimesheetClosingTable({
       return <span className="text-xs text-muted-foreground">Sem registo</span>;
     if (row.kind === "vacation") return <Badge variant="secondary">Férias</Badge>;
     if (row.kind === "paid_leave") return <Badge variant="secondary">Folga remunerada</Badge>;
+    if (row.kind === "sheet") return <Badge variant="outline">Na folha</Badge>;
     const r = row.recon!;
     return (
       <>

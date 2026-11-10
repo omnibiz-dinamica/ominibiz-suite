@@ -4,6 +4,7 @@ import {
   addPointDefaults,
   buildClosingRows,
   isClosingLocked,
+  isPaidLeaveEntry,
   launchDefaults,
 } from "../src/lib/ponto/closing-table";
 import type { ReconciliationRow } from "../src/lib/ponto/reconciliation";
@@ -138,6 +139,34 @@ describe("tabela única do fechamento", () => {
     expect(rows.find((r) => r.date === "2026-10-02")?.kind).toBe("paid_leave");
     expect(rows.find((r) => r.date === "2026-10-03")?.kind).toBe("vacation");
     expect(rows).toHaveLength(31);
+  });
+
+  test("folga do cliente FOLGA REMUNERADA (ponto 'work' de 0 min) aparece; ponto não coberto nunca some", () => {
+    const rows = buildClosingRows(
+      2026,
+      10,
+      [rec({ row_key: "a", work_date: "2026-10-16", task_id: "t1", entries_count: 1 })],
+      {
+        days: [
+          day("2026-10-16", {
+            entries: [
+              entry({ time_entry_id: "x1", task_id: "t1" }),
+              entry({
+                time_entry_id: "f1",
+                task_id: "tf",
+                client_name: "FOLGA REMUNERADA",
+                worked_minutes: 0,
+              }),
+              entry({ time_entry_id: "o1", task_id: "to", client_name: "Outro" }),
+            ],
+          }),
+        ],
+      },
+    );
+    const d = rows.filter((r) => r.date === "2026-10-16").map((r) => r.kind);
+    expect(d).toEqual(["reconciliation", "paid_leave", "sheet"]);
+    expect(isPaidLeaveEntry({ entry_kind: "work", client_name: " Folga Remunerada " })).toBe(true);
+    expect(isPaidLeaveEntry({ entry_kind: "work", client_name: "Coifa" })).toBe(false);
   });
 
   test("folha assinada ou com versão bloqueia ações por linha", () => {
