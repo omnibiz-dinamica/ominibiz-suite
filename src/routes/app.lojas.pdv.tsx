@@ -82,7 +82,7 @@ const saveUnit = (id: string) => {
   }
 };
 
-type CartLine = { productId: string; quantity: number };
+type CartLine = { productId: string; quantity: number; qtyText?: string };
 type PayLine = { key: string; method: PaymentMethod; amount: string };
 const parseNum = (v: string) => Number(v.replace(",", "."));
 
@@ -156,7 +156,7 @@ function PdvPage() {
       const next = round2(c[i].quantity + by);
       return next <= 0
         ? c.filter((_, j) => j !== i)
-        : c.map((l, j) => (j === i ? { ...l, quantity: next } : l));
+        : c.map((l, j) => (j === i ? { ...l, quantity: next, qtyText: undefined } : l));
     });
 
   const onSearchEnter = () => {
@@ -338,17 +338,31 @@ function PdvPage() {
                       <Input
                         className="h-7 w-16 text-center"
                         inputMode="decimal"
-                        value={String(l.quantity)}
+                        value={l.qtyText ?? String(l.quantity)}
                         aria-label="Quantidade"
                         onChange={(e) => {
-                          const n = parseNum(e.target.value);
-                          if (Number.isFinite(n) && n > 0)
-                            setCart((c) =>
-                              c.map((x) =>
-                                x.productId === l.productId ? { ...x, quantity: n } : x,
-                              ),
-                            );
+                          const raw = e.target.value;
+                          const n = parseNum(raw);
+                          setCart((c) =>
+                            c.map((x) =>
+                              x.productId === l.productId
+                                ? {
+                                    ...x,
+                                    qtyText: raw,
+                                    quantity:
+                                      Number.isFinite(n) && n > 0 ? round2(n) : x.quantity,
+                                  }
+                                : x,
+                            ),
+                          );
                         }}
+                        onBlur={() =>
+                          setCart((c) =>
+                            c.map((x) =>
+                              x.productId === l.productId ? { ...x, qtyText: undefined } : x,
+                            ),
+                          )
+                        }
                       />
                       <Button
                         size="icon"
