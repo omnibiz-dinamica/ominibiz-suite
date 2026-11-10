@@ -21,7 +21,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { CalendarPlus, Download, Lock, Printer, Send } from "lucide-react";
+import { CalendarPlus, Download, Lock, Printer, Search, Send } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { matchesClosingSearch } from "@/lib/ponto/closing-search";
 import {
   MONTH_LABELS,
   TIMESHEET_STATUS_LABEL,
@@ -63,6 +65,7 @@ function Closing() {
   const [year, setYear] = useState(now.getUTCFullYear());
   const [month, setMonth] = useState(now.getUTCMonth() + 1);
   const [status, setStatus] = useState<TimesheetStatus | "all">("all");
+  const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const [viewing, setViewing] = useState<TimesheetListRow | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
@@ -77,8 +80,11 @@ function Closing() {
   });
 
   const rows = useMemo(
-    () => (list.data ?? []).filter((r) => status === "all" || r.status === status),
-    [list.data, status],
+    () =>
+      (list.data ?? []).filter(
+        (r) => (status === "all" || r.status === status) && matchesClosingSearch(r, search),
+      ),
+    [list.data, status, search],
   );
   const selectedRows = rows.filter((r) => selected.includes(r.period_id));
 
@@ -175,7 +181,7 @@ function Closing() {
         )}
       </div>
 
-      <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-3">
+      <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-1.5">
           <Label>Ano</Label>
           <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
@@ -209,6 +215,23 @@ function Closing() {
               ))}
             </SelectContent>
           </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="fechamento-search">Pesquisar</Label>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              id="fechamento-search"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                // a seleção não pode ficar escondida atrás da pesquisa
+                setSelected([]);
+              }}
+              placeholder="Nome ou e-mail do funcionário"
+              className="pl-8"
+            />
+          </div>
         </div>
       </div>
 
@@ -245,7 +268,7 @@ function Closing() {
             <tr>
               <th className="px-3 py-2 text-left">
                 <Checkbox
-                  checked={rows.length > 0 && selected.length === rows.length}
+                  checked={rows.length > 0 && rows.every((r) => selected.includes(r.period_id))}
                   onCheckedChange={(v) =>
                     setSelected(v ? rows.map((r) => r.period_id) : [])
                   }
@@ -311,7 +334,11 @@ function Closing() {
             {rows.length === 0 && (
               <tr>
                 <td className="px-3 py-6 text-center text-sm text-muted-foreground" colSpan={7}>
-                  {list.isLoading ? "Carregando..." : "Nenhuma folha neste mês/filtro."}
+                  {list.isLoading
+                    ? "Carregando..."
+                    : search.trim()
+                      ? `Nenhum funcionário encontrado para "${search.trim()}".`
+                      : "Nenhuma folha neste mês/filtro."}
                 </td>
               </tr>
             )}
