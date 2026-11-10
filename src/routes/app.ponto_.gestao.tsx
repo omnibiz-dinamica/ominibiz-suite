@@ -67,6 +67,7 @@ import { formatCivilDate, type TaskOperationalNote } from "@/lib/ponto/task-note
 import { fetchOfflineEntryIds } from "@/lib/punch/offline-flags";
 import { entryScheduleFlags, fetchEntryTimeZones } from "@/lib/punch/off-schedule";
 import { RECONCILIATION_QUERY_KEY, ScheduleReconciliation } from "@/components/ponto/ScheduleReconciliation";
+import { launchDefaults } from "@/lib/ponto/closing-table";
 import { monthRange, type ReconciliationRow } from "@/lib/ponto/reconciliation";
 
 export const Route = createFileRoute("/app/ponto_/gestao")({ component: Page });
@@ -469,6 +470,8 @@ function GestaoPonto() {
   };
   const openConfLaunch = (row: ReconciliationRow) => {
     if (!row.task_id) return;
+    // Recorrência: scheduled_end é o fim da série; usa-se só a hora no dia da ocorrência.
+    const plan = launchDefaults(row.scheduled_for, row.scheduled_end);
     openManualPoint({
       id: row.task_id,
       company_id: currentCompanyId,
@@ -477,8 +480,8 @@ function GestaoPonto() {
       tasks: {
         title: row.task_title ?? "Tarefa",
         client_id: null,
-        scheduled_for: row.scheduled_for,
-        scheduled_end: row.scheduled_end,
+        scheduled_for: plan.startedAt,
+        scheduled_end: plan.endedAt,
       },
       profiles: { full_name: confEmployeeName(confFilters.userId) },
     } as unknown as Row);

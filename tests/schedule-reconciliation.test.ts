@@ -162,12 +162,13 @@ test("Gestão: aba Conferência com funcionário e período; Alterar e Lançar p
   expect(g).toMatch(/view === "lancamentos" \? "space-y-5" : "hidden"/);
 });
 
-test("Fechamento e Contabilidade: conferência na folha; Alterar só com canEdit (gestor)", () => {
+test("Fechamento e Contabilidade: folha e conferência numa só tabela; Alterar só com canEdit", () => {
   const d = read("../src/components/ponto/TimesheetViewerDialog.tsx");
-  expect(d).toMatch(/\["conferencia", "Conferência Previsto x Real"\]/);
-  expect(d).toMatch(/onEdit=\{\s*canEdit/);
-  expect(d).toMatch(/onLaunch=\{\s*canEdit/);
-  expect(d).toMatch(/\{\.\.\.monthRange\(year, month\)\}/);
+  expect(d).not.toMatch(/\["conferencia", "Conferência Previsto x Real"\]/);
+  expect(d).not.toMatch(/<TimesheetDaysTable/);
+  expect(d).toMatch(/<TimesheetClosingTable/);
+  expect(d).toMatch(/canEdit=\{canEdit\}/);
+  expect(d).toMatch(/locked=\{isClosingLocked\(viewRow \?\? row\)\}/);
   const c = read("../src/routes/app.contabilidade.folhas-ponto.tsx");
   expect(c).toMatch(/<TimesheetViewerDialog/);
   expect(c).not.toMatch(/canEdit/);
