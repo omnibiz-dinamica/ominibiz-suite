@@ -80,6 +80,7 @@ import { OfflinePunchBanner } from "@/components/ponto/OfflinePunchBanner";
 import { OffDayPunchDialog } from "@/components/ponto/OffDayPunchDialog";
 import { offDayInfo } from "@/lib/punch/off-day";
 import { applyLocalEvent, isLocalEntryId, type OfflinePunchEvent } from "@/lib/punch/offline-queue";
+import { finishedPauses, formatPauseSeconds, type PauseRow } from "@/lib/ponto/history";
 import { RefuseTaskDialog, type RefusalSubmitPayload } from "@/components/tasks/RefuseTaskDialog";
 
 export const Route = createFileRoute("/app/ponto")({ component: PontoPage });
@@ -161,7 +162,8 @@ function PontoPage() {
   // Toast único por retorno de RPC v2 — sempre baseado no código do servidor.
   function handleV2Toast(res: PunchV2Response) {
     const msg = res.message ?? res.code;
-    if (res.success) toast.success(`${res.code} — ${msg}`);
+    // 12/11/2026: só o texto amigável (antes mostrava "PUNCH_RESUMED — …").
+    if (res.success) toast.success(msg);
     else toast.error(msg);
   }
 
@@ -425,7 +427,10 @@ function PontoPage() {
       applyOfflineToScreen(res);
       return res;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["punch-open"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["punch-open"] });
+      qc.invalidateQueries({ queryKey: ["punch-open-pauses"] });
+    },
   });
   const endMut = useMutation({
     mutationFn: async ({ note }: { note: string }) => {
@@ -1075,6 +1080,24 @@ function ActiveTaskCard({
     const id = window.setInterval(() => setPauseNow(Date.now()), 15000);
     return () => window.clearInterval(id);
   }, [state]);
+  // 12/11/2026: depois de retomar, mostra ao lado do tempo as pausas já feitas.
+  const canListPauses =
+    state === "aberto" &&
+    !isLocalEntryId(entry.id) &&
+    (!!entry.resumed_at || Number(entry.prior_pause_seconds ?? 0) > 0);
+  const { data: pauseRows } = useQuery({
+    queryKey: ["punch-open-pauses", entry.id, entry.paused_at, entry.resumed_at],
+    enabled: canListPauses,
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.from("time_entry_pauses" as never) as any)
+        .select("time_entry_id, paused_at, resumed_at")
+        .eq("time_entry_id", entry.id);
+      if (error) throw error;
+      return (data ?? []) as PauseRow[];
+    },
+  });
+  const donePauses = canListPauses ? finishedPauses(entry, pauseRows) : [];
   const pausedAtMs = state === "pausado" && entry.paused_at ? new Date(entry.paused_at).getTime() : NaN;
   const hasPauseStart = Number.isFinite(pausedAtMs);
   const pauseElapsedMin = hasPauseStart ? Math.max(0, Math.floor((pauseNow - pausedAtMs) / 60000)) : 0;
@@ -1134,8 +1157,24 @@ function ActiveTaskCard({
         ) : (
           <div className="flex flex-col items-center justify-center rounded-xl bg-background/60 py-6">
             <div className="text-[11px] uppercase tracking-widest text-muted-foreground">Tempo efetivo</div>
-            <div className="max-w-full break-all font-display text-5xl font-semibold tabular-nums sm:text-6xl">
-              {formatHMS(liveSec)}
+            <div className="flex max-w-full items-center justify-center gap-3 sm:gap-5">
+              <div className="min-w-0 break-all font-display text-5xl font-semibold tabular-nums sm:text-6xl">
+                {formatHMS(liveSec)}
+              </div>
+              {donePauses.length > 0 && (
+                <div
+                  className="shrink-0 border-l border-border pl-3 text-left text-xs leading-5 sm:pl-4 sm:text-sm"
+                  data-testid="done-pauses"
+                >
+                  <div className="font-medium text-muted-foreground">Pausa</div>
+                  {donePauses.map((p, i) => (
+                    <div key={i} className="whitespace-nowrap tabular-nums">
+                      <span className="text-muted-foreground">{i + 1}ª</span>{" "}
+                      {formatPauseSeconds(p.seconds)}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             {state === "pausado" && (
               <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-warning/15 px-2.5 py-1 text-xs font-medium text-warning-foreground">

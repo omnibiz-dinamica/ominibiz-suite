@@ -66,6 +66,7 @@ import { Route as AppMaterialConstrucaoProdutosRouteImport } from './routes/app.
 import { Route as AppMaterialConstrucaoVendasRouteImport } from './routes/app.material-construcao.vendas'
 import { Route as AppPontoFechamentoRouteImport } from './routes/app.ponto_.fechamento'
 import { Route as AppPontoGestaoRouteImport } from './routes/app.ponto_.gestao'
+import { Route as AppPontoHistoricoRouteImport } from './routes/app.ponto_.historico'
 import { Route as AppPontoMeusRelatoriosRouteImport } from './routes/app.ponto_.meus-relatorios'
 import { Route as AppRestauranteIndexRouteImport } from './routes/app.restaurante.index'
 import { Route as AppRestauranteCozinhaRouteImport } from './routes/app.restaurante.cozinha'
@@ -387,6 +388,11 @@ const AppPontoGestaoRoute = AppPontoGestaoRouteImport.update({
   path: '/ponto/gestao',
   getParentRoute: () => AppRoute,
 } as any)
+const AppPontoHistoricoRoute = AppPontoHistoricoRouteImport.update({
+  id: '/ponto_/historico',
+  path: '/ponto/historico',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppPontoMeusRelatoriosRoute = AppPontoMeusRelatoriosRouteImport.update({
   id: '/ponto_/meus-relatorios',
   path: '/ponto/meus-relatorios',
@@ -552,6 +558,7 @@ export interface FileRoutesByFullPath {
   '/app/material-construcao/vendas': typeof AppMaterialConstrucaoVendasRoute
   '/app/ponto/fechamento': typeof AppPontoFechamentoRoute
   '/app/ponto/gestao': typeof AppPontoGestaoRoute
+  '/app/ponto/historico': typeof AppPontoHistoricoRoute
   '/app/ponto/meus-relatorios': typeof AppPontoMeusRelatoriosRoute
   '/app/restaurante/cozinha': typeof AppRestauranteCozinhaRoute
   '/app/restaurante/delivery': typeof AppRestauranteDeliveryRoute
@@ -629,6 +636,7 @@ export interface FileRoutesByTo {
   '/app/material-construcao/vendas': typeof AppMaterialConstrucaoVendasRoute
   '/app/ponto/fechamento': typeof AppPontoFechamentoRoute
   '/app/ponto/gestao': typeof AppPontoGestaoRoute
+  '/app/ponto/historico': typeof AppPontoHistoricoRoute
   '/app/ponto/meus-relatorios': typeof AppPontoMeusRelatoriosRoute
   '/app/restaurante/cozinha': typeof AppRestauranteCozinhaRoute
   '/app/restaurante/delivery': typeof AppRestauranteDeliveryRoute
@@ -710,6 +718,7 @@ export interface FileRoutesById {
   '/app/material-construcao/vendas': typeof AppMaterialConstrucaoVendasRoute
   '/app/ponto_/fechamento': typeof AppPontoFechamentoRoute
   '/app/ponto_/gestao': typeof AppPontoGestaoRoute
+  '/app/ponto_/historico': typeof AppPontoHistoricoRoute
   '/app/ponto_/meus-relatorios': typeof AppPontoMeusRelatoriosRoute
   '/app/restaurante/cozinha': typeof AppRestauranteCozinhaRoute
   '/app/restaurante/delivery': typeof AppRestauranteDeliveryRoute
@@ -792,6 +801,7 @@ export interface FileRouteTypes {
     | '/app/material-construcao/vendas'
     | '/app/ponto/fechamento'
     | '/app/ponto/gestao'
+    | '/app/ponto/historico'
     | '/app/ponto/meus-relatorios'
     | '/app/restaurante/cozinha'
     | '/app/restaurante/delivery'
@@ -869,6 +879,7 @@ export interface FileRouteTypes {
     | '/app/material-construcao/vendas'
     | '/app/ponto/fechamento'
     | '/app/ponto/gestao'
+    | '/app/ponto/historico'
     | '/app/ponto/meus-relatorios'
     | '/app/restaurante/cozinha'
     | '/app/restaurante/delivery'
@@ -949,6 +960,7 @@ export interface FileRouteTypes {
     | '/app/material-construcao/vendas'
     | '/app/ponto_/fechamento'
     | '/app/ponto_/gestao'
+    | '/app/ponto_/historico'
     | '/app/ponto_/meus-relatorios'
     | '/app/restaurante/cozinha'
     | '/app/restaurante/delivery'
@@ -1395,6 +1407,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPontoGestaoRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/ponto_/historico': {
+      id: '/app/ponto_/historico'
+      path: '/ponto/historico'
+      fullPath: '/app/ponto/historico'
+      preLoaderRoute: typeof AppPontoHistoricoRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/ponto_/meus-relatorios': {
       id: '/app/ponto_/meus-relatorios'
       path: '/ponto/meus-relatorios'
@@ -1667,6 +1686,7 @@ interface AppRouteChildren {
   AppMaterialConstrucaoVendasRoute: typeof AppMaterialConstrucaoVendasRoute
   AppPontoFechamentoRoute: typeof AppPontoFechamentoRoute
   AppPontoGestaoRoute: typeof AppPontoGestaoRoute
+  AppPontoHistoricoRoute: typeof AppPontoHistoricoRoute
   AppPontoMeusRelatoriosRoute: typeof AppPontoMeusRelatoriosRoute
   AppRestauranteCozinhaRoute: typeof AppRestauranteCozinhaRoute
   AppRestauranteDeliveryRoute: typeof AppRestauranteDeliveryRoute
@@ -1721,6 +1741,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppMaterialConstrucaoVendasRoute: AppMaterialConstrucaoVendasRoute,
   AppPontoFechamentoRoute: AppPontoFechamentoRoute,
   AppPontoGestaoRoute: AppPontoGestaoRoute,
+  AppPontoHistoricoRoute: AppPontoHistoricoRoute,
   AppPontoMeusRelatoriosRoute: AppPontoMeusRelatoriosRoute,
   AppRestauranteCozinhaRoute: AppRestauranteCozinhaRoute,
   AppRestauranteDeliveryRoute: AppRestauranteDeliveryRoute,

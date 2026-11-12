@@ -1,4 +1,5 @@
 import {
+  History,
   LayoutDashboard,
   ClipboardList,
   Shield,
@@ -177,6 +178,7 @@ function employeeGroups(employeeHasVehicle: boolean): NavGroup[] {
       items: [
         { to: "/app", label: "Minha Operação", icon: LayoutDashboard },
         { to: "/app/ponto", label: "Folha de Ponto", icon: Clock, module: "time_clock" },
+        { to: "/app/ponto/historico", label: "Histórico", icon: History, module: "time_clock" },
         { to: "/app/ponto/meus-relatorios", label: "Meus Relatórios", icon: FileText, module: "time_clock" },
         { to: "/app/tarefas", label: "Minhas Tarefas", icon: ListChecks, module: "tasks" },
         { to: "/app/trabalho-extra", label: "Trabalho Extra", icon: Sparkles, module: "extra_work" },
