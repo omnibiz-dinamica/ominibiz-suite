@@ -78,7 +78,7 @@ import { managerUpcomingFilter } from "@/lib/punch/manager-queue";
 import { useOfflinePunch } from "@/hooks/use-offline-punch";
 import { OfflinePunchBanner } from "@/components/ponto/OfflinePunchBanner";
 import { OffDayPunchDialog } from "@/components/ponto/OffDayPunchDialog";
-import { offDayInfo } from "@/lib/punch/off-day";
+import { offDayInfo, sameClientTaskToday } from "@/lib/punch/off-day";
 import { applyLocalEvent, isLocalEntryId, type OfflinePunchEvent } from "@/lib/punch/offline-queue";
 import { finishedPauses, formatPauseSeconds, type PauseRow } from "@/lib/ponto/history";
 import { RefuseTaskDialog, type RefusalSubmitPayload } from "@/components/tasks/RefuseTaskDialog";
@@ -586,6 +586,10 @@ function PontoPage() {
   // Decide qual ação executar ao clicar em "Iniciar/Bater entrada".
   // Aviso: bater o ponto numa tarefa que não é de hoje (dia anterior ou posterior).
   const [offDayTask, setOffDayTask] = useState<TaskRow | null>(null);
+  // Ticket 165: se houver uma tarefa do mesmo cliente para hoje, sugere-a.
+  const todayAlternative = offDayTask
+    ? sameClientTaskToday(offDayTask, (upcoming ?? []) as TaskRow[])
+    : null;
   const handleStart = (t: TaskRow) => {
     if (offDayInfo(t)) {
       setOffDayTask(t);
@@ -645,9 +649,15 @@ function PontoPage() {
         taskLabel={
           (offDayTask?.client_id ? clientsMap?.[offDayTask.client_id] : undefined) || offDayTask?.title || "Tarefa"
         }
+        todayTaskLabel={todayAlternative ? todayAlternative.title || "Tarefa de hoje" : null}
         onCancel={() => setOffDayTask(null)}
         onConfirm={() => {
           const t = offDayTask;
+          setOffDayTask(null);
+          if (t) startAfterChecks(t);
+        }}
+        onUseToday={() => {
+          const t = todayAlternative;
           setOffDayTask(null);
           if (t) startAfterChecks(t);
         }}
