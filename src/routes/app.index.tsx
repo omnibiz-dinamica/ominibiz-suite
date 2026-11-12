@@ -18,6 +18,8 @@ import {
 } from "@/lib/tasks/dashboard-counters";
 import { sortTasksForList } from "@/lib/tasks/list-order";
 import { formatWallDate, formatWallTime } from "@/lib/wall-clock";
+import { useCompanyTimeZoneInfo } from "@/lib/company-time";
+import { dayRangeInTz, isRefusedOn, todayInTz } from "@/lib/tasks/refusals";
 
 export const Route = createFileRoute("/app/")({
   component: Dashboard,
@@ -111,6 +113,48 @@ function ManagerDashboard() {
   );
   const counts = useMemo(() => countDashboardTasks(todayTasks, { day: today }), [todayTasks, today]);
 
+  // SUP-2026-000174 — "Recusadas" conta as recusas FEITAS hoje (fuso da
+  // empresa), seja qual for o dia da tarefa: o mesmo critério das notificações.
+  const { tz: companyTz, ready: tzReady } = useCompanyTimeZoneInfo();
+  const refusalDay = todayInTz(companyTz);
+  const refusals = useQuery({
+    queryKey: ["tasks", "dashboard-refusals", currentCompanyId, user?.id, isManager, refusalDay, companyTz],
+    enabled: initialized && tzReady && !!user && !!currentCompanyId,
+    queryFn: async () => {
+      let assigneeIds: string[] | null = null;
+      if (isManager) {
+        const { data: companyRoles, error: rolesError } = await supabase
+          .from("user_roles")
+          .select("user_id, role")
+          .eq("company_id", currentCompanyId!);
+        if (rolesError) throw rolesError;
+        assigneeIds = dashboardOperationalAssigneeIds(companyRoles ?? []);
+        if (assigneeIds.length === 0) return [];
+      }
+      const { from, to } = dayRangeInTz(refusalDay, companyTz);
+      let q = supabase
+        .from("tasks")
+        .select("id, status, refused_by, refused_at, archived_at, deleted_at")
+        .eq("company_id", currentCompanyId!)
+        .eq("status", "cancelado")
+        .not("refused_by", "is", null)
+        .gte("refused_at", from)
+        .lt("refused_at", to)
+        .is("deleted_at", null)
+        .is("archived_at", null)
+        .limit(2000);
+      if (!isManager) q = q.eq("assigned_to", user!.id);
+      else if (assigneeIds) q = q.in("assigned_to", assigneeIds);
+      const { data, error: queryError } = await q;
+      if (queryError) throw queryError;
+      return data ?? [];
+    },
+  });
+  const refusedToday = useMemo(
+    () => (refusals.data ?? []).filter((t) => isRefusedOn(t, refusalDay, companyTz)).length,
+    [refusals.data, refusalDay, companyTz],
+  );
+
   const upcoming = useMemo(
     () =>
       sortTasksForList(
@@ -128,7 +172,7 @@ function ManagerDashboard() {
     { label: t("Concluídas"), value: counts.concluido, icon: CheckCircle2, tone: "text-success", status: "concluido" as const },
     { label: t("Atrasadas"), value: counts.atrasada, icon: AlertTriangle, tone: "text-destructive", status: "atrasadas" as const },
     { label: t("Ausentes"), value: counts.ausente, icon: UserX, tone: "text-warning", status: "ausente" as const },
-    { label: t("Canceladas/Recusadas"), value: counts.cancelada + counts.recusada, icon: Ban, tone: "text-muted-foreground", status: "canceladas" as const },
+    { label: t("Recusadas"), value: refusedToday, icon: Ban, tone: "text-muted-foreground", status: "recusadas" as const },
   ];
 
   return (
@@ -178,7 +222,11 @@ function ManagerDashboard() {
           <Link
             key={c.label}
             to="/app/tarefas"
-            search={{ status: c.status, date: today }}
+            search={
+              c.status === "recusadas"
+                ? { status: c.status, refused: refusalDay }
+                : { status: c.status, date: today }
+            }
             aria-label={`${t("Ver tarefas de hoje")} — ${c.label}`}
             className="group rounded-2xl border border-border bg-card p-5 text-left transition hover:border-primary/50 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
@@ -188,16 +236,19 @@ function ManagerDashboard() {
             </div>
             {isLoading ? (
               <div className="mt-3 h-8 w-16 animate-pulse rounded bg-muted" />
-            ) : c.status === "canceladas" ? (
-              <div className="mt-3 flex flex-wrap items-baseline gap-2 font-display text-2xl font-semibold group-hover:text-primary">
-                <span>
-                  {counts.cancelada} <span className="text-sm font-normal text-muted-foreground">{t("Canceladas")}</span>
-                </span>
-                <span className="text-muted-foreground">|</span>
-                <span>
-                  {counts.recusada} <span className="text-sm font-normal text-muted-foreground">{t("Recusadas")}</span>
-                </span>
-              </div>
+            ) : c.status === "recusadas" && (refusals.isLoading || !tzReady) ? (
+              <div className="mt-3 h-8 w-16 animate-pulse rounded bg-muted" />
+            ) : c.status === "recusadas" && refusals.isError ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  void refusals.refetch();
+                }}
+                className="mt-3 text-sm text-destructive underline"
+              >
+                {t("Tentar novamente")}
+              </button>
             ) : (
               <div className="mt-3 font-display text-3xl font-semibold group-hover:text-primary">{c.value}</div>
             )}

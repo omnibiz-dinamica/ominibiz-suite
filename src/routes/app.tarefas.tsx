@@ -1,4 +1,6 @@
 import { firstNameOf } from "@/lib/person-name";
+import { useCompanyTimeZone } from "@/lib/company-time";
+import { isRefusedOn } from "@/lib/tasks/refusals";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -72,12 +74,15 @@ export const Route = createFileRoute("/app/tarefas")({
     // Filtro de dia operacional (vindo do Dashboard). O histórico continua
     // acessível: basta limpar o filtro de data.
     const date = typeof s.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s.date) ? s.date : undefined;
-    return { status, employee, client, task, date };
+    const refused =
+      typeof s.refused === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s.refused) ? s.refused : undefined;
+    return { status, employee, client, task, date, refused };
   },
 });
 
 function TasksPage() {
   const { user, profile, isManager, isSuperAdmin, currentCompanyId } = useAuth();
+  const companyTz = useCompanyTimeZone();
   const qc = useQueryClient();
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
@@ -1027,6 +1032,8 @@ function TasksPage() {
       if (selectedClients.size > 0 && (!t.client_id || !selectedClients.has(t.client_id))) return false;
       // Dia operacional (agendamento / ocorrência / prazo), nunca created_at.
       if (search.date && taskOperationalDay(t) !== search.date) return false;
+      // SUP-2026-000174: vindo do cartão "Recusadas", o dia é o da recusa.
+      if (search.refused && !isRefusedOn(t, search.refused, companyTz)) return false;
       if (!search.status) return true;
       // Mesma classificação exclusiva usada pelos cartões do Dashboard.
       if (search.status === "atrasadas") return matchesDashboardBucket(t, "atrasada");
@@ -1045,6 +1052,8 @@ function TasksPage() {
     search.client,
     search.task,
     search.date,
+    search.refused,
+    companyTz,
     selectedEmployeeIds,
     selectedClientIds,
     focusTaskExtra,
@@ -1585,6 +1594,15 @@ function TasksPage() {
                 onClick={() => setStatusFilter(search.status === key ? undefined : (key as StatusFilter))}
               />
             ))}
+            {search.refused && (
+              <FilterChip
+                label={`Recusadas em ${formatWallDate(`${search.refused}T00:00:00.000Z`)} ✕`}
+                active
+                onClick={() =>
+                  void navigate({ search: (prev: TasksSearch) => ({ ...prev, refused: undefined }), replace: true })
+                }
+              />
+            )}
             {search.date && (
               <FilterChip
                 label={`Dia ${formatWallDate(`${search.date}T00:00:00.000Z`)} ✕`}

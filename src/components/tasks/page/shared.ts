@@ -24,7 +24,15 @@ export const STATUS_FILTERS = [
 ] as const;
 
 export type StatusFilter = (typeof STATUS_FILTERS)[number];
-export type TasksSearch = { status?: StatusFilter; employee?: string; client?: string; task?: string; date?: string };
+export type TasksSearch = {
+  status?: StatusFilter;
+  employee?: string;
+  client?: string;
+  task?: string;
+  date?: string;
+  /** SUP-2026-000174: dia (YYYY-MM-DD, fuso da empresa) em que a recusa foi feita. */
+  refused?: string;
+};
 export type ClientOption = {
   id: string;
   name: string;
