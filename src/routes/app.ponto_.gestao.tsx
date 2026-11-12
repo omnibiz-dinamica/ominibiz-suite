@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,6 +33,8 @@ import {
   RotateCcw,
   ClockPlus,
   AlertCircle,
+  Plane,
+  UserX,
 } from "lucide-react";
 import { PunchEditorDrawer } from "@/components/ponto/PunchEditorDrawer";
 import { PunchAuditDrawer } from "@/components/ponto/PunchAuditDrawer";
@@ -67,7 +69,7 @@ import { formatCivilDate, type TaskOperationalNote } from "@/lib/ponto/task-note
 import { fetchOfflineEntryIds } from "@/lib/punch/offline-flags";
 import { entryScheduleFlags, fetchEntryTimeZones } from "@/lib/punch/off-schedule";
 import { RECONCILIATION_QUERY_KEY, ScheduleReconciliation } from "@/components/ponto/ScheduleReconciliation";
-import { launchDefaults } from "@/lib/ponto/closing-table";
+import { addPointDefaults, launchDefaults } from "@/lib/ponto/closing-table";
 import { monthRange, type ReconciliationRow } from "@/lib/ponto/reconciliation";
 
 export const Route = createFileRoute("/app/ponto_/gestao")({ component: Page });
@@ -245,7 +247,16 @@ function formatPrevisto(t: TaskJoin | null | undefined): string {
   return end ? `${date} ${start}–${end}` : `${date} ${start}`;
 }
 
+/** "YYYY-MM-DD" do instante no fuso do aparelho (dia de uma linha de férias). */
+function localDayKey(iso: string | null | undefined): string {
+  const d = iso ? new Date(iso) : new Date();
+  const ok = Number.isFinite(d.getTime()) ? d : new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${ok.getFullYear()}-${pad(ok.getMonth() + 1)}-${pad(ok.getDate())}`;
+}
+
 function GestaoPonto() {
+  const nav = useNavigate();
   const { currentCompanyId } = useAuth();
   const qc = useQueryClient();
   const [filters, setFilters] = useState<Filters>(emptyFilters);
@@ -261,6 +272,19 @@ function GestaoPonto() {
   const [absenceEditTarget, setAbsenceEditTarget] = useState<TaskRow | null>(null);
   const [taskAuditTarget, setTaskAuditTarget] = useState<Row | null>(null);
   const [manualPointTarget, setManualPointTarget] = useState<Row | null>(null);
+  // Ticket 218: "Adicionar ponto" num dia de férias (ponto avulso, sem tarefa).
+  const [addPointDay, setAddPointDay] = useState<{ userId: string; date: string } | null>(null);
+  const [absenceCreateTarget, setAbsenceCreateTarget] = useState<TaskRow | null>(null);
+  // Horário sugerido no editor: tarefa → previsto (recorrência: só a hora do fim);
+  // dia de férias → 08:00–12:00 nesse dia.
+  const manualPlan = manualPointTarget
+    ? launchDefaults(manualPointTarget.tasks?.scheduled_for, manualPointTarget.tasks?.scheduled_end)
+    : addPointDay
+      ? (() => {
+          const d = addPointDefaults(addPointDay.date);
+          return { startedAt: d.startedAt, endedAt: d.endedAt };
+        })()
+      : { startedAt: null, endedAt: null };
   // Conferência Previsto x Real (pedido da gestora V-Clean, 09/11/2026)
   const [view, setView] = useState<"lancamentos" | "conferencia">("lancamentos");
   const [confFilters, setConfFilters] = useState(() => {
@@ -417,6 +441,7 @@ function GestaoPonto() {
     setInitialEntryKind(entryKind);
     setActiveEntry(null);
     setManualPointTarget(null);
+    setAddPointDay(null);
     setEditorOpen(true);
   };
 
@@ -446,8 +471,36 @@ function GestaoPonto() {
     setEditorMode("create");
     setInitialEntryKind("work");
     setActiveEntry(null);
+    setAddPointDay(null);
     setManualPointTarget(r);
     setEditorOpen(true);
+  };
+  // Ticket 218: dia de férias → ponto avulso nesse dia (nunca passa o id das férias como tarefa).
+  const openVacationAddPoint = (r: Row) => {
+    setEditorMode("create");
+    setInitialEntryKind("work");
+    setActiveEntry(null);
+    setManualPointTarget(null);
+    setAddPointDay({ userId: r.user_id, date: localDayKey(r.started_at) });
+    setEditorOpen(true);
+  };
+  // Ticket 218: "Marcar falta" numa tarefa pendente/atrasada (o banco valida prazo e ponto aberto).
+  const openAbsenceCreate = (r: Row) => {
+    if (!r.task_id) return;
+    setAbsenceCreateTarget({
+      id: r.task_id,
+      company_id: r.company_id,
+      title: r.tasks?.title ?? "Tarefa",
+      description: null,
+      status: "pendente",
+      priority: "media",
+      assigned_to: r.user_id,
+      created_by: r.created_by ?? r.user_id,
+      client_id: r.tasks?.client_id ?? null,
+      scheduled_for: r.tasks?.scheduled_for ?? null,
+      scheduled_end: r.tasks?.scheduled_end ?? null,
+      due_at: r.tasks?.due_at ?? null,
+    } as unknown as TaskRow);
   };
   // Conferência: "Alterar" abre o mesmo editor do ponto; "Lançar ponto" a regularização da tarefa.
   const confEmployeeName = (id: string) => members?.find((m) => m.id === id)?.name ?? null;
@@ -1139,8 +1192,48 @@ function GestaoPonto() {
                       />
                     </TableCell>
                     <TableCell>
-                      {isOperationalTask(r) || isVacation(r) ? (
-                        <span className="text-muted-foreground">—</span>
+                      {isOperationalTask(r) ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Ações da tarefa">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              disabled={!r.task_id || resolvedTaskStatus(r) === "em_andamento"}
+                              title={resolvedTaskStatus(r) === "em_andamento" ? "A tarefa já tem um ponto aberto" : undefined}
+                              onClick={() => openManualPoint(r)}
+                            >
+                              <ClockPlus className="mr-2 h-4 w-4" /> Lançar ponto
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              disabled={!r.task_id || resolvedTaskStatus(r) === "em_andamento"}
+                              onClick={() => openAbsenceCreate(r)}
+                            >
+                              <UserX className="mr-2 h-4 w-4" /> Marcar falta
+                            </DropdownMenuItem>
+                            <DropdownMenuItem disabled={!r.task_id} onClick={() => openTaskAudit(r)}>
+                              <History className="mr-2 h-4 w-4" /> Histórico
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : isVacation(r) ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Ações das férias">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openVacationAddPoint(r)}>
+                              <ClockPlus className="mr-2 h-4 w-4" /> Adicionar ponto neste dia
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => nav({ to: "/app/ferias" })}>
+                              <Plane className="mr-2 h-4 w-4" /> Abrir em Férias
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       ) : (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -1211,6 +1304,7 @@ function GestaoPonto() {
           setEditorOpen(open);
           if (!open) {
             setManualPointTarget(null);
+            setAddPointDay(null);
             qc.invalidateQueries({ queryKey: [RECONCILIATION_QUERY_KEY] });
           }
         }}
@@ -1225,11 +1319,25 @@ function GestaoPonto() {
             : undefined
         }
         initialEntryKind={initialEntryKind}
-        initialUserId={manualPointTarget?.user_id}
+        initialUserId={manualPointTarget?.user_id ?? addPointDay?.userId}
         initialTaskId={manualPointTarget?.task_id}
-        initialStartedAt={manualPointTarget?.tasks?.scheduled_for ?? null}
-        initialEndedAt={manualPointTarget?.tasks?.scheduled_end ?? null}
+        initialStartedAt={manualPlan.startedAt}
+        initialEndedAt={manualPlan.endedAt}
         regularizeTaskAbsence={!!manualPointTarget}
+        regularizeKind={manualPointTarget && !isAbsence(manualPointTarget) ? "task" : "absence"}
+      />
+      <MarkAbsentDialog
+        mode="create"
+        task={absenceCreateTarget}
+        employeeName={absenceCreateTarget?.assigned_to ? memberDisplayName(absenceCreateTarget.assigned_to) : undefined}
+        clientName={absenceCreateTarget?.client_id ? (clientsMap[absenceCreateTarget.client_id] ?? undefined) : undefined}
+        open={!!absenceCreateTarget}
+        onOpenChange={(open) => !open && setAbsenceCreateTarget(null)}
+        onDone={() => {
+          setAbsenceCreateTarget(null);
+          qc.invalidateQueries({ queryKey: ["punch-admin-list"] });
+          qc.invalidateQueries({ queryKey: [RECONCILIATION_QUERY_KEY] });
+        }}
       />
       <PunchAuditDrawer open={auditOpen} onOpenChange={setAuditOpen} timeEntryId={auditEntryId} />
       <PunchGeoDrawer

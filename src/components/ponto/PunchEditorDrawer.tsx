@@ -47,6 +47,8 @@ interface Props {
   initialStartedAt?: string | null;
   initialEndedAt?: string | null;
   regularizeTaskAbsence?: boolean;
+  /** Ticket 218: "task" = lançar ponto numa tarefa pendente/atrasada (não é falta). */
+  regularizeKind?: "absence" | "task";
 }
 
 interface FormState {
@@ -126,6 +128,7 @@ function PunchEditorSession({
   initialStartedAt = null,
   initialEndedAt = null,
   regularizeTaskAbsence = false,
+  regularizeKind = "absence",
 }: Props) {
   const qc = useQueryClient();
   const [form, setForm] = useState<FormState>(emptyForm());
@@ -549,10 +552,20 @@ function PunchEditorSession({
       <SheetContent className="w-full sm:max-w-lg">
         <ModalHeader
           icon={mode === "create" ? ClockPlus : Pencil}
-          title={regularizeTaskAbsence ? "Regularizar falta" : mode === "create" ? "Adicionar ponto" : "Corrigir ponto"}
+          title={
+            regularizeTaskAbsence
+              ? regularizeKind === "task"
+                ? "Lançar ponto"
+                : "Regularizar falta"
+              : mode === "create"
+                ? "Adicionar ponto"
+                : "Corrigir ponto"
+          }
           description={
             regularizeTaskAbsence
-              ? "Informe o horário real. A falta será substituída por um ponto manual auditado."
+              ? regularizeKind === "task"
+                ? "Informe o horário real. A tarefa fica concluída com um ponto manual auditado."
+                : "Informe o horário real. A falta será substituída por um ponto manual auditado."
               : mode === "create"
                 ? "Registro manual. Toda criação é auditada."
                 : "Toda alteração é gravada no histórico."

@@ -37,7 +37,10 @@ test("vacation entries are non-editable operational records with a visible label
   assert.match(managementPage, /const isVacation = \(r: Row\) => r\.record_kind === "vacation"/);
   assert.match(managementPage, /if \(isVacation\(r\)\) return "Férias"/);
   assert.match(managementPage, /r\.tasks\?\.recurrence_date\s*\?\s*formatWallDate\(r\.tasks\.recurrence_date\)/);
-  assert.match(managementPage, /isOperationalTask\(r\) \|\| isVacation\(r\)/);
+  // Ticket 218 (12/11/2026): a linha de férias continua sem "Editar" (o registo é das Férias),
+  // mas tem menu com "Adicionar ponto neste dia" e "Abrir em Férias".
+  assert.match(managementPage, /\) : isVacation\(r\) \? \(/);
+  assert.match(managementPage, /Abrir em Férias/);
 });
 
 test("operational vacation feed keeps one row per approved period and cannot block real punches", () => {
