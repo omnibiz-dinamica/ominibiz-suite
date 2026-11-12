@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { inputInTzToIso, isoToInputInTz } from "@/lib/company-time";
 import type { TimeEntryRow } from "@/lib/tasks";
 import {
   resolveTaskOperationalNotes,
@@ -166,15 +167,20 @@ export async function punchAuditList(timeEntryId: string): Promise<PunchAuditRow
   return (data ?? []) as PunchAuditRow[];
 }
 
-/** datetime-local input <-> ISO. The input gives local naive datetime; we treat it as local TZ. */
-export function toLocalInput(iso: string | null | undefined): string {
+/**
+ * datetime-local input <-> ISO. Com `tz` (fuso da empresa — SUP-323) a hora é
+ * mostrada/lida nesse fuso; sem `tz`, no fuso do aparelho (comportamento antigo).
+ */
+export function toLocalInput(iso: string | null | undefined, tz?: string): string {
+  if (tz) return isoToInputInTz(iso, tz);
   if (!iso) return "";
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function fromLocalInput(v: string): string | null {
+export function fromLocalInput(v: string, tz?: string): string | null {
+  if (tz) return inputInTzToIso(v, tz);
   if (!v) return null;
   return new Date(v).toISOString();
 }

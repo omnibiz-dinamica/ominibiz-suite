@@ -27,6 +27,7 @@ import { validatePauseList, type TimeEntryPauseRow } from "@/lib/punch/pause";
 import { formatDuration } from "@/lib/tasks";
 import { OfflineEntryNote } from "@/components/ponto/OfflineEntryNote";
 import { ChangeTaskClient } from "@/components/ponto/ChangeTaskClient";
+import { formatInTz, isValidTimeZone, useCompanyTimeZoneInfo } from "@/lib/company-time";
 import { ClockPlus, Pencil, Users, Clock, FileText, Coffee, Plus, Trash2 } from "lucide-react";
 
 type Mode = "create" | "edit";
@@ -47,6 +48,11 @@ interface Props {
   initialStartedAt?: string | null;
   initialEndedAt?: string | null;
   regularizeTaskAbsence?: boolean;
+  /**
+   * SUP-323: fuso do sítio onde este ponto foi batido (telemóvel). Na edição as
+   * horas aparecem nesse fuso, como no Fechamento; sem ele, o fuso da empresa.
+   */
+  entryTimeZone?: string | null;
   /** Ticket 218: "task" = lançar ponto numa tarefa pendente/atrasada (não é falta). */
   regularizeKind?: "absence" | "task";
 }
@@ -98,6 +104,11 @@ function previewEffective(f: Pick<FormState, "started_at" | "ended_at" | "paused
 
 export function PunchEditorDrawer(props: Props) {
   const { user } = useAuth();
+  // SUP-323: o fuso da empresa entra na identidade — quando carrega, o formulário
+  // é refeito com as horas no fuso certo (nunca grava com o fuso do aparelho).
+  const company = useCompanyTimeZoneInfo();
+  const tz =
+    props.mode === "edit" && isValidTimeZone(props.entryTimeZone) ? props.entryTimeZone : company.tz;
   // O formulário, as pausas e as refs pertencem à mesma identidade do rascunho.
   // Desmontar o editor anterior também descarrega a sua gravação pendente.
   const editorKey = JSON.stringify([
@@ -109,6 +120,7 @@ export function PunchEditorDrawer(props: Props) {
     props.mode === "create" ? props.initialTaskId ?? null : null,
     props.mode === "create" ? props.initialUserId ?? null : null,
     props.mode === "create" ? props.initialEntryKind ?? "work" : null,
+    tz,
   ]);
   return <PunchEditorSession key={editorKey} {...props} />;
 }
@@ -129,8 +141,13 @@ function PunchEditorSession({
   initialEndedAt = null,
   regularizeTaskAbsence = false,
   regularizeKind = "absence",
+  entryTimeZone = null,
 }: Props) {
   const qc = useQueryClient();
+  // SUP-323: horas de ponto mostradas e lidas no fuso da empresa (igual ao Fechamento).
+  const company = useCompanyTimeZoneInfo();
+  const tz = mode === "edit" && isValidTimeZone(entryTimeZone) ? entryTimeZone : company.tz;
+  const tzReady = company.ready || (mode === "edit" && isValidTimeZone(entryTimeZone));
   const [form, setForm] = useState<FormState>(emptyForm());
   // Várias pausas (fase 2): lista editável das pausas terminadas do ponto.
   const [pauseRows, setPauseRows] = useState<{ paused_at: string; resumed_at: string }[]>([]);
@@ -221,10 +238,10 @@ function PunchEditorSession({
         task_id: entry.task_id ?? "",
         leave_date: entry.started_at ? new Date(entry.started_at).toISOString().slice(0, 10) : "",
         leave_minutes: String(entry.paid_leave_minutes ?? entry.effective_minutes ?? 480),
-        started_at: toLocalInput(entry.started_at),
-        ended_at: toLocalInput(entry.ended_at),
-        paused_at: toLocalInput(entry.paused_at),
-        resumed_at: toLocalInput(entry.resumed_at),
+        started_at: toLocalInput(entry.started_at, tz),
+        ended_at: toLocalInput(entry.ended_at, tz),
+        paused_at: toLocalInput(entry.paused_at, tz),
+        resumed_at: toLocalInput(entry.resumed_at, tz),
         notes: entry.notes ?? "",
         reason: "",
       });
@@ -292,9 +309,9 @@ function PunchEditorSession({
     if (mode !== "edit" || !entry) return [] as string[];
     const lines: string[] = [];
     const compare = (label: string, oldV: string | null, newLocal: string) => {
-      const newIso = fromLocalInput(newLocal);
+      const newIso = fromLocalInput(newLocal, tz);
       if ((oldV ?? null) !== (newIso ?? null)) {
-        const fmt = (s: string | null) => (s ? new Date(s).toLocaleString() : "—");
+        const fmt = (s: string | null) => (s ? formatInTz(s, tz) : "—");
         lines.push(`${label}: ${fmt(oldV)} → ${fmt(newIso)}`);
       }
     };
@@ -336,7 +353,7 @@ function PunchEditorSession({
         : entry.paused_at && entry.resumed_at
           ? [{ paused_at: entry.paused_at, resumed_at: entry.resumed_at }]
           : [];
-    const baseRows = base.map((p) => ({ paused_at: toLocalInput(p.paused_at), resumed_at: toLocalInput(p.resumed_at) }));
+    const baseRows = base.map((p) => ({ paused_at: toLocalInput(p.paused_at, tz), resumed_at: toLocalInput(p.resumed_at, tz) }));
     setPauseRows(baseRows);
     setPausesDirty(false);
     if (!appliedDraftRef.current) {
@@ -400,8 +417,8 @@ function PunchEditorSession({
       if (regularizeTaskAbsence) {
         return punchAbsenceRegularize(
           form.task_id,
-          fromLocalInput(form.started_at)!,
-          fromLocalInput(form.ended_at),
+          fromLocalInput(form.started_at, tz)!,
+          fromLocalInput(form.ended_at, tz),
           form.reason,
         );
       }
@@ -410,10 +427,10 @@ function PunchEditorSession({
         return punchAdminCreateWithTask(
           {
             user_id: form.user_id,
-            started_at: fromLocalInput(form.started_at)!,
-            ended_at: fromLocalInput(form.ended_at),
-            paused_at: fromLocalInput(form.paused_at),
-            resumed_at: fromLocalInput(form.resumed_at),
+            started_at: fromLocalInput(form.started_at, tz)!,
+            ended_at: fromLocalInput(form.ended_at, tz),
+            paused_at: fromLocalInput(form.paused_at, tz),
+            resumed_at: fromLocalInput(form.resumed_at, tz),
             notes: form.notes || null,
           },
           {
@@ -431,10 +448,10 @@ function PunchEditorSession({
         {
           task_id: form.task_id,
           user_id: form.user_id,
-          started_at: fromLocalInput(form.started_at)!,
-          ended_at: fromLocalInput(form.ended_at),
-          paused_at: fromLocalInput(form.paused_at),
-          resumed_at: fromLocalInput(form.resumed_at),
+          started_at: fromLocalInput(form.started_at, tz)!,
+          ended_at: fromLocalInput(form.ended_at, tz),
+          paused_at: fromLocalInput(form.paused_at, tz),
+          resumed_at: fromLocalInput(form.resumed_at, tz),
           notes: form.notes || null,
         },
         form.reason,
@@ -453,24 +470,24 @@ function PunchEditorSession({
     mutationFn: async () => {
       if (!entry) throw new Error("Sem registro");
       const payload: Record<string, unknown> = {};
-      const oldStarted = toLocalInput(entry.started_at);
-      const oldEnded = toLocalInput(entry.ended_at);
-      const oldPaused = toLocalInput(entry.paused_at);
-      const oldResumed = toLocalInput(entry.resumed_at);
-      if (form.started_at !== oldStarted) payload.started_at = fromLocalInput(form.started_at);
-      if (form.ended_at !== oldEnded) payload.ended_at = fromLocalInput(form.ended_at);
-      if (form.paused_at !== oldPaused) payload.paused_at = fromLocalInput(form.paused_at);
-      if (form.resumed_at !== oldResumed) payload.resumed_at = fromLocalInput(form.resumed_at);
+      const oldStarted = toLocalInput(entry.started_at, tz);
+      const oldEnded = toLocalInput(entry.ended_at, tz);
+      const oldPaused = toLocalInput(entry.paused_at, tz);
+      const oldResumed = toLocalInput(entry.resumed_at, tz);
+      if (form.started_at !== oldStarted) payload.started_at = fromLocalInput(form.started_at, tz);
+      if (form.ended_at !== oldEnded) payload.ended_at = fromLocalInput(form.ended_at, tz);
+      if (form.paused_at !== oldPaused) payload.paused_at = fromLocalInput(form.paused_at, tz);
+      if (form.resumed_at !== oldResumed) payload.resumed_at = fromLocalInput(form.resumed_at, tz);
       if (form.notes !== (entry.notes ?? "")) payload.notes = form.notes || null;
       // Várias pausas: a lista é validada aqui e de novo no banco (punch_admin_set_pauses).
       let pausesPayload: { paused_at: string | null; resumed_at: string | null }[] | null = null;
       if (isWorkEdit && pausesDirty) {
         const iso = pauseRows.map((p) => ({
-          paused_at: fromLocalInput(p.paused_at),
-          resumed_at: fromLocalInput(p.resumed_at),
+          paused_at: fromLocalInput(p.paused_at, tz),
+          resumed_at: fromLocalInput(p.resumed_at, tz),
         }));
-        const limit = runningPauseStart ?? fromLocalInput(form.ended_at) ?? new Date().toISOString();
-        const err = validatePauseList(iso, fromLocalInput(form.started_at), limit);
+        const limit = runningPauseStart ?? fromLocalInput(form.ended_at, tz) ?? new Date().toISOString();
+        const err = validatePauseList(iso, fromLocalInput(form.started_at, tz), limit);
         if (err) throw new Error(err);
         pausesPayload = iso;
       }
@@ -620,7 +637,7 @@ function PunchEditorSession({
               {entry.last_edited_at && (
                 <div>
                   <span className="text-muted-foreground">Última edição:</span>{" "}
-                  {new Date(entry.last_edited_at).toLocaleString()}
+                  {formatInTz(entry.last_edited_at, tz)}
                 </div>
               )}
             </div>
@@ -829,7 +846,7 @@ function PunchEditorSession({
                   {runningPauseStart && (
                     <div className="rounded-lg border border-warning/40 bg-warning/5 p-2 text-xs">
                       Pausa em curso desde{" "}
-                      {new Date(runningPauseStart).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}{" "}
+                      {formatInTz(runningPauseStart, tz, { timeOnly: true })}{" "}
                       — não pode ser editada enquanto decorre.
                     </div>
                   )}
@@ -892,7 +909,7 @@ function PunchEditorSession({
           >
             Cancelar
           </Button>
-          <Button onClick={submit} disabled={pending}>
+          <Button onClick={submit} disabled={pending || !tzReady}>
             {pending
               ? "Salvando..."
               : regularizeTaskAbsence

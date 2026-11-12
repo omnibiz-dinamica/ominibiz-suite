@@ -70,6 +70,7 @@ import { fetchOfflineEntryIds } from "@/lib/punch/offline-flags";
 import { entryScheduleFlags, fetchEntryTimeZones } from "@/lib/punch/off-schedule";
 import { RECONCILIATION_QUERY_KEY, ScheduleReconciliation } from "@/components/ponto/ScheduleReconciliation";
 import { addPointDefaults, launchDefaults } from "@/lib/ponto/closing-table";
+import { formatInTz, useCompanyTimeZone } from "@/lib/company-time";
 import { monthRange, type ReconciliationRow } from "@/lib/ponto/reconciliation";
 
 export const Route = createFileRoute("/app/ponto_/gestao")({ component: Page });
@@ -257,6 +258,7 @@ function localDayKey(iso: string | null | undefined): string {
 
 function GestaoPonto() {
   const nav = useNavigate();
+  const companyTz = useCompanyTimeZone();
   const { currentCompanyId } = useAuth();
   const qc = useQueryClient();
   const [filters, setFilters] = useState<Filters>(emptyFilters);
@@ -635,7 +637,10 @@ function GestaoPonto() {
     },
   });
 
-  const fmtDT = (s: string | null) => (s ? new Date(s).toLocaleString("pt-PT") : "");
+  // SUP-323: a mesma regra do Fechamento — fuso do sítio onde o ponto foi batido
+  // (telemóvel) e, sem ele, o fuso da empresa. Nunca o fuso do computador de quem vê.
+  const rowTz = (r: Row) => entryTimeZones?.get(r.id) ?? companyTz;
+  const fmtDT = (r: Row, s: string | null) => (s ? formatInTz(s, rowTz(r)) : "");
   const resolvedTaskStatus = (r: Row) => {
     if (!r.tasks || !r.task_status) return r.operational_status ?? null;
     const status = r.task_status as TaskStatus;
@@ -760,8 +765,8 @@ function GestaoPonto() {
     { header: "Cliente", accessor: (r) => (r.tasks?.client_id ? (clientsMap[r.tasks.client_id] ?? "") : "") },
     { header: "Previsto", accessor: (r) => (isVacation(r) ? formatVacationDate(r) : formatPrevisto(r.tasks)) },
     { header: "Situação", accessor: (r) => formatSituation(r) },
-    { header: "Início", accessor: (r) => (isNonWork(r) ? "" : fmtDT(r.started_at)) },
-    { header: "Fim", accessor: (r) => (isNonWork(r) ? "" : fmtDT(r.ended_at)) },
+    { header: "Início", accessor: (r) => (isNonWork(r) ? "" : fmtDT(r, r.started_at)) },
+    { header: "Fim", accessor: (r) => (isNonWork(r) ? "" : fmtDT(r, r.ended_at)) },
     {
       header: "Efetivo",
       accessor: (r) => (isNonWork(r) ? "" : r.effective_minutes != null ? formatDuration(r.effective_minutes) : ""),
@@ -1139,7 +1144,7 @@ function GestaoPonto() {
                         "—"
                       ) : (
                         <span className={offCellClass(offByRow.get(r.id)?.start)}>
-                          {new Date(r.started_at).toLocaleString()}
+                          {fmtDT(r, r.started_at)}
                         </span>
                       )}
                     </TableCell>
@@ -1148,7 +1153,7 @@ function GestaoPonto() {
                         "—"
                       ) : r.ended_at ? (
                         <span className={offCellClass(offByRow.get(r.id)?.end)}>
-                          {new Date(r.ended_at).toLocaleString()}
+                          {fmtDT(r, r.ended_at)}
                         </span>
                       ) : (
                         <span className="text-warning">em aberto</span>
@@ -1325,6 +1330,7 @@ function GestaoPonto() {
         initialEndedAt={manualPlan.endedAt}
         regularizeTaskAbsence={!!manualPointTarget}
         regularizeKind={manualPointTarget && !isAbsence(manualPointTarget) ? "task" : "absence"}
+        entryTimeZone={activeEntry ? (entryTimeZones?.get(activeEntry.id) ?? null) : null}
       />
       <MarkAbsentDialog
         mode="create"
