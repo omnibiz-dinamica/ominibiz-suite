@@ -1,5 +1,6 @@
 // Tarefas · formulário de criar/editar tarefa (extraído de app.tarefas.tsx).
 import { TeamChips } from "@/components/common/TeamChips";
+import { teamNumberLabel } from "@/lib/teams";
 
 import {
   recurrenceFromScheduleSlot,
@@ -105,7 +106,14 @@ export function TaskForm({
   onDraftDiscard,
 }: {
   formId: string;
-  members: { id: string; full_name: string | null; email?: string | null; job_title?: string | null; sector?: string | null }[];
+  members: {
+    id: string;
+    full_name: string | null;
+    email?: string | null;
+    job_title?: string | null;
+    sector?: string | null;
+    team_number?: number | null;
+  }[];
   clients: {
     id: string;
     name: string;
@@ -181,7 +189,7 @@ export function TaskForm({
             .replace(/[\u0300-\u036f]/g, "");
           const email = (m.email ?? "").toLocaleLowerCase("pt-BR");
           // SUP-2026-000305 — também pesquisa pelo setor e cargo do funcionário.
-          const details = [m.sector, m.job_title]
+          const details = [m.sector, m.job_title, teamNumberLabel(m.team_number)]
             .join(" ")
             .toLocaleLowerCase("pt-BR")
             .normalize("NFD")

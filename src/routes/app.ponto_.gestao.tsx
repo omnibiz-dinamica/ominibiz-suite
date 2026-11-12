@@ -312,9 +312,15 @@ function GestaoPonto() {
       if (rolesErr) throw rolesErr;
       const ids = [...new Set((roles ?? []).map((r) => r.user_id))];
       if (ids.length === 0)
-        return [] as { id: string; name: string; inactive: boolean; sector: string | null }[];
+        return [] as {
+          id: string;
+          name: string;
+          inactive: boolean;
+          sector: string | null;
+          team_number: number | null;
+        }[];
       const { data: profs, error: profsErr } = await (supabase.from("profiles" as never) as any)
-        .select("id, full_name, is_active, status, termination_date, sector")
+        .select("id, full_name, is_active, status, termination_date, sector, team_number")
         .in("id", ids);
       if (profsErr) throw profsErr;
       return (
@@ -325,6 +331,7 @@ function GestaoPonto() {
           status: string | null;
           termination_date: string | null;
           sector?: string | null;
+          team_number?: number | null;
         }[]
       )
         .map((p) => ({
@@ -332,6 +339,7 @@ function GestaoPonto() {
           name: p.full_name ?? p.id,
           inactive: !isEmployeeActive(p),
           sector: p.sector ?? null,
+          team_number: p.team_number ?? null,
         }))
         .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
     },
@@ -357,7 +365,7 @@ function GestaoPonto() {
     },
   });
 
-  // Ticket 172: equipas = Setor do cadastro.
+  // Ticket 172: setores (nome) e equipas (número) do cadastro.
   const teams = useMemo(() => teamGroups(members ?? []), [members]);
   const teamIds = useMemo(() => {
     if (filters.userId !== "all") return [];
@@ -1048,7 +1056,7 @@ function GestaoPonto() {
               />
             </div>
             <div>
-              <Label className="text-xs">Equipa</Label>
+              <Label className="text-xs">Setor / equipa</Label>
               <Select
                 value={filters.team}
                 onValueChange={(v) => {
@@ -1060,7 +1068,7 @@ function GestaoPonto() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   {teams.map((t) => (
                     <SelectItem key={t.key} value={t.key}>
                       {t.name} ({t.ids.length})

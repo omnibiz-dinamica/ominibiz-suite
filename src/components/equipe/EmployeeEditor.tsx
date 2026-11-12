@@ -354,9 +354,23 @@ function TabDadosGerais({
           </Field>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
-          {/* Ticket 172: a equipa é o Setor com nome (COIFAS, HAPPYKOTS…). O número 1–10
-              antigo deixa de aparecer; o valor guardado continua (team_number). */}
-          <Field label="Equipa (ex.: COIFAS, HAPPYKOTS)">
+          {/* Ticket 172: dois campos pesquisáveis — número da equipa e Setor com nome. */}
+          <Field label="Equipa (nº, opcional)">
+            <Select value={teamNumber || "none"} onValueChange={(v) => setTeamNumber(v === "none" ? "" : v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="—" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">— sem equipa —</SelectItem>
+                {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                  <SelectItem key={n} value={String(n)}>
+                    Equipa {n}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Setor (ex.: COIFAS, HAPPYKOTS)">
             <SectorPicker value={sector} options={sectorOptions} onChange={setSector} />
           </Field>
           <Field label="Status">
@@ -921,7 +935,7 @@ function SectorPicker({
       <PopoverTrigger asChild>
         <Button type="button" variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between font-normal">
           <span className={value ? "truncate" : "truncate text-muted-foreground"}>
-            {value || "Selecionar ou criar equipa"}
+            {value || "Selecionar ou criar setor"}
           </span>
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" aria-hidden />
         </Button>
@@ -932,8 +946,8 @@ function SectorPicker({
             autoFocus
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Pesquisar ou criar equipa"
-            aria-label="Pesquisar ou criar equipa"
+            placeholder="Pesquisar ou criar setor"
+            aria-label="Pesquisar ou criar setor"
           />
         </div>
         <div className="max-h-60 overflow-y-auto p-1">
@@ -943,7 +957,7 @@ function SectorPicker({
             onClick={() => { onChange(""); setOpen(false); }}
           >
             <Check className={`h-4 w-4 ${!value ? "opacity-100" : "opacity-0"}`} aria-hidden />
-            — sem equipa —
+            — sem setor —
           </button>
           {query.trim() && !hasExactOption && (
             <button
@@ -952,7 +966,7 @@ function SectorPicker({
               onClick={() => { onChange(query.trim().toUpperCase()); setOpen(false); }}
             >
               <Plus className="h-4 w-4 shrink-0" aria-hidden />
-              Criar equipa “{query.trim().toUpperCase()}”
+              Criar setor “{query.trim().toUpperCase()}”
             </button>
           )}
           {filteredOptions.map((option) => (
@@ -967,7 +981,7 @@ function SectorPicker({
             </button>
           ))}
           {filteredOptions.length === 0 && !query.trim() && (
-            <p className="px-3 py-3 text-center text-xs text-muted-foreground">Digite para criar a primeira equipa.</p>
+            <p className="px-3 py-3 text-center text-xs text-muted-foreground">Digite para criar o primeiro setor.</p>
           )}
         </div>
       </PopoverContent>

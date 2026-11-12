@@ -62,7 +62,14 @@ export type ApprovedVacation = {
 };
 export type CalendarMode = "day" | "week" | "month" | "year";
 
-export type TaskMember = { id: string; full_name: string | null; job_title?: string | null; sector?: string | null };
+export type TaskMember = {
+  id: string;
+  full_name: string | null;
+  job_title?: string | null;
+  sector?: string | null;
+  /** Ticket 172: número da equipa (1–10). */
+  team_number?: number | null;
+};
 
 /**
  * 29092026-001 — nome COMPLETO (primeiro nome + apelido) em qualquer lugar que

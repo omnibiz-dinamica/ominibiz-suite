@@ -94,10 +94,10 @@ function Closing() {
     queryFn: async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase.from("profiles" as never) as any)
-        .select("id, sector")
+        .select("id, sector, team_number")
         .in("id", employeeIds);
       if (error) throw error;
-      return (data ?? []) as { id: string; sector: string | null }[];
+      return (data ?? []) as { id: string; sector: string | null; team_number: number | null }[];
     },
   });
   const teams = useMemo(() => teamGroups(sectors.data ?? []), [sectors.data]);
@@ -247,7 +247,7 @@ function Closing() {
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label>Equipa</Label>
+          <Label>Setor / equipa</Label>
           <Select
             value={team}
             onValueChange={(v) => {
@@ -259,7 +259,7 @@ function Closing() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todas</SelectItem>
+              <SelectItem value="all">Todos</SelectItem>
               {teams.map((t) => (
                 <SelectItem key={t.key} value={t.key}>
                   {t.name} ({t.ids.length})

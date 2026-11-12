@@ -318,6 +318,29 @@ function TasksPage() {
    * se falhar, as pesquisas ficam exatamente como antes (só nome/cargo).
    */
   const memberIdsKey = (members ?? []).map((m) => m.id).sort().join(",");
+  // Ticket 172: também o número da equipa (team_number).
+  const { data: memberTeams } = useQuery({
+    queryKey: ["members-team-numbers", currentCompanyId, memberIdsKey],
+    queryFn: async (): Promise<Record<string, number>> => {
+      const map: Record<string, number> = {};
+      const ids = (members ?? []).map((m) => m.id);
+      if (ids.length === 0) return map;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data, error } = await (supabase.from("profiles" as never) as any).select("id, team_number").in("id", ids);
+        if (error) return map;
+        for (const row of (data ?? []) as { id: string; team_number: number | null }[]) {
+          if (row.team_number != null) map[row.id] = Number(row.team_number);
+        }
+      } catch {
+        // sem número de equipa: pesquisa como antes
+      }
+      return map;
+    },
+    enabled: !!currentCompanyId && isManager && (members ?? []).length > 0,
+    staleTime: 60 * 1000,
+    retry: false,
+  });
   const { data: memberSectors } = useQuery({
     queryKey: ["members-sectors", currentCompanyId, memberIdsKey],
     queryFn: async (): Promise<Record<string, string>> => {
@@ -347,6 +370,7 @@ function TasksPage() {
       ...m,
       job_title: m.job_title ?? (members ?? []).find((x) => x.id === m.id)?.job_title ?? null,
       sector: m.sector ?? memberSectors?.[m.id] ?? null,
+      team_number: m.team_number ?? memberTeams?.[m.id] ?? null,
     }));
 
   // Tipo A — telas de NOVA atribuição: só funcionários ATIVOS, filtrados no servidor.
@@ -1578,6 +1602,7 @@ function TasksPage() {
                 full_name: taskMemberName(members ?? [], m.id, "Funcionário"),
                 job_title: (m as { job_title?: string | null }).job_title ?? null,
                 sector: memberSectors?.[m.id] ?? null,
+                team_number: memberTeams?.[m.id] ?? null,
               }))}
               values={selectedEmployeeIds}
               onValuesChange={setEmployeeFilter}

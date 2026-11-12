@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { TeamChips } from "@/components/common/TeamChips";
+import { teamNumberLabel } from "@/lib/teams";
 import { Check, ChevronsUpDown, Search, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +37,8 @@ export type EmployeeOption = {
   job_title?: string | null;
   /** Setor do cadastro do funcionário (ex.: Coifas, Tobaco). */
   sector?: string | null;
+  /** Ticket 172: número da equipa (1–10) — pesquisável como "equipa 6". */
+  team_number?: number | null;
   team?: string | null;
 };
 
@@ -112,6 +115,7 @@ export function EmployeePicker({
         normalize(e.job_title),
         normalize(e.sector),
         normalize(e.team),
+        normalize(teamNumberLabel(e.team_number)),
       ].join(" ");
       return tokens.every((t) => haystack.includes(t));
     });
@@ -177,7 +181,7 @@ export function EmployeePicker({
           ) : (
             visible.map((e) => {
               const isSelected = e.id === value;
-              const secondary = [e.job_title, e.sector, e.team, e.email]
+              const secondary = [e.job_title, e.sector, teamNumberLabel(e.team_number), e.team, e.email]
                 .filter(Boolean)
                 .join(" · ");
               return (
@@ -268,6 +272,7 @@ export function EmployeeMultiPicker({
         normalize(e.job_title),
         normalize(e.sector),
         normalize(e.team),
+        normalize(teamNumberLabel(e.team_number)),
       ].join(" ");
       return tokens.every((token) => haystack.includes(token));
     });
@@ -321,7 +326,7 @@ export function EmployeeMultiPicker({
             <li className="px-3 py-6 text-center text-sm text-muted-foreground">{emptyText}</li>
           ) : filtered.map((e) => {
             const isSelected = selectedIds.has(e.id);
-            const secondary = [e.job_title, e.sector, e.team, e.email].filter(Boolean).join(" · ");
+            const secondary = [e.job_title, e.sector, teamNumberLabel(e.team_number), e.team, e.email].filter(Boolean).join(" · ");
             return (
               <li key={e.id} role="option" aria-selected={isSelected}>
                 <button type="button" onClick={() => toggle(e.id)} className={cn("flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-accent focus-visible:bg-accent focus-visible:outline-none", isSelected && "bg-accent/50")}>
