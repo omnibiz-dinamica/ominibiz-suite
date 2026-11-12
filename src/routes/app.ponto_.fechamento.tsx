@@ -24,6 +24,8 @@ import { toast } from "sonner";
 import { CalendarPlus, Download, Lock, Printer, Search, Send } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { matchesClosingSearch } from "@/lib/ponto/closing-search";
+import { teamGroups } from "@/lib/teams";
+import { supabase } from "@/integrations/supabase/client";
 import {
   MONTH_LABELS,
   TIMESHEET_STATUS_LABEL,
@@ -66,6 +68,7 @@ function Closing() {
   const [month, setMonth] = useState(now.getUTCMonth() + 1);
   const [status, setStatus] = useState<TimesheetStatus | "all">("all");
   const [search, setSearch] = useState("");
+  const [team, setTeam] = useState("all");
   const [selected, setSelected] = useState<string[]>([]);
   const [viewing, setViewing] = useState<TimesheetListRow | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
@@ -79,12 +82,39 @@ function Closing() {
     queryFn: () => listPeriods(currentCompanyId!, year, month),
   });
 
+  // Ticket 172: equipa = Setor do cadastro (o gestor lê profiles.sector por RLS).
+  const employeeIds = useMemo(
+    () => [...new Set((list.data ?? []).map((r) => r.employee_id))].sort(),
+    [list.data],
+  );
+  const sectors = useQuery({
+    queryKey: ["closing-sectors", currentCompanyId, employeeIds.join(",")],
+    enabled: employeeIds.length > 0,
+    staleTime: 60 * 1000,
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.from("profiles" as never) as any)
+        .select("id, sector")
+        .in("id", employeeIds);
+      if (error) throw error;
+      return (data ?? []) as { id: string; sector: string | null }[];
+    },
+  });
+  const teams = useMemo(() => teamGroups(sectors.data ?? []), [sectors.data]);
+  const teamSet = useMemo(
+    () => (team === "all" ? null : new Set(teams.find((t) => t.key === team)?.ids ?? [])),
+    [team, teams],
+  );
+
   const rows = useMemo(
     () =>
       (list.data ?? []).filter(
-        (r) => (status === "all" || r.status === status) && matchesClosingSearch(r, search),
+        (r) =>
+          (status === "all" || r.status === status) &&
+          matchesClosingSearch(r, search) &&
+          (!teamSet || teamSet.has(r.employee_id)),
       ),
-    [list.data, status, search],
+    [list.data, status, search, teamSet],
   );
   const selectedRows = rows.filter((r) => selected.includes(r.period_id));
 
@@ -181,7 +211,7 @@ function Closing() {
         )}
       </div>
 
-      <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-5">
         <div className="space-y-1.5">
           <Label>Ano</Label>
           <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
@@ -212,6 +242,28 @@ function Closing() {
               <SelectItem value="all">Todos</SelectItem>
               {Object.entries(TIMESHEET_STATUS_LABEL).map(([k, v]) => (
                 <SelectItem key={k} value={k}>{v}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Equipa</Label>
+          <Select
+            value={team}
+            onValueChange={(v) => {
+              setTeam(v);
+              setSelected([]);
+            }}
+          >
+            <SelectTrigger aria-label="Filtrar por equipa">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              {teams.map((t) => (
+                <SelectItem key={t.key} value={t.key}>
+                  {t.name} ({t.ids.length})
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>

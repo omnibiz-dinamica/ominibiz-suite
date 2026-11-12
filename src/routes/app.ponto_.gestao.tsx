@@ -71,6 +71,7 @@ import { entryScheduleFlags, fetchEntryTimeZones } from "@/lib/punch/off-schedul
 import { RECONCILIATION_QUERY_KEY, ScheduleReconciliation } from "@/components/ponto/ScheduleReconciliation";
 import { addPointDefaults, launchDefaults } from "@/lib/ponto/closing-table";
 import { formatInTz, useCompanyTimeZone } from "@/lib/company-time";
+import { teamGroups } from "@/lib/teams";
 import { monthRange, type ReconciliationRow } from "@/lib/ponto/reconciliation";
 
 export const Route = createFileRoute("/app/ponto_/gestao")({ component: Page });
@@ -88,6 +89,8 @@ const PAGE_SIZE = 50;
 
 interface Filters {
   userId: string;
+  /** Ticket 172: equipa (Setor do cadastro); "all" = todas. */
+  team: string;
   clientId: string;
   taskSearch: string;
   status: StatusFilter;
@@ -97,6 +100,7 @@ interface Filters {
 
 const emptyFilters: Filters = {
   userId: "all",
+  team: "all",
   clientId: "all",
   taskSearch: "",
   status: "all",
@@ -307,9 +311,10 @@ function GestaoPonto() {
         .eq("company_id", currentCompanyId!);
       if (rolesErr) throw rolesErr;
       const ids = [...new Set((roles ?? []).map((r) => r.user_id))];
-      if (ids.length === 0) return [] as { id: string; name: string; inactive: boolean }[];
+      if (ids.length === 0)
+        return [] as { id: string; name: string; inactive: boolean; sector: string | null }[];
       const { data: profs, error: profsErr } = await (supabase.from("profiles" as never) as any)
-        .select("id, full_name, is_active, status, termination_date")
+        .select("id, full_name, is_active, status, termination_date, sector")
         .in("id", ids);
       if (profsErr) throw profsErr;
       return (
@@ -319,9 +324,15 @@ function GestaoPonto() {
           is_active: boolean | null;
           status: string | null;
           termination_date: string | null;
+          sector?: string | null;
         }[]
       )
-        .map((p) => ({ id: p.id, name: p.full_name ?? p.id, inactive: !isEmployeeActive(p) }))
+        .map((p) => ({
+          id: p.id,
+          name: p.full_name ?? p.id,
+          inactive: !isEmployeeActive(p),
+          sector: p.sector ?? null,
+        }))
         .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
     },
   });
@@ -346,6 +357,13 @@ function GestaoPonto() {
     },
   });
 
+  // Ticket 172: equipas = Setor do cadastro.
+  const teams = useMemo(() => teamGroups(members ?? []), [members]);
+  const teamIds = useMemo(() => {
+    if (filters.userId !== "all") return [];
+    return teams.find((t) => t.key === filters.team)?.ids ?? [];
+  }, [teams, filters.team, filters.userId]);
+
   // Feed canónico: pontos reais e faltas sem criar time_entry artificial.
   const {
     data: result,
@@ -354,9 +372,29 @@ function GestaoPonto() {
     error,
     refetch,
   } = useQuery({
-    queryKey: ["punch-admin-list", currentCompanyId, filters, page],
+    queryKey: ["punch-admin-list", currentCompanyId, filters, page, teamIds.join(",")],
     enabled: !!currentCompanyId,
     queryFn: async () => {
+      // Ticket 172: filtro por equipa — o servidor filtra um funcionário de cada vez,
+      // por isso lê o período todo e filtra/pagina aqui (máx. 5000 registos).
+      if (teamIds.length > 0) {
+        const all = await listOperationalPunches({
+          companyId: currentCompanyId!,
+          employeeId: null,
+          clientId: filters.clientId === "all" ? null : filters.clientId,
+          taskSearch: filters.taskSearch,
+          status: filters.status,
+          fromTs: filters.from ? new Date(filters.from + "T00:00:00").toISOString() : null,
+          toTs: filters.to ? new Date(filters.to + "T23:59:59").toISOString() : null,
+          fromDate: filters.from || null,
+          toDate: filters.to || null,
+          limit: 5000,
+          offset: 0,
+        });
+        const set = new Set(teamIds);
+        const rows = all.rows.filter((r) => set.has(r.user_id));
+        return { ...all, rows: rows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE), total: rows.length };
+      }
       return listOperationalPunches({
         companyId: currentCompanyId!,
         employeeId: filters.userId === "all" ? null : filters.userId,
@@ -787,7 +825,7 @@ function GestaoPonto() {
   ];
 
   const fetchAllForExport = async (): Promise<Row[]> => {
-    const { rows } = await listOperationalPunches({
+    const { rows: fetched } = await listOperationalPunches({
       companyId: currentCompanyId!,
       employeeId: filters.userId === "all" ? null : filters.userId,
       clientId: filters.clientId === "all" ? null : filters.clientId,
@@ -800,6 +838,8 @@ function GestaoPonto() {
       limit: 5000,
       offset: 0,
     });
+    const teamSet = teamIds.length > 0 ? new Set(teamIds) : null;
+    const rows = teamSet ? fetched.filter((r) => teamSet.has(r.user_id)) : fetched;
     const realRows = rows.filter((r) => !isNonWork(r));
     const ids = realRows.map((r) => r.id);
     if (ids.length === 0) return rows;
@@ -1006,6 +1046,28 @@ function GestaoPonto() {
                 placeholder="Todos"
                 ariaLabel="Filtrar por funcionário"
               />
+            </div>
+            <div>
+              <Label className="text-xs">Equipa</Label>
+              <Select
+                value={filters.team}
+                onValueChange={(v) => {
+                  setFilters((f) => ({ ...f, team: v, userId: v === "all" ? f.userId : "all" }));
+                  setPage(0);
+                }}
+              >
+                <SelectTrigger aria-label="Filtrar por equipa">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  {teams.map((t) => (
+                    <SelectItem key={t.key} value={t.key}>
+                      {t.name} ({t.ids.length})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label className="text-xs">Cliente</Label>

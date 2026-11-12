@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { TeamChips } from "@/components/common/TeamChips";
 import { Check, ChevronsUpDown, Search, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -309,6 +310,12 @@ export function EmployeeMultiPicker({
             <Input ref={inputRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar por nome, cargo, setor, equipe…" className="h-9 pl-8" aria-label="Buscar funcionários" />
           </div>
         </div>
+        <TeamChips
+          members={employees}
+          selected={values}
+          onChange={onValuesChange}
+          className="border-b border-border px-2 py-2"
+        />
         <ul role="listbox" aria-multiselectable="true" className="max-h-72 overflow-y-auto py-1" aria-label="Funcionários">
           {filtered.length === 0 ? (
             <li className="px-3 py-6 text-center text-sm text-muted-foreground">{emptyText}</li>

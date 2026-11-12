@@ -1,4 +1,5 @@
 // Tarefas · formulário de criar/editar tarefa (extraído de app.tarefas.tsx).
+import { TeamChips } from "@/components/common/TeamChips";
 
 import {
   recurrenceFromScheduleSlot,
@@ -1456,6 +1457,14 @@ export function TaskForm({
                       className="h-9 pl-8"
                     />
                   </div>
+                  <TeamChips
+                    members={members}
+                    selected={assignees}
+                    onChange={(ids) => {
+                      setTouchedAssignees(true);
+                      setAssignees(ids);
+                    }}
+                  />
                   <div className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-border p-2">
                     {members.length === 0 && (
                       <p className="px-1 py-2 text-xs text-muted-foreground">Nenhum funcionário disponível.</p>
