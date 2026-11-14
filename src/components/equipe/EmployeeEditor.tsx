@@ -774,8 +774,9 @@ function TabFinanceiro({
       }}
     >
       <p className="text-xs text-muted-foreground">
-        Estes valores são informativos para RH. Os valores que alimentam folha e valorizações continuam em
-        “Configurações financeiras”.
+        A folha é paga com o valor do funcionário (14/11/2026), não com o do cliente: "Valor hora — semana"
+        nos dias úteis e "Valor hora — fim de semana/feriado" ao sábado, domingo e feriados (sem este,
+        usa o da semana). "Valor dia — Bélgica" vale para quem recebe por dia.
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="IBAN">
@@ -816,8 +817,9 @@ function TabFinanceiro({
       <div className="rounded-xl border border-dashed border-border bg-muted/20 p-4">
         <div className="mb-1 text-sm font-semibold">Pagamento do funcionário</div>
         <p className="mb-3 text-xs text-muted-foreground">
-          Hierarquia oficial: <strong>funcionário</strong> &gt; cliente &gt; empresa. Deixe o valor em
-          branco para herdar. A modalidade escolhida aqui é a que a folha aplica.
+          A folha usa o valor do <strong>funcionário</strong>; sem valor, o padrão da empresa. O cliente
+          não muda o valor (só a folga remunerada segue o cliente). A modalidade escolhida aqui é a
+          que a folha aplica. O valor hora daqui, se preenchido, tem prioridade sobre "Valor hora — semana".
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Tipo de pagamento">

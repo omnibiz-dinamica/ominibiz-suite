@@ -26,6 +26,7 @@ import {
 } from "@/lib/timesheet-view";
 import { PAYMENT_TYPE_LABEL, type PaymentType } from "@/lib/compensation";
 import { currentLanguage, dateLocale, translator, type AppLanguage } from "@/i18n";
+import { dayTypeRows, holidayLabels } from "@/lib/ponto/day-type-summary";
 
 /**
  * Gerador do PDF "Folha de Ponto Individual de Trabalho" (ADR-038).
@@ -379,6 +380,18 @@ export async function generateTimesheetPdf(
     ]);
   } else if (s.calculated_amount != null) {
     summaryRows.push([tr("Total do mês"), money(s.calculated_amount, s.currency)]);
+  }
+  // 14/11/2026: somatório de horas da semana e do fim de semana/feriado.
+  const dayRows = dayTypeRows(s.by_day_type);
+  if (dayRows) {
+    const holidays = holidayLabels(s.by_day_type);
+    for (const r of dayRows) {
+      const extra = r.key === "weekend" && holidays.length > 0 ? ` (${tr("feriados")}: ${holidays.join(", ")})` : "";
+      summaryRows.push([
+        `${tr("Horas")} · ${tr(r.label)}`,
+        `${formatMinutes(r.minutes)} · ${money(r.amount, s.currency)}${extra}`,
+      ]);
+    }
   }
   // 10/11/2026: com mais de um cliente/forma, mostra a composição por cliente.
   const byClient = s.by_client ?? [];

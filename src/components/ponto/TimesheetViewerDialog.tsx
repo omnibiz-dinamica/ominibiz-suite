@@ -27,6 +27,7 @@ import { withLiveExtras } from "@/lib/timesheet-view";
 import { TimesheetClosingTable } from "@/components/ponto/TimesheetClosingTable";
 import { isClosingLocked } from "@/lib/ponto/closing-table";
 import { toast } from "sonner";
+import { dayTypeRows, holidayLabels, missingEmployeeRate } from "@/lib/ponto/day-type-summary";
 
 export function TimesheetViewerDialog({
   row,
@@ -202,6 +203,47 @@ export function TimesheetViewerDialog({
                   </div>
                 </div>
               </div>
+              {(() => {
+                // 14/11/2026: somatório de horas da semana e do fim de semana/feriado.
+                const summary = snap.data.snapshot.summary;
+                const rows = dayTypeRows(summary.by_day_type);
+                const holidays = holidayLabels(summary.by_day_type);
+                const missing = missingEmployeeRate(summary.by_client);
+                if (!rows && !missing) return null;
+                return (
+                  <div className="space-y-2">
+                    {missing && (
+                      <div
+                        role="alert"
+                        className="rounded-xl border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive"
+                      >
+                        Falta o valor no cadastro do funcionário: há horas a 0,00. Preencha em Equipe →
+                        Financeiro (valor hora da semana e do fim de semana/feriado).
+                      </div>
+                    )}
+                    {rows && (
+                      <div className="grid gap-2 rounded-xl border border-border bg-card/60 p-4 text-sm sm:grid-cols-2">
+                        {rows.map((r) => (
+                          <div key={r.key}>
+                            <div className="text-xs uppercase text-muted-foreground">Horas · {r.label}</div>
+                            <div className="font-medium">
+                              {formatMinutes(r.minutes)}{" "}
+                              <span className="text-xs font-normal text-muted-foreground">
+                                · {r.days} dia(s) · {r.amount.toFixed(2)} {summary.currency}
+                              </span>
+                            </div>
+                            {r.key === "weekend" && holidays.length > 0 && (
+                              <div className="text-xs text-muted-foreground">
+                                Feriados: {holidays.join(", ")}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
               {(snap.data.snapshot.summary.by_client?.length ?? 0) > 0 && (
                 <div className="rounded-xl border border-border bg-card/60 p-4 text-sm">
                   <div className="mb-2 text-xs font-semibold uppercase text-muted-foreground">

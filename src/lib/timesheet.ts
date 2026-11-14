@@ -23,7 +23,8 @@ export type TimesheetStatus =
 
 export const TIMESHEET_STATUS_LABEL: Record<TimesheetStatus, string> = {
   em_aberto: "Em aberto",
-  aguardando_funcionario: "Aguardando conferência",
+  // 14/11/2026: era "Aguardando conferência" e parecia a conferência do gestor.
+  aguardando_funcionario: "Aguardando assinatura do funcionário",
   aguardando_correcao: "Aguardando correção",
   assinado_funcionario: "Assinado pelo funcionário",
   em_conferencia: "Em conferência",
@@ -167,6 +168,8 @@ export type TimesheetSnapshot = {
     currency: string;
     /** 10/11/2026: total por cliente, com a forma de pagamento de cada um. */
     by_client?: TimesheetClientTotal[];
+    /** 14/11/2026: horas e valor de semana / fim de semana+feriado (dia da tarefa). */
+    by_day_type?: TimesheetDayTypeTotals;
   };
   generated_at: string;
   /** SUP-301: versão criada por correção do gestor (mantém a assinatura). */
@@ -190,6 +193,18 @@ export type TimesheetClientTotal = {
   entries: number;
   days: number;
   amount: number;
+};
+
+/** Somatórios por tipo de dia (timesheet_build_snapshot, 14/11/2026). */
+export type TimesheetDayTypeTotals = {
+  week_minutes: number;
+  weekend_minutes: number;
+  holiday_minutes: number;
+  week_days: number;
+  weekend_days: number;
+  week_amount: number;
+  weekend_amount: number;
+  holidays: string[];
 };
 
 /** Rótulo do tipo de pagamento da folha ("multiple" = formas diferentes por cliente). */

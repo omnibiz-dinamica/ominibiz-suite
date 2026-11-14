@@ -42,6 +42,7 @@ import { buildTimesheetPackage } from "@/lib/timesheet-batch";
 import { downloadBytes, printBytes } from "@/lib/timesheet-pdf";
 import { TimesheetViewerDialog } from "@/components/ponto/TimesheetViewerDialog";
 import { OpenMonthDialog } from "@/components/ponto/OpenMonthDialog";
+import { CLOSING_STEPS_TOTAL, closingNextStep } from "@/lib/ponto/closing-steps";
 
 export const Route = createFileRoute("/app/ponto_/fechamento")({ component: Page });
 
@@ -287,6 +288,29 @@ function Closing() {
         </div>
       </div>
 
+      <details className="rounded-2xl border border-border bg-card p-4 text-sm">
+        <summary className="cursor-pointer font-medium">Como fechar o mês (passo a passo)</summary>
+        <ol className="mt-3 list-decimal space-y-1 pl-5 text-muted-foreground">
+          <li>
+            <span className="text-foreground">Abrir o mês para conferência</span> e escolher os
+            funcionários. Cada um recebe um aviso.
+          </li>
+          <li>
+            <span className="text-foreground">Conferir</span>: em "Ver", validar, ignorar ou corrigir
+            os pontos. Ao mesmo tempo o funcionário confere a folha dele e assina (ou pede correção).
+          </li>
+          <li>
+            <span className="text-foreground">Fechar</span>: só depois da assinatura do funcionário.
+          </li>
+          <li>
+            <span className="text-foreground">Enviar à contabilidade</span>: só depois de fechar.
+          </li>
+          <li>
+            <span className="text-foreground">Concluído</span>: a contabilidade vê a folha.
+          </li>
+        </ol>
+      </details>
+
       <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-card p-4">
         <span className="text-sm text-muted-foreground">
           {selectedRows.length > 0 ? `${selectedRows.length} selecionado(s)` : "Ações em lote"}
@@ -294,14 +318,28 @@ function Closing() {
         <Button
           size="sm"
           variant="outline"
-          onClick={() => runBatch("Fechado", (r) => closePeriod(r.period_id))}
+          onClick={() => {
+            const ok = selectedRows.filter((r) => closingNextStep(r.status).canClose);
+            if (selectedRows.length > 0 && ok.length === 0) {
+              toast.error("Nenhuma das selecionadas está assinada pelo funcionário.");
+              return;
+            }
+            void runBatch("Fechado", (r) => closePeriod(r.period_id), ok);
+          }}
         >
           <Lock className="h-4 w-4" /> Fechar selecionados
         </Button>
         <Button
           size="sm"
           variant="outline"
-          onClick={() => runBatch("Liberado", (r) => sendToAccounting(r.period_id))}
+          onClick={() => {
+            const ok = selectedRows.filter((r) => closingNextStep(r.status).canSend);
+            if (selectedRows.length > 0 && ok.length === 0) {
+              toast.error("Nenhuma das selecionadas está fechada. Feche primeiro.");
+              return;
+            }
+            void runBatch("Enviado à contabilidade", (r) => sendToAccounting(r.period_id), ok);
+          }}
         >
           <Send className="h-4 w-4" /> Enviar à contabilidade
         </Button>
@@ -355,6 +393,11 @@ function Closing() {
                 </td>
                 <td className="px-3 py-2">
                   <Badge variant={statusTone(r.status)}>{TIMESHEET_STATUS_LABEL[r.status]}</Badge>
+                  {/* 14/11/2026: próximo passo do fecho, para o gestor não ter de adivinhar. */}
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    Passo {closingNextStep(r.status).step}/{CLOSING_STEPS_TOTAL} ·{" "}
+                    {closingNextStep(r.status).next}
+                  </div>
                 </td>
                 <td className="px-3 py-2">{formatMinutes(r.worked_minutes)}</td>
                 <td className="px-3 py-2">{r.paid_days ?? 0}</td>
@@ -369,15 +412,29 @@ function Closing() {
                     <Button
                       size="sm"
                       variant="outline"
+                      disabled={!closingNextStep(r.status).canClose}
+                      title={
+                        closingNextStep(r.status).canClose
+                          ? "Fechar a folha assinada"
+                          : "Só depois de o funcionário assinar"
+                      }
                       onClick={() => runBatch("Fechado", (x) => closePeriod(x.period_id), [r])}
                     >
                       Fechar
                     </Button>
                     <Button
                       size="sm"
-                      onClick={() => runBatch("Liberado", (x) => sendToAccounting(x.period_id), [r])}
+                      disabled={!closingNextStep(r.status).canSend}
+                      title={
+                        closingNextStep(r.status).canSend
+                          ? "Enviar à contabilidade"
+                          : "Só depois de fechar a folha"
+                      }
+                      onClick={() =>
+                        runBatch("Enviado à contabilidade", (x) => sendToAccounting(x.period_id), [r])
+                      }
                     >
-                      Liberar
+                      Enviar à contabilidade
                     </Button>
                   </div>
                 </td>
