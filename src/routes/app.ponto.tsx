@@ -1440,7 +1440,7 @@ function UpcomingTasks({
               )}
             </Button>
           )}
-          {canMarkAbsent && canBecomeAbsent(nextStartable) && (
+          {canMarkAbsent && (isManager || canBecomeAbsent(nextStartable)) && (
             <Button
               size="lg"
               variant="outline"
@@ -1578,7 +1578,7 @@ function UpcomingTasks({
                         )}
                       </Button>
                     )}
-                    {canMarkAbsent && canBecomeAbsent(t) && (
+                    {canMarkAbsent && (isManager || canBecomeAbsent(t)) && (
                       <Button
                         size="lg"
                         variant="outline"

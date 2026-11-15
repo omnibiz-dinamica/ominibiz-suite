@@ -639,15 +639,18 @@ export function availableActions(
   if (actionableStatus === "em_andamento" && (isAssignee || ctx.isManager)) out.push("concluir");
   // A falta só pode ser registada depois da ocorrência: 1h após o horário
   // definido ou no dia seguinte quando a tarefa não tem horário.
+  // SUP-2026-000294 (15/11/2026): o GESTOR pode marcar a qualquer momento
+  // (ex.: a funcionária avisou que está doente antes do início).
   if (
     (ctx.isManager || isAssignee) &&
     (actionableStatus === "pendente" || actionableStatus === "autorizado") &&
-    canBecomeAbsent({
-      ...task,
-      scheduled_for: task.scheduled_for ?? null,
-      recurrence_date: task.recurrence_date ?? null,
-      due_at: task.due_at ?? null,
-    })
+    (ctx.isManager ||
+      canBecomeAbsent({
+        ...task,
+        scheduled_for: task.scheduled_for ?? null,
+        recurrence_date: task.recurrence_date ?? null,
+        due_at: task.due_at ?? null,
+      }))
   )
     out.push("marcar_ausente");
   if (ctx.isManager) out.push("cancelar");
@@ -682,7 +685,8 @@ export function canMarkAbsent(
 ): boolean {
   if (!t.assigned_to) return false;
   if (!ctx.isManager && t.assigned_to !== ctx.userId) return false;
-  return (t.status === "pendente" || t.status === "autorizado") && canBecomeAbsent(t);
+  // SUP-2026-000294: o gestor marca a falta quando souber, sem esperar pelo horário.
+  return (t.status === "pendente" || t.status === "autorizado") && (ctx.isManager || canBecomeAbsent(t));
 }
 
 export async function markTaskAbsent(taskId: string, reason: string, justified: boolean): Promise<TaskRow> {
