@@ -206,6 +206,51 @@ export function correctionContext(row: ReconciliationRow): CorrectionContext {
   };
 }
 
+/**
+ * SUP-299 parte 2: o gestor regista o dia como férias a partir da conferência.
+ * Linha com tarefa, folha não assinada/fechada e sem ponto aberto; ainda não
+ * registada como férias.
+ */
+export function canMarkVacation(row: ReconciliationRow): boolean {
+  if (!row.task_id || row.period_locked || row.status === "aberto") return false;
+  if (row.status === "ignored" && (row.notes ?? "").trim() === "Férias") return false;
+  return true;
+}
+
+export function vacationConfirmText(row: ReconciliationRow): string {
+  const day = row.work_date.slice(0, 10).split("-").reverse().join("/");
+  const punch =
+    row.entries_count > 0
+      ? ` O ponto (${formatHours(row.real_minutes)}) é anulado e fica no histórico.`
+      : "";
+  return `Registar ${day} como férias?${punch} A tarefa passa a falta justificada "Férias" e o dia fica como férias aprovadas no módulo Férias. O funcionário é avisado.`;
+}
+
+export type MarkVacationResult = {
+  work_date: string;
+  voided_entries: number;
+  vacation_id: string | null;
+  vacation_status: string | null;
+  vacation_pending: boolean;
+};
+
+export async function markReconciliationVacation(params: {
+  companyId: string;
+  employeeId: string;
+  taskId: string;
+  note?: string | null;
+}): Promise<MarkVacationResult> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("timesheet_reconciliation_mark_vacation", {
+    _company_id: params.companyId,
+    _employee_id: params.employeeId,
+    _task_id: params.taskId,
+    _note: params.note?.trim() ? params.note.trim() : null,
+  });
+  if (error) throw error;
+  return data as MarkVacationResult;
+}
+
 /** Texto de confirmação antes de Ignorar. */
 export function ignoreConfirmText(row: ReconciliationRow): string {
   if (row.kind === "missing") {

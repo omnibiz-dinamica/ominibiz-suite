@@ -29,10 +29,12 @@ import {
   listReconciliation,
   statusLabel,
   shiftText,
+  canMarkVacation,
   summarizeReconciliation,
   type ReconciliationDecision,
   type ReconciliationRow,
 } from "@/lib/ponto/reconciliation";
+import { ReconciliationVacationButton } from "@/components/ponto/ReconciliationVacationButton";
 
 export const RECONCILIATION_QUERY_KEY = "timesheet-reconciliation";
 
@@ -179,6 +181,25 @@ export function ScheduleReconciliation({
           <Icon className="mr-1 h-3.5 w-3.5" />
           {ACTION_LABEL[a]}
         </Button>,
+      );
+    }
+    // SUP-299 parte 2: registar o dia como férias (só gestão: onde se pode Corrigir).
+    if (onEdit && canDecide && employeeId && canMarkVacation(row)) {
+      out.push(
+        <ReconciliationVacationButton
+          key="vacation"
+          companyId={companyId}
+          employeeId={employeeId}
+          row={row}
+          disabled={busy}
+          onDone={() => {
+            qc.invalidateQueries({ queryKey: [RECONCILIATION_QUERY_KEY] });
+            qc.invalidateQueries({ queryKey: ["timesheet-view"] });
+            qc.invalidateQueries({ queryKey: ["timesheet-closing"] });
+            qc.invalidateQueries({ queryKey: ["punch-admin-list"] });
+            onChanged?.();
+          }}
+        />,
       );
     }
     return out.length ? out : <span className="text-xs text-muted-foreground">—</span>;
@@ -357,9 +378,10 @@ export function ScheduleReconciliation({
 
       <p className="flex items-start gap-1 text-xs text-muted-foreground">
         <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-        Validar conta as horas reais. Ignorar conta as horas previstas (numa falta, só regista que
-        foi vista e conta 0h). Duração igual à prevista não precisa de ação, mesmo com horário
-        diferente.
+        Pede decisão quando a diferença passa de 30 min, quando a entrada ou a saída ficam a 15 min
+        ou mais do previsto (linha em vermelho) ou quando o funcionário deixou observação. Validar
+        conta as horas reais; Ignorar conta as previstas (numa falta, só regista que foi vista e
+        conta 0h); Corrigir abre o ponto; Férias regista o dia como férias.
       </p>
 
       <AlertDialog open={!!confirmIgnore} onOpenChange={(v) => !v && setConfirmIgnore(null)}>

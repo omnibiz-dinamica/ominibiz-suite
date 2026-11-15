@@ -97,3 +97,39 @@ describe("SUP-2026-000299: conferência para pagamento", () => {
     );
   });
 });
+
+describe("SUP-2026-000299 parte 2: registar o dia como férias", () => {
+  test("só em linhas com tarefa, folha aberta, sem ponto aberto e ainda não registadas", async () => {
+    const { canMarkVacation, vacationConfirmText } =
+      await import("../src/lib/ponto/reconciliation");
+    expect(canMarkVacation(row({}))).toBe(true);
+    expect(canMarkVacation(row({ task_id: null }))).toBe(false);
+    expect(canMarkVacation(row({ period_locked: true }))).toBe(false);
+    expect(canMarkVacation(row({ status: "aberto" }))).toBe(false);
+    expect(canMarkVacation(row({ status: "ignored", notes: "Férias" }))).toBe(false);
+    expect(vacationConfirmText(row({ work_date: "2026-11-03", real_minutes: 240 }))).toContain(
+      "Registar 03/11/2026 como férias? O ponto (4:00) é anulado",
+    );
+  });
+
+  test("botão Férias na Gestão e no Fechamento; o SQL anula, marca falta Férias e cria férias aprovadas", () => {
+    expect(read("../src/components/ponto/ScheduleReconciliation.tsx")).toContain(
+      "<ReconciliationVacationButton",
+    );
+    expect(read("../src/components/ponto/TimesheetClosingTable.tsx")).toContain(
+      "<ReconciliationVacationButton",
+    );
+    const sql = read("../docs/sql/conferencia_ferias_20261115_aplicar.sql");
+    expect(sql).toContain("void_reason = 'Férias (registado na conferência)'");
+    expect(sql).toContain(
+      "absence_reason = 'Férias', absence_justified = true, absence_source = 'manual'",
+    );
+    expect(sql).toContain("INSERT INTO public.vacation_requests");
+    expect(sql).toContain("Apenas o gestor pode registar férias na conferência");
+    expect(sql).toContain("Folha assinada ou fechada");
+    // SUP-294: o trigger deixa o gestor marcar falta sem esperar
+    expect(sql).toContain(
+      "AND NOT (COALESCE(NEW.absence_source, '') = 'manual' AND auth.uid() IS NOT NULL",
+    );
+  });
+});
