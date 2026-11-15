@@ -1398,6 +1398,14 @@ export function TaskForm({
                 <div>
                   <Label htmlFor="task-docs-create">Documentos da tarefa</Label>
                   <p className="text-xs text-muted-foreground">PDF, JPG ou PNG ate 10 MB.</p>
+                  {recurrence.enabled && (
+                    // SUP-2026-000242: hoje os anexos não passam para as tarefas geradas
+                    // por uma recorrência; avisa em vez de os perder em silêncio.
+                    <p className="text-xs font-medium text-warning-foreground" role="note">
+                      Numa tarefa recorrente os anexos não passam para os dias gerados. Anexe-os depois em
+                      cada dia (Editar a tarefa → Documentos operacionais).
+                    </p>
+                  )}
                 </div>
                 <Button type="button" variant="outline" size="sm" asChild>
                   <label htmlFor="task-docs-create" className="cursor-pointer">

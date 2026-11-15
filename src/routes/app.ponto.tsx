@@ -36,6 +36,8 @@ import {
   ChevronDown as ChevronDownIcon,
 } from "lucide-react";
 import { TaskDocuments } from "@/components/tasks/TaskDocuments";
+import { TaskWorkInfo } from "@/components/tasks/TaskWorkInfo";
+import { useTaskWorkInfo } from "@/lib/tasks/task-work-info";
 import { Dialog, DialogContent, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/dialog";
 import {
   type TimeEntryRow,
@@ -1081,6 +1083,10 @@ function ActiveTaskCard({
   const isManualEntry = mode === "manual" || entry.notes === "Apontamento manual pelo funcionario";
   const useManualExit = isManualEntry;
   const activeInstructions = usePunchClientInstructions(task.client_id ? [task.client_id] : []);
+  // SUP-2026-000242: também durante a tarefa — morada do cliente e colegas
+  // (os anexos já aparecem em "Documentos operacionais", no fim do cartão).
+  const activeAddresses = useClientAddresses(task.client_id ? [task.client_id] : []);
+  const { colleaguesByTask: activeColleagues } = useTaskWorkInfo([task.id]);
 
   // SUP-286: em pausa, mostra a hora em que a pausa começou e há quanto tempo dura.
   const [pauseNow, setPauseNow] = useState(() => Date.now());
@@ -1139,6 +1145,8 @@ function ActiveTaskCard({
           <h2 className="break-words font-display text-2xl font-semibold leading-tight sm:text-3xl">
             {clientName || task.title}
           </h2>
+          <ClientAddressBlock info={task.client_id ? activeAddresses[task.client_id] : undefined} />
+          <TaskWorkInfo colleagues={activeColleagues[task.id]} />
           <ClientInstructionsToggle text={task.client_id ? activeInstructions[task.client_id] : undefined} />
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_TONE[task.status]}`}>
@@ -1286,34 +1294,9 @@ function UpcomingTasks({
   // Endereço e coordenadas dos clientes das tarefas na fila (a RLS já permite ao
   // funcionário ler o cliente das tarefas atribuídas a ele).
   const clientIds = Array.from(new Set(tasks.map((t) => t.client_id).filter((id): id is string => !!id))).sort();
-  const { data: clientAddresses = {} } = useQuery({
-    queryKey: ["punch-client-addresses", clientIds],
-    queryFn: async () => {
-      const map: Record<string, ClientAddressInfo> = {};
-      if (clientIds.length === 0) return map;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase.from("clients" as never) as any)
-        .select("id,address,geo_address,geo_lat,geo_lng")
-        .in("id", clientIds);
-      if (error) throw error;
-      for (const r of (data ?? []) as {
-        id: string;
-        address: string | null;
-        geo_address: string | null;
-        geo_lat: number | null;
-        geo_lng: number | null;
-      }[]) {
-        map[r.id] = {
-          address: (r.address ?? "").trim() || (r.geo_address ?? "").trim() || null,
-          lat: typeof r.geo_lat === "number" ? r.geo_lat : null,
-          lng: typeof r.geo_lng === "number" ? r.geo_lng : null,
-        };
-      }
-      return map;
-    },
-    enabled: clientIds.length > 0,
-    staleTime: 5 * 60 * 1000,
-  });
+  const clientAddresses = useClientAddresses(clientIds);
+  // SUP-2026-000242: anexos e colegas de cada tarefa da fila (uma consulta de cada).
+  const { docsByTask, colleaguesByTask } = useTaskWorkInfo(tasks.map((t) => t.id));
   const clientInstructions = usePunchClientInstructions(clientIds);
 
   if (tasks.length === 0) {
@@ -1407,6 +1390,7 @@ function UpcomingTasks({
               {nextClient || nextStartable.title}
             </h2>
             <ClientAddressBlock info={nextStartable.client_id ? clientAddresses[nextStartable.client_id] : undefined} />
+            <TaskWorkInfo colleagues={colleaguesByTask[nextStartable.id]} docs={docsByTask[nextStartable.id]} />
             <ClientInstructionsToggle
               text={nextStartable.client_id ? clientInstructions[nextStartable.client_id] : undefined}
             />
@@ -1550,6 +1534,7 @@ function UpcomingTasks({
                     )}
                     <div className="mt-1 truncate font-semibold">{clientName || t.title}</div>
                     <ClientAddressBlock info={clientAddress} compact />
+                    <TaskWorkInfo colleagues={colleaguesByTask[t.id]} docs={docsByTask[t.id]} compact />
                     <ClientInstructionsToggle
                       text={t.client_id ? clientInstructions[t.client_id] : undefined}
                       compact
@@ -1641,6 +1626,40 @@ function UpcomingTasks({
 }
 
 type ClientAddressInfo = { address: string | null; lat: number | null; lng: number | null };
+
+/** Endereço e coordenadas dos clientes (a RLS deixa o funcionário ler os das suas tarefas). */
+function useClientAddresses(clientIds: string[]): Record<string, ClientAddressInfo> {
+  const { data = {} } = useQuery({
+    queryKey: ["punch-client-addresses", clientIds],
+    queryFn: async () => {
+      const map: Record<string, ClientAddressInfo> = {};
+      if (clientIds.length === 0) return map;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.from("clients" as never) as any)
+        .select("id,address,geo_address,geo_lat,geo_lng")
+        .in("id", clientIds);
+      if (error) throw error;
+      for (const r of (data ?? []) as {
+        id: string;
+        address: string | null;
+        geo_address: string | null;
+        geo_lat: number | null;
+        geo_lng: number | null;
+      }[]) {
+        map[r.id] = {
+          address: (r.address ?? "").trim() || (r.geo_address ?? "").trim() || null,
+          lat: typeof r.geo_lat === "number" ? r.geo_lat : null,
+          lng: typeof r.geo_lng === "number" ? r.geo_lng : null,
+        };
+      }
+      return map;
+    },
+    enabled: clientIds.length > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+  return data;
+}
+
 
 /**
  * Endereço do cliente com atalhos de navegação (Google Maps, Waze, Mapas) e cópia.
