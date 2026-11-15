@@ -17,6 +17,8 @@ type Row = Record<string, unknown>;
 /** Ordem e nomes das colunas (as que não estão aqui vão no fim, com o nome técnico). */
 export const PROFILE_COLUMNS: Array<[string, string]> = [
   ["full_name", "Nome completo"],
+  // SUP-2026-000303: o e-mail de acesso (fica no login, não no perfil).
+  ["email", "E-mail"],
   ["first_name", "Nome"],
   ["last_name", "Apelido"],
   ["company_roles", "Papel na empresa"],
@@ -210,10 +212,39 @@ export function attachmentsSheet(
   ];
 }
 
+/** SUP-303: notas de RH do funcionário (uma linha por nota). */
+export type EmployeeNoteRow = {
+  profile_id: string;
+  body: string;
+  created_at: string;
+  created_by_name: string | null;
+};
+
+export function notesSheet(
+  notes: EmployeeNoteRow[],
+  nameOf: (id: string) => string,
+): (string | number)[][] {
+  return [
+    ["Funcionário", "Data", "Autor", "Nota"],
+    ...notes.map((n) => [
+      nameOf(n.profile_id),
+      String(n.created_at ?? "").slice(0, 16).replace("T", " "),
+      n.created_by_name ?? "",
+      n.body ?? "",
+    ]),
+  ];
+}
+
+/** Junta o e-mail de acesso a cada perfil (sem alterar os outros campos). */
+export function withEmails(profiles: Row[], emails: Map<string, string>): Row[] {
+  return profiles.map((p) => ({ ...p, email: emails.get(String(p.id)) ?? p.email ?? null }));
+}
+
 function workbookBytes(
   profiles: Row[],
   entries: ZipEntry[],
   nameOf: (id: string) => string,
+  notes: EmployeeNoteRow[] = [],
 ): Uint8Array {
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(profilesSheet(profiles));
@@ -223,6 +254,11 @@ function workbookBytes(
     const wa = XLSX.utils.aoa_to_sheet(attachmentsSheet(entries, nameOf));
     wa["!cols"] = [28, 22, 36, 12, 12, 26, 12, 50].map((wch) => ({ wch }));
     XLSX.utils.book_append_sheet(wb, wa, "Anexos");
+  }
+  if (notes.length) {
+    const wn = XLSX.utils.aoa_to_sheet(notesSheet(notes, nameOf));
+    wn["!cols"] = [28, 18, 22, 80].map((wch) => ({ wch }));
+    XLSX.utils.book_append_sheet(wb, wn, "Notas RH");
   }
   return new Uint8Array(XLSX.write(wb, { type: "array", bookType: "xlsx" }) as ArrayBuffer);
 }
@@ -254,8 +290,23 @@ export async function exportEmployees(opts: {
     _profile_id: opts.profileId ?? null,
   });
   if (error) throw new Error(error.message ?? "Não foi possível exportar.");
-  const profiles = (data ?? []) as Row[];
+  let profiles = (data ?? []) as Row[];
   if (profiles.length === 0) throw new Error("Não há funcionários para exportar.");
+
+  // SUP-303: e-mail de acesso (função segura do banco; se falhar, segue sem e-mail).
+  try {
+    const { data: emailRows } = await supabase.rpc("company_member_emails", {
+      _company_id: opts.companyId,
+    });
+    const emails = new Map(
+      ((emailRows ?? []) as Array<{ user_id: string; email: string | null }>)
+        .filter((r) => r.email?.trim())
+        .map((r) => [r.user_id, r.email!.trim()]),
+    );
+    profiles = withEmails(profiles, emails);
+  } catch {
+    /* sem e-mails: o resto do Excel continua */
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let q = (supabase as any)
@@ -273,11 +324,25 @@ export async function exportEmployees(opts: {
   const attachments = ((atts ?? []) as EmployeeAttachment[]).filter((a) => names.has(a.profile_id));
   const entries = planZipEntries(attachments, nameOf);
 
+  // SUP-303: notas de RH (se o perfil puder lê-las; senão, sem folha de notas).
+  let notes: EmployeeNoteRow[] = [];
+  {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let nq = (supabase as any)
+      .from("employee_notes")
+      .select("profile_id, body, created_at, created_by_name")
+      .eq("company_id", opts.companyId)
+      .order("created_at", { ascending: true });
+    if (opts.profileId) nq = nq.eq("profile_id", opts.profileId);
+    const { data: noteRows, error: noteErr } = await nq;
+    if (!noteErr) notes = ((noteRows ?? []) as EmployeeNoteRow[]).filter((n) => names.has(n.profile_id));
+  }
+
   const stamp = new Date().toISOString().slice(0, 10);
   const base = opts.profileId
     ? `funcionario-${safeName(nameOf(opts.profileId))}-${stamp}`
     : `funcionarios-${safeName(opts.companyName ?? "empresa")}-${stamp}`;
-  const xlsx = workbookBytes(profiles, entries, nameOf);
+  const xlsx = workbookBytes(profiles, entries, nameOf, notes);
 
   if (entries.length === 0) {
     saveBlob(
