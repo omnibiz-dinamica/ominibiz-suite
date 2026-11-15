@@ -776,7 +776,8 @@ function TabFinanceiro({
       <p className="text-xs text-muted-foreground">
         A folha é paga com o valor do funcionário (14/11/2026), não com o do cliente: "Valor hora — semana"
         nos dias úteis e "Valor hora — fim de semana/feriado" ao sábado, domingo e feriados (sem este,
-        usa o da semana). "Valor dia — Bélgica" vale para quem recebe por dia.
+        usa o da semana). "Valor dia — Bélgica" vale para quem recebe por dia e "Valor mês" para quem
+        recebe por mês (escolha o tipo em "Pagamento do funcionário").
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="IBAN">
@@ -798,6 +799,16 @@ function TabFinanceiro({
         </Field>
         <Field label="Valor dia — estrangeiro">
           <Input type="number" step="0.01" value={f.rate_day_foreign} onChange={upd("rate_day_foreign")} />
+        </Field>
+        {/* SUP-2026-000311: valor mês junto dos outros valores (é o que a folha paga em "Por Mês"). */}
+        <Field label="Valor mês">
+          <Input
+            type="number"
+            step="0.01"
+            value={f.manual_monthly_rate}
+            onChange={upd("manual_monthly_rate")}
+            aria-label="Valor mês"
+          />
         </Field>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -863,15 +874,10 @@ function TabFinanceiro({
             </Field>
           )}
           {payModel === "monthly" && (
-            <Field label="Valor Mensal (€ / mês)">
-              <Input
-                type="number"
-                step="0.01"
-                placeholder="herda cliente/empresa"
-                value={f.manual_monthly_rate}
-                onChange={upd("manual_monthly_rate")}
-              />
-            </Field>
+            // SUP-311: o valor mensal passou para o campo "Valor mês", acima (o mesmo dado).
+            <p className="self-end text-xs text-muted-foreground">
+              Por Mês paga o <strong>Valor mês</strong> indicado acima.
+            </p>
           )}
           {(payModel === "fixed" || payModel === "mixed") && (
             <Field label="Valor fixo por tarefa (€ / tarefa)">

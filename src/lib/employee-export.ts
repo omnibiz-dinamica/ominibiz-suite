@@ -68,7 +68,7 @@ export const PROFILE_COLUMNS: Array<[string, string]> = [
   ["rate_day_foreign", "Valor dia (Holanda/Alemanha)"],
   ["manual_hourly_rate", "Valor hora (manual)"],
   ["manual_daily_rate", "Valor dia (manual)"],
-  ["manual_monthly_rate", "Valor mensal (manual)"],
+  ["manual_monthly_rate", "Valor mês"],
   ["allowance_rent", "Renda"],
   ["allowance_transport", "Transporte"],
   ["allowance_meal", "Comida"],
