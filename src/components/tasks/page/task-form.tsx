@@ -195,6 +195,9 @@ export function TaskForm({
             .normalize("NFD")
             .replace(/[\u0300-\u036f]/g, "");
           const haystack = `${name} ${email} ${details}`;
+          // SUP-2026-000239 — a pesquisa nunca esconde quem já está selecionado
+          // (ex.: equipa sugerida pelo cliente), para não criar tarefas sem ver.
+          if (assignees.includes(m.id)) return true;
           return q
             .split(/\s+/)
             .filter(Boolean)
@@ -1465,6 +1468,42 @@ export function TaskForm({
                       className="h-9 pl-8"
                     />
                   </div>
+                  {/* SUP-2026-000239 — quem já está selecionado fica sempre visível. */}
+                  {assignees.length > 0 && (
+                    <div
+                      className="rounded-lg border border-primary/40 bg-primary/5 p-2"
+                      aria-label="Funcionários selecionados"
+                    >
+                      <div className="mb-1 flex items-center justify-between gap-2 text-xs">
+                        <span className="font-medium text-foreground">
+                          Selecionados ({assignees.length}) · cada um recebe a sua tarefa
+                        </span>
+                        <button
+                          type="button"
+                          className="text-muted-foreground underline hover:text-foreground"
+                          onClick={() => {
+                            setTouchedAssignees(true);
+                            setAssignees([]);
+                          }}
+                        >
+                          Limpar
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {assignees.map((id) => (
+                          <button
+                            key={id}
+                            type="button"
+                            onClick={() => toggleAssignee(id)}
+                            title="Tirar da tarefa"
+                            className="inline-flex items-center gap-1 rounded-full border border-primary/50 bg-background px-2 py-0.5 text-xs hover:border-destructive hover:text-destructive"
+                          >
+                            {taskMemberName(members, id, "Funcionário")} <span aria-hidden>✕</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <TeamChips
                     members={members}
                     selected={assignees}
@@ -1632,7 +1671,13 @@ export function TaskForm({
           Cancelar
         </Button>
         <Button type="submit" form={formId} disabled={loading}>
-          {loading ? "Salvando..." : initial ? "Salvar alterações" : "Criar tarefa"}
+          {loading
+            ? "Salvando..."
+            : initial
+              ? "Salvar alterações"
+              : assignees.length > 1
+                ? `Criar ${assignees.length} tarefas (uma por funcionário)`
+                : "Criar tarefa"}
         </Button>
       </ModalFooter>
       <AlertDialog
