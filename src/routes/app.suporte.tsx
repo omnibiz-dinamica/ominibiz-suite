@@ -194,7 +194,7 @@ function SupportListPage() {
           </SelectContent>
         </Select>
         <Select value={sortOrder} onValueChange={(v) => changeSort(v as SupportSortOrder)}>
-          <SelectTrigger className="w-60" aria-label="Ordenar">
+          <SelectTrigger className="w-full sm:w-96" aria-label="Ordenar">
             <SelectValue placeholder="Ordenar" />
           </SelectTrigger>
           <SelectContent>

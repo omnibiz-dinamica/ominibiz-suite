@@ -2,16 +2,18 @@ import type { SupportTicketPriority } from "./constants";
 import { PRIORITY_ORDER } from "./constants";
 
 /** Ordenação da lista de tickets (Central de Suporte e Central Global). */
-export type SupportSortOrder = "recent" | "priority_desc" | "priority_asc";
+export type SupportSortOrder = "recent" | "oldest" | "priority_desc" | "priority_asc";
 
 export const SUPPORT_SORT_OPTIONS: { value: SupportSortOrder; label: string }[] = [
-  { value: "recent", label: "Mais recentes" },
-  { value: "priority_desc", label: "Prioridade: Urgente → Baixa" },
-  { value: "priority_asc", label: "Prioridade: Baixa → Urgente" },
+  { value: "recent", label: "Data: mais recentes primeiro" },
+  { value: "oldest", label: "Data: mais antigos primeiro" },
+  // Dentro de cada prioridade: do mais antigo para o mais recente (15/11/2026).
+  { value: "priority_desc", label: "Prioridade: Urgente → Baixa · data mais antiga → mais nova" },
+  { value: "priority_asc", label: "Prioridade: Baixa → Urgente · data mais antiga → mais nova" },
 ];
 
 const isSortOrder = (v: unknown): v is SupportSortOrder =>
-  v === "recent" || v === "priority_desc" || v === "priority_asc";
+  v === "recent" || v === "oldest" || v === "priority_desc" || v === "priority_asc";
 
 type Sortable = { priority: SupportTicketPriority; created_at: string };
 
@@ -24,10 +26,19 @@ export function sortSupportTickets<T extends Sortable>(tickets: T[], order: Supp
   const weight = (t: Sortable) => PRIORITY_ORDER[t.priority] ?? 99;
   return [...tickets].sort((a, b) => {
     if (order === "recent") return time(b) - time(a);
+    if (order === "oldest") return time(a) - time(b);
     const byPriority = order === "priority_desc" ? weight(a) - weight(b) : weight(b) - weight(a);
     if (byPriority !== 0) return byPriority;
     return time(a) - time(b);
   });
+}
+
+/** Texto da linha "N tickets - ordenados por …". */
+export function supportSortDescription(order: SupportSortOrder): string {
+  if (order === "recent") return "data de abertura (mais recentes primeiro)";
+  if (order === "oldest") return "data de abertura (mais antigos primeiro)";
+  const p = order === "priority_desc" ? "urgente → baixa" : "baixa → urgente";
+  return `prioridade (${p}) e, dentro de cada prioridade, da data mais antiga para a mais nova`;
 }
 
 /** A escolha fica no navegador de cada pessoa; sem acesso ao armazenamento volta a "Mais recentes". */

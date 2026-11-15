@@ -67,15 +67,35 @@ test("escolha guardada no navegador; valor inválido ou sem armazenamento volta 
   expect(() => saveSupportSort(SUPPORT_SORT_KEY_COMPANY, "priority_desc")).not.toThrow();
 });
 
-test("as duas telas têm o seletor Ordenar com as 3 opções", () => {
+// 15/11/2026: rótulos dizem também a data (dentro da prioridade, mais antiga primeiro)
+// e há a opção "mais antigos primeiro".
+test("as duas telas têm o seletor Ordenar com as 4 opções", () => {
   expect(SUPPORT_SORT_OPTIONS.map((o) => o.label)).toEqual([
-    "Mais recentes",
-    "Prioridade: Urgente → Baixa",
-    "Prioridade: Baixa → Urgente",
+    "Data: mais recentes primeiro",
+    "Data: mais antigos primeiro",
+    "Prioridade: Urgente → Baixa · data mais antiga → mais nova",
+    "Prioridade: Baixa → Urgente · data mais antiga → mais nova",
   ]);
   for (const file of ["../src/routes/app.suporte.tsx", "../src/routes/app.admin.suporte.tsx"]) {
     const src = readFileSync(new URL(file, import.meta.url), "utf8");
     expect(src).toMatch(/aria-label="Ordenar"/);
     expect(src).toMatch(/sortSupportTickets\((found|arr), sortOrder\)/);
   }
+});
+
+test("15/11/2026: Urgente → Baixa e, em cada prioridade, da data mais antiga para a mais nova", () => {
+  const t = (id: string, priority: string, created_at: string) => ({ id, priority, created_at }) as never;
+  const list = [
+    t("b-novo", "baixa", "2026-11-10T10:00:00Z"),
+    t("u-novo", "urgente", "2026-11-09T10:00:00Z"),
+    t("b-antigo", "baixa", "2026-10-01T10:00:00Z"),
+    t("u-antigo", "urgente", "2026-09-01T10:00:00Z"),
+  ];
+  expect(sortSupportTickets(list, "priority_desc").map((x: { id: string }) => x.id)).toEqual([
+    "u-antigo",
+    "u-novo",
+    "b-antigo",
+    "b-novo",
+  ]);
+  expect(sortSupportTickets(list, "oldest").map((x: { id: string }) => x.id)[0]).toBe("u-antigo");
 });

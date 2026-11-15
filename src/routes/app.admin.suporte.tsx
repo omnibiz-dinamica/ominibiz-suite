@@ -26,6 +26,7 @@ import {
   loadSupportSort,
   saveSupportSort,
   sortSupportTickets,
+  supportSortDescription,
   type SupportSortOrder,
 } from "@/lib/support/sort";
 import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
@@ -475,7 +476,7 @@ function SupportAdminPage() {
           </SelectContent>
         </Select>
         <Select value={sortOrder} onValueChange={(v) => changeSort(v as SupportSortOrder)}>
-          <SelectTrigger className="w-60" aria-label="Ordenar">
+          <SelectTrigger className="w-full sm:w-96" aria-label="Ordenar">
             <SelectValue placeholder="Ordenar" />
           </SelectTrigger>
           <SelectContent>
@@ -517,11 +518,7 @@ function SupportAdminPage() {
         <ul className="space-y-2">
           <li className="px-1 text-xs text-muted-foreground">
             {filtered.length} ticket{filtered.length !== 1 ? "s" : ""} - ordenados por{" "}
-            {sortOrder === "recent"
-              ? "data de abertura"
-              : sortOrder === "priority_desc"
-                ? "prioridade (urgente → baixa)"
-                : "prioridade (baixa → urgente)"}
+            {supportSortDescription(sortOrder)}
           </li>
           {filtered.map((t) => (
             <li key={t.id}>
