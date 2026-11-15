@@ -29,6 +29,7 @@ import { OfflineEntryNote } from "@/components/ponto/OfflineEntryNote";
 import { ChangeTaskClient } from "@/components/ponto/ChangeTaskClient";
 import { formatInTz, isValidTimeZone, useCompanyTimeZoneInfo } from "@/lib/company-time";
 import { ClockPlus, Pencil, Users, Clock, FileText, Coffee, Plus, Trash2 } from "lucide-react";
+import type { CorrectionContext } from "@/lib/ponto/reconciliation";
 
 type Mode = "create" | "edit";
 
@@ -55,6 +56,11 @@ interface Props {
   entryTimeZone?: string | null;
   /** Ticket 218: "task" = lançar ponto numa tarefa pendente/atrasada (não é falta). */
   regularizeKind?: "absence" | "task";
+  /**
+   * SUP-299: ao "Corrigir" na conferência, mostra o horário previsto da tarefa,
+   * o desvio e a observação que o funcionário deixou.
+   */
+  reviewContext?: CorrectionContext | null;
 }
 
 interface FormState {
@@ -142,6 +148,7 @@ function PunchEditorSession({
   regularizeTaskAbsence = false,
   regularizeKind = "absence",
   entryTimeZone = null,
+  reviewContext = null,
 }: Props) {
   const qc = useQueryClient();
   // SUP-323: horas de ponto mostradas e lidas no fuso da empresa (igual ao Fechamento).
@@ -610,6 +617,34 @@ function PunchEditorSession({
                 suppressedDraftRef.current = false;
               }}
             />
+          )}
+          {mode === "edit" && reviewContext && (reviewContext.planned || reviewContext.employeeNote) && (
+            <div
+              className="space-y-1 rounded-lg border border-primary/40 bg-primary/5 p-3 text-xs"
+              data-testid="punch-review-context"
+            >
+              {reviewContext.planned && (
+                <div>
+                  <span className="text-muted-foreground">Previsto na tarefa:</span>{" "}
+                  <span className="font-medium">{reviewContext.planned}</span>
+                  {reviewContext.plannedMinutes != null && (
+                    <span className="text-muted-foreground">
+                      {" "}
+                      ({Math.floor(reviewContext.plannedMinutes / 60)}:
+                      {String(reviewContext.plannedMinutes % 60).padStart(2, "0")} h)
+                    </span>
+                  )}
+                </div>
+              )}
+              {reviewContext.shift && <div className="font-medium text-destructive">{reviewContext.shift}</div>}
+              {reviewContext.employeeNote && (
+                <div>
+                  <span className="text-muted-foreground">Observação do funcionário:</span>{" "}
+                  <span className="italic">“{reviewContext.employeeNote}”</span>
+                </div>
+              )}
+              <div className="text-muted-foreground">O funcionário é avisado da correção.</div>
+            </div>
           )}
           {mode === "edit" && entry && (
             <div className="rounded-lg border border-border bg-muted/40 p-3 text-xs space-y-1">

@@ -28,6 +28,7 @@ import {
   ignoreConfirmText,
   listReconciliation,
   statusLabel,
+  shiftText,
   summarizeReconciliation,
   type ReconciliationDecision,
   type ReconciliationRow,
@@ -185,6 +186,13 @@ export function ScheduleReconciliation({
 
   const rowNote = (row: ReconciliationRow) => (
     <>
+      {/* SUP-299: entrada/saída a 15 min ou mais do previsto, e observação do funcionário */}
+      {shiftText(row) && (
+        <div className="mt-1 text-xs font-medium text-destructive">{shiftText(row)}</div>
+      )}
+      {row.employee_note && (
+        <div className="mt-1 text-xs italic text-muted-foreground">“{row.employee_note}”</div>
+      )}
       {row.decision_stale && (
         <div className="mt-1 text-xs text-amber-700">
           O ponto mudou depois da decisão anterior: confira de novo.
@@ -255,7 +263,12 @@ export function ScheduleReconciliation({
               </thead>
               <tbody>
                 {rows.map((row) => (
-                  <tr key={row.row_key} className="border-t border-border align-top">
+                  <tr
+                    key={row.row_key}
+                    className={`border-t border-border align-top ${
+                      row.shift_alert && row.status === "pendente" ? "bg-destructive/10" : ""
+                    }`}
+                  >
                     <td className="whitespace-nowrap px-3 py-2">
                       {formatCivilDate(row.work_date)}
                     </td>
@@ -305,7 +318,11 @@ export function ScheduleReconciliation({
             {rows.map((row) => (
               <div
                 key={row.row_key}
-                className="rounded-xl border border-border bg-card p-3 text-sm"
+                className={`rounded-xl border p-3 text-sm ${
+                  row.shift_alert && row.status === "pendente"
+                    ? "border-destructive/50 bg-destructive/10"
+                    : "border-border bg-card"
+                }`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">

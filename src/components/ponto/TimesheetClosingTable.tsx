@@ -40,6 +40,9 @@ import {
   listReconciliation,
   monthRange,
   statusLabel,
+  shiftText,
+  correctionContext,
+  type CorrectionContext,
   summarizeReconciliation,
   type ReconciliationAction,
   type ReconciliationDecision,
@@ -67,7 +70,15 @@ interface Props {
 }
 
 type EditorState =
-  | { mode: "edit"; entry: AdminTimeEntry; taskTitle?: string; clientName?: string; date: string }
+  | {
+      mode: "edit";
+      entry: AdminTimeEntry;
+      taskTitle?: string;
+      clientName?: string;
+      date: string;
+      /** SUP-299: previsto + observação do funcionário no editor. */
+      review?: CorrectionContext;
+    }
   | {
       mode: "create";
       date: string;
@@ -180,6 +191,7 @@ export function TimesheetClosingTable({
       taskTitle: r.task_title ?? undefined,
       clientName: r.client_name ?? undefined,
       date,
+      review: correctionContext(r),
     });
   };
 
@@ -357,6 +369,7 @@ export function TimesheetClosingTable({
     return (
       <>
         <Badge variant={statusVariant(r)}>{statusLabel(r)}</Badge>
+        {shiftText(r) && <div className="mt-1 text-xs font-medium text-destructive">{shiftText(r)}</div>}
         {r.decision_stale && (
           <div className="mt-1 text-xs text-amber-700">
             O ponto mudou depois da decisão anterior: confira de novo.
@@ -432,7 +445,11 @@ export function TimesheetClosingTable({
               <tr
                 key={row.key}
                 className={`align-top ${row.firstOfDay ? "border-t border-border" : ""} ${
-                  row.kind === "empty" ? "bg-muted/20" : ""
+                  row.recon?.shift_alert && row.recon.status === "pendente"
+                    ? "bg-destructive/10"
+                    : row.kind === "empty"
+                      ? "bg-muted/20"
+                      : ""
                 }`}
               >
                 <td className="whitespace-nowrap px-3 py-2">{dataCell(row)}</td>
@@ -459,7 +476,11 @@ export function TimesheetClosingTable({
           <div
             key={row.key}
             className={`rounded-xl border border-border p-3 text-sm ${
-              row.kind === "empty" ? "bg-muted/20" : "bg-card"
+              row.recon?.shift_alert && row.recon.status === "pendente"
+                ? "border-destructive/50 bg-destructive/10"
+                : row.kind === "empty"
+                  ? "bg-muted/20"
+                  : "bg-card"
             }`}
           >
             <div className="flex items-start justify-between gap-2">
@@ -551,6 +572,7 @@ export function TimesheetClosingTable({
           initialStartedAt={editor.mode === "create" ? editor.startedAt : null}
           initialEndedAt={editor.mode === "create" ? editor.endedAt : null}
           regularizeTaskAbsence={editor.mode === "create" && editor.regularize}
+          reviewContext={editor.mode === "edit" ? (editor.review ?? null) : null}
         />
       )}
     </div>

@@ -43,6 +43,13 @@ export interface ReconciliationRow {
   decided_by_name: string | null;
   decided_at: string | null;
   notes: string | null;
+  /** SUP-299 (15/11/2026): observação que o funcionário deixou na tarefa. */
+  employee_note?: string | null;
+  /** Desvio da entrada / saída face ao previsto, em minutos (+ depois, − antes). */
+  start_shift_minutes?: number | null;
+  end_shift_minutes?: number | null;
+  /** Entrada ou saída a 15 min ou mais do previsto: linha em vermelho. */
+  shift_alert?: boolean;
   period_status: string | null;
   period_locked: boolean;
   actions: ReconciliationAction[];
@@ -100,10 +107,13 @@ export function formatHours(minutes: number | null | undefined): string {
   return `${Math.floor(abs / 60)}:${String(abs % 60).padStart(2, "0")}`;
 }
 
-export function statusLabel(row: Pick<ReconciliationRow, "status" | "kind">): string {
+export function statusLabel(
+  row: Pick<ReconciliationRow, "status" | "kind"> & { diff_minutes?: number | null },
+): string {
   switch (row.status) {
     case "ok":
-      return "Sem diferença";
+      // SUP-299: até 30 min de diferença (e horários a menos de 15 min) não pede decisão.
+      return row.diff_minutes ? "Dentro da tolerância" : "Sem diferença";
     case "aberto":
       return "Ponto aberto";
     case "validated":
@@ -118,7 +128,7 @@ export function statusLabel(row: Pick<ReconciliationRow, "status" | "kind">): st
 export const ACTION_LABEL: Record<ReconciliationAction, string> = {
   validate: "Validar",
   ignore: "Ignorar",
-  edit: "Alterar",
+  edit: "Corrigir",
   launch: "Lançar ponto",
   reset: "Desfazer",
 };
@@ -161,6 +171,39 @@ export function monthRange(year: number, month: number): { from: string; to: str
   const last = new Date(Date.UTC(year, month, 0)).getUTCDate();
   const mm = String(month).padStart(2, "0");
   return { from: `${year}-${mm}-01`, to: `${year}-${mm}-${String(last).padStart(2, "0")}` };
+}
+
+/** "Entrada 20 min antes · saída 45 min depois" (só desvios de 15 min ou mais). */
+export function shiftText(
+  row: Pick<ReconciliationRow, "start_shift_minutes" | "end_shift_minutes">,
+): string | null {
+  const part = (label: string, m: number | null | undefined) => {
+    if (m == null || Math.abs(m) < 15) return null;
+    const abs = Math.abs(m);
+    const t = abs >= 60 ? `${Math.floor(abs / 60)}h${String(abs % 60).padStart(2, "0")}` : `${abs} min`;
+    return `${label} ${t} ${m < 0 ? "antes" : "depois"}`;
+  };
+  const out = [part("Entrada", row.start_shift_minutes), part("saída", row.end_shift_minutes)].filter(Boolean);
+  if (out.length === 0) return null;
+  const txt = out.join(" · ");
+  return txt.charAt(0).toUpperCase() + txt.slice(1);
+}
+
+/** Contexto mostrado no editor ao "Corrigir": previsto, desvio e observação do funcionário. */
+export type CorrectionContext = {
+  planned: string | null;
+  plannedMinutes: number | null;
+  shift: string | null;
+  employeeNote: string | null;
+};
+
+export function correctionContext(row: ReconciliationRow): CorrectionContext {
+  return {
+    planned: row.planned_start ? `${row.planned_start}–${row.planned_end ?? "?"}` : null,
+    plannedMinutes: row.planned_minutes,
+    shift: shiftText(row),
+    employeeNote: row.employee_note?.trim() || null,
+  };
 }
 
 /** Texto de confirmação antes de Ignorar. */

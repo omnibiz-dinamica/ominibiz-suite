@@ -72,7 +72,12 @@ import { RECONCILIATION_QUERY_KEY, ScheduleReconciliation } from "@/components/p
 import { addPointDefaults, launchDefaults } from "@/lib/ponto/closing-table";
 import { formatInTz, useCompanyTimeZone } from "@/lib/company-time";
 import { teamGroups } from "@/lib/teams";
-import { monthRange, type ReconciliationRow } from "@/lib/ponto/reconciliation";
+import {
+  correctionContext,
+  monthRange,
+  type CorrectionContext,
+  type ReconciliationRow,
+} from "@/lib/ponto/reconciliation";
 
 export const Route = createFileRoute("/app/ponto_/gestao")({ component: Page });
 
@@ -508,7 +513,10 @@ function GestaoPonto() {
       void supabase.removeChannel(channel);
     };
   }, [currentCompanyId, qc]);
+  // SUP-299: previsto + observação do funcionário no editor ao "Corrigir" na conferência.
+  const [reviewContext, setReviewContext] = useState<CorrectionContext | null>(null);
   const openEdit = (r: Row) => {
+    setReviewContext(null);
     setEditorMode("edit");
     setInitialEntryKind("work");
     setActiveEntry(r);
@@ -568,6 +576,8 @@ function GestaoPonto() {
       tasks: row.task_id ? { title: row.task_title ?? "Tarefa", client_id: null } : null,
       profiles: { full_name: confEmployeeName(confFilters.userId) },
     } as unknown as Row);
+    // depois do openEdit (que limpa o contexto das outras edições)
+    setReviewContext(correctionContext(row));
   };
   const openConfLaunch = (row: ReconciliationRow) => {
     if (!row.task_id) return;
@@ -1401,6 +1411,7 @@ function GestaoPonto() {
         regularizeTaskAbsence={!!manualPointTarget}
         regularizeKind={manualPointTarget && !isAbsence(manualPointTarget) ? "task" : "absence"}
         entryTimeZone={activeEntry ? (entryTimeZones?.get(activeEntry.id) ?? null) : null}
+        reviewContext={editorMode === "edit" ? reviewContext : null}
       />
       <MarkAbsentDialog
         mode="create"
