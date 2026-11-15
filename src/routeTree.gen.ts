@@ -68,6 +68,7 @@ import { Route as AppPontoFechamentoRouteImport } from './routes/app.ponto_.fech
 import { Route as AppPontoGestaoRouteImport } from './routes/app.ponto_.gestao'
 import { Route as AppPontoHistoricoRouteImport } from './routes/app.ponto_.historico'
 import { Route as AppPontoMeusRelatoriosRouteImport } from './routes/app.ponto_.meus-relatorios'
+import { Route as AppPontoPagamentoRouteImport } from './routes/app.ponto_.pagamento'
 import { Route as AppRestauranteIndexRouteImport } from './routes/app.restaurante.index'
 import { Route as AppRestauranteCozinhaRouteImport } from './routes/app.restaurante.cozinha'
 import { Route as AppRestauranteDeliveryRouteImport } from './routes/app.restaurante.delivery'
@@ -398,6 +399,11 @@ const AppPontoMeusRelatoriosRoute = AppPontoMeusRelatoriosRouteImport.update({
   path: '/ponto/meus-relatorios',
   getParentRoute: () => AppRoute,
 } as any)
+const AppPontoPagamentoRoute = AppPontoPagamentoRouteImport.update({
+  id: '/ponto_/pagamento',
+  path: '/ponto/pagamento',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppRestauranteIndexRoute = AppRestauranteIndexRouteImport.update({
   id: '/restaurante/',
   path: '/restaurante/',
@@ -560,6 +566,7 @@ export interface FileRoutesByFullPath {
   '/app/ponto/gestao': typeof AppPontoGestaoRoute
   '/app/ponto/historico': typeof AppPontoHistoricoRoute
   '/app/ponto/meus-relatorios': typeof AppPontoMeusRelatoriosRoute
+  '/app/ponto/pagamento': typeof AppPontoPagamentoRoute
   '/app/restaurante/cozinha': typeof AppRestauranteCozinhaRoute
   '/app/restaurante/delivery': typeof AppRestauranteDeliveryRoute
   '/app/restaurante/entregadores': typeof AppRestauranteEntregadoresRoute
@@ -638,6 +645,7 @@ export interface FileRoutesByTo {
   '/app/ponto/gestao': typeof AppPontoGestaoRoute
   '/app/ponto/historico': typeof AppPontoHistoricoRoute
   '/app/ponto/meus-relatorios': typeof AppPontoMeusRelatoriosRoute
+  '/app/ponto/pagamento': typeof AppPontoPagamentoRoute
   '/app/restaurante/cozinha': typeof AppRestauranteCozinhaRoute
   '/app/restaurante/delivery': typeof AppRestauranteDeliveryRoute
   '/app/restaurante/entregadores': typeof AppRestauranteEntregadoresRoute
@@ -720,6 +728,7 @@ export interface FileRoutesById {
   '/app/ponto_/gestao': typeof AppPontoGestaoRoute
   '/app/ponto_/historico': typeof AppPontoHistoricoRoute
   '/app/ponto_/meus-relatorios': typeof AppPontoMeusRelatoriosRoute
+  '/app/ponto_/pagamento': typeof AppPontoPagamentoRoute
   '/app/restaurante/cozinha': typeof AppRestauranteCozinhaRoute
   '/app/restaurante/delivery': typeof AppRestauranteDeliveryRoute
   '/app/restaurante/entregadores': typeof AppRestauranteEntregadoresRoute
@@ -803,6 +812,7 @@ export interface FileRouteTypes {
     | '/app/ponto/gestao'
     | '/app/ponto/historico'
     | '/app/ponto/meus-relatorios'
+    | '/app/ponto/pagamento'
     | '/app/restaurante/cozinha'
     | '/app/restaurante/delivery'
     | '/app/restaurante/entregadores'
@@ -881,6 +891,7 @@ export interface FileRouteTypes {
     | '/app/ponto/gestao'
     | '/app/ponto/historico'
     | '/app/ponto/meus-relatorios'
+    | '/app/ponto/pagamento'
     | '/app/restaurante/cozinha'
     | '/app/restaurante/delivery'
     | '/app/restaurante/entregadores'
@@ -962,6 +973,7 @@ export interface FileRouteTypes {
     | '/app/ponto_/gestao'
     | '/app/ponto_/historico'
     | '/app/ponto_/meus-relatorios'
+    | '/app/ponto_/pagamento'
     | '/app/restaurante/cozinha'
     | '/app/restaurante/delivery'
     | '/app/restaurante/entregadores'
@@ -1421,6 +1433,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPontoMeusRelatoriosRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/ponto_/pagamento': {
+      id: '/app/ponto_/pagamento'
+      path: '/ponto/pagamento'
+      fullPath: '/app/ponto/pagamento'
+      preLoaderRoute: typeof AppPontoPagamentoRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/restaurante/': {
       id: '/app/restaurante/'
       path: '/restaurante'
@@ -1688,6 +1707,7 @@ interface AppRouteChildren {
   AppPontoGestaoRoute: typeof AppPontoGestaoRoute
   AppPontoHistoricoRoute: typeof AppPontoHistoricoRoute
   AppPontoMeusRelatoriosRoute: typeof AppPontoMeusRelatoriosRoute
+  AppPontoPagamentoRoute: typeof AppPontoPagamentoRoute
   AppRestauranteCozinhaRoute: typeof AppRestauranteCozinhaRoute
   AppRestauranteDeliveryRoute: typeof AppRestauranteDeliveryRoute
   AppRestauranteEntregadoresRoute: typeof AppRestauranteEntregadoresRoute
@@ -1743,6 +1763,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppPontoGestaoRoute: AppPontoGestaoRoute,
   AppPontoHistoricoRoute: AppPontoHistoricoRoute,
   AppPontoMeusRelatoriosRoute: AppPontoMeusRelatoriosRoute,
+  AppPontoPagamentoRoute: AppPontoPagamentoRoute,
   AppRestauranteCozinhaRoute: AppRestauranteCozinhaRoute,
   AppRestauranteDeliveryRoute: AppRestauranteDeliveryRoute,
   AppRestauranteEntregadoresRoute: AppRestauranteEntregadoresRoute,

@@ -244,6 +244,8 @@ function managerGroups(args: { superAdminOperating: boolean; vertical: BusinessV
         { to: "/app/ponto", label: "Folha de Ponto", icon: Clock, module: "time_clock" },
         { to: "/app/ponto/gestao", label: "Ponto · Gestão", icon: ListChecks, module: "time_clock" },
         { to: "/app/ponto/fechamento", label: "Fechamento Mensal", icon: FileText, module: "time_clock" },
+        // SUP-302: resumo para pagamento (depois das folhas fechadas).
+        { to: "/app/ponto/pagamento", label: "Resumo para pagamento", icon: Wallet, module: "time_clock" },
         // Super Admin vê tudo: também a vista da Contabilidade (a rota já o autoriza).
         ...(superAdminOperating
           ? [
