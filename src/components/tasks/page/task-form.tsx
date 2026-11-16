@@ -34,7 +34,7 @@ import { toast } from "sonner";
 import { fetchClientSchedule, slotsForDate, nextDateForSchedule, describeSlot, slotTimesForTeam, teamStartTimeFor, type ClientScheduleSlot } from "@/lib/tasks/client-schedule";
 import { clientTeamType } from "@/lib/tasks/client-team";
 import { addWallMinutes, resolveWallEndDate, distributeContractedMinutes, formatContractedMinutes } from "@/lib/tasks/contracted-hours";
-import { X, Upload, FileText, Search, AlertTriangle } from "lucide-react";
+import { X, Upload, FileText, Search, AlertTriangle, Check, ChevronDown } from "lucide-react";
 import { PUNCH_MODE_LABELS, type TaskRow, type PunchMode, checkTaskScheduleConflicts, type TaskScheduleConflict, previewRecurrenceDates } from "@/lib/tasks";
 
 import { RecurrenceForm, emptyRecurrence, type RecurrenceFormValue } from "@/components/tasks/RecurrenceForm";
@@ -218,6 +218,7 @@ export function TaskForm({
    * selecionado e nunca altera os IDs canônicos nem os nomes exibidos.
    */
   const [clientQuery, setClientQuery] = useState("");
+  const [clientListOpen, setClientListOpen] = useState(false);
   const filteredClients = useMemo(() => {
     const norm = (value: string) =>
       value
@@ -1223,44 +1224,87 @@ export function TaskForm({
         >
           <div className="space-y-1.5">
             <Label>Cliente</Label>
-            <Select
-              value={clientId}
-              onValueChange={(v) => void applyClient(v)}
-              onOpenChange={(open) => {
-                if (!open) setClientQuery("");
-              }}
+            {/*
+              16/11/2026: lista INLINE (sem janela por cima). No telemóvel/tablet o
+              Select com pesquisa dentro fechava a lista e o teclado não abria
+              (o modal da tarefa prende o foco). Agora a pesquisa e a lista ficam
+              dentro do formulário.
+            */}
+            <button
+              type="button"
+              aria-expanded={clientListOpen}
+              aria-controls="task-client-list"
+              onClick={() => setClientListOpen((v) => !v)}
+              className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 text-left text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+              data-testid="task-client-trigger"
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o cliente" />
-              </SelectTrigger>
-              <SelectContent>
-                <div className="sticky top-0 z-10 border-b border-border bg-popover p-2">
+              <span className={clientId ? "truncate" : "truncate text-muted-foreground"}>
+                {clients.find((c) => c.id === clientId)?.name ?? "Selecione o cliente"}
+              </span>
+              <ChevronDown className="h-4 w-4 shrink-0 opacity-50" aria-hidden />
+            </button>
+            {clientListOpen && (
+              <div id="task-client-list" className="rounded-md border border-border bg-popover">
+                <div className="border-b border-border p-2">
                   <div className="relative">
                     <Search
                       className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                       aria-hidden
                     />
                     <Input
+                      autoFocus
+                      type="search"
+                      inputMode="search"
+                      autoComplete="off"
                       value={clientQuery}
                       onChange={(e) => setClientQuery(e.target.value)}
-                      onKeyDown={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") {
+                          e.stopPropagation();
+                          setClientListOpen(false);
+                          setClientQuery("");
+                        }
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          if (filteredClients.length === 1) {
+                            void applyClient(filteredClients[0].id);
+                            setClientListOpen(false);
+                            setClientQuery("");
+                          }
+                        }
+                      }}
                       placeholder="Buscar cliente..."
-                      className="h-9 pl-8"
+                      className="h-10 pl-8 text-base sm:h-9 sm:text-sm"
                       aria-label="Buscar cliente"
                     />
                   </div>
                 </div>
-                {filteredClients.length === 0 ? (
-                  <div className="px-3 py-6 text-center text-sm text-muted-foreground">Nenhum cliente encontrado</div>
-                ) : (
-                  filteredClients.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+                <ul role="listbox" aria-label="Clientes" className="max-h-64 overflow-y-auto overscroll-contain py-1">
+                  {filteredClients.length === 0 ? (
+                    <li className="px-3 py-6 text-center text-sm text-muted-foreground">Nenhum cliente encontrado</li>
+                  ) : (
+                    filteredClients.map((c) => (
+                      <li key={c.id} role="option" aria-selected={c.id === clientId}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void applyClient(c.id);
+                            setClientListOpen(false);
+                            setClientQuery("");
+                          }}
+                          className={`flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-accent sm:min-h-9 ${
+                            c.id === clientId ? "bg-accent font-medium" : ""
+                          }`}
+                        >
+                          <Check className={`h-4 w-4 shrink-0 ${c.id === clientId ? "opacity-100" : "opacity-0"}`} aria-hidden />
+                          <span className="truncate">{c.name}</span>
+                        </button>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              </div>
+            )}
             {!initial && namedSchedules.length > 0 && (
               <div className="space-y-1" data-testid="client-schedule-picker">
                 <Label>Programação do cliente</Label>
