@@ -614,7 +614,13 @@ function ClientsPage() {
               <li className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <h3 className="truncate font-medium">{c.name}</h3>
+                    {/* Telemóvel/tablet (toque): nome completo em várias linhas; com rato fica numa linha e o nome inteiro vai no title. */}
+                    <h3
+                      className="break-words font-medium [@media(hover:hover)_and_(pointer:fine)]:truncate"
+                      title={c.name}
+                    >
+                      {c.name}
+                    </h3>
                     <span
                       className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium uppercase ${
                         c.status === "ativo" ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"
