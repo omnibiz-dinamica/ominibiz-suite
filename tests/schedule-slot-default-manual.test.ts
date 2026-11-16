@@ -16,7 +16,8 @@ const klein: ClientScheduleSlot = {
 describe("programação começa em Livre / Manual", () => {
   test("(a) escolher o cliente não pré-seleciona nem preenche", () => {
     expect(page).toContain("if (!hasNamed) suggestFromSchedule(slots, startDate);");
-    expect(page).toContain('value={selectedScheduleId ?? "__free__"}');
+    // 16/11: na edição o seletor mostra a programação gravada; na criação continua "__free__".
+    expect(page).toMatch(/value=\{\s*selectedScheduleId\s*\?\?[\s\S]{0,260}"__free__"\s*\}/);
   });
   test("(b) Klein liga, abre o bloco e mostra o resumo", () => {
     const r = recurrenceFromScheduleSlot(emptyRecurrence(), klein, new Date(2026, 9, 8))!;

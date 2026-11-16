@@ -31,7 +31,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { fetchClientSchedule, slotsForDate, nextDateForSchedule, describeSlot, chosenScheduleDateWarning, slotTimesForTeam, teamStartTimeFor, type ClientScheduleSlot } from "@/lib/tasks/client-schedule";
+import { fetchClientSchedule, slotsForDate, nextDateForSchedule, describeSlot, chosenScheduleDateWarning, editScheduleName, savedScheduleSlotId, slotTimesForTeam, teamStartTimeFor, type ClientScheduleSlot } from "@/lib/tasks/client-schedule";
 import { clientTeamType } from "@/lib/tasks/client-team";
 import { addWallMinutes, resolveWallEndDate, distributeContractedMinutes, formatContractedMinutes } from "@/lib/tasks/contracted-hours";
 import { X, Upload, FileText, Search, AlertTriangle, Check, ChevronDown } from "lucide-react";
@@ -302,6 +302,8 @@ export function TaskForm({
   const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(null);
   /** Programação escolhida à mão pelo gestor: a data nunca a troca (só avisa). */
   const scheduleChosenByManagerRef = useRef(false);
+  /** Edição: o gestor escolheu "Livre / Manual" (tira a etiqueta gravada). */
+  const [scheduleClearedInEdit, setScheduleClearedInEdit] = useState(false);
 
   // ----- Rascunho automático: restaura os valores guardados e reporta mudanças -----
   const appliedDraftRef = useRef(false);
@@ -574,6 +576,19 @@ export function TaskForm({
   };
 
   const loadClientSchedule = async (cid: string) => {
+    if (initial && cid) {
+      // Edição (16/11): só carrega as programações para o seletor; não sugere,
+      // não pré-seleciona nem altera horários — a tarefa fica como está.
+      try {
+        setClientSchedule(await fetchClientSchedule(cid));
+      } catch {
+        setClientSchedule([]);
+      }
+      setSelectedScheduleId(null);
+      scheduleChosenByManagerRef.current = false;
+      setScheduleClearedInEdit(false);
+      return;
+    }
     if (initial || !cid) {
       setClientSchedule([]);
       setSchedulePrompt([]);
@@ -598,6 +613,12 @@ export function TaskForm({
     }
   };
 
+  // Edição: carrega as programações do cliente da tarefa para o seletor (Klein/Grote…).
+  useEffect(() => {
+    if (initial?.client_id) void loadClientSchedule(initial.client_id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initial?.id]);
+
   const applyClient = async (cid: string) => {
     if (!initial && autoRecurrenceRef.current && cid !== clientId) {
       // Não herdar a recorrência ligada pela programação do cliente anterior.
@@ -607,6 +628,10 @@ export function TaskForm({
     }
     setClientId(cid);
     setTeamPrompt(null);
+    if (initial && cid) {
+      void loadClientSchedule(cid);
+      return;
+    }
     if (initial || !cid) return;
     void loadClientSchedule(cid);
     let team: string[] = [];
@@ -804,9 +829,12 @@ export function TaskForm({
                 // Na edição o seletor não existe: mantém a etiqueta gravada (ex.: Klein);
                 // só some se o cliente da tarefa for trocado (a etiqueta era do outro cliente).
                 schedule_name: initial
-                  ? clientId === (initial.client_id ?? "")
-                    ? (initial.schedule_name ?? null)
-                    : null
+                  ? editScheduleName({
+                      chosenLabel: scheduleName,
+                      cleared: scheduleClearedInEdit,
+                      sameClient: clientId === (initial.client_id ?? ""),
+                      savedLabel: initial.schedule_name ?? null,
+                    })
                   : scheduleName,
               };
               // A distribuição da carga contratada só pode recalcular uma hora de fim
@@ -1332,15 +1360,22 @@ export function TaskForm({
                 </ul>
               </div>
             )}
-            {!initial && namedSchedules.length > 0 && (
+            {namedSchedules.length > 0 && (
               <div className="space-y-1" data-testid="client-schedule-picker">
                 <Label>Programação do cliente</Label>
                 <Select
-                  value={selectedScheduleId ?? "__free__"}
+                  value={
+                    selectedScheduleId ??
+                    (initial && !scheduleClearedInEdit && clientId === (initial.client_id ?? "")
+                      ? savedScheduleSlotId(namedSchedules, initial.schedule_name)
+                      : null) ??
+                    "__free__"
+                  }
                   onValueChange={(value) => {
                     if (value === "__free__") {
                       scheduleChosenByManagerRef.current = false;
                       setSelectedScheduleId(null);
+                      if (initial) setScheduleClearedInEdit(true);
                       setScheduleHint(null);
                       if (!initial) {
                         setRecurrence((prev) => disableAutoRecurrence(prev, autoRecurrenceRef.current));
@@ -1352,8 +1387,11 @@ export function TaskForm({
                     const slot = namedSchedules.find((s) => s.id === value);
                     if (slot) {
                       scheduleChosenByManagerRef.current = true;
+                      setScheduleClearedInEdit(false);
                       applySlot(slot);
                       if (!initial) applySlotRecurrence(slot);
+                      // Edição: aplica o horário da programação; se o dia não bater, só avisa.
+                      else setScheduleHint(chosenScheduleDateWarning(slot, startDate) ?? `Horário da programação ${slot.label}: ${describeSlot(slot)}.`);
                     }
                   }}
                 >
@@ -1369,6 +1407,18 @@ export function TaskForm({
                     ))}
                   </SelectContent>
                 </Select>
+                {initial && scheduleHint && (
+                  <p
+                    data-testid="schedule-hint-edit"
+                    className={
+                      scheduleHint.startsWith("Atenção:")
+                        ? "mt-1 rounded-md border border-warning/40 bg-warning/10 px-2 py-1 text-xs text-foreground"
+                        : "mt-1 text-xs text-muted-foreground"
+                    }
+                  >
+                    {scheduleHint}
+                  </p>
+                )}
                 <p className="text-xs text-muted-foreground">
                   O nome escolhido aparece como etiqueta nas tarefas e no calendário.
                 </p>

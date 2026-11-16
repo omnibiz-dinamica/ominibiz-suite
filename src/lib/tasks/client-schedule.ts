@@ -343,3 +343,25 @@ export function chosenScheduleDateWarning(slot: ClientScheduleSlot, dateKey: str
   const name = slot.label?.trim() || "escolhida";
   return `Atenção: ${dateKey} não coincide com a programação ${name} (${describeSlot(slot)}). A programação ${name} foi mantida, como escolheu; confira a data.`;
 }
+
+/** Edição: id da programação cujo nome é a etiqueta gravada na tarefa (ex.: "Klein"). */
+export function savedScheduleSlotId(slots: ClientScheduleSlot[], savedLabel: string | null | undefined): string | null {
+  const name = savedLabel?.trim().toLowerCase();
+  if (!name) return null;
+  return slots.find((s) => s.label?.trim().toLowerCase() === name)?.id ?? null;
+}
+
+/**
+ * Edição: etiqueta a gravar. Escolha nova do gestor manda; "Livre / Manual"
+ * tira; sem mexer mantém a gravada (salvo se o cliente foi trocado).
+ */
+export function editScheduleName(p: {
+  chosenLabel: string | null;
+  cleared: boolean;
+  sameClient: boolean;
+  savedLabel: string | null;
+}): string | null {
+  if (p.chosenLabel) return p.chosenLabel;
+  if (p.cleared || !p.sameClient) return null;
+  return p.savedLabel;
+}
