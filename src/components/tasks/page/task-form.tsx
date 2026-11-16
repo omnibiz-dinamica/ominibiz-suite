@@ -31,7 +31,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { fetchClientSchedule, slotsForDate, nextDateForSchedule, describeSlot, slotTimesForTeam, teamStartTimeFor, type ClientScheduleSlot } from "@/lib/tasks/client-schedule";
+import { fetchClientSchedule, slotsForDate, nextDateForSchedule, describeSlot, chosenScheduleDateWarning, slotTimesForTeam, teamStartTimeFor, type ClientScheduleSlot } from "@/lib/tasks/client-schedule";
 import { clientTeamType } from "@/lib/tasks/client-team";
 import { addWallMinutes, resolveWallEndDate, distributeContractedMinutes, formatContractedMinutes } from "@/lib/tasks/contracted-hours";
 import { X, Upload, FileText, Search, AlertTriangle, Check, ChevronDown } from "lucide-react";
@@ -300,6 +300,8 @@ export function TaskForm({
   const [schedulePrompt, setSchedulePrompt] = useState<ClientScheduleSlot[]>([]);
   const [scheduleHint, setScheduleHint] = useState<string | null>(null);
   const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(null);
+  /** Programação escolhida à mão pelo gestor: a data nunca a troca (só avisa). */
+  const scheduleChosenByManagerRef = useRef(false);
 
   // ----- Rascunho automático: restaura os valores guardados e reporta mudanças -----
   const appliedDraftRef = useRef(false);
@@ -525,6 +527,16 @@ export function TaskForm({
   };
 
   const suggestFromSchedule = (slots: ClientScheduleSlot[], dateKey: string) => {
+    // Gestor já escolheu (ex.: Klein): manter; se a data não bater, só avisar.
+    const chosen = scheduleChosenByManagerRef.current
+      ? (slots.find((s) => s.id === selectedScheduleId) ?? null)
+      : null;
+    if (chosen) {
+      setSchedulePrompt([]);
+      const warning = chosenScheduleDateWarning(chosen, dateKey);
+      setScheduleHint(warning ?? `Programação ${chosen.label?.trim() || "escolhida"} mantida: ${describeSlot(chosen)}.`);
+      return;
+    }
     setSchedulePrompt([]);
     if (initial || touchedTimes || slots.length === 0) return;
     const effectiveDate = dateKey || (!touchedDates ? nextDateForSchedule(slots) : null);
@@ -573,6 +585,7 @@ export function TaskForm({
       const slots = await fetchClientSchedule(cid);
       setClientSchedule(slots);
       setSelectedScheduleId(null);
+      scheduleChosenByManagerRef.current = false;
       setScheduleHint(null);
       // Clientes com programações nomeadas começam SEMPRE em "Livre / Manual":
       // nada é preenchido até o gestor escolher no seletor.
@@ -1320,6 +1333,7 @@ export function TaskForm({
                   value={selectedScheduleId ?? "__free__"}
                   onValueChange={(value) => {
                     if (value === "__free__") {
+                      scheduleChosenByManagerRef.current = false;
                       setSelectedScheduleId(null);
                       setScheduleHint(null);
                       if (!initial) {
@@ -1331,6 +1345,7 @@ export function TaskForm({
                     }
                     const slot = namedSchedules.find((s) => s.id === value);
                     if (slot) {
+                      scheduleChosenByManagerRef.current = true;
                       applySlot(slot);
                       if (!initial) applySlotRecurrence(slot);
                     }
@@ -1393,7 +1408,10 @@ export function TaskForm({
                     <p className="text-foreground">Este cliente possui mais de uma programação para este dia.</p>
                     <div className="flex flex-wrap gap-1.5">
                       {schedulePrompt.map((s) => (
-                        <Button key={s.id} type="button" size="sm" variant="outline" onClick={() => applySlot(s)}>
+                        <Button key={s.id} type="button" size="sm" variant="outline" onClick={() => {
+                            scheduleChosenByManagerRef.current = true;
+                            applySlot(s);
+                          }}>
                           {s.title}: {s.startTime ?? "flexível"}
                           {s.endTime ? `–${s.endTime}` : ""}
                         </Button>
@@ -1401,7 +1419,18 @@ export function TaskForm({
                     </div>
                   </div>
                 )}
-                {scheduleHint && <p className="mt-1 text-muted-foreground">{scheduleHint}</p>}
+                {scheduleHint && (
+                  <p
+                    data-testid="schedule-hint"
+                    className={
+                      scheduleHint.startsWith("Atenção:")
+                        ? "mt-1 rounded-md border border-warning/40 bg-warning/10 px-2 py-1 text-foreground"
+                        : "mt-1 text-muted-foreground"
+                    }
+                  >
+                    {scheduleHint}
+                  </p>
+                )}
               </div>
             )}
             {teamPrompt && (

@@ -332,3 +332,14 @@ export function describeSlot(slot: ClientScheduleSlot): string {
     : "";
   return `${slot.title} • ${days} • ${window} • ${mode}${load}${cycle}${teams}`;
 }
+
+/**
+ * 16/11/2026 — programação escolhida pelo gestor (ex.: "Klein") nunca é trocada
+ * pelo sistema ao mudar a data. Se a data não coincidir com essa programação,
+ * devolve só um aviso para o gestor conferir; null quando coincide.
+ */
+export function chosenScheduleDateWarning(slot: ClientScheduleSlot, dateKey: string): string | null {
+  if (!dateKey || scheduleRuleAppliesToDate(slot, dateKey)) return null;
+  const name = slot.label?.trim() || "escolhida";
+  return `Atenção: ${dateKey} não coincide com a programação ${name} (${describeSlot(slot)}). A programação ${name} foi mantida, como escolheu; confira a data.`;
+}
