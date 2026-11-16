@@ -32,3 +32,11 @@ describe("16/11 — programação escolhida pelo gestor não é trocada ao mudar
     expect(form).toContain("setSelectedScheduleId(null);\n      scheduleChosenByManagerRef.current = false;");
   });
 });
+
+describe("16/11 — editar uma tarefa não apaga a programação (Klein/Grote)", () => {
+  test("na edição o payload leva a etiqueta já gravada (a RPC grava o que vier)", () => {
+    expect(form).toMatch(
+      /schedule_name: initial\s*\?\s*clientId === \(initial\.client_id \?\? ""\)\s*\?\s*\(initial\.schedule_name \?\? null\)\s*:\s*null\s*:\s*scheduleName/,
+    );
+  });
+});

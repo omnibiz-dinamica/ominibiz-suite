@@ -801,7 +801,13 @@ export function TaskForm({
                 absence_grace_minutes: graceMinutes,
                 punch_mode_override: punchMode || null,
                 // Etiqueta da programação do cliente escolhida pelo gestor.
-                schedule_name: scheduleName,
+                // Na edição o seletor não existe: mantém a etiqueta gravada (ex.: Klein);
+                // só some se o cliente da tarefa for trocado (a etiqueta era do outro cliente).
+                schedule_name: initial
+                  ? clientId === (initial.client_id ?? "")
+                    ? (initial.schedule_name ?? null)
+                    : null
+                  : scheduleName,
               };
               // A distribuição da carga contratada só pode recalcular uma hora de fim
               // que o gestor JÁ registou. Sem hora de fim digitada, nada é derivado.

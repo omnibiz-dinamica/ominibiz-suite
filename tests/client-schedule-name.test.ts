@@ -17,7 +17,8 @@ describe("programação do cliente como etiqueta da tarefa", () => {
   });
 
   test("o formulário grava a etiqueta na tarefa avulsa e na série", () => {
-    expect(tasksPage).toContain("schedule_name: scheduleName");
+    // 16/11: na criação usa a escolha do gestor; na edição mantém a etiqueta gravada.
+    expect(tasksPage).toMatch(/schedule_name: initial[\s\S]{0,160}: scheduleName,/);
     expect(tasksPage).toContain("schedule_name: payload.schedule_name");
   });
 
