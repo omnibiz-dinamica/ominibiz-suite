@@ -53,6 +53,7 @@ import { useT } from "@/i18n";
 import { wallISOToDateInput, wallDateToEndOfDayISO, wallDateTimeToISO, formatWallDate, formatWallTime } from "@/lib/wall-clock";
 import { dailyShiftDurationMinutes, taskDurationMinutes, LONG_STANDALONE_TASK_MINUTES } from "@/lib/tasks/daily-shift-duration";
 import { tt, taskMemberName } from "./shared";
+import type { SavedTasksResult } from "@/lib/tasks/fresh-tasks";
 
 export function taskSaveErrorMessage(error: unknown): string {
   const technicalError = (error && typeof error === "object" ? error : {}) as {
@@ -124,7 +125,8 @@ export function TaskForm({
   userId: string;
   initial?: TaskRow;
   onCancel: () => void;
-  onDone: () => void;
+  /** Recebe o que foi gravado para a lista mostrar já, sem esperar a releitura completa. */
+  onDone: (saved?: SavedTasksResult) => void;
   documentsSlot?: ReactNode;
   draftValues?: TaskFormDraft | null;
   draftSavedAt?: number | null;
@@ -952,6 +954,8 @@ export function TaskForm({
               let error: { message: string } | null = null;
               let recurrenceSummary: { kind: "success" | "info" | "warning"; text: string } | null = null;
               const createdTaskIds: string[] = [...createdTaskIdsRef.current];
+              // Séries cujas ocorrências foram geradas: a lista mostra-as já (fresh-tasks.ts).
+              const savedRecurrenceIds: string[] = [];
               // Fase B: lote multi-responsável. Cada responsável mantém a SUA tarefa
               // (estado, ponto, recusa e conclusão próprios); o grupo só correlaciona.
               const groupId = selectedAssignees.length > 1 ? crypto.randomUUID() : null;
@@ -1093,6 +1097,7 @@ export function TaskForm({
                   // Janela de 12 meses; o índice único (série + data) mantém a idempotência.
                   const reusedRecurrenceIds = existingRecurrenceIds.filter((id) => !createdRecurrenceIds.includes(id));
                   const toMaterialize = [...createdRecurrenceIds, ...reusedRecurrenceIds];
+                  savedRecurrenceIds.push(...toMaterialize);
                   const horizon = 365;
                   const failed: string[] = [];
                   let generated = 0;
@@ -1212,7 +1217,10 @@ export function TaskForm({
                       : "Tarefa criada",
                 );
               }
-              onDone();
+              onDone({
+                taskIds: initial ? [initial.id, ...createdTaskIds] : createdTaskIds,
+                recurrenceIds: savedRecurrenceIds,
+              });
             } catch (submitError) {
               console.error("[task-create] failed", submitError);
               toast.error(taskSaveErrorMessage(submitError));

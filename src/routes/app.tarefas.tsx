@@ -23,6 +23,7 @@ import {
 import { toast } from "sonner";
 import { addWallMinutes, isOvernightTimeRange, formatContractedMinutes } from "@/lib/tasks/contracted-hours";
 import { Plus, Check, Repeat, Trash2, Archive, FileText, ListTodo } from "lucide-react";
+import { createCoalescedRefresh, showSavedTasks } from "@/lib/tasks/fresh-tasks";
 import { type TaskAction, type TaskRow, sweepAbsent, transitionTask, transitionTaskWithScheduleRequest, archiveTask, addTaskCompletionNote, isBulkArchiveEligible, isBulkDeleteEligible, type TimeEntryRow, recordNoStartReason } from "@/lib/tasks";
 
 import { TaskDocuments } from "@/components/tasks/TaskDocuments";
@@ -282,6 +283,10 @@ function TasksPage() {
       return rows;
     },
     enabled: !!user && !!currentCompanyId && tasks !== undefined,
+    // Ao entrar uma tarefa nova a chave muda (taskIds); mantém os pontos já lidos da
+    // mesma empresa enquanto relê, para os estados "em andamento/pausa" não piscarem.
+    placeholderData: (previous, previousQuery) =>
+      previousQuery?.queryKey?.[1] === currentCompanyId ? previous : undefined,
   });
 
   const { data: members } = useQuery({
@@ -682,11 +687,13 @@ function TasksPage() {
   // Realtime: APENAS sincroniza a UI. Nenhuma lógica de negócio aqui.
   useEffect(() => {
     if (!user) return;
+    // Avisos em rajada (recorrência gerada, equipa a bater ponto) viram UMA releitura,
+    // sem cancelar a que está a meio (fresh-tasks.ts).
+    const tasksRefresh = createCoalescedRefresh(qc, ["tasks"]);
+    const punchesRefresh = createCoalescedRefresh(qc, ["task-punches"]);
     const ch = supabase
       .channel(`user:${user.id}:tasks-ui-sync`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, () =>
-        qc.invalidateQueries({ queryKey: ["tasks"] }),
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, () => tasksRefresh.trigger())
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "task_refusals" }, () =>
         qc.invalidateQueries({ queryKey: ["task-refusals"] }),
       )
@@ -694,13 +701,15 @@ function TasksPage() {
         qc.invalidateQueries({ queryKey: ["task-completion-notes"] }),
       )
       .on("postgres_changes", { event: "*", schema: "public", table: "time_entries" }, () =>
-        qc.invalidateQueries({ queryKey: ["task-punches"] }),
+        punchesRefresh.trigger(),
       )
       .on("postgres_changes", { event: "*", schema: "public", table: "vacation_requests" }, () =>
         qc.invalidateQueries({ queryKey: ["approved-vacations-calendar"] }),
       )
       .subscribe();
     return () => {
+      tasksRefresh.dispose();
+      punchesRefresh.dispose();
       void supabase.removeChannel(ch);
     };
   }, [user?.id, qc]);
@@ -1215,10 +1224,12 @@ function TasksPage() {
                     clearTaskDraft();
                     setOpen(false);
                   }}
-                  onDone={() => {
+                  onDone={(saved) => {
                     clearTaskDraft();
                     setOpen(false);
-                    qc.invalidateQueries({ queryKey: ["tasks"] });
+                    // A tarefa criada entra já na lista; a releitura completa segue em segundo plano.
+                    if (currentCompanyId) void showSavedTasks(qc, currentCompanyId, saved);
+                    else qc.invalidateQueries({ queryKey: ["tasks"] });
                   }}
                 />
               </DialogContent>
@@ -1261,10 +1272,10 @@ function TasksPage() {
                 clearTaskDraft();
                 setEditing(null);
               }}
-              onDone={() => {
+              onDone={(saved) => {
                 clearTaskDraft();
                 setEditing(null);
-                qc.invalidateQueries({ queryKey: ["tasks"] });
+                void showSavedTasks(qc, editing.company_id, saved);
               }}
               documentsSlot={<TaskDocuments taskId={editing.id} companyId={editing.company_id} canManage={isManager} />}
             />
