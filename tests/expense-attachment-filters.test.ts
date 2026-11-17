@@ -34,9 +34,10 @@ describe("Despesas: um só conjunto de filtros", () => {
     expect(api).not.toContain('.eq("status", "aprovada")\n          .gte');
   });
   test("(b) Aguarda pagamento e Paga separam corretamente", () => {
-    expect(ids(filterExpenses(rows, { ...all, payment: "aguardando_pagamento" }))).toEqual(["a", "b", "g"]);
+    // SUP-331: "b" (aprovada, sem estado de pagamento) é "Aprovada", não "Aguarda pagamento".
+    expect(ids(filterExpenses(rows, { ...all, payment: "aguardando_pagamento" }))).toEqual(["a", "g"]);
     expect(ids(filterExpenses(rows, { ...all, payment: "paga" }))).toEqual(["c", "f"]);
-    expect(api).toContain("payment_status.is.null,payment_status.neq.paga");
+    expect(api).toContain('.eq("status", "aprovada").eq("payment_status", "aguardando_pagamento")');
   });
   test("(c) resumo bate com a lista", () => {
     const sel = filterExpenses(rows, { ...all, start: "2026-10-01", end: "2026-10-31" });

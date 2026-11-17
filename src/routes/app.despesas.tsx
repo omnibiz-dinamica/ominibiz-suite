@@ -8,6 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  APPROVED_STAGES,
+  STAGE_LABEL,
+  STAGE_TONE,
+  expenseStage,
+  stageChange,
+  type ExpenseStage,
+} from "@/lib/expense-stage";
 import { EmployeePicker } from "@/components/common/EmployeePicker";
 import { toast } from "sonner";
 import { RecordHistoryMenu } from "@/components/history/RecordHistoryMenu";
@@ -25,7 +33,6 @@ import {
   FileSpreadsheet,
   FileText,
   Package,
-  Undo2,
 } from "lucide-react";
 import {
   attachmentArchiveName,
@@ -100,10 +107,6 @@ const STATUS_LABEL: Record<ExpenseStatus, string> = {
   pendente: "pendente",
   aprovada: "aprovada",
   rejeitada: "rejeitada",
-};
-const PAYMENT_TONE: Record<PaymentStatus, string> = {
-  aguardando_pagamento: "bg-warning/15 text-warning-foreground",
-  paga: "bg-success/15 text-success",
 };
 const PAYMENT_LABEL: Record<PaymentStatus, string> = {
   aguardando_pagamento: "aguarda pagamento",
@@ -453,23 +456,6 @@ function DespesasPage() {
     onError: (e: any) => toast.error(e.message ?? "Falha"),
   });
 
-  const markPayment = useMutation({
-    mutationFn: async (vars: { id: string; paymentStatus: PaymentStatus }) => {
-      const { error } = await (supabase as any).rpc("expense_mark_payment", {
-        _id: vars.id,
-        _payment_status: vars.paymentStatus,
-      });
-      if (error) throw error;
-    },
-    onSuccess: (_d, v) => {
-      toast.success(
-        v.paymentStatus === "paga" ? "Despesa marcada como paga" : "Despesa marcada como aguardando pagamento",
-      );
-      qc.invalidateQueries({ queryKey: ["expenses"] });
-    },
-    onError: (e: any) => toast.error(e.message ?? "Falha ao atualizar pagamento"),
-  });
-
   const remove = useMutation({
     mutationFn: async (row: ExpenseRow) => {
       // Apaga primeiro a despesa (RLS valida no servidor) e só depois o comprovante,
@@ -494,9 +480,7 @@ function DespesasPage() {
   const [deleteTarget, setDeleteTarget] = useState<ExpenseRow | null>(null);
   // SUP-280: o gestor pode reverter a aprovação de uma despesa ainda não paga (volta a pendente).
   // Só muda o estado e os campos da decisão/pagamento; data, valor, motivo e comprovante ficam iguais.
-  const [revertTarget, setRevertTarget] = useState<ExpenseRow | null>(null);
-  const revertApproval = useMutation({
-    mutationFn: async (row: ExpenseRow) => {
+  const revertApprovalRow = async (row: ExpenseRow) => {
       const { data, error } = await (supabase as any)
         .from("employee_expenses")
         .update({
@@ -516,22 +500,18 @@ function DespesasPage() {
       if (!data || data.length === 0) {
         throw new Error("Não foi possível reverter: a despesa pode já estar paga ou ter mudado.");
       }
-    },
-    onSuccess: () => {
-      setRevertTarget(null);
-      toast.success("Aprovação revertida: a despesa voltou a pendente");
-      qc.invalidateQueries({ queryKey: ["expenses"] });
-    },
-    onError: (e: any) => toast.error(e.message ?? "Falha ao reverter a aprovação"),
-  });
+  };
   /** Gestor ou owner edita qualquer despesa (pendente, aprovada ou rejeitada). Status, aprovador e pagamento mantêm-se; o RLS valida no servidor. */
   const [editingExpense, setEditingExpense] = useState<ExpenseRow | null>(null);
   const [editDate, setEditDate] = useState("");
   const [editAmount, setEditAmount] = useState("");
   const [editReason, setEditReason] = useState("");
   const [editNotes, setEditNotes] = useState("");
+  /** SUP-331: estado escolhido no lápis (Aprovada / Aguarda pagamento / Paga / voltar a Pendente). */
+  const [editStage, setEditStage] = useState<ExpenseStage>("pendente");
   const openEditExpense = (row: ExpenseRow) => {
     setEditingExpense(row);
+    setEditStage(expenseStage(row));
     setEditDate(row.expense_date);
     setEditAmount(String(row.amount).replace(".", ","));
     setEditReason(row.reason ?? "");
@@ -556,6 +536,16 @@ function DespesasPage() {
         .select("id");
       if (error) throw error;
       if (!data || data.length === 0) throw new Error("Sem permissão para editar esta despesa");
+      // SUP-331: mudança de estado (validada no banco pelas RPCs/RLS).
+      const change = stageChange(expenseStage(editingExpense), editStage);
+      if (change.kind === "revert") await revertApprovalRow(editingExpense);
+      if (change.kind === "payment") {
+        const { error: payError } = await (supabase as any).rpc("expense_mark_payment", {
+          _id: editingExpense.id,
+          _payment_status: change.value,
+        });
+        if (payError) throw payError;
+      }
     },
     onSuccess: () => {
       toast.success("Despesa atualizada");
@@ -700,7 +690,7 @@ function DespesasPage() {
       { header: "Estado", accessor: (r) => STATUS_LABEL[r.status], width: 72 },
       {
         header: "Pagamento",
-        accessor: (r) => (r.status === "aprovada" ? PAYMENT_LABEL[r.payment_status ?? "aguardando_pagamento"] : "-"),
+        accessor: (r) => (r.status === "aprovada" ? STAGE_LABEL[expenseStage(r)] : "-"),
         width: 88,
       },
       { header: "Pago em", accessor: (r) => fmtDateTime(r.paid_at), width: 92 },
@@ -1164,53 +1154,19 @@ function DespesasPage() {
                       <Download className="h-4 w-4" />
                     </Button>
                   )}
-                  <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_TONE[r.status]}`}>
-                    {STATUS_LABEL[r.status]}
+                  {/* SUP-331: só o estado atual; mudar estado/infos no lápis. */}
+                  <span
+                    data-testid="expense-stage"
+                    className={`rounded-full px-2 py-0.5 text-xs ${STAGE_TONE[expenseStage(r)]}`}
+                  >
+                    {STAGE_LABEL[expenseStage(r)]}
                   </span>
-                  {r.status === "aprovada" && (
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs ${PAYMENT_TONE[r.payment_status ?? "aguardando_pagamento"]}`}
-                    >
-                      {PAYMENT_LABEL[r.payment_status ?? "aguardando_pagamento"]}
-                    </span>
-                  )}
-                  {isManager && r.status === "aprovada" && (r.payment_status ?? "aguardando_pagamento") !== "paga" && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={markPayment.isPending}
-                      onClick={() => markPayment.mutate({ id: r.id, paymentStatus: "paga" })}
-                    >
-                      Marcar paga
-                    </Button>
-                  )}
-                  {isManager && r.status === "aprovada" && r.payment_status === "paga" && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={markPayment.isPending}
-                      onClick={() => markPayment.mutate({ id: r.id, paymentStatus: "aguardando_pagamento" })}
-                    >
-                      Aguardar pagamento
-                    </Button>
-                  )}
-                  {isManager && r.status === "aprovada" && r.payment_status !== "paga" && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={revertApproval.isPending}
-                      onClick={() => setRevertTarget(r)}
-                      title="Reverter aprovação (a despesa volta a pendente)"
-                    >
-                      <Undo2 className="mr-1 h-4 w-4" /> Reverter
-                    </Button>
-                  )}
                   {isManager && (
                     <Button
                       size="icon"
                       variant="ghost"
                       onClick={() => openEditExpense(r)}
-                      title="Editar despesa"
+                      title="Editar despesa e estado"
                       aria-label="Editar despesa"
                     >
                       <Pencil className="h-4 w-4" />
@@ -1238,34 +1194,6 @@ function DespesasPage() {
         )}
       </section>
       <AlertDialog
-        open={!!revertTarget}
-        onOpenChange={(open) => {
-          if (!open && !revertApproval.isPending) setRevertTarget(null);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Reverter aprovação?</AlertDialogTitle>
-            <AlertDialogDescription>
-              A despesa volta ao estado Pendente e deixa de estar a aguardar pagamento. A data, o valor, o motivo e o
-              comprovante não mudam. Depois pode aprovar ou rejeitar de novo.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={revertApproval.isPending}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={revertApproval.isPending}
-              onClick={(e) => {
-                e.preventDefault();
-                if (revertTarget) revertApproval.mutate(revertTarget);
-              }}
-            >
-              Reverter
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      <AlertDialog
         open={!!editingExpense}
         onOpenChange={(open) => {
           if (!open && !updateExpense.isPending) setEditingExpense(null);
@@ -1276,7 +1204,9 @@ function DespesasPage() {
             <AlertDialogTitle>Editar despesa</AlertDialogTitle>
             <AlertDialogDescription>
               {editingExpense
-                ? `Estado atual: ${STATUS_LABEL[editingExpense.status]}. O estado, o aprovador e o pagamento não mudam ao editar.`
+                ? editingExpense.status === "aprovada"
+                  ? `Estado atual: ${STAGE_LABEL[expenseStage(editingExpense)]}. Pode mudar o estado e as informações.`
+                  : `Estado atual: ${STAGE_LABEL[expenseStage(editingExpense)]}. Para aprovar ou rejeitar use os botões da despesa pendente.`
                 : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -1286,6 +1216,32 @@ function DespesasPage() {
             </p>
           )}
           <div className="grid gap-3 sm:grid-cols-2">
+            {editingExpense?.status === "aprovada" && (
+              <div className="space-y-1.5 sm:col-span-2" data-testid="expense-stage-select">
+                <Label>Estado</Label>
+                <Select value={editStage} onValueChange={(v) => setEditStage(v as ExpenseStage)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {APPROVED_STAGES.map((st) => (
+                      <SelectItem key={st} value={st}>
+                        {STAGE_LABEL[st]}
+                      </SelectItem>
+                    ))}
+                    {expenseStage(editingExpense) !== "paga" && (
+                      <SelectItem value="pendente">Voltar a Pendente (reverter aprovação)</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+                {editStage === "pendente" && (
+                  <p className="text-xs text-muted-foreground">
+                    A despesa volta a Pendente; depois pode aprovar ou rejeitar de novo. Data, valor, motivo e
+                    comprovante não mudam.
+                  </p>
+                )}
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label htmlFor="edit-expense-date">Data</Label>
               <Input

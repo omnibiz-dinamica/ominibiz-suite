@@ -232,7 +232,8 @@ test("SUP-277/158/249/286/274 e Super Admin: férias por mês atual, falta como 
 test("SUP-280 e SUP-249: reverter aprovação de despesa não paga; filtro de estado sem linhas só de férias", () => {
   const expensesPage = readFileSync(new URL("../src/routes/app.despesas.tsx", import.meta.url), "utf8");
   // só despesas aprovadas e não pagas, e só muda estado/decisão/pagamento
-  assert.match(expensesPage, /isManager && r\.status === "aprovada" && r\.payment_status !== "paga" && \(/);
+  // SUP-331: reverter passou para o lápis (estado "Voltar a Pendente"), só se não estiver paga.
+  assert.match(expensesPage, /expenseStage\(editingExpense\) !== "paga" && \(\s*<SelectItem value="pendente">Voltar a Pendente \(reverter aprovação\)/);
   assert.match(
     expensesPage,
     /\.eq\("status", "aprovada"\)\s*\.or\("payment_status\.is\.null,payment_status\.neq\.paga"\)/,
@@ -242,6 +243,6 @@ test("SUP-280 e SUP-249: reverter aprovação de despesa não paga; filtro de es
     /status: "pendente",\s*decided_by: null,\s*decided_at: null,\s*decision_reason: null,\s*payment_status: null,/,
   );
   assert.doesNotMatch(expensesPage, /update\(\{[^}]*expense_date[^}]*status: "pendente"/);
-  assert.match(expensesPage, /Reverter aprovação\?/);
+  assert.match(expensesPage, /if \(change\.kind === "revert"\) await revertApprovalRow\(editingExpense\);/);
   assert.match(tasksPage, /vacations=\{search\.status \? \[\] : filteredCalendarData\.vacations\}/);
 });

@@ -58,11 +58,15 @@ export type ExpenseSelectionRow = {
   attachment_path: string | null;
 };
 
-/** "Aguarda pagamento" = aprovada e ainda não paga (inclui sem estado); "Paga" = paga. */
+/**
+ * "Aguarda pagamento" = aprovada e ainda não paga; "Paga" = paga.
+ * SUP-331: "Aprovada" (sem estado de pagamento) já não é "Aguarda pagamento".
+ */
 export function matchesExpenseFilters(r: ExpenseSelectionRow, f: ExpenseSelectionFilters): boolean {
   if (f.status !== "all" && r.status !== f.status) return false;
   if (f.payment === "paga" && r.payment_status !== "paga") return false;
-  if (f.payment === "aguardando_pagamento" && (r.status !== "aprovada" || r.payment_status === "paga")) return false;
+  if (f.payment === "aguardando_pagamento" && (r.status !== "aprovada" || r.payment_status !== "aguardando_pagamento"))
+    return false;
   if (f.userId !== "all" && r.user_id !== f.userId) return false;
   const d = f.dateBy === "expense_date" ? r.expense_date : new Date(r.created_at).toISOString().slice(0, 10);
   if (f.start && d < f.start) return false;

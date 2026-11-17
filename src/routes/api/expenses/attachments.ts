@@ -83,7 +83,8 @@ export const Route = createFileRoute("/api/expenses/attachments")({
         if (filters.payment === "paga") query = query.eq("payment_status", "paga");
         // Aprovadas ainda sem estado de pagamento contam como "aguarda pagamento".
         if (filters.payment === "aguardando_pagamento") {
-          query = query.eq("status", "aprovada").or("payment_status.is.null,payment_status.neq.paga");
+          // SUP-331: só as que estão mesmo em "Aguarda pagamento" (Aprovada = NULL fica de fora).
+          query = query.eq("status", "aprovada").eq("payment_status", "aguardando_pagamento");
         }
         if (filters.dateBy === "expense_date") {
           if (start) query = query.gte("expense_date", start);
