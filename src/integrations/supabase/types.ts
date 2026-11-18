@@ -10218,6 +10218,7 @@ export type Database = {
         | "bank_change_requested"
         | "bank_change_decided"
         | "employee_document_signed"
+        | "employee_document_viewed"
       notification_priority: "baixa" | "media" | "alta" | "urgente"
       notification_state:
         | "nova"
@@ -10555,6 +10556,7 @@ export const Constants = {
         "bank_change_requested",
         "bank_change_decided",
         "employee_document_signed",
+        "employee_document_viewed",
       ],
       notification_priority: ["baixa", "media", "alta", "urgente"],
       notification_state: [

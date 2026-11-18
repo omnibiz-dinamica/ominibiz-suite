@@ -76,7 +76,8 @@ type NotificationEvent =
   | "extra_work_filled"
   | "bank_change_requested"
   | "bank_change_decided"
-  | "employee_document_signed";
+  | "employee_document_signed"
+  | "employee_document_viewed";
 
 type NotificationPriority = "baixa" | "media" | "alta" | "urgente";
 
@@ -374,6 +375,7 @@ const EVENT_LABEL: Record<NotificationEvent, string> = {
   bank_change_requested: "Pedido de NIB/IBAN",
   bank_change_decided: "NIB/IBAN — decisão",
   employee_document_signed: "Documento assinado",
+  employee_document_viewed: "Documento lido",
   vacation_requested: "Férias — solicitação",
   vacation_approved: "Férias — aprovadas",
   vacation_rejected: "Férias — rejeitadas",

@@ -3,7 +3,9 @@
  * para ler ou assinar). Abre ao entrar no sistema; "Mais tarde" fecha até ao
  * próximo acesso. O botão Lido/Assinar só fica ativo no fim do arquivo.
  * Assinar: usa a assinatura do Perfil (ou desenha na hora), põe-na no sítio de
- * "Assinatura" do PDF, grava uma cópia assinada e avisa os gestores.
+ * "Assinatura" do PDF — ou onde o funcionário tocar (obrigatório em PDF
+ * digitalizado, sem texto) — e o visto (rubrica) em cada página (18/11/2026).
+ * Grava uma cópia assinada e avisa os gestores.
  */
 import { useEffect, useRef, useState } from "react";
 import SignaturePad from "signature_pad";
@@ -31,8 +33,12 @@ import {
   saveSignedAttachment,
   signedCopyPath,
   stampSignature,
+  vistoPlacements,
   type EmployeeAttachment,
+  type SignaturePlacement,
 } from "@/lib/employee-attachments";
+import { cleanSignatureImage, fitInBox } from "@/lib/signature-image";
+import { SignaturePlacementPicker } from "@/components/perfil/SignaturePlacementPicker";
 
 async function toPng(bytes: Uint8Array): Promise<Uint8Array> {
   const bmp = await createImageBitmap(new Blob([bytes as BlobPart]));
@@ -338,47 +344,36 @@ function Viewer({
   );
 }
 
-function SignStep({
-  doc,
-  pdf,
-  onBack,
-  onDone,
-}: {
-  doc: EmployeeAttachment;
-  pdf: Uint8Array;
-  onBack: () => void;
-  onDone: () => Promise<void>;
-}) {
+/** PNG de uma imagem guardada no bucket de assinaturas, sem fundo e recortado. */
+async function storedSignaturePng(path: string): Promise<CleanPng> {
+  const bytes = await downloadStorageBytes("employee-signatures", path);
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(String(fr.result));
+    fr.onerror = () => reject(new Error("Não foi possível ler a imagem."));
+    fr.readAsDataURL(new Blob([bytes as BlobPart]));
+  });
+  return dataUrlToCleanPng(dataUrl);
+}
+
+type CleanPng = { png: Uint8Array; aspect: number };
+
+async function dataUrlToCleanPng(dataUrl: string): Promise<CleanPng> {
+  const clean = await cleanSignatureImage(dataUrl).catch(() => null);
+  if (clean) {
+    const png = new Uint8Array(await (await fetch(clean.dataUrl)).arrayBuffer());
+    return { png, aspect: clean.width / Math.max(clean.height, 1) };
+  }
+  const png = await toPng(new Uint8Array(await (await fetch(dataUrl)).arrayBuffer()));
+  return { png, aspect: pngAspect(png) };
+}
+
+/** Área de desenho (assinatura ou visto). */
+function usePad(active: boolean) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const padRef = useRef<SignaturePad | null>(null);
-  const [draw, setDraw] = useState(false);
-  const [busy, setBusy] = useState(false);
-
-  const profile = useQuery({
-    queryKey: ["my-signature-for-docs", doc.profile_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("full_name, signature_url")
-        .eq("id", doc.profile_id)
-        .maybeSingle();
-      if (error) throw error;
-      const row = (data ?? {}) as { full_name?: string | null; signature_url?: string | null };
-      let preview: string | null = null;
-      if (row.signature_url) {
-        const { data: s } = await supabase.storage
-          .from("employee-signatures")
-          .createSignedUrl(row.signature_url, 600);
-        preview = s?.signedUrl ?? null;
-      }
-      return { name: row.full_name ?? "", path: row.signature_url ?? null, preview };
-    },
-  });
-  const hasSaved = !!profile.data?.path;
-  const showPad = draw || (profile.isSuccess && !hasSaved);
-
   useEffect(() => {
-    if (!showPad) return;
+    if (!active) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ratio = Math.max(window.devicePixelRatio || 1, 1);
@@ -394,40 +389,131 @@ function SignStep({
       padRef.current?.off();
       padRef.current = null;
     };
-  }, [showPad]);
+  }, [active]);
+  return { canvasRef, padRef };
+}
+
+function SignStep({
+  doc,
+  pdf,
+  onBack,
+  onDone,
+}: {
+  doc: EmployeeAttachment;
+  pdf: Uint8Array;
+  onBack: () => void;
+  onDone: () => Promise<void>;
+}) {
+  const [draw, setDraw] = useState(false);
+  const [drawVisto, setDrawVisto] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [placement, setPlacement] = useState<SignaturePlacement | null>(null);
+  const [placeChosen, setPlaceChosen] = useState(false);
+
+  const profile = useQuery({
+    queryKey: ["my-signature-for-docs", doc.profile_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("full_name, signature_url, initials_url")
+        .eq("id", doc.profile_id)
+        .maybeSingle();
+      if (error) throw error;
+      const row = (data ?? {}) as {
+        full_name?: string | null;
+        signature_url?: string | null;
+        initials_url?: string | null;
+      };
+      const signed = async (path?: string | null) => {
+        if (!path) return null;
+        const { data: s } = await supabase.storage
+          .from("employee-signatures")
+          .createSignedUrl(path, 600);
+        return s?.signedUrl ?? null;
+      };
+      return {
+        name: row.full_name ?? "",
+        path: row.signature_url ?? null,
+        preview: await signed(row.signature_url),
+        vistoPath: row.initials_url ?? null,
+        vistoPreview: await signed(row.initials_url),
+      };
+    },
+  });
+
+  // Texto e páginas do PDF: local sugerido para a assinatura.
+  const layout = useQuery({
+    queryKey: ["doc-sign-layout", doc.id],
+    queryFn: () => readPdfText(pdf),
+    staleTime: Infinity,
+  });
+  useEffect(() => {
+    if (!layout.data || placement) return;
+    const p = chooseSignaturePlacement(layout.data.items, layout.data.pages, 3);
+    setPlacement(p);
+    // Sem texto no PDF (digitalizado): o funcionário tem de escolher o local.
+    setPlaceChosen(p.found !== "fallback");
+  }, [layout.data, placement]);
+
+  const hasSaved = !!profile.data?.path;
+  const showPad = draw || (profile.isSuccess && !hasSaved);
+  const hasVisto = !!profile.data?.vistoPath;
+  const showVistoPad = drawVisto || (profile.isSuccess && !hasVisto);
+  const sig = usePad(showPad);
+  const visto = usePad(showVistoPad);
 
   const run = async () => {
     setBusy(true);
     try {
-      let png: Uint8Array;
+      if (!layout.data || !placement) throw new Error("O documento ainda está a ser preparado.");
+      if (!placeChosen) throw new Error("Toque na página, no sítio onde quer assinar.");
+      let signature: CleanPng;
       let source: "profile" | "drawn";
       if (showPad) {
-        if (!padRef.current || padRef.current.isEmpty())
+        if (!sig.padRef.current || sig.padRef.current.isEmpty())
           throw new Error("Desenhe a sua assinatura.");
-        const blob = await (await fetch(padRef.current.toDataURL("image/png"))).blob();
-        png = new Uint8Array(await blob.arrayBuffer());
+        signature = await dataUrlToCleanPng(sig.padRef.current.toDataURL("image/png"));
         source = "drawn";
       } else {
-        png = await toPng(await downloadStorageBytes("employee-signatures", profile.data!.path!));
+        signature = await storedSignaturePng(profile.data!.path!);
         source = "profile";
       }
-      const { items, pages } = await readPdfText(pdf);
-      const placement = chooseSignaturePlacement(items, pages, pngAspect(png));
+      let vistoPng: CleanPng;
+      if (showVistoPad) {
+        if (!visto.padRef.current || visto.padRef.current.isEmpty())
+          throw new Error("Desenhe o seu visto (rubrica).");
+        vistoPng = await dataUrlToCleanPng(visto.padRef.current.toDataURL("image/png"));
+      } else {
+        vistoPng = await storedSignaturePng(profile.data!.vistoPath!);
+      }
+      // A assinatura entra na caixa escolhida sem deformar (centrada).
+      const fit = fitInBox(signature.aspect, 1, placement.width, placement.height);
+      const finalPlacement: SignaturePlacement = {
+        ...placement,
+        x: placement.x + (placement.width - fit.w) / 2,
+        y: placement.y + (placement.height - fit.h) / 2,
+        width: fit.w,
+        height: fit.h,
+      };
       const when = new Date().toLocaleString("pt-PT", { dateStyle: "short", timeStyle: "short" });
-      const signed = await stampSignature(
+      const signedPdf = await stampSignature(
         pdf,
-        png,
-        placement,
+        signature.png,
+        finalPlacement,
         `Assinado digitalmente por ${profile.data?.name || "funcionário"} em ${when}`,
+        {
+          png: vistoPng.png,
+          placements: vistoPlacements(layout.data.pages, finalPlacement, vistoPng.aspect),
+        },
       );
       const path = signedCopyPath(doc);
       const up = await supabase.storage
         .from("employee-docs")
-        .upload(path, new Blob([signed as BlobPart], { type: "application/pdf" }), {
+        .upload(path, new Blob([signedPdf as BlobPart], { type: "application/pdf" }), {
           contentType: "application/pdf",
         });
       if (up.error) throw new Error(up.error.message);
-      await saveSignedAttachment(doc.id, path, source, placement);
+      await saveSignedAttachment(doc.id, path, source, finalPlacement);
       toast.success("Documento assinado. A gestão foi avisada.");
       await onDone();
     } catch (e) {
@@ -438,10 +524,10 @@ function SignStep({
   };
 
   return (
-    <div className="space-y-3">
-      {profile.isLoading && (
+    <div className="min-h-0 space-y-3 overflow-y-auto">
+      {(profile.isLoading || layout.isLoading) && (
         <p className="py-6 text-center text-sm text-muted-foreground">
-          <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />A carregar a sua assinatura…
+          <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />A preparar a assinatura…
         </p>
       )}
       {profile.isError && (
@@ -449,21 +535,53 @@ function SignStep({
           Não foi possível carregar a sua assinatura.
         </p>
       )}
+      {layout.isError && (
+        <p className="py-6 text-center text-sm text-destructive">
+          Não foi possível abrir este PDF para assinar (protegido ou danificado). Peça ao gestor
+          outra versão.
+        </p>
+      )}
+
+      {layout.data && placement && (
+        <div className="space-y-2 rounded-xl border border-border p-3">
+          <p className="text-sm font-medium">Onde vai a assinatura</p>
+          {placement.found === "fallback" && !placeChosen ? (
+            <p
+              className="rounded-md border border-warning/40 bg-warning/10 px-2 py-1 text-xs"
+              data-testid="signature-place-required"
+            >
+              Não encontrámos o lugar da assinatura neste documento (por exemplo, PDF digitalizado).
+              Vá à página certa e toque no sítio onde quer assinar.
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Para mudar, toque noutro sítio da página ou mude de página.
+            </p>
+          )}
+          <SignaturePlacementPicker
+            pdf={pdf}
+            pages={layout.data.pages}
+            placement={placement}
+            aspect={3}
+            onChange={(p) => {
+              setPlacement(p);
+              setPlaceChosen(true);
+            }}
+          />
+        </div>
+      )}
+
       {profile.isSuccess && !showPad && (
-        <div className="space-y-2 rounded-xl border border-border p-4">
-          <p className="text-sm">Vamos usar a assinatura do seu Perfil:</p>
+        <div className="space-y-2 rounded-xl border border-border p-3">
+          <p className="text-sm">Assinatura do seu Perfil:</p>
           {profile.data.preview ? (
             <img
               src={profile.data.preview}
               alt="A sua assinatura"
-              className="h-20 rounded-md border border-border bg-white object-contain px-2"
+              className="h-16 rounded-md border border-border bg-white object-contain px-2"
             />
           ) : null}
-          <button
-            type="button"
-            className="text-xs text-primary underline"
-            onClick={() => setDraw(true)}
-          >
+          <button type="button" className="text-xs text-primary underline" onClick={() => setDraw(true)}>
             Prefiro desenhar agora
           </button>
         </div>
@@ -471,34 +589,69 @@ function SignStep({
       {showPad && (
         <div className="space-y-2">
           <p className="text-sm">
-            {hasSaved
-              ? "Desenhe a assinatura:"
-              : "Ainda não tem assinatura no Perfil. Desenhe-a aqui:"}
+            {hasSaved ? "Desenhe a assinatura:" : "Ainda não tem assinatura no Perfil. Desenhe-a aqui:"}
           </p>
           <canvas
-            ref={canvasRef}
-            className="h-36 w-full touch-none rounded-md border border-dashed border-border bg-white"
+            ref={sig.canvasRef}
+            className="h-32 w-full touch-none rounded-md border border-dashed border-border bg-white"
             aria-label="Área para desenhar a assinatura"
           />
-          <Button type="button" size="sm" variant="outline" onClick={() => padRef.current?.clear()}>
+          <Button type="button" size="sm" variant="outline" onClick={() => sig.padRef.current?.clear()}>
             <Eraser className="h-4 w-4" /> Limpar
           </Button>
         </div>
       )}
+
+      {profile.isSuccess && !showVistoPad && (
+        <div className="space-y-2 rounded-xl border border-border p-3" data-testid="visto-profile">
+          <p className="text-sm">Visto (rubrica) em cada página — do seu Perfil:</p>
+          {profile.data.vistoPreview ? (
+            <img
+              src={profile.data.vistoPreview}
+              alt="O seu visto"
+              className="h-12 rounded-md border border-border bg-white object-contain px-2"
+            />
+          ) : null}
+          <button
+            type="button"
+            className="text-xs text-primary underline"
+            onClick={() => setDrawVisto(true)}
+          >
+            Prefiro desenhar o visto agora
+          </button>
+        </div>
+      )}
+      {showVistoPad && (
+        <div className="space-y-2" data-testid="visto-pad">
+          <p className="text-sm">
+            {hasVisto
+              ? "Desenhe o visto (rubrica):"
+              : "Ainda não tem visto no Perfil. Desenhe a sua rubrica — vai em cada página:"}
+          </p>
+          <canvas
+            ref={visto.canvasRef}
+            className="h-24 w-full max-w-xs touch-none rounded-md border border-dashed border-border bg-white"
+            aria-label="Área para desenhar o visto"
+          />
+          <Button type="button" size="sm" variant="outline" onClick={() => visto.padRef.current?.clear()}>
+            <Eraser className="h-4 w-4" /> Limpar
+          </Button>
+        </div>
+      )}
+
       <p className="text-xs text-muted-foreground">
-        A assinatura é colocada no local de assinatura do documento (ou no fim da última página) e é
-        guardada uma cópia assinada. O original não é alterado.
+        A assinatura vai no sítio escolhido e o visto no canto inferior de cada página. É guardada
+        uma cópia assinada; o original não é alterado.
       </p>
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button variant="ghost" onClick={onBack} disabled={busy}>
           Voltar
         </Button>
-        <Button disabled={busy || !profile.isSuccess} onClick={() => void run()}>
-          {busy ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <FileSignature className="h-4 w-4" />
-          )}
+        <Button
+          disabled={busy || !profile.isSuccess || !layout.isSuccess || !placeChosen}
+          onClick={() => void run()}
+        >
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSignature className="h-4 w-4" />}
           {busy ? "A assinar…" : "Confirmar assinatura"}
         </Button>
       </div>

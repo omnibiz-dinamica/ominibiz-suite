@@ -192,8 +192,9 @@ export function EmployeeAttachmentsTab({
         </div>
         <p className="text-xs text-muted-foreground">
           Com "Funcionário pode ver", o documento abre para ele ao entrar no sistema. Para assinar,
-          a assinatura do perfil dele é colocada no local de "Assinatura" do PDF e os gestores são
-          avisados.
+          a assinatura do perfil dele vai no local de "Assinatura" do PDF (ou onde ele tocar, em PDF
+          digitalizado) e o visto em cada página. Os gestores são avisados quando ele lê e quando
+          assina.
         </p>
       </div>
 

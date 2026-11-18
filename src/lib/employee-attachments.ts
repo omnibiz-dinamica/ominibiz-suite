@@ -221,12 +221,74 @@ export async function readPdfText(
   return { items, pages };
 }
 
-/** Desenha a assinatura (PNG) e a linha "Assinado digitalmente…" numa cópia do PDF. */
+/* ------------------------------------------------------------------ */
+/* 18/11/2026 — local escolhido pelo funcionário e visto em cada página */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Caixa da assinatura centrada no ponto tocado (coordenadas PDF: y a partir
+ * de baixo), sempre dentro da página. Usado quando o PDF é digitalizado (sem
+ * texto) ou quando o funcionário quer mudar o local sugerido.
+ */
+export function placementAtPoint(
+  page: PdfPageSize,
+  x: number,
+  y: number,
+  aspect: number,
+): SignaturePlacement {
+  const a = Math.max(aspect, 0.5);
+  const height = Math.min(55, 150 / a);
+  const width = height * a;
+  const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), Math.max(lo, hi));
+  return {
+    page: page.page,
+    x: clamp(x - width / 2, 4, page.width - width - 4),
+    y: clamp(y - height / 2, 4, page.height - height - 4),
+    width,
+    height,
+    found: "label",
+  };
+}
+
+export type VistoPlacement = { page: number; x: number; y: number; width: number; height: number };
+
+const overlaps = (a: VistoPlacement, b: SignaturePlacement) =>
+  a.page === b.page &&
+  a.x < b.x + b.width &&
+  b.x < a.x + a.width &&
+  a.y < b.y + b.height &&
+  b.y < a.y + a.height;
+
+/**
+ * Visto (rubrica) em TODAS as páginas, no canto inferior direito (margem).
+ * Se na página da assinatura bater na caixa da assinatura, vai para o canto
+ * inferior esquerdo.
+ */
+export function vistoPlacements(
+  pages: PdfPageSize[],
+  signature: SignaturePlacement,
+  aspect: number,
+): VistoPlacement[] {
+  const a = Math.max(aspect, 0.3);
+  const height = Math.min(28, 56 / a);
+  const width = height * a; // mantém a proporção do visto (nunca deformado)
+  return pages.map((pg) => {
+    const right: VistoPlacement = { page: pg.page, x: pg.width - width - 20, y: 14, width, height };
+    if (!overlaps(right, signature)) return right;
+    return { ...right, x: 20 };
+  });
+}
+
+/**
+ * Desenha a assinatura (PNG) e a linha "Assinado digitalmente…" numa cópia do
+ * PDF e, se vier, o visto em cada página.
+ */
 export async function stampSignature(
   pdfBytes: Uint8Array,
   png: Uint8Array,
   placement: SignaturePlacement,
   signerLine: string,
+  visto?: { png: Uint8Array; placements: VistoPlacement[] },
 ): Promise<Uint8Array> {
   const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
   let pdf;
@@ -254,6 +316,15 @@ export async function stampSignature(
     color: rgb(0.3, 0.3, 0.3),
     maxWidth: Math.max(placement.width, 200),
   });
+  if (visto && visto.placements.length > 0) {
+    const vImg = await pdf.embedPng(visto.png);
+    const all = pdf.getPages();
+    for (const v of visto.placements) {
+      const pg = all[v.page - 1];
+      if (!pg) continue;
+      pg.drawImage(vImg, { x: v.x, y: v.y, width: v.width, height: v.height });
+    }
+  }
   return pdf.save();
 }
 
