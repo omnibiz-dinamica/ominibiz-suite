@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Receipt, Upload, Download, Mail, UserPlus, Trash2, Loader2, FileText, AlertTriangle, CheckCircle2, History, Send, UserCog } from "lucide-react";
 import { extractPdfText, parsePayslipText, fuzzyMatchEmployee, MONTH_LABEL_PT } from "@/lib/payslip-parser";
-import { isEmployeeActive } from "@/lib/employee-status";
+import { employeeExitState, isExplicitlyInactive } from "@/lib/employee-status";
 
 export const Route = createFileRoute("/app/rh/recibos")({ component: PayslipsAdminPage });
 
@@ -98,7 +98,12 @@ function PayslipsAdminPage() {
         .in("id", ids);
       if (profsErr) throw profsErr;
       return ((profs ?? []) as { id: string; full_name: string | null; is_active: boolean | null; status: string | null; termination_date: string | null }[])
-        .map((p) => ({ id: p.id, name: p.full_name ?? "Sem nome", inactive: !isEmployeeActive(p) }))
+        .map((p) => ({
+          id: p.id,
+          // SUP-308: "(Em saída)" durante o fecho de contas; "(Inativo)" depois.
+          name: `${p.full_name ?? "Sem nome"}${employeeExitState(p) === "em_saida" ? " (Em saída)" : ""}`,
+          inactive: isExplicitlyInactive(p),
+        }))
         .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
     },
   });

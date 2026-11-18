@@ -60,7 +60,7 @@ import {
   type TaskStatus,
 } from "@/lib/tasks";
 import { formatWallDate, formatWallTime } from "@/lib/wall-clock";
-import { isEmployeeActive } from "@/lib/employee-status";
+import { employeeExitState, isExplicitlyInactive } from "@/lib/employee-status";
 import { classifyEventStatus, type GeoPointRow } from "@/lib/punch/geo-view";
 import { exportToExcel, exportToPdf, type ExportColumn } from "@/lib/exports";
 import { toast } from "sonner";
@@ -341,8 +341,9 @@ function GestaoPonto() {
       )
         .map((p) => ({
           id: p.id,
-          name: p.full_name ?? p.id,
-          inactive: !isEmployeeActive(p),
+          // SUP-308: quem saiu continua aqui no período de fecho de contas, marcado "(Em saída)".
+          name: `${p.full_name ?? p.id}${employeeExitState(p) === "em_saida" ? " (Em saída)" : ""}`,
+          inactive: isExplicitlyInactive(p),
           sector: p.sector ?? null,
           team_number: p.team_number ?? null,
         }))

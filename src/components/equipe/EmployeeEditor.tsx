@@ -17,6 +17,7 @@ import { EMPLOYEE_PAYMENT_TYPES, PAYMENT_TYPE_LABEL, type PaymentType } from "@/
 import { lastNameLabel, splitFullName, useCompanyCountry } from "@/lib/person-name";
 import { EmployeeHistoryTab } from "@/components/equipe/EmployeeHistoryTab";
 import { EmployeeAttachmentsTab } from "@/components/equipe/EmployeeAttachmentsTab";
+import { ExitTasksDialog } from "@/components/equipe/ExitTasksDialog";
 import { exportEmployees } from "@/lib/employee-export";
 
 
@@ -162,7 +163,7 @@ export function EmployeeEditor({
           />
         </TabsContent>
         <TabsContent value="rh" className="mt-0 space-y-4">
-          <TabRH profile={profile} onSave={save} />
+          <TabRH profile={profile} onSave={save} companyId={companyId} />
         </TabsContent>
         <TabsContent value="docs" className="mt-0 space-y-4">
           <TabDocs profile={profile} onSave={save} />
@@ -414,13 +415,19 @@ function TabDadosGerais({
 function TabRH({
   profile,
   onSave,
+  companyId,
 }: {
   profile: ProfileRow;
   onSave: (p: Record<string, unknown>, msg?: string) => Promise<void>;
+  companyId: string;
 }) {
+  // SUP-308: só envia o campo novo quando o banco já o tem (antes do SQL não quebra).
+  const hasAccessField = "access_authorized_until" in profile;
+  const [exitTasksOpen, setExitTasksOpen] = useState(false);
   const [f, setF] = useState({
     hire_date: str(profile.hire_date),
     termination_date: str(profile.termination_date),
+    access_authorized_until: str(profile.access_authorized_until),
     birth_date: str(profile.birth_date),
     marital_status: str(profile.marital_status),
     dependents_count: num(profile.dependents_count),
@@ -456,9 +463,14 @@ function TabRH({
               contract_type: toNullableString(f.contract_type),
               weekly_contracted_hours: toNullableNumber(f.weekly_contracted_hours),
               contract_renewal_date: toNullableDate(f.contract_renewal_date),
+              ...(hasAccessField
+                ? { access_authorized_until: f.termination_date ? toNullableDate(f.access_authorized_until) : null }
+                : {}),
             },
             "Dados de contabilidade salvos",
           );
+          // SUP-308: nova data de saída → mostrar as tarefas depois dela para o gestor decidir.
+          if (f.termination_date && f.termination_date !== str(profile.termination_date)) setExitTasksOpen(true);
         } catch (err) {
           toast.error((err as Error).message);
         } finally {
@@ -475,6 +487,38 @@ function TabRH({
           <Input type="date" value={f.termination_date} onChange={upd("termination_date")} />
         </Field>
       </div>
+      {f.termination_date && (
+        <div className="space-y-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs" data-testid="exit-box">
+          <p>
+            A partir da data de rescisão deixa de receber tarefas e de entrar no sistema. Continua visível para a gestão
+            durante o período de fecho de contas (Empresa › Saída de funcionários) e depois passa a Inativo.
+          </p>
+          {hasAccessField && (
+            <Field label="Acesso ao sistema autorizado até (opcional)">
+              <Input
+                type="date"
+                value={f.access_authorized_until}
+                min={f.termination_date}
+                onChange={upd("access_authorized_until")}
+              />
+            </Field>
+          )}
+          {str(profile.termination_date) && (
+            <Button type="button" size="sm" variant="outline" onClick={() => setExitTasksOpen(true)}>
+              Ver tarefas depois da saída
+            </Button>
+          )}
+        </div>
+      )}
+      {exitTasksOpen && (f.termination_date || str(profile.termination_date)) && (
+        <ExitTasksDialog
+          open={exitTasksOpen}
+          onOpenChange={setExitTasksOpen}
+          userId={profile.id}
+          companyId={companyId}
+          terminationDate={f.termination_date || str(profile.termination_date)}
+        />
+      )}
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="NIF">
           <Input value={f.tax_id_nif} onChange={upd("tax_id_nif")} />

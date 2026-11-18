@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -60,6 +61,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return null;
     }
     const row = Array.isArray(data) ? data[0] : data;
+    // SUP-308: rescisão — sem autorização da gestão, a pessoa deixa de entrar.
+    // O banco já bloqueia (Auth); isto só termina a sessão aberta de imediato.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const blocked = await (supabase as any).rpc("my_access_blocked").then(
+      (r: { data: unknown; error: unknown }) => (r.error ? false : r.data === true),
+      () => false,
+    );
+    if (blocked) {
+      toast.error("O seu acesso terminou na data de saída. Fale com a gestão se precisar de entrar.");
+      await supabase.auth.signOut();
+      return null;
+    }
     const nextRoles = (row?.roles ?? []) as { role: AppRole; company_id: string | null }[];
     const nextCompanyId = (row?.current_company_id ?? null) as string | null;
     log("get_auth_context:success", { reqId, currentCompanyId: nextCompanyId, roles: nextRoles });

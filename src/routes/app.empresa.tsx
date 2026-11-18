@@ -59,6 +59,8 @@ function CompanyPage() {
 
       <DefaultRatesCard companyId={currentCompanyId!} />
 
+      <ExitSettingsCard companyId={currentCompanyId!} />
+
       <ManagerInviteCard companyId={currentCompanyId!} companyName={company.name} />
 
       <GeoSettingsCard companyId={currentCompanyId!} />
@@ -357,6 +359,82 @@ function HRSettingsCard({ companyId }: { companyId: string }) {
       <p className="mt-3 text-xs text-muted-foreground">
         Funcionário nunca se autoaprova. Gestor só se "Autoaprovação permitida" estiver selecionado.
       </p>
+    </div>
+  );
+}
+
+/**
+ * SUP-308 (18/11/2026) — Saída de funcionários: quantos dias quem saiu continua
+ * visível para a gestão (fecho de contas) antes de passar a Inativo.
+ * Guardado em company_hr_settings.termination_grace_days (padrão 45).
+ */
+function ExitSettingsCard({ companyId }: { companyId: string }) {
+  const qc = useQueryClient();
+  const { data, isLoading } = useQuery({
+    queryKey: ["company-exit-settings", companyId],
+    queryFn: async () => {
+      // "*" para não quebrar antes do SQL (coluna nova).
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.from("company_hr_settings") as any)
+        .select("*")
+        .eq("company_id", companyId)
+        .maybeSingle();
+      if (error) throw error;
+      return (data ?? {}) as { termination_grace_days?: number | null };
+    },
+  });
+  const supported = !!data && "termination_grace_days" in data;
+  const [days, setDays] = useState("45");
+  useEffect(() => {
+    if (data?.termination_grace_days != null) setDays(String(data.termination_grace_days));
+  }, [data]);
+  const value = Number(days);
+  const valid = Number.isInteger(value) && value >= 0 && value <= 365;
+
+  const save = useMutation({
+    mutationFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from("company_hr_settings") as any).upsert(
+        { company_id: companyId, termination_grace_days: value },
+        { onConflict: "company_id" },
+      );
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Período de saída atualizado");
+      qc.invalidateQueries({ queryKey: ["company-exit-settings", companyId] });
+      qc.invalidateQueries({ queryKey: ["termination-grace-days", companyId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  if (isLoading || !supported) return null;
+  return (
+    <div className="rounded-2xl border border-border bg-card p-6" data-testid="exit-settings">
+      <h2 className="font-display text-lg font-semibold">Saída de funcionários</h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Na data de rescisão o funcionário deixa de receber tarefas e de entrar no sistema (salvo
+        autorização na ficha dele). Continua visível para a gestão durante estes dias, para o fecho
+        de contas, e depois passa sozinho a Inativo. Todo o histórico fica guardado.
+      </p>
+      <div className="mt-4 max-w-xs space-y-1.5">
+        <Label htmlFor="exit-days">Dias visível após a rescisão</Label>
+        <input
+          id="exit-days"
+          type="number"
+          min={0}
+          max={365}
+          value={days}
+          onChange={(e) => setDays(e.target.value)}
+          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+        />
+        {!valid && <p className="text-xs text-destructive">Indique um número entre 0 e 365.</p>}
+      </div>
+      <div className="mt-5 flex justify-end">
+        <Button onClick={() => save.mutate()} disabled={save.isPending || !valid}>
+          Salvar
+        </Button>
+      </div>
     </div>
   );
 }

@@ -16,7 +16,12 @@ import { sendTransactionalEmail } from "@/lib/email/send";
 import { buildAppUrl } from "@/lib/app-url";
 import { EmployeeEditor } from "@/components/equipe/EmployeeEditor";
 import { decideEmailChangeRequest } from "@/lib/user-email";
-import { isEmployeeActive } from "@/lib/employee-status";
+import {
+  DEFAULT_TERMINATION_GRACE_DAYS,
+  exitBadgeLabel,
+  fetchTerminationGraceDays,
+  isExplicitlyInactive,
+} from "@/lib/employee-status";
 import { formatIban, type BankChangeRequest } from "@/lib/employee-history";
 import { exportEmployees } from "@/lib/employee-export";
 
@@ -261,6 +266,13 @@ function TeamPage() {
   };
 
   const [showInactive, setShowInactive] = useState(false);
+  // SUP-308: dias em que quem saiu continua visível (por empresa; padrão 45).
+  const { data: graceDays = DEFAULT_TERMINATION_GRACE_DAYS } = useQuery({
+    queryKey: ["termination-grace-days", currentCompanyId],
+    enabled: !!currentCompanyId,
+    staleTime: 5 * 60 * 1000,
+    queryFn: () => fetchTerminationGraceDays(currentCompanyId!),
+  });
   const [memberSearch, setMemberSearch] = useState("");
   const [memberSort, setMemberSort] = useState<"az" | "za">("az");
   const [memberRoleFilter, setMemberRoleFilter] = useState<string>("all");
@@ -334,7 +346,8 @@ function TeamPage() {
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "");
     const rows = (members ?? []).filter((m) => {
-      if (showInactive ? isEmployeeActive(m.profile) : !isEmployeeActive(m.profile)) return false;
+      // SUP-308: quem está "em saída" continua na lista (fecho de contas) até ficar Inativo.
+      if (showInactive ? !isExplicitlyInactive(m.profile) : isExplicitlyInactive(m.profile)) return false;
       if (memberRoleFilter === "__sem_cargo__" && jobKey(m.profile?.job_title)) return false;
       if (
         memberRoleFilter.startsWith("job:") &&
@@ -362,7 +375,7 @@ function TeamPage() {
 
   const toggleActive = useMutation({
     mutationFn: async (m: MemberRow) => {
-      const activate = !isEmployeeActive(m.profile);
+      const activate = isExplicitlyInactive(m.profile);
       const { error } = await supabase
         .from("profiles")
         .update({
@@ -691,7 +704,8 @@ function TeamPage() {
             </li>
           )}
           {visibleMembers.map((m) => {
-            const active = isEmployeeActive(m.profile);
+            const active = !isExplicitlyInactive(m.profile);
+            const exitBadge = exitBadgeLabel(m.profile, graceDays);
             const isSelf = m.user_id === user?.id;
             const displayName = getMemberDisplayName(m);
             const email = m.profile?.email?.trim() || null;
@@ -708,6 +722,14 @@ function TeamPage() {
                     {!active && (
                       <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase text-muted-foreground">
                         inativo
+                      </span>
+                    )}
+                    {active && exitBadge && (
+                      <span
+                        className="rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-medium text-warning-foreground"
+                        data-testid="exit-badge"
+                      >
+                        {exitBadge}
                       </span>
                     )}
                   </div>
