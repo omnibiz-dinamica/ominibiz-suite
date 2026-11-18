@@ -10,12 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, ModalHeader, ModalBody } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { RecordHistoryMenu } from "@/components/history/RecordHistoryMenu";
-import { Check, Copy, FileSpreadsheet, Landmark, Loader2, MailCheck, Trash2, Pencil, Power, Send, UserCog, X } from "lucide-react";
+import { Check, Copy, FileSpreadsheet, FolderDown, Landmark, Loader2, MailCheck, Trash2, Pencil, Power, Send, UserCog, X } from "lucide-react";
 import { RoleGuard } from "@/components/RoleGuard";
 import { sendTransactionalEmail } from "@/lib/email/send";
 import { buildAppUrl } from "@/lib/app-url";
 import { EmployeeEditor } from "@/components/equipe/EmployeeEditor";
 import { decideEmailChangeRequest } from "@/lib/user-email";
+import { DocumentExtractionDialog } from "@/components/equipe/DocumentExtractionDialog";
 import {
   DEFAULT_TERMINATION_GRACE_DAYS,
   exitBadgeLabel,
@@ -248,6 +249,7 @@ function TeamPage() {
   }, [focusSearch.employee, focusSearch.bank, members]);
 
   const [exportingAll, setExportingAll] = useState(false);
+  const [extractOpen, setExtractOpen] = useState(false);
   const exportAll = async () => {
     if (!currentCompanyId) return;
     setExportingAll(true);
@@ -534,11 +536,24 @@ function TeamPage() {
           <h1 className="font-display text-3xl font-semibold tracking-tight">Equipe</h1>
           <p className="mt-1 text-muted-foreground">Convide funcionários e gestores para sua empresa.</p>
         </div>
-        <Button variant="outline" disabled={exportingAll || !currentCompanyId} onClick={() => void exportAll()}>
-          {exportingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
-          {exportingAll ? "A exportar…" : "Exportar todos (Excel)"}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {/* SUP-304: extrair um tipo de documento de vários funcionários. */}
+          <Button variant="outline" disabled={!currentCompanyId} onClick={() => setExtractOpen(true)}>
+            <FolderDown className="h-4 w-4" /> Extrair documentos
+          </Button>
+          <Button variant="outline" disabled={exportingAll || !currentCompanyId} onClick={() => void exportAll()}>
+            {exportingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
+            {exportingAll ? "A exportar…" : "Exportar todos (Excel)"}
+          </Button>
+        </div>
       </div>
+      {currentCompanyId && extractOpen && (
+        <DocumentExtractionDialog
+          open={extractOpen}
+          onOpenChange={setExtractOpen}
+          companyId={currentCompanyId}
+        />
+      )}
 
       <div className="rounded-2xl border border-border bg-card p-6">
         <h2 className="font-display text-lg font-semibold">Convidar pessoa</h2>
