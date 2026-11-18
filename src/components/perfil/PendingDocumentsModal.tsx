@@ -39,6 +39,7 @@ import {
 } from "@/lib/employee-attachments";
 import { cleanSignatureImage, fitInBox } from "@/lib/signature-image";
 import { SignaturePlacementPicker } from "@/components/perfil/SignaturePlacementPicker";
+import { OPEN_PENDING_DOCUMENTS_EVENT } from "@/lib/pending-documents-events";
 
 async function toPng(bytes: Uint8Array): Promise<Uint8Array> {
   const bmp = await createImageBitmap(new Blob([bytes as BlobPart]));
@@ -80,12 +81,23 @@ export function PendingDocumentsModal({
     staleTime: 60_000,
   });
 
+  // "Abrir para ler/assinar" em "Os meus documentos" (Perfil) reabre esta janela.
+  useEffect(() => {
+    const reopen = () => {
+      setLater(false);
+      void qc.invalidateQueries({ queryKey: ["my-pending-attachments", userId, companyId] });
+    };
+    window.addEventListener(OPEN_PENDING_DOCUMENTS_EVENT, reopen);
+    return () => window.removeEventListener(OPEN_PENDING_DOCUMENTS_EVENT, reopen);
+  }, [qc, userId, companyId]);
+
   const list = pending.data ?? [];
   const current = list[0];
   const open = !later && !!current;
 
   const done = async () => {
     await qc.invalidateQueries({ queryKey: ["my-pending-attachments", userId, companyId] });
+    void qc.invalidateQueries({ queryKey: ["my-documents", userId, companyId] });
   };
 
   return (

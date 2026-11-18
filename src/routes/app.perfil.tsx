@@ -11,6 +11,7 @@ import { Dialog, DialogContent, ModalBody, ModalFooter, ModalHeader } from "@/co
 import { toast } from "sonner";
 import { SignatureVistoCard } from "@/components/perfil/SignatureVistoCard";
 import { BankDetailsCard } from "@/components/perfil/BankDetailsCard";
+import { MyDocumentsCard } from "@/components/perfil/MyDocumentsCard";
 import { MailCheck } from "lucide-react";
 import { submitEmailChangeRequest } from "@/lib/user-email";
 import { isValidEmailChangeReason, isValidUserEmail, normalizeUserEmail } from "@/lib/user-email-security";
@@ -230,6 +231,8 @@ function ProfilePage() {
       {currentCompanyId && <BankDetailsCard />}
 
       <SignatureVistoCard />
+
+      <MyDocumentsCard />
 
       <Dialog open={emailRequestOpen} onOpenChange={setEmailRequestOpen}>
         <DialogContent size="sm">
