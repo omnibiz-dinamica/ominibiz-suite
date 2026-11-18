@@ -1,3 +1,10 @@
+import {
+  FORWARD_SUGGESTIONS,
+  forwardKey,
+  forwardTargets,
+  forwardTone,
+  matchesForwardFilter,
+} from "@/lib/notifications/forwarding";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -352,8 +359,6 @@ const TABS: { key: TabKey; label: string; states: NotificationState[] | null }[]
   { key: "todas", label: "Todas", states: null },
 ];
 
-/** Sugestões rápidas de destinatário no encaminhamento. */
-const FORWARD_SUGGESTIONS = ["Contabilista", "Gestor", "Recursos Humanos", "Direção"];
 
 const EVENT_LABEL: Record<NotificationEvent, string> = {
   task_created: "Nova tarefa",
@@ -646,11 +651,19 @@ function NotificationsPage() {
     return map;
   }, [rows]);
 
+  // SUP-161: em "Em tratamento", filtrar por pessoa a quem foi encaminhada.
+  const [forwardFilter, setForwardFilter] = useState("");
+  const forwardOptions = useMemo(
+    () => forwardTargets(rows.filter((n) => n.state === "encaminhada").map((n) => n.forwarded_to)),
+    [rows],
+  );
   const visible = useMemo(() => {
     const states = TABS.find((t) => t.key === tab)?.states;
     if (!states) return rows;
-    return rows.filter((n) => states.includes(n.state ?? "nova"));
-  }, [rows, tab]);
+    const inTab = rows.filter((n) => states.includes(n.state ?? "nova"));
+    if (tab !== "tratamento" || !forwardFilter) return inTab;
+    return inTab.filter((n) => n.state === "encaminhada" && matchesForwardFilter(n.forwarded_to, forwardFilter));
+  }, [rows, tab, forwardFilter]);
 
   const unreadCount = useMemo(
     () =>
@@ -745,6 +758,30 @@ function NotificationsPage() {
           </Button>
         ))}
       </div>
+
+      {tab === "tratamento" && forwardOptions.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2" data-testid="forward-filter">
+          <span className="text-xs text-muted-foreground">Encaminhadas para:</span>
+          <Button size="sm" variant={!forwardFilter ? "default" : "outline"} onClick={() => setForwardFilter("")}>
+            Todas
+          </Button>
+          {forwardOptions.map((name) => (
+            <Button
+              key={name}
+              size="sm"
+              variant="outline"
+              className={
+                forwardKey(forwardFilter) === forwardKey(name)
+                  ? "ring-2 ring-primary " + (forwardTone(name) ?? "")
+                  : (forwardTone(name) ?? "")
+              }
+              onClick={() => setForwardFilter(name)}
+            >
+              {name}
+            </Button>
+          ))}
+        </div>
+      )}
 
       {tab === "ativas" && vacationQueue.length > 0 && (
         <section className="overflow-hidden rounded-lg border border-border">
@@ -885,8 +922,21 @@ function NotificationsPage() {
                       >
                         {t(STATE_LABEL[state])}
                         {handlerName ? ` por ${handlerName}` : ""}
-                        {state === "encaminhada" && n.forwarded_to ? ` · ${n.forwarded_to}` : ""}
+                        {state === "encaminhada" && n.forwarded_to && !forwardTone(n.forwarded_to)
+                          ? ` · ${n.forwarded_to}`
+                          : ""}
                       </span>
+                      {state === "encaminhada" && n.forwarded_to && forwardTone(n.forwarded_to) && (
+                        <span
+                          className={
+                            "rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide " +
+                            forwardTone(n.forwarded_to)
+                          }
+                          data-testid="forward-tag"
+                        >
+                          {n.forwarded_to}
+                        </span>
+                      )}
                       <span className="text-xs text-muted-foreground">{new Date(n.created_at).toLocaleString()}</span>
                     </div>
                     <p className="mt-1 font-medium">

@@ -1545,8 +1545,17 @@ export function TaskForm({
           </div>
 
           <div className="space-y-1.5">
-            <Label>Descrição</Label>
-            <Textarea maxLength={1000} value={description} onChange={(e) => setDescription(e.target.value)} />
+            <Label>Anotação / descrição</Label>
+            <Textarea
+              maxLength={1000}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Ex.: o cliente pediu por e-mail para esta semana ser só na segunda-feira."
+            />
+            <p className="text-xs text-muted-foreground">
+              Visível para os gestores (na tarefa e no calendário) e para o funcionário.
+              {initial?.recurrence_id ? " Aqui fica só nesta data." : ""}
+            </p>
           </div>
           {!initial && (
             <div className="space-y-2 rounded-lg border border-border bg-muted/20 p-3">

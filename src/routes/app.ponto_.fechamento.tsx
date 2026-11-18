@@ -7,6 +7,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { employerOptions, matchesEmployer } from "@/lib/ponto/closing-employer";
 import { RoleGuard } from "@/components/RoleGuard";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -70,6 +71,8 @@ function Closing() {
   const [status, setStatus] = useState<TimesheetStatus | "all">("all");
   const [search, setSearch] = useState("");
   const [team, setTeam] = useState("all");
+  // SUP-322: empresa do funcionário (campo "Cargo / função" do cadastro, ex.: Life Tidy, Letras Modestas).
+  const [employer, setEmployer] = useState("all");
   const [selected, setSelected] = useState<string[]>([]);
   const [viewing, setViewing] = useState<TimesheetListRow | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
@@ -113,10 +116,12 @@ function Closing() {
         (r) =>
           (status === "all" || r.status === status) &&
           matchesClosingSearch(r, search) &&
-          (!teamSet || teamSet.has(r.employee_id)),
+          (!teamSet || teamSet.has(r.employee_id)) &&
+          matchesEmployer(r.job_title, employer),
       ),
-    [list.data, status, search, teamSet],
+    [list.data, status, search, teamSet, employer],
   );
+  const employers = useMemo(() => employerOptions(list.data ?? []), [list.data]);
   const selectedRows = rows.filter((r) => selected.includes(r.period_id));
 
   const invalidate = () => qc.invalidateQueries({ queryKey: key });
@@ -269,6 +274,30 @@ function Closing() {
             </SelectContent>
           </Select>
         </div>
+        {employers.length > 0 && (
+          <div className="space-y-1.5">
+            <Label>Empresa (cargo / função)</Label>
+            <Select
+              value={employer}
+              onValueChange={(v) => {
+                setEmployer(v);
+                setSelected([]);
+              }}
+            >
+              <SelectTrigger aria-label="Filtrar por empresa">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                {employers.map((e) => (
+                  <SelectItem key={e.key} value={e.key}>
+                    {e.label} ({e.count})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         <div className="space-y-1.5">
           <Label htmlFor="fechamento-search">Pesquisar</Label>
           <div className="relative">

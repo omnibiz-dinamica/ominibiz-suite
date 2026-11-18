@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { RecordHistoryMenu } from "@/components/history/RecordHistoryMenu";
-import { Clock, Pencil, Repeat, UserCog, Users, Trash2, CalendarDays, Building2, ChevronLeft, ChevronRight, FileText, Info as InfoIcon, MapPin as MapPinIcon, ChevronDown as ChevronDownIcon } from "lucide-react";
+import { Clock, Pencil, Repeat, UserCog, Users, Trash2, CalendarDays, Building2, ChevronLeft, ChevronRight, FileText, Info as InfoIcon, MapPin as MapPinIcon, ChevronDown as ChevronDownIcon, StickyNote } from "lucide-react";
 import { STATUS_LABELS, STATUS_TONE, type TaskRow, availableActions, formatStartedLateMinutes, isVisuallyLate, resolveOperationalStatus, startedLateMinutes, AUTO_RECURRENCE_BADGE_LABEL, AUTO_RECURRENCE_BADGE_TITLE } from "@/lib/tasks";
 
 import { currentTaskCancellation, currentTaskRefusal } from "@/lib/task-refusal-view";
@@ -193,6 +193,15 @@ export function TaskPlanningCalendar({
       {clientFilterActive && groupEntries.length === 0 && (
         <ClientFilterEmptyState withOtherFilters={otherFiltersActive} onClear={onClearClientFilter} />
       )}
+      {/* SUP-306: na vista Dia, um quadrado por colaborador/cliente lado a lado (como no Mês). */}
+      <div
+        className={
+          mode === "day" && groupBy !== "all"
+            ? "grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+            : "contents"
+        }
+        data-testid="calendar-groups"
+      >
       {groupEntries.map(([key, groupTasks]) => {
         const groupVacations =
           groupBy === "all"
@@ -364,6 +373,7 @@ export function TaskPlanningCalendar({
           </section>
         );
       })}
+      </div>
     </div>
   );
 }
@@ -549,14 +559,17 @@ export function MiniTaskChip({ task, startedAt, onClick }: { task: TaskRow; star
       className="block w-full truncate rounded-md bg-primary/10 px-2 py-1 text-left text-[11px] font-medium text-primary hover:bg-primary/15"
       title={
         lateMinutes != null
-          ? `${taskHeading(task)} · Início com atraso · ${formatStartedLateMinutes(lateMinutes)}${taskClientInstructions(task) ? `\nInstruções: ${taskClientInstructions(task)}` : ""}`
-          : `${taskHeading(task)}${taskClientInstructions(task) ? `\nInstruções: ${taskClientInstructions(task)}` : ""}`
+          ? `${taskHeading(task)} · Início com atraso · ${formatStartedLateMinutes(lateMinutes)}${taskClientInstructions(task) ? `\nInstruções: ${taskClientInstructions(task)}` : ""}${task.description ? `\nAnotação: ${task.description}` : ""}`
+          : `${taskHeading(task)}${taskClientInstructions(task) ? `\nInstruções: ${taskClientInstructions(task)}` : ""}${task.description ? `\nAnotação: ${task.description}` : ""}`
       }
     >
       {start ? `${start} ` : ""}
       {task.schedule_name ? `[${task.schedule_name}] ` : ""}
       {taskClientInstructions(task) ? (
         <InfoIcon className="mr-0.5 inline h-3 w-3 align-[-2px]" aria-label="Tem instruções do cliente" />
+      ) : null}
+      {task.description ? (
+        <StickyNote className="mr-0.5 inline h-3 w-3 align-[-2px]" aria-label="Tem anotação" />
       ) : null}
       {taskHeading(task)}
     </button>
@@ -846,6 +859,16 @@ export function CalendarTaskCard({
           </span>
         )}
       </div>
+      {task.description && (
+        // SUP-307: anotação da tarefa (gestores e funcionário veem).
+        <div
+          className="flex items-start gap-1.5 rounded-md border border-warning/40 bg-warning/10 px-2 py-1.5 text-[11px]"
+          data-testid="task-note"
+        >
+          <StickyNote className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
+          <span className="whitespace-pre-wrap break-words">{task.description}</span>
+        </div>
+      )}
       {refusal && (
         <div className="space-y-0.5 rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1.5 text-[11px]">
           <div className="font-semibold uppercase tracking-wide text-destructive">
