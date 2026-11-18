@@ -5,6 +5,7 @@ import {
   forwardTone,
   matchesForwardFilter,
 } from "@/lib/notifications/forwarding";
+import { NewManagerNotificationDialog } from "@/components/notifications/NewManagerNotificationDialog";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -27,6 +28,7 @@ import {
   Archive,
   ArchiveRestore,
   Bell,
+  BellPlus,
   CheckCheck,
   CheckCircle2,
   ExternalLink,
@@ -84,7 +86,8 @@ type NotificationEvent =
   | "bank_change_requested"
   | "bank_change_decided"
   | "employee_document_signed"
-  | "employee_document_viewed";
+  | "employee_document_viewed"
+  | "manager_message";
 
 type NotificationPriority = "baixa" | "media" | "alta" | "urgente";
 
@@ -381,6 +384,7 @@ const EVENT_LABEL: Record<NotificationEvent, string> = {
   bank_change_decided: "NIB/IBAN — decisão",
   employee_document_signed: "Documento assinado",
   employee_document_viewed: "Documento lido",
+  manager_message: "Mensagem da gestão",
   vacation_requested: "Férias — solicitação",
   vacation_approved: "Férias — aprovadas",
   vacation_rejected: "Férias — rejeitadas",
@@ -410,6 +414,7 @@ export const Route = createFileRoute("/app/notificacoes")({
 
 function NotificationsPage() {
   const { user, currentCompanyId, isManager, isSuperAdmin } = useAuth();
+  const [newOpen, setNewOpen] = useState(false);
   const { t } = useT();
   const qc = useQueryClient();
   const nav = useNavigate();
@@ -739,15 +744,26 @@ function NotificationsPage() {
             )}
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={unreadCount === 0 || markRead.isPending}
-          onClick={() => markRead.mutate(null)}
-        >
-          <CheckCheck className="mr-2 h-4 w-4" /> Marcar todas como lidas
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {(isManager || isSuperAdmin) && currentCompanyId && (
+            // SUP-160: o gestor cria uma notificação formal.
+            <Button size="sm" onClick={() => setNewOpen(true)}>
+              <BellPlus className="mr-2 h-4 w-4" /> Nova notificação
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={unreadCount === 0 || markRead.isPending}
+            onClick={() => markRead.mutate(null)}
+          >
+            <CheckCheck className="mr-2 h-4 w-4" /> Marcar todas como lidas
+          </Button>
+        </div>
       </div>
+      {newOpen && currentCompanyId && (
+        <NewManagerNotificationDialog open={newOpen} onOpenChange={setNewOpen} companyId={currentCompanyId} />
+      )}
 
       {/* Filtros de estado (ADR-043) */}
       <div className="flex flex-wrap gap-2">
@@ -1056,6 +1072,11 @@ function NotificationsPage() {
                       n.body && (
                         <p className="mt-0.5 whitespace-pre-line break-words text-sm text-muted-foreground">{n.body}</p>
                       )
+                    )}
+                    {n.event === "manager_message" && typeof n.metadata?.sent_by_name === "string" && (
+                      <p className="mt-1 text-xs text-muted-foreground" data-testid="manager-message-sender">
+                        De: {n.metadata.sent_by_name}
+                      </p>
                     )}
                     {n.state_note && <p className="mt-1 text-xs italic text-muted-foreground">Nota: {n.state_note}</p>}
                   </div>

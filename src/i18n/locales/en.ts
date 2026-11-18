@@ -293,6 +293,7 @@ export const enNotifications: Record<string, string> = {
   "NIB/IBAN — decisão": "IBAN — decision",
   "Documento assinado": "Document signed",
   "Documento lido": "Document read",
+  "Mensagem da gestão": "Message from management",
   "Férias — solicitação": "Vacation — request",
   "Férias — aprovadas": "Vacation — approved",
   "Férias — rejeitadas": "Vacation — rejected",

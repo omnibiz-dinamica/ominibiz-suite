@@ -297,6 +297,7 @@ export const nlNotifications: Record<string, string> = {
   "NIB/IBAN — decisão": "IBAN — beslissing",
   "Documento assinado": "Document ondertekend",
   "Documento lido": "Document gelezen",
+  "Mensagem da gestão": "Bericht van het management",
   "Férias — solicitação": "Verlof — aanvraag",
   "Férias — aprovadas": "Verlof — goedgekeurd",
   "Férias — rejeitadas": "Verlof — afgewezen",

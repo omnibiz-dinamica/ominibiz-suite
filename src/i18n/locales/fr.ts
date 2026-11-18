@@ -297,6 +297,7 @@ export const frNotifications: Record<string, string> = {
   "NIB/IBAN — decisão": "IBAN — décision",
   "Documento assinado": "Document signé",
   "Documento lido": "Document lu",
+  "Mensagem da gestão": "Message de la direction",
   "Férias — solicitação": "Congés — demande",
   "Férias — aprovadas": "Congés — approuvés",
   "Férias — rejeitadas": "Congés — refusés",
