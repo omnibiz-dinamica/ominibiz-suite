@@ -56,6 +56,7 @@ import {
 import {
   DESTINATION_EMOJI,
   destinationLabel,
+  destinationsForCompany,
   fetchSupportDestinations,
   setTicketDestination,
   supportDestinationsQueryKey,
@@ -618,7 +619,7 @@ function SupportDetailPage() {
                   <SelectValue placeholder="Selecionar destino" />
                 </SelectTrigger>
                 <SelectContent>
-                  {destinations.map((d) => (
+                  {destinationsForCompany(destinations, t.company_id).map((d) => (
                     <SelectItem key={d.code} value={d.code}>
                       {d.label}
                     </SelectItem>

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { TeamChips } from "@/components/common/TeamChips";
 import { teamNumberLabel } from "@/lib/teams";
-import { Check, ChevronsUpDown, Search, User } from "lucide-react";
+import { Check, ChevronsUpDown, Search, User, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -56,6 +56,11 @@ export interface EmployeePickerProps {
   className?: string;
   /** Rótulo acessível do trigger. */
   ariaLabel?: string;
+  /**
+   * SUP-324: filtros — mostra "Limpar seleção" quando há alguém escolhido;
+   * ao limpar chama onChange("") (volta a "todos").
+   */
+  clearable?: boolean;
 }
 
 function useDebouncedValue<T>(value: T, delay = 180): T {
@@ -89,6 +94,7 @@ export function EmployeePicker({
   virtualWindowSize = 60,
   className,
   ariaLabel,
+  clearable = false,
 }: EmployeePickerProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -174,6 +180,22 @@ export function EmployeePicker({
           className="max-h-72 overflow-y-auto py-1"
           aria-label="Funcionários"
         >
+          {clearable && value && (
+            <li role="option" aria-selected={false}>
+              <button
+                type="button"
+                data-testid="employee-picker-clear"
+                onClick={() => {
+                  onChange("");
+                  setOpen(false);
+                }}
+                className="flex w-full items-center gap-2 border-b border-border px-3 py-2 text-left text-sm font-medium text-primary hover:bg-accent focus-visible:bg-accent focus-visible:outline-none"
+              >
+                <X className="h-4 w-4 shrink-0" aria-hidden />
+                Limpar seleção · {placeholder}
+              </button>
+            </li>
+          )}
           {visible.length === 0 ? (
             <li className="px-3 py-6 text-center text-sm text-muted-foreground">
               {emptyText}

@@ -27,6 +27,8 @@ export interface SupportDestination {
   is_technical: boolean;
   sort_order: number;
   is_active: boolean;
+  /** SUP-310: destino só desta empresa (ex.: Léa, Luc na V-clean); null = todas. */
+  company_id?: string | null;
 }
 
 /** Ícones conhecidos; qualquer código novo cai no fallback. */
@@ -49,6 +51,8 @@ export const DESTINATION_EMOJI: Record<string, string> = {
   tech: "🛠",
   accounting: "📊",
   secretary: "📋",
+  lea: "🌸",
+  luc: "🟣",
 };
 
 export const DEFAULT_DESTINATION_CODE = "tech";
@@ -58,11 +62,20 @@ export const supportDestinationsQueryKey = ["support-destinations"] as const;
 export async function fetchSupportDestinations(): Promise<SupportDestination[]> {
   const { data, error } = await (supabase as any)
     .from("support_destinations")
-    .select("code, label, description, icon, target_role, is_technical, sort_order, is_active")
+    // "*" para incluir company_id quando existir (SUP-310) sem quebrar antes do SQL.
+    .select("*")
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
   if (error) throw error;
   return (data ?? []) as SupportDestination[];
+}
+
+/** SUP-310: destinos que se podem escolher para tickets desta empresa. */
+export function destinationsForCompany(
+  list: SupportDestination[],
+  companyId: string | null | undefined,
+): SupportDestination[] {
+  return list.filter((d) => !d.company_id || d.company_id === companyId);
 }
 
 export function destinationLabel(

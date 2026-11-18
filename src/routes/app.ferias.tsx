@@ -1101,6 +1101,7 @@ function FeriasPage() {
                 employees={uniqueUsers.map((u) => ({ id: u.id, full_name: u.name }))}
                 value={filterUser === "all" ? null : filterUser}
                 onChange={(id: string) => setFilterUser(id || "all")}
+                clearable
                 placeholder="Todos"
                 ariaLabel="Filtrar por colaborador"
               />

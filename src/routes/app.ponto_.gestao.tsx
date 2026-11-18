@@ -988,6 +988,7 @@ function GestaoPonto() {
                 }))}
                 value={confFilters.userId || null}
                 onChange={(id: string) => setConfFilters((f) => ({ ...f, userId: id || "" }))}
+                clearable
                 placeholder="Escolha o funcionário"
                 ariaLabel="Funcionário da conferência"
               />
@@ -1061,6 +1062,7 @@ function GestaoPonto() {
                 }))}
                 value={filters.userId === "all" ? null : filters.userId}
                 onChange={(id: string) => onFilterChange("userId", id || "all")}
+                clearable
                 placeholder="Todos"
                 ariaLabel="Filtrar por funcionário"
               />

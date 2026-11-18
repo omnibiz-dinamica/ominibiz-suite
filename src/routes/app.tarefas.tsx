@@ -1278,6 +1278,15 @@ function TasksPage() {
                 void showSavedTasks(qc, editing.company_id, saved);
               }}
               documentsSlot={<TaskDocuments taskId={editing.id} companyId={editing.company_id} canManage={isManager} />}
+              onEditSeries={
+                editing.recurrence_id
+                  ? () => {
+                      const row = editing;
+                      setEditing(null);
+                      setEditingSeries(row);
+                    }
+                  : undefined
+              }
             />
           )}
         </DialogContent>

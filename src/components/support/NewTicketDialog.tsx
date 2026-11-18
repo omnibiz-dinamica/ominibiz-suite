@@ -53,6 +53,7 @@ import { SimilarTicketsDialog } from "@/components/support/SimilarTicketsDialog"
 import {
   DESTINATION_EMOJI,
   destinationIcon,
+  destinationsForCompany,
   fetchSupportDestinations,
   supportDestinationsQueryKey,
 } from "@/lib/support/destinations";
@@ -313,7 +314,7 @@ export function NewTicketDialog({
                 <div className="text-sm text-muted-foreground">Carregando destinos…</div>
               ) : (
                 <div className="grid gap-2 sm:grid-cols-3">
-                  {destinations.map((d) => {
+                  {destinationsForCompany(destinations, currentCompanyId).map((d) => {
                     const Icon = destinationIcon(d.icon);
                     const active = destinationCode === d.code;
                     return (

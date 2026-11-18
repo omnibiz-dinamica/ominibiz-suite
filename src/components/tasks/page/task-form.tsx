@@ -34,7 +34,7 @@ import { toast } from "sonner";
 import { fetchClientSchedule, slotsForDate, nextDateForSchedule, describeSlot, chosenScheduleDateWarning, editScheduleName, savedScheduleSlotId, slotTimesForTeam, teamStartTimeFor, type ClientScheduleSlot } from "@/lib/tasks/client-schedule";
 import { clientTeamType } from "@/lib/tasks/client-team";
 import { addWallMinutes, resolveWallEndDate, distributeContractedMinutes, formatContractedMinutes } from "@/lib/tasks/contracted-hours";
-import { X, Upload, FileText, Search, AlertTriangle, Check, ChevronDown } from "lucide-react";
+import { X, Upload, FileText, Search, AlertTriangle, Check, ChevronDown, Repeat } from "lucide-react";
 import { PUNCH_MODE_LABELS, type TaskRow, type PunchMode, checkTaskScheduleConflicts, type TaskScheduleConflict, previewRecurrenceDates } from "@/lib/tasks";
 
 import { RecurrenceForm, emptyRecurrence, type RecurrenceFormValue } from "@/components/tasks/RecurrenceForm";
@@ -100,6 +100,7 @@ export function TaskForm({
   onCancel,
   onDone,
   documentsSlot,
+  onEditSeries,
   draftValues = null,
   draftSavedAt = null,
   draftConflict = false,
@@ -128,6 +129,8 @@ export function TaskForm({
   /** Recebe o que foi gravado para a lista mostrar já, sem esperar a releitura completa. */
   onDone: (saved?: SavedTasksResult) => void;
   documentsSlot?: ReactNode;
+  /** SUP-318: tarefa de série — abre "Editar série" (esta e as futuras). */
+  onEditSeries?: () => void;
   draftValues?: TaskFormDraft | null;
   draftSavedAt?: number | null;
   draftConflict?: boolean;
@@ -663,6 +666,22 @@ export function TaskForm({
   return (
     <>
       <ModalBody className="space-y-4" data-modal-body>
+        {initial?.recurrence_id && (
+          <div
+            className="flex flex-col gap-2 rounded-md border border-primary/30 bg-primary/5 p-3 text-xs sm:flex-row sm:items-center sm:justify-between"
+            data-testid="series-occurrence-note"
+          >
+            <span>
+              Esta tarefa faz parte de uma série. Aqui altera <strong>só esta data</strong>; as outras
+              ficam como estão.
+            </span>
+            {onEditSeries && (
+              <Button type="button" size="sm" variant="outline" onClick={onEditSeries}>
+                <Repeat className="h-3.5 w-3.5" /> Alterar esta e as futuras
+              </Button>
+            )}
+          </div>
+        )}
         {draftSavedAt !== null && (
           <DraftNotice
             savedAt={draftSavedAt}

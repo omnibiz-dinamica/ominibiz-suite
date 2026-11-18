@@ -53,7 +53,8 @@ export function EditRecurrenceDialog({
 }) {
   const fromTask = task ?? null;
   const allowThis = !!fromTask;
-  const [scope, setScope] = useState<ReassignScope>(allowThis ? "this" : "future");
+  // SUP-318: aberto por "Editar série" → por omissão "Esta e todas as futuras".
+  const [scope, setScope] = useState<ReassignScope>("future");
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<Priority>("media");
   const [assignedTo, setAssignedTo] = useState<string>("");
@@ -151,7 +152,7 @@ export function EditRecurrenceDialog({
   // Valores iniciais derivados do registo (linha de base do rascunho).
   const initialValues = (): RecurrenceEditDraft => {
     const v: RecurrenceEditDraft = {
-      scope: allowThis ? "this" : "future",
+      scope: "future",
       title,
       priority,
       assignedTo,
@@ -352,10 +353,15 @@ export function EditRecurrenceDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {allowThis && <SelectItem value="this">Apenas esta ocorrência</SelectItem>}
                 <SelectItem value="future">Esta e todas as futuras</SelectItem>
+                {allowThis && <SelectItem value="this">Apenas esta ocorrência</SelectItem>}
               </SelectContent>
             </Select>
+            <p className="text-[11px] text-muted-foreground" data-testid="recurrence-scope-hint">
+              {scope === "this"
+                ? "Só esta tarefa muda; a série e as outras datas ficam como estão."
+                : "A série muda a partir desta tarefa: esta e as datas seguintes passam a ter os novos dados."}
+            </p>
           </div>
 
           <div className="space-y-1.5">
@@ -400,12 +406,29 @@ export function EditRecurrenceDialog({
             {scope === "this" ? (
               <div className="space-y-1.5 col-span-2">
                 <Label>Data/hora</Label>
-                <Input type="datetime-local" value={scheduledFor} onChange={(e) => setScheduledFor(e.target.value)} />
+                <Input
+                  type="datetime-local"
+                  value={scheduledFor}
+                  onChange={(e) => {
+                    setScheduledFor(e.target.value);
+                    // SUP-318: a hora escolhida segue para o campo da série se mudar o âmbito.
+                    if (/T\d{2}:\d{2}/.test(e.target.value)) setScheduledTime(e.target.value.slice(11, 16));
+                  }}
+                />
               </div>
             ) : (
               <div className="space-y-1.5">
                 <Label>Horário</Label>
-                <Input type="time" value={scheduledTime} onChange={(e) => setScheduledTime(e.target.value)} />
+                <Input
+                  type="time"
+                  value={scheduledTime}
+                  onChange={(e) => {
+                    setScheduledTime(e.target.value);
+                    // SUP-318: mantém a hora igual se voltar a "Apenas esta ocorrência".
+                    if (scheduledFor.length >= 16 && /^\d{2}:\d{2}$/.test(e.target.value))
+                      setScheduledFor(`${scheduledFor.slice(0, 11)}${e.target.value}`);
+                  }}
+                />
               </div>
             )}
             <div className="space-y-1.5">
@@ -451,7 +474,11 @@ export function EditRecurrenceDialog({
             Cancelar
           </Button>
           <Button disabled={saving || !title.trim() || !assignedTo} onClick={() => void submit()}>
-            {saving ? "Salvando..." : "Salvar alterações"}
+            {saving
+              ? "Salvando..."
+              : scope === "this"
+                ? "Salvar só esta ocorrência"
+                : "Salvar esta e as futuras"}
           </Button>
         </ModalFooter>
         <AlertDialog

@@ -57,6 +57,8 @@ type TicketRow = {
   archived_at: string | null;
   created_at: string;
   updated_at: string;
+  requester_user_id?: string | null;
+  created_by_role?: string | null;
 };
 
 function SupportRouteContent() {
@@ -96,7 +98,7 @@ function SupportListPage() {
       let query = supabase
         .from("support_tickets")
         .select(
-          "id, ticket_number, company_id, destination_code, type, priority, status, title, archived_at, created_at, updated_at",
+          "id, ticket_number, company_id, destination_code, type, priority, status, title, archived_at, created_at, updated_at, requester_user_id, created_by_role",
         )
         .order("created_at", { ascending: false })
         .limit(200);
@@ -113,6 +115,33 @@ function SupportListPage() {
     },
   });
 
+
+  // SUP-205: nome de quem abriu cada ticket (como nas Notificações).
+  const requesterIds = useMemo(
+    () => [...new Set(tickets.map((t) => t.requester_user_id).filter(Boolean) as string[])].sort(),
+    [tickets],
+  );
+  const requestersQ = useQuery({
+    queryKey: ["support-ticket-requesters", currentCompanyId, requesterIds],
+    enabled: requesterIds.length > 0,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", requesterIds);
+      if (error) throw error;
+      return Object.fromEntries(
+        (data ?? []).map((p) => [p.id, (p.full_name ?? "").trim()]),
+      ) as Record<string, string>;
+    },
+  });
+  const requesterName = (t: TicketRow): string | null => {
+    const name = t.requester_user_id ? requestersQ.data?.[t.requester_user_id] : null;
+    if (name) return name;
+    if (t.created_by_role === "super_admin") return "Suporte OmniBiz";
+    return null;
+  };
 
   useRealtimeInvalidate({
     channel: "support",
@@ -251,6 +280,11 @@ function SupportListPage() {
                     </span>
                   </div>
                   <div className="mt-1 truncate text-sm font-medium">{t.title}</div>
+                  {requesterName(t) && (
+                    <div className="mt-0.5 truncate text-xs text-muted-foreground" data-testid="ticket-requester">
+                      Aberto por {requesterName(t)}
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <MessageCircle className="h-3.5 w-3.5" />
