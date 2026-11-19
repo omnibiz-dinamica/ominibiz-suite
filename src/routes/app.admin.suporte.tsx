@@ -29,6 +29,7 @@ import {
   supportSortDescription,
   type SupportSortOrder,
 } from "@/lib/support/sort";
+import { ticketMatchesSearch } from "@/lib/support/search";
 import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
 import { invalidateSupportCache } from "@/lib/cache/support";
 import { DuplicateClustersPanel } from "@/components/support/DuplicateClustersPanel";
@@ -64,6 +65,8 @@ type Row = {
   resolved_at: string | null;
   created_at: string;
   updated_at: string;
+  requester_user_id?: string | null;
+  created_by_role?: string | null;
   companies: { name: string } | null;
 };
 
@@ -98,7 +101,7 @@ function SupportAdminPage() {
       let query = supabase
         .from("support_tickets")
         .select(
-          "id, ticket_number, company_id, destination_code, type, priority, status, title, description, module, first_response_at, resolved_at, created_at, updated_at, companies(name)",
+          "id, ticket_number, company_id, destination_code, type, priority, status, title, description, module, first_response_at, resolved_at, created_at, updated_at, requester_user_id, created_by_role, companies(name)",
         )
         .order("created_at", { ascending: false })
         .limit(1000);
@@ -178,22 +181,51 @@ function SupportAdminPage() {
       });
   }, [companies, data]);
 
+  // SUP-337: nome de quem abriu cada ticket (para mostrar e pesquisar).
+  const requesterIds = useMemo(
+    () => [...new Set(data.map((t) => t.requester_user_id).filter(Boolean) as string[])].sort(),
+    [data],
+  );
+  const requestersQ = useQuery({
+    queryKey: ["support-admin-requesters", requesterIds],
+    enabled: requesterIds.length > 0,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const names: Record<string, string> = {};
+      // em blocos, para não passar o tamanho máximo do pedido
+      for (let i = 0; i < requesterIds.length; i += 200) {
+        const { data: rows, error } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", requesterIds.slice(i, i + 200));
+        if (error) throw error;
+        for (const p of rows ?? []) names[p.id] = (p.full_name ?? "").trim();
+      }
+      return names;
+    },
+  });
+  const requesterName = (t: Row): string | null => {
+    const name = t.requester_user_id ? requestersQ.data?.[t.requester_user_id] : null;
+    if (name) return name;
+    if (t.created_by_role === "super_admin") return "Suporte OmniBiz";
+    return null;
+  };
+
   const filtered = useMemo(() => {
+    // SUP-337: número, título, descrição, empresa ou pessoa que abriu (sem acentos).
     const arr = q.trim()
-      ? data.filter((t) => {
-          const lower = q.trim().toLowerCase();
-          return (
-            t.title.toLowerCase().includes(lower) ||
-            t.ticket_number.toLowerCase().includes(lower) ||
-            (t.description?.toLowerCase().includes(lower) ?? false) ||
-            (t.companies?.name?.toLowerCase().includes(lower) ?? false)
-          );
-        })
+      ? data.filter((t) =>
+          ticketMatchesSearch(
+            [t.title, t.ticket_number, t.description, t.companies?.name, requesterName(t)],
+            q,
+          ),
+        )
       : data;
 
     // Ordenação escolhida no seletor "Ordenar" (padrão: mais recentes).
     return sortSupportTickets(arr, sortOrder);
-  }, [data, q, sortOrder]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, q, sortOrder, requestersQ.data]);
 
   const kpis = useMemo(() => {
     const now = Date.now();
@@ -404,7 +436,7 @@ function SupportAdminPage() {
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Buscar por número, título, descrição ou empresa"
+          placeholder="Buscar por número, título, descrição, empresa ou pessoa"
           className="max-w-md"
         />
         <Select value={status || "all"} onValueChange={(v) => setStatus(v === "all" ? "" : (v as SupportTicketStatus))}>
@@ -550,6 +582,14 @@ function SupportAdminPage() {
                     )}
                   </div>
                   <div className="mt-1 truncate text-sm font-medium">{t.title}</div>
+                  {requesterName(t) && (
+                    <div
+                      className="mt-0.5 truncate text-xs text-muted-foreground"
+                      data-testid="ticket-requester"
+                    >
+                      Aberto por {requesterName(t)}
+                    </div>
+                  )}
                 </div>
                 <div className="flex shrink-0 items-start gap-2 text-xs text-muted-foreground sm:text-right">
                   <MessageCircle className="mt-0.5 h-3.5 w-3.5" />

@@ -28,6 +28,7 @@ import {
   sortSupportTickets,
   type SupportSortOrder,
 } from "@/lib/support/sort";
+import { ticketMatchesSearch } from "@/lib/support/search";
 import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
 import { invalidateSupportCache } from "@/lib/cache/support";
 import {
@@ -152,15 +153,13 @@ function SupportListPage() {
   });
 
   const filtered = useMemo(() => {
-    const lower = q.trim().toLowerCase();
-    const found = lower
-      ? tickets.filter(
-          (t) =>
-            t.title.toLowerCase().includes(lower) || t.ticket_number.toLowerCase().includes(lower),
-        )
+    // SUP-337: título, número ou pessoa que abriu (sem acentos).
+    const found = q.trim()
+      ? tickets.filter((t) => ticketMatchesSearch([t.title, t.ticket_number, requesterName(t)], q))
       : tickets;
     return sortSupportTickets(found, sortOrder);
-  }, [tickets, q, sortOrder]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tickets, q, sortOrder, requestersQ.data]);
 
   return (
     <div className="space-y-6">
@@ -187,7 +186,7 @@ function SupportListPage() {
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Buscar por título ou número (SUP-…)"
+          placeholder="Buscar por título, número (SUP-…) ou pessoa"
           className="max-w-sm"
         />
         <Select
