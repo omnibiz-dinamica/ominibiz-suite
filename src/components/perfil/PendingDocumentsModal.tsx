@@ -486,7 +486,12 @@ function SignStep({
     }
     setSaving(kind);
     try {
-      await saveSignatureToProfile(kind, doc.company_id, doc.profile_id, pad.toDataURL("image/png"));
+      await saveSignatureToProfile(
+        kind,
+        doc.company_id,
+        doc.profile_id,
+        pad.toDataURL("image/png"),
+      );
       await profile.refetch();
       if (kind === "signature") setDraw(false);
       else setDrawVisto(false);
@@ -548,209 +553,233 @@ function SignStep({
   };
 
   return (
-    <div className="min-h-0 space-y-3 overflow-y-auto">
-      {(profile.isLoading || layout.isLoading) && (
-        <p className="py-6 text-center text-sm text-muted-foreground">
-          <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />A preparar a assinatura…
-        </p>
-      )}
-      {profile.isError && (
-        <p className="py-6 text-center text-sm text-destructive">
-          Não foi possível carregar a sua assinatura.
-        </p>
-      )}
-      {layout.isError && (
-        <p className="py-6 text-center text-sm text-destructive">
-          Não foi possível abrir este PDF para assinar (protegido ou danificado). Peça ao gestor
-          outra versão.
-        </p>
-      )}
-
-      {layout.data && placement && (
-        <div className="space-y-2 rounded-xl border border-border p-3">
-          <p className="text-sm font-medium">Onde vai a assinatura</p>
-          {placement.found === "fallback" && !placeChosen ? (
-            <p
-              className="rounded-md border border-warning/40 bg-warning/10 px-2 py-1 text-xs"
-              data-testid="signature-place-required"
-            >
-              Não encontrámos o lugar da assinatura neste documento (por exemplo, PDF digitalizado).
-              Vá à página certa e toque no sítio onde quer assinar.
-            </p>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              Para mudar, toque noutro sítio da página ou mude de página.
-            </p>
-          )}
-          <SignaturePlacementPicker
-            pdf={pdf}
-            pages={layout.data.pages}
-            placement={placement}
-            aspect={3}
-            onChange={(p) => {
-              setPlacement(p);
-              setPlaceChosen(true);
-            }}
-          />
-        </div>
-      )}
-
-      {profile.isSuccess && !showPad && (
-        <div className="space-y-2 rounded-xl border border-border p-3">
-          <p className="flex items-center gap-1 text-sm">
-            <CheckCircle2 className="h-4 w-4 text-success" /> 1. Assinatura guardada:
+    // 19/11/2026: só o conteúdo rola; os botões ficam SEMPRE visíveis em baixo
+    // (no telemóvel, as áreas de desenho e a página do PDF prendem o dedo e o
+    // botão do fim ficava inalcançável).
+    <div className="flex min-h-0 flex-1 flex-col gap-3" data-testid="sign-step">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pr-1">
+        {(profile.isLoading || layout.isLoading) && (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />A preparar a assinatura…
           </p>
-          {profile.data.preview ? (
-            <img
-              src={profile.data.preview}
-              alt="A sua assinatura"
-              className="h-16 rounded-md border border-border bg-white object-contain px-2"
-            />
-          ) : null}
-          <button type="button" className="text-xs text-primary underline" onClick={() => setDraw(true)}>
-            Desenhar outra
-          </button>
-        </div>
-      )}
-      {showPad && (
-        <div className="space-y-2" data-testid="signature-pad">
-          <p className="text-sm font-medium">
-            {hasSaved
-              ? "1. Desenhe a nova assinatura e guarde:"
-              : "1. Ainda não tem assinatura guardada. Desenhe-a aqui e clique em Guardar assinatura:"}
+        )}
+        {profile.isError && (
+          <p className="py-6 text-center text-sm text-destructive">
+            Não foi possível carregar a sua assinatura.
           </p>
-          <canvas
-            ref={sig.canvasRef}
-            className="h-32 w-full touch-none rounded-md border border-dashed border-border bg-white"
-            aria-label="Área para desenhar a assinatura"
-          />
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => sig.padRef.current?.clear()}
-            >
-              <Eraser className="h-4 w-4" /> Limpar
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              data-testid="save-signature"
-              disabled={saving !== null}
-              onClick={() => void saveDrawn("signature")}
-            >
-              {saving === "signature" ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4" />
-              )}
-              Guardar assinatura
-            </Button>
-            {hasSaved && (
-              <Button type="button" size="sm" variant="ghost" onClick={() => setDraw(false)}>
-                Cancelar
-              </Button>
+        )}
+        {layout.isError && (
+          <p className="py-6 text-center text-sm text-destructive">
+            Não foi possível abrir este PDF para assinar (protegido ou danificado). Peça ao gestor
+            outra versão.
+          </p>
+        )}
+
+        {layout.data && placement && (
+          <div className="space-y-2 rounded-xl border border-border p-3">
+            <p className="text-sm font-medium">Onde vai a assinatura</p>
+            {placement.found === "fallback" && !placeChosen ? (
+              <p
+                className="rounded-md border border-warning/40 bg-warning/10 px-2 py-1 text-xs"
+                data-testid="signature-place-required"
+              >
+                Não encontrámos o lugar da assinatura neste documento (por exemplo, PDF
+                digitalizado). Vá à página certa e toque no sítio onde quer assinar.
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Para mudar, toque noutro sítio da página ou mude de página.
+              </p>
             )}
-          </div>
-        </div>
-      )}
-
-      {profile.isSuccess && !showVistoPad && (
-        <div className="space-y-2 rounded-xl border border-border p-3" data-testid="visto-profile">
-          <p className="flex items-center gap-1 text-sm">
-            <CheckCircle2 className="h-4 w-4 text-success" /> 2. Visto (rubrica) guardado — vai em
-            cada página:
-          </p>
-          {profile.data.vistoPreview ? (
-            <img
-              src={profile.data.vistoPreview}
-              alt="O seu visto"
-              className="h-12 rounded-md border border-border bg-white object-contain px-2"
+            <SignaturePlacementPicker
+              pdf={pdf}
+              pages={layout.data.pages}
+              placement={placement}
+              aspect={3}
+              onChange={(p) => {
+                setPlacement(p);
+                setPlaceChosen(true);
+              }}
             />
-          ) : null}
-          <button
-            type="button"
-            className="text-xs text-primary underline"
-            onClick={() => setDrawVisto(true)}
+          </div>
+        )}
+
+        {profile.isSuccess && !showPad && (
+          <div className="space-y-2 rounded-xl border border-border p-3">
+            <p className="flex items-center gap-1 text-sm">
+              <CheckCircle2 className="h-4 w-4 text-success" /> 1. Assinatura guardada:
+            </p>
+            {profile.data.preview ? (
+              <img
+                src={profile.data.preview}
+                alt="A sua assinatura"
+                className="h-16 rounded-md border border-border bg-white object-contain px-2"
+              />
+            ) : null}
+            <button
+              type="button"
+              className="text-xs text-primary underline"
+              onClick={() => setDraw(true)}
+            >
+              Desenhar outra
+            </button>
+          </div>
+        )}
+        {showPad && (
+          <div className="space-y-2" data-testid="signature-pad">
+            <p className="text-sm font-medium">
+              {hasSaved
+                ? "1. Desenhe a nova assinatura e guarde:"
+                : "1. Ainda não tem assinatura guardada. Desenhe-a aqui e clique em Guardar assinatura:"}
+            </p>
+            <canvas
+              ref={sig.canvasRef}
+              className="h-32 w-full touch-none rounded-md border border-dashed border-border bg-white"
+              aria-label="Área para desenhar a assinatura"
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => sig.padRef.current?.clear()}
+              >
+                <Eraser className="h-4 w-4" /> Limpar
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                data-testid="save-signature"
+                disabled={saving !== null}
+                onClick={() => void saveDrawn("signature")}
+              >
+                {saving === "signature" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                Guardar assinatura
+              </Button>
+              {hasSaved && (
+                <Button type="button" size="sm" variant="ghost" onClick={() => setDraw(false)}>
+                  Cancelar
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {profile.isSuccess && !showVistoPad && (
+          <div
+            className="space-y-2 rounded-xl border border-border p-3"
+            data-testid="visto-profile"
           >
-            Desenhar outro
-          </button>
-        </div>
-      )}
-      {showVistoPad && (
-        <div className="space-y-2" data-testid="visto-pad">
-          <p className="text-sm font-medium">
-            {hasVisto
-              ? "2. Desenhe o novo visto (rubrica) e guarde:"
-              : "2. Ainda não tem visto guardado. Desenhe a sua rubrica (vai em cada página) e clique em Guardar visto:"}
-          </p>
-          <canvas
-            ref={visto.canvasRef}
-            className="h-24 w-full max-w-xs touch-none rounded-md border border-dashed border-border bg-white"
-            aria-label="Área para desenhar o visto"
-          />
-          <div className="flex flex-wrap gap-2">
-            <Button
+            <p className="flex items-center gap-1 text-sm">
+              <CheckCircle2 className="h-4 w-4 text-success" /> 2. Visto (rubrica) guardado — vai em
+              cada página:
+            </p>
+            {profile.data.vistoPreview ? (
+              <img
+                src={profile.data.vistoPreview}
+                alt="O seu visto"
+                className="h-12 rounded-md border border-border bg-white object-contain px-2"
+              />
+            ) : null}
+            <button
               type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => visto.padRef.current?.clear()}
+              className="text-xs text-primary underline"
+              onClick={() => setDrawVisto(true)}
             >
-              <Eraser className="h-4 w-4" /> Limpar
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              data-testid="save-visto"
-              disabled={saving !== null}
-              onClick={() => void saveDrawn("initials")}
-            >
-              {saving === "initials" ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4" />
-              )}
-              Guardar visto
-            </Button>
-            {hasVisto && (
-              <Button type="button" size="sm" variant="ghost" onClick={() => setDrawVisto(false)}>
-                Cancelar
-              </Button>
-            )}
+              Desenhar outro
+            </button>
           </div>
-        </div>
-      )}
+        )}
+        {showVistoPad && (
+          <div className="space-y-2" data-testid="visto-pad">
+            <p className="text-sm font-medium">
+              {hasVisto
+                ? "2. Desenhe o novo visto (rubrica) e guarde:"
+                : "2. Ainda não tem visto guardado. Desenhe a sua rubrica (vai em cada página) e clique em Guardar visto:"}
+            </p>
+            <canvas
+              ref={visto.canvasRef}
+              className="h-24 w-full max-w-xs touch-none rounded-md border border-dashed border-border bg-white"
+              aria-label="Área para desenhar o visto"
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => visto.padRef.current?.clear()}
+              >
+                <Eraser className="h-4 w-4" /> Limpar
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                data-testid="save-visto"
+                disabled={saving !== null}
+                onClick={() => void saveDrawn("initials")}
+              >
+                {saving === "initials" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                Guardar visto
+              </Button>
+              {hasVisto && (
+                <Button type="button" size="sm" variant="ghost" onClick={() => setDrawVisto(false)}>
+                  Cancelar
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
 
-      <p className="text-xs text-muted-foreground">
-        A assinatura vai no sítio escolhido e o visto no canto inferior de cada página. É guardada
-        uma cópia assinada; o original não é alterado.
-      </p>
-      {profile.isSuccess && !readyToSend && (
-        <p className="text-xs font-medium text-warning-foreground" data-testid="send-signature-hint">
-          Guarde a assinatura e o visto para poder enviar.
+        <p className="text-xs text-muted-foreground">
+          A assinatura vai no sítio escolhido e o visto no canto inferior de cada página. É guardada
+          uma cópia assinada; o original não é alterado.
         </p>
-      )}
-      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-        <Button variant="ghost" onClick={onBack} disabled={busy}>
-          Voltar
-        </Button>
-        <Button
-          data-testid="send-signature"
-          disabled={
-            busy ||
-            saving !== null ||
-            !profile.isSuccess ||
-            !layout.isSuccess ||
-            !placeChosen ||
-            !readyToSend
-          }
-          title={readyToSend ? undefined : "Guarde primeiro a assinatura e o visto"}
-          onClick={() => void run()}
-        >
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSignature className="h-4 w-4" />}
-          {busy ? "A enviar…" : "3. Enviar assinatura"}
-        </Button>
+      </div>
+      <div
+        className="shrink-0 space-y-2 border-t border-border pt-3"
+        data-testid="sign-step-actions"
+      >
+        {profile.isSuccess && !readyToSend && (
+          <p
+            className="text-xs font-medium text-warning-foreground"
+            data-testid="send-signature-hint"
+          >
+            Guarde a assinatura e o visto para poder enviar.
+          </p>
+        )}
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button variant="ghost" onClick={onBack} disabled={busy}>
+            Voltar
+          </Button>
+          <Button
+            data-testid="send-signature"
+            disabled={
+              busy ||
+              saving !== null ||
+              !profile.isSuccess ||
+              !layout.isSuccess ||
+              !placeChosen ||
+              !readyToSend
+            }
+            title={readyToSend ? undefined : "Guarde primeiro a assinatura e o visto"}
+            onClick={() => void run()}
+          >
+            {busy ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <FileSignature className="h-4 w-4" />
+            )}
+            {busy ? "A enviar…" : "3. Enviar assinatura"}
+          </Button>
+        </div>
       </div>
     </div>
   );

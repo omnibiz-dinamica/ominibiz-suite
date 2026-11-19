@@ -24,3 +24,17 @@ describe("Assinar documento sem assinatura guardada: guardar → guardar → env
     expect(modal).toContain("3. Enviar assinatura");
   });
 });
+
+describe("botões de assinar sempre visíveis (telemóvel)", () => {
+  test("conteúdo rola; botões ficam fixos em baixo", () => {
+    const modal = readFileSync("src/components/perfil/PendingDocumentsModal.tsx", "utf8");
+    expect(modal).toContain('data-testid="sign-step"');
+    expect(modal).toContain(
+      'className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pr-1"',
+    );
+    expect(modal).toContain('data-testid="sign-step-actions"');
+    const actions = modal.indexOf('data-testid="sign-step-actions"');
+    expect(modal.indexOf('data-testid="send-signature"')).toBeGreaterThan(actions);
+    expect(modal.indexOf('data-testid="signature-pad"')).toBeLessThan(actions);
+  });
+});

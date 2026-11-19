@@ -117,7 +117,7 @@ export function SignaturePlacementPicker({
       </div>
       <div
         ref={hostRef}
-        className="max-h-[45vh] overflow-y-auto rounded-md border border-border bg-muted/30"
+        className="max-h-[32vh] overflow-y-auto rounded-md sm:max-h-[45vh] border border-border bg-muted/30"
       >
         <div className="relative mx-auto w-fit cursor-crosshair" onClick={onTap}>
           <canvas ref={canvasRef} className="block bg-white" />
