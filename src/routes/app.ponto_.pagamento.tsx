@@ -8,7 +8,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, Minus, Plus, Printer, Search, Wallet, X } from "lucide-react";
+import { Download, Minus, Plus, Printer, Receipt, Search, Wallet, X } from "lucide-react";
 import { toast } from "sonner";
 import { RoleGuard } from "@/components/RoleGuard";
 import { useAuth } from "@/lib/auth";
@@ -41,10 +41,15 @@ import {
 import { missingEmployeeRate } from "@/lib/ponto/day-type-summary";
 import {
   addAdjustment,
+  attachExpenses,
+  detachExpense,
+  expenseInclusion,
   extraRows,
   fetchPaymentSummary,
   formatMoney,
+  nextMonthOf,
   paymentSummaryCsv,
+  periodLabel,
   setAdvance,
   voidAdjustment,
   workRows,
@@ -106,6 +111,24 @@ function PaymentSummaryPage() {
 
   const refresh = () => qc.invalidateQueries({ queryKey: ["payment-summary"] });
 
+  // SUP-301: despesas "Aguarda pagamento" ainda por incluir neste mês (todos).
+  const pendingExpenses = (q.data?.employees ?? []).reduce(
+    (n, e) => n + expenseInclusion(e).pending.length,
+    0,
+  );
+  const attachAll = useMutation({
+    mutationFn: () => attachExpenses({ companyId: currentCompanyId!, year, month }),
+    onSuccess: (n) => {
+      toast.success(
+        n > 0
+          ? `${n} despesa(s) incluída(s) no pagamento de ${periodLabel(year, month)}.`
+          : "Não havia despesas por incluir.",
+      );
+      void refresh();
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   const exportCsv = () => {
     if (!q.data) return;
     const blob = new Blob([paymentSummaryCsv(q.data, employees)], {
@@ -138,6 +161,16 @@ function PaymentSummaryPage() {
             disabled={!employees.length}
           >
             <Printer className="mr-1 h-4 w-4" /> Imprimir
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            data-testid="attach-all-expenses"
+            onClick={() => attachAll.mutate()}
+            disabled={!currentCompanyId || pendingExpenses === 0 || attachAll.isPending}
+            title="Inclui neste mês as despesas em Aguarda pagamento; em Despesas fica a indicação do mês"
+          >
+            <Receipt className="mr-1 h-4 w-4" /> Incluir despesas ({pendingExpenses})
           </Button>
           <Button variant="outline" size="sm" onClick={exportCsv} disabled={!employees.length}>
             <Download className="mr-1 h-4 w-4" /> Exportar (Excel)
@@ -253,6 +286,9 @@ function PaymentSummaryPage() {
                 onAdvance={() => setAdvanceFor(e)}
                 onAdjust={() => setAdjustFor(e)}
                 onChanged={refresh}
+                companyId={currentCompanyId ?? ""}
+                year={year}
+                month={month}
               />
             ))}
           </div>
@@ -289,13 +325,36 @@ function EmployeeCard({
   onAdvance,
   onAdjust,
   onChanged,
+  companyId,
+  year,
+  month,
 }: {
   e: PaymentEmployee;
   currency: string;
   onAdvance: () => void;
   onAdjust: () => void;
   onChanged: () => void;
+  companyId: string;
+  year: number;
+  month: number;
 }) {
+  const inclusion = expenseInclusion(e);
+  const attachOne = useMutation({
+    mutationFn: () => attachExpenses({ companyId, year, month, employeeId: e.employee_id }),
+    onSuccess: (n) => {
+      toast.success(`${n} despesa(s) incluída(s) no pagamento de ${periodLabel(year, month)}.`);
+      onChanged();
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+  const detach = useMutation({
+    mutationFn: (id: string) => detachExpense(id, "Retirada no resumo para pagamento"),
+    onSuccess: () => {
+      toast.success("Despesa retirada deste mês");
+      onChanged();
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
   const rows = [...workRows(e), ...extraRows(e)];
   const missing = missingEmployeeRate(e.by_client);
   const removeAdj = useMutation({
@@ -396,6 +455,54 @@ function EmployeeCard({
           </tr>
         </tbody>
       </table>
+      {e.expenses.length > 0 && (
+        <div className="mt-3 rounded-lg border border-border p-2" data-testid="payment-expenses">
+          <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs font-semibold uppercase text-muted-foreground">
+              Despesas ({e.expenses.length})
+            </span>
+            {inclusion.pending.length > 0 && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 print:hidden"
+                disabled={!companyId || attachOne.isPending}
+                onClick={() => attachOne.mutate()}
+              >
+                <Receipt className="mr-1 h-3.5 w-3.5" /> Incluir neste mês
+              </Button>
+            )}
+          </div>
+          <ul className="space-y-1 text-xs">
+            {e.expenses.map((x) => (
+              <li key={x.id} className="flex flex-wrap items-center gap-2">
+                <span className="tabular-nums text-muted-foreground">
+                  {x.date ? `${x.date.slice(8, 10)}/${x.date.slice(5, 7)}` : "—"}
+                </span>
+                <span className="min-w-0 flex-1 break-words">{x.reason || "Despesa"}</span>
+                <span className="tabular-nums">{formatMoney(x.amount, currency)}</span>
+                <span
+                  className={`rounded-full px-2 py-0.5 ${x.attached ? "bg-success/15 text-success" : "bg-warning/15 text-warning-foreground"}`}
+                >
+                  {x.attached ? `Incluída em ${periodLabel(year, month)}` : "Por incluir"}
+                </span>
+                {x.attached && (
+                  <button
+                    type="button"
+                    className="text-muted-foreground hover:text-destructive print:hidden"
+                    title="Retirar deste mês (não se já estiver paga)"
+                    aria-label="Retirar despesa deste mês"
+                    disabled={detach.isPending}
+                    onClick={() => detach.mutate(x.id)}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <div className="mt-3 flex flex-wrap gap-2 print:hidden">
         <Button size="sm" variant="outline" onClick={onAdvance}>
           <Wallet className="mr-1 h-3.5 w-3.5" /> Avanço
@@ -498,6 +605,11 @@ function AdjustmentDialog({
   const [amount, setAmount] = useState("");
   const [label, setLabel] = useState("");
   const [reason, setReason] = useState("");
+  // SUP-301: "transitar" — lançar já no mês seguinte (ex.: pagou-se a mais em setembro).
+  const next = nextMonthOf(year, month);
+  const [target, setTarget] = useState<"this" | "next">("this");
+  const targetYear = target === "next" ? next.year : year;
+  const targetMonth = target === "next" ? next.month : month;
   const value = Number(amount.replace(",", "."));
   const valid = Number.isFinite(value) && value > 0 && reason.trim().length > 0;
   const save = useMutation({
@@ -505,15 +617,17 @@ function AdjustmentDialog({
       addAdjustment({
         companyId,
         employeeId: e.employee_id,
-        year,
-        month,
+        year: targetYear,
+        month: targetMonth,
         kind,
         amount: value,
         reason,
         label,
       }),
     onSuccess: () => {
-      toast.success(kind === "desconto" ? "Desconto registado" : "Acréscimo registado");
+      toast.success(
+        `${kind === "desconto" ? "Desconto registado" : "Acréscimo registado"} em ${monthLabel(targetMonth, targetYear)}`,
+      );
       onDone();
       onClose();
     },
@@ -525,7 +639,7 @@ function AdjustmentDialog({
         <DialogHeader>
           <DialogTitle>Acréscimo ou desconto · {e.full_name}</DialogTitle>
           <DialogDescription>
-            Entra no total deste mês e fica registado no histórico.
+            Entra no total do mês escolhido e fica registado no histórico.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
@@ -546,6 +660,20 @@ function AdjustmentDialog({
             >
               <Plus className="mr-1 h-3.5 w-3.5" /> Acréscimo
             </Button>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Aplicar em</Label>
+            <Select value={target} onValueChange={(v) => setTarget(v as "this" | "next")}>
+              <SelectTrigger data-testid="adj-target">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="this">Este mês · {monthLabel(month, year)}</SelectItem>
+                <SelectItem value="next">
+                  Mês seguinte · {monthLabel(next.month, next.year)} (transitar)
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="adj-label">Nome curto (aparece no resumo)</Label>

@@ -492,6 +492,17 @@ function Closing() {
         onClose={() => setViewing(null)}
         canEdit
         onChanged={invalidate}
+        onCloseSheet={async (r) => {
+          try {
+            await closePeriod(r.period_id);
+            invalidate();
+            toast.success(`Folha de ${r.employee_name ?? "funcionário"} fechada.`);
+            return true;
+          } catch (e) {
+            toast.error((e as Error).message);
+            return false;
+          }
+        }}
       />
     </div>
   );

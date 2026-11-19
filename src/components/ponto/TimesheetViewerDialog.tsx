@@ -9,7 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { TimesheetCorrectionEditor } from "@/components/ponto/TimesheetCorrectionEditor";
 import { Dialog, DialogContent, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, FileText, Pencil, Printer } from "lucide-react";
+import { Download, FileText, Loader2, Lock, Pencil, Printer } from "lucide-react";
 import {
   TIMESHEET_STATUS_LABEL,
   buildSnapshot,
@@ -26,6 +26,7 @@ import { resolveVersionSignature, signatureNotice } from "@/lib/timesheet-signat
 import { withLiveExtras } from "@/lib/timesheet-view";
 import { TimesheetClosingTable } from "@/components/ponto/TimesheetClosingTable";
 import { isClosingLocked } from "@/lib/ponto/closing-table";
+import { closingNextStep } from "@/lib/ponto/closing-steps";
 import { toast } from "sonner";
 import { dayTypeRows, holidayLabels, missingEmployeeRate } from "@/lib/ponto/day-type-summary";
 
@@ -37,6 +38,7 @@ export function TimesheetViewerDialog({
   onClose,
   canEdit = false,
   onChanged,
+  onCloseSheet,
 }: {
   row: TimesheetListRow | null;
   companyId: string;
@@ -47,8 +49,15 @@ export function TimesheetViewerDialog({
   canEdit?: boolean;
   /** Depois de gravar uma correção (ex.: atualizar a lista). */
   onChanged?: () => void;
+  /**
+   * SUP-300 (19/11/2026): fechar a folha sem sair do "Ver" (corrigir e fechar
+   * no mesmo sítio). Só aparece quando o passo do fecho o permite; o banco
+   * continua a validar (timesheet_manager_close só depois de assinado).
+   */
+  onCloseSheet?: (row: TimesheetListRow) => Promise<boolean>;
 }) {
   const [editing, setEditing] = useState(false);
+  const [closing, setClosing] = useState(false);
   // Depois de uma correção numa folha assinada há uma versão nova: mostra essa.
   const [versionOverride, setVersionOverride] = useState<{
     period: string;
@@ -290,6 +299,33 @@ export function TimesheetViewerDialog({
           )}
         </ModalBody>
         <ModalFooter>
+          {onCloseSheet && row && (
+            <Button
+              variant="default"
+              data-testid="viewer-close-sheet"
+              disabled={closing || editing || !closingNextStep(row.status).canClose}
+              title={
+                closingNextStep(row.status).canClose
+                  ? "Fechar a folha assinada"
+                  : `Ainda não pode fechar · ${closingNextStep(row.status).next}`
+              }
+              onClick={async () => {
+                setClosing(true);
+                try {
+                  if (await onCloseSheet(viewRow ?? row)) onClose();
+                } finally {
+                  setClosing(false);
+                }
+              }}
+            >
+              {closing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Lock className="h-4 w-4" />
+              )}{" "}
+              Fechar folha
+            </Button>
+          )}
           <Button variant="ghost" onClick={() => exportPdf("print")}>
             <Printer className="h-4 w-4" /> Imprimir
           </Button>

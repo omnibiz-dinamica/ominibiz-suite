@@ -132,6 +132,57 @@ export async function addAdjustment(p: {
   if (error) throw error;
 }
 
+/** Mês seguinte (para transitar um acerto: "pagou-se a mais em setembro"). */
+export function nextMonthOf(year: number, month: number): { year: number; month: number } {
+  return month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
+}
+
+/** "10/2026" */
+export function periodLabel(year: number | null | undefined, month: number | null | undefined) {
+  return year && month ? `${String(month).padStart(2, "0")}/${year}` : "";
+}
+
+/**
+ * SUP-301 (19/11/2026): despesas "Aguarda pagamento" ainda não incluídas
+ * (attached=false) e as já incluídas neste mês.
+ */
+export function expenseInclusion(e: Pick<PaymentEmployee, "expenses">) {
+  const pending = e.expenses.filter((x) => !x.attached);
+  return {
+    pending,
+    attached: e.expenses.filter((x) => x.attached),
+    pendingTotal: pending.reduce((s, x) => s + Number(x.amount ?? 0), 0),
+  };
+}
+
+/** Inclui no pagamento deste mês as despesas "Aguarda pagamento" (todos ou um funcionário). */
+export async function attachExpenses(p: {
+  companyId: string;
+  year: number;
+  month: number;
+  employeeId?: string | null;
+}): Promise<number> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("payroll_attach_expenses", {
+    _company_id: p.companyId,
+    _year: p.year,
+    _month: p.month,
+    _employee_id: p.employeeId ?? null,
+  });
+  if (error) throw error;
+  return Number(data ?? 0);
+}
+
+/** Retira a despesa do pagamento do mês (não se já estiver paga — o banco recusa). */
+export async function detachExpense(id: string, reason: string) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase.rpc as any)("payroll_detach_expense", {
+    _expense_id: id,
+    _reason: reason,
+  });
+  if (error) throw error;
+}
+
 export async function voidAdjustment(id: string, reason: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase.rpc as any)("payroll_void_adjustment", {

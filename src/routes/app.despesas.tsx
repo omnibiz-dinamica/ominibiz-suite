@@ -96,6 +96,9 @@ type ExpenseRow = {
   decided_at: string | null;
   decision_reason: string | null;
   created_at: string;
+  /** SUP-301: mês do Resumo para pagamento em que a despesa foi incluída. */
+  payroll_year?: number | null;
+  payroll_month?: number | null;
 };
 
 const STATUS_TONE: Record<ExpenseStatus, string> = {
@@ -694,6 +697,14 @@ function DespesasPage() {
         width: 88,
       },
       { header: "Pago em", accessor: (r) => fmtDateTime(r.paid_at), width: 92 },
+      {
+        header: "Mês de pagamento",
+        accessor: (r) =>
+          r.payroll_year && r.payroll_month
+            ? `${String(r.payroll_month).padStart(2, "0")}/${r.payroll_year}`
+            : "",
+        width: 70,
+      },
       { header: "Observações", accessor: (r) => r.notes ?? "", width: 170 },
     ];
     // O arquivo sai com exatamente as linhas e os filtros da tela.
@@ -1162,6 +1173,15 @@ function DespesasPage() {
                   >
                     {STAGE_LABEL[expenseStage(r)]}
                   </span>
+                  {r.payroll_year && r.payroll_month ? (
+                    <span
+                      data-testid="expense-payroll-month"
+                      className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary"
+                      title="Incluída no Resumo para pagamento deste mês"
+                    >
+                      Pagamento {String(r.payroll_month).padStart(2, "0")}/{r.payroll_year}
+                    </span>
+                  ) : null}
                   {isManager && (
                     <Button
                       size="icon"
