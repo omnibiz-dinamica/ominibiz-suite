@@ -21,13 +21,28 @@ export type CalendarPdfTask = {
   status?: string | null;
 };
 
+/** Uma tarefa numa célula: horas (azul), cliente/título (negrito), extra (cinza). */
+export type CalendarPdfItem = { time: string; title: string; extra: string };
+
+export function taskItem(t: CalendarPdfTask, extra?: string | null): CalendarPdfItem {
+  const start = formatWallTime(t.scheduled_for);
+  const end = formatWallTime(t.scheduled_end);
+  const status =
+    t.status === "cancelado" ? "[cancelada]" : t.status === "concluido" ? "[concluída]" : "";
+  return {
+    time: start ? `${start}${end ? `–${end}` : ""}` : "",
+    title: t.title,
+    extra: [extra ? `(${extra})` : "", status].filter(Boolean).join(" "),
+  };
+}
+
 export type CalendarPdfGroupBy = "assignee" | "client" | "all";
 
 export type CalendarPdfPlan = {
   weekStart: string;
   weekEnd: string;
   days: { key: string; label: string }[];
-  rows: { label: string; cells: string[] }[];
+  rows: { label: string; cells: string[]; items: CalendarPdfItem[][] }[];
   taskCount: number;
   source: "selecionadas" | "todas";
 };
@@ -101,26 +116,17 @@ export function planCalendarPdf(p: {
         ? p.memberName(key === "__none__" ? null : key)
         : p.clientName(key === "__none__" ? null : key);
 
+  const extraOf = (t: CalendarPdfTask) =>
+    p.groupBy === "assignee" ? null : t.assigned_to ? p.memberName(t.assigned_to) : null;
   const rows = [...groups.entries()]
-    .map(([key, list]) => ({
-      label: labelOf(key),
-      cells: days.map((d) =>
-        tasksForCalendarDay(list, d.key)
-          .map((t) =>
-            taskLine(
-              t,
-              p.groupBy === "assignee"
-                ? null
-                : p.groupBy === "client"
-                  ? p.memberName(t.assigned_to)
-                  : t.assigned_to
-                    ? p.memberName(t.assigned_to)
-                    : null,
-            ),
-          )
-          .join("\n\n"),
-      ),
-    }))
+    .map(([key, list]) => {
+      const perDay = days.map((d) => tasksForCalendarDay(list, d.key));
+      return {
+        label: labelOf(key),
+        cells: perDay.map((ts) => ts.map((t) => taskLine(t, extraOf(t))).join("\n\n")),
+        items: perDay.map((ts) => ts.map((t) => taskItem(t, extraOf(t)))),
+      };
+    })
     .sort((a, b) => a.label.localeCompare(b.label, "pt"));
 
   return {
@@ -184,6 +190,31 @@ export async function downloadCalendarPdf(
 
   const firstCol = meta.groupBy === "all" ? 0 : 92;
   const dayCol = (pageWidth - 56 - firstCol) / 7;
+  const FONT = 7;
+  const PAD = 3;
+  const LINE = FONT * 1.15;
+  const BLUE: [number, number, number] = [0, 56, 168]; // horas: azul forte
+  // Cada tarefa já partida em linhas (com a largura do negrito): a mesma
+  // lista serve para a altura da célula e para o desenho.
+  type Line = { text: string; kind: "time" | "title" | "extra" | "gap" };
+  const wrap = (text: string, bold: boolean) => {
+    doc.setFont("helvetica", bold ? "bold" : "normal");
+    doc.setFontSize(FONT);
+    return doc.splitTextToSize(text, dayCol - PAD * 2 - 1) as string[];
+  };
+  const cellLines: Line[][][] = plan.rows.map((r) =>
+    r.items.map((items) => {
+      const out: Line[] = [];
+      items.forEach((it, i) => {
+        if (i > 0) out.push({ text: "", kind: "gap" });
+        if (it.time) out.push({ text: it.time, kind: "time" });
+        for (const l of wrap(it.title, true)) out.push({ text: l, kind: "title" });
+        if (it.extra) for (const l of wrap(it.extra, false)) out.push({ text: l, kind: "extra" });
+      });
+      return out;
+    }),
+  );
+  const dayIdx = (col: number) => col - (firstCol ? 1 : 0);
   autoTable(doc, {
     startY: 60,
     margin: { left: 28, right: 28 },
@@ -193,11 +224,35 @@ export async function downloadCalendarPdf(
         ...plan.days.map((d) => d.label),
       ],
     ],
-    body: plan.rows.map((r) => [...(firstCol ? [r.label] : []), ...r.cells]),
+    body: plan.rows.map((r, ri) => [
+      ...(firstCol ? [r.label] : []),
+      ...cellLines[ri].map((lines) => lines.map((l) => l.text || " ").join("\n")),
+    ]),
+    // As células dos dias são desenhadas à mão (horas a azul, cliente a negrito).
+    willDrawCell: (data) => {
+      if (data.section === "body" && dayIdx(data.column.index) >= 0) data.cell.text = [];
+    },
+    didDrawCell: (data) => {
+      if (data.section !== "body" || dayIdx(data.column.index) < 0) return;
+      const lines = cellLines[data.row.index]?.[dayIdx(data.column.index)] ?? [];
+      let y = data.cell.y + PAD + FONT * 0.85;
+      for (const l of lines) {
+        if (l.kind !== "gap") {
+          doc.setFontSize(FONT);
+          doc.setFont("helvetica", l.kind === "title" ? "bold" : "normal");
+          if (l.kind === "time") doc.setTextColor(...BLUE);
+          else if (l.kind === "extra") doc.setTextColor(110, 110, 110);
+          else doc.setTextColor(25, 25, 25);
+          doc.text(l.text, data.cell.x + PAD, y);
+        }
+        y += LINE;
+      }
+      doc.setTextColor(0, 0, 0);
+    },
     styles: {
       font: "helvetica",
-      fontSize: 7,
-      cellPadding: 3,
+      fontSize: FONT,
+      cellPadding: PAD,
       valign: "top",
       overflow: "linebreak",
     },
