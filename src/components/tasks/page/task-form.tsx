@@ -426,6 +426,23 @@ export function TaskForm({
     });
   })();
 
+  /**
+   * 22/11/2026 — o cadastro do cliente só INFORMA: quando o horário da tarefa é
+   * diferente do cadastro, mostra um aviso; grava-se sempre o que está nos campos.
+   */
+  const registryDifference = (() => {
+    if (initial || !startTime || !endTime || new Set(assignees).size > 1) return null;
+    const slotStart = selectedSchedule?.startTime ?? null;
+    const slotEnd = selectedSchedule?.endTime ?? null;
+    if (slotStart && slotEnd && (slotStart !== startTime || slotEnd !== endTime)) {
+      return `Cadastro do cliente: ${slotStart}–${slotEnd}. Esta tarefa: ${startTime}–${endTime}. Será gravado o horário desta tarefa.`;
+    }
+    if (clientContractedMinutes == null) return null;
+    const minutes = taskDurationMinutes(startDate, startTime, endDate, endTime, recurrence.enabled);
+    if (minutes == null || minutes <= 0 || minutes === clientContractedMinutes) return null;
+    return `Cadastro do cliente: ${formatContractedMinutes(clientContractedMinutes)}. Esta tarefa: ${startTime}–${endTime} (${formatContractedMinutes(minutes)}). Será gravado o horário desta tarefa.`;
+  })();
+
   useEffect(() => {
     if (initial || !startDate || recurrenceStartTouchedRef.current) return;
     // Datas de negócio não passam por Date/UTC. A data principal só sugere o
@@ -858,8 +875,11 @@ export function TaskForm({
               };
               // A distribuição da carga contratada só pode recalcular uma hora de fim
               // que o gestor JÁ registou. Sem hora de fim digitada, nada é derivado.
+              // 22/11/2026: com 1 funcionário grava SEMPRE o horário dos campos; a divisão
+              // só se aplica com 2+ funcionários (a prévia "horas divididas" está visível).
               const useContractedSchedule =
                 contractedMinutes != null &&
+                selectedAssignees.length > 1 &&
                 !endTypedByManager &&
                 startDate !== "" &&
                 startTime !== "" &&
@@ -1778,6 +1798,14 @@ export function TaskForm({
                 }}
               />
             </div>
+            {registryDifference && (
+              <p
+                data-testid="client-registry-difference"
+                className="col-span-2 rounded-lg border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900"
+              >
+                {registryDifference}
+              </p>
+            )}
             {perEmployeeSchedule.length > 1 && (
               <div className="col-span-2 rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs">
                 <div className="font-medium">Horário de cada funcionário (horas divididas)</div>

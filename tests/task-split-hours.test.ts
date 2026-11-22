@@ -24,7 +24,8 @@ test("criação: carga do cliente primeiro; sem ela, o horário da tarefa", () =
   expect(form).toMatch(/const contractedMinutes = clientContractedMinutes \?\? taskTotalMinutes;/);
   // A hora de fim digitada só bloqueia a divisão quando a carga vem do cadastro.
   expect(form).toMatch(/const endTypedByManager = manualEndOverride && !splitFromTaskTimes;/);
-  expect(form).toMatch(/contractedMinutes != null &&\s+!endTypedByManager &&/);
+  // 22/11/2026: a divisão só com 2+ funcionários; com 1 grava o horário dos campos.
+  expect(form).toMatch(/contractedMinutes != null &&\s+selectedAssignees\.length > 1 &&\s+!endTypedByManager &&/);
 });
 
 test("avulsa 01/12 08:00 → 03/12 17:00 mantém 3420 minutos e o fim para uma pessoa", () => {
@@ -62,4 +63,10 @@ test("edição: a divisão vem do banco e o gestor é avisado", () => {
   // prévia na edição: sem carga, só ao acrescentar (horário × pessoas que já estavam)
   expect(form).toMatch(/if \(count < groupAssignees\.length\) return null;/);
   expect(form).toMatch(/minutes \* Math\.max\(groupAssignees\.length, 1\)/);
+});
+
+test("22/11: cadastro do cliente só informa quando o horário é diferente", () => {
+  expect(form).toContain('data-testid="client-registry-difference"');
+  expect(form).toContain("Será gravado o horário desta tarefa.");
+  expect(form).toMatch(/const registryDifference = \(\(\) => \{\s+if \(initial \|\| !startTime \|\| !endTime \|\| new Set\(assignees\)\.size > 1\) return null;/);
 });
