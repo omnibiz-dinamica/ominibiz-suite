@@ -64,6 +64,7 @@ import {
 import { invalidateSupportTicket } from "@/lib/cache/support";
 import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
 import { canArchiveTicketNow, canClaimTicket, canCloseTicketNow } from "@/lib/support/close-permission";
+import { tr } from "@/i18n";
 
 export const Route = createFileRoute("/app/suporte/$id")({
   component: () => (
@@ -155,7 +156,7 @@ function AttachmentThumb({ att, onOpen }: { att: AttachmentRow; onOpen: (a: Atta
   }, [att.storage_path, isImage, isPdf]);
   return (
     <div className="group relative overflow-hidden rounded-lg border border-border bg-background">
-      <button type="button" onClick={() => onOpen(att)} className="block w-full" title="Abrir em nova aba">
+      <button type="button" onClick={() => onOpen(att)} className="block w-full" title={tr("Abrir em nova aba")}>
         {isImage && url ? (
           <img src={url} alt={att.file_name} className="h-32 w-full object-cover" />
         ) : isPdf ? (
@@ -175,7 +176,7 @@ function AttachmentThumb({ att, onOpen }: { att: AttachmentRow; onOpen: (a: Atta
         <span className="text-muted-foreground">{formatBytes(att.size_bytes)}</span>
       </div>
       <div className="absolute right-1 top-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-        <button type="button" onClick={() => onOpen(att)} className="rounded bg-background/90 p-1 shadow" title="Abrir">
+        <button type="button" onClick={() => onOpen(att)} className="rounded bg-background/90 p-1 shadow" title={tr("Abrir")}>
           <ExternalLink className="h-3 w-3" />
         </button>
         <a
@@ -185,7 +186,7 @@ function AttachmentThumb({ att, onOpen }: { att: AttachmentRow; onOpen: (a: Atta
             if (!url) e.preventDefault();
           }}
           className="rounded bg-background/90 p-1 shadow"
-          title="Download"
+          title={tr("Download")}
         >
           <Download className="h-3 w-3" />
         </a>
@@ -234,7 +235,7 @@ function SupportDetailPage() {
     mutationFn: (code: string) => setTicketDestination(id, code),
     onSuccess: () => {
       invalidateSupportTicket(qc, id);
-      toast.success("Ticket reencaminhado.");
+      toast.success(tr("Ticket reencaminhado."));
     },
     onError: (err: unknown) =>
       toast.error("Falha ao reencaminhar: " + (err instanceof Error ? err.message : String(err))),
@@ -408,14 +409,14 @@ function SupportDetailPage() {
 
   const replyMut = useMutation({
     mutationFn: async () => {
-      if (!reply.trim()) throw new Error("Mensagem vazia");
+      if (!reply.trim()) throw new Error(tr("Mensagem vazia"));
       await postMessage(id, reply, isInternal);
     },
     onSuccess: () => {
       setReply("");
       setIsInternal(false);
       invalidateSupportTicket(qc, id);
-      toast.success("Mensagem enviada.");
+      toast.success(tr("Mensagem enviada."));
     },
     onError: (e) => toast.error("Erro: " + (e as Error).message),
   });
@@ -427,7 +428,7 @@ function SupportDetailPage() {
     },
     onSuccess: (s) => {
       invalidateSupportTicket(qc, id);
-      toast.success("Status atualizado.");
+      toast.success(tr("Status atualizado."));
       // Parte 3B — ao resolver, perguntar se quer arquivar já (arquivar não altera o status).
       if (
         (s === "resolvido" || s === "resolved_by_manager") &&
@@ -449,7 +450,7 @@ function SupportDetailPage() {
     onSuccess: () => {
       invalidateSupportTicket(qc, id);
       qc.invalidateQueries({ queryKey: ["notifications"] });
-      toast.success("Ticket assumido. Você é o responsável.");
+      toast.success(tr("Ticket assumido. Você é o responsável."));
     },
     onError: (e) => toast.error("Erro: " + (e as Error).message),
   });
@@ -458,7 +459,7 @@ function SupportDetailPage() {
     mutationFn: async (p: SupportTicketPriority) => updatePriority(id, p),
     onSuccess: () => {
       invalidateSupportTicket(qc, id);
-      toast.success("Prioridade atualizada.");
+      toast.success(tr("Prioridade atualizada."));
     },
     onError: (e) => toast.error("Erro: " + (e as Error).message),
   });
@@ -466,12 +467,12 @@ function SupportDetailPage() {
   const uploadMut = useMutation({
     mutationFn: async (file: File) => {
       const t = ticketQ.data;
-      if (!t) throw new Error("Ticket não carregado");
+      if (!t) throw new Error(tr("Ticket não carregado"));
       await uploadAttachment(id, t.company_id, file);
     },
     onSuccess: () => {
       invalidateSupportTicket(qc, id);
-      toast.success("Anexo enviado.");
+      toast.success(tr("Anexo enviado."));
     },
     onError: (e) => toast.error("Erro no upload: " + (e as Error).message),
   });
@@ -503,22 +504,22 @@ function SupportDetailPage() {
   function copyText(text: string, label = "Copiado") {
     navigator.clipboard.writeText(text).then(
       () => toast.success(label),
-      () => toast.error("Não foi possível copiar"),
+      () => toast.error(tr("Não foi possível copiar")),
     );
   }
 
   if (ticketQ.isLoading) {
-    return <div className="text-sm text-muted-foreground">Carregando…</div>;
+    return <div className="text-sm text-muted-foreground">{tr("Carregando…")}</div>;
   }
   const t = ticket;
   if (!t) {
     return (
       <div className="rounded-2xl border border-border bg-card p-8 text-center">
-        <h2 className="font-display text-xl font-semibold">Ticket não encontrado</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Ele pode ter sido movido ou pertence a outra empresa.</p>
+        <h2 className="font-display text-xl font-semibold">{tr("Ticket não encontrado")}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{tr("Ele pode ter sido movido ou pertence a outra empresa.")}</p>
         <Button asChild variant="outline" className="mt-4">
           <Link to="/app/suporte">
-            <ArrowLeft className="mr-1 h-4 w-4" /> Voltar
+            <ArrowLeft className="mr-1 h-4 w-4" /> {tr("Voltar")}
           </Link>
         </Button>
       </div>
@@ -572,12 +573,12 @@ function SupportDetailPage() {
         <div className="flex items-center gap-2 text-sm">
           <Button asChild variant="ghost" size="sm">
             <Link to="/app/suporte">
-              <ArrowLeft className="mr-1 h-4 w-4" /> Voltar
+              <ArrowLeft className="mr-1 h-4 w-4" /> {tr("Voltar")}
             </Link>
           </Button>
           {isSuperAdmin && (
             <Button asChild variant="ghost" size="sm">
-              <Link to="/app/admin/suporte">Central Global</Link>
+              <Link to="/app/admin/suporte">{tr("Central Global")}</Link>
             </Button>
           )}
         </div>
@@ -586,7 +587,7 @@ function SupportDetailPage() {
           <div className="flex flex-wrap items-center gap-2 text-xs">
             <span className="font-mono text-muted-foreground">{t.ticket_number}</span>
             <span className={"rounded px-1.5 py-0.5 " + TICKET_STATUS_TONE[t.status]}>
-              {TICKET_STATUS_LABEL[t.status]}
+              {tr(TICKET_STATUS_LABEL[t.status])}
             </span>
             <span className={"rounded px-1.5 py-0.5 " + TICKET_PRIORITY_TONE[t.priority]}>
               {TICKET_PRIORITY_LABEL[t.priority]}
@@ -594,7 +595,7 @@ function SupportDetailPage() {
             <span className="text-muted-foreground">
               {TICKET_TYPE_LABEL[t.type as keyof typeof TICKET_TYPE_LABEL] ?? t.type}
             </span>
-            <span className="rounded bg-primary/10 px-1.5 py-0.5 text-primary" title="Fila de destino do ticket">
+            <span className="rounded bg-primary/10 px-1.5 py-0.5 text-primary" title={tr("Fila de destino do ticket")}>
               {(DESTINATION_EMOJI[t.destination_code ?? ""] ?? "→") + " "}
               {destinationLabel(t.destination_code, destinations)}
             </span>
@@ -602,21 +603,21 @@ function SupportDetailPage() {
               type="button"
               onClick={() => copyText(t.ticket_number, "Número copiado")}
               className="ml-auto inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
-              title="Copiar número"
+              title={tr("Copiar número")}
             >
-              <Copy className="h-3 w-3" /> copiar nº
+              <Copy className="h-3 w-3" /> {tr("copiar nº")}
             </button>
           </div>
           {canRoute && (
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className="text-xs text-muted-foreground">Reencaminhar para:</span>
+              <span className="text-xs text-muted-foreground">{tr("Reencaminhar para:")}</span>
               <Select
                 value={t.destination_code ?? undefined}
                 onValueChange={(v) => destinationMut.mutate(v)}
                 disabled={destinationMut.isPending}
               >
                 <SelectTrigger className="h-8 w-56 text-xs">
-                  <SelectValue placeholder="Selecionar destino" />
+                  <SelectValue placeholder={tr("Selecionar destino")} />
                 </SelectTrigger>
                 <SelectContent>
                   {destinationsForCompany(destinations, t.company_id).map((d) => (
@@ -635,7 +636,7 @@ function SupportDetailPage() {
               type="button"
               onClick={() => copyText(`${t.title}\n\n${t.description}`, "Título e descrição copiados")}
               className="shrink-0 rounded border border-border p-1.5 text-muted-foreground hover:text-foreground"
-              title="Copiar título + descrição"
+              title={tr("Copiar título + descrição")}
             >
               <Copy className="h-3.5 w-3.5" />
             </button>
@@ -645,11 +646,11 @@ function SupportDetailPage() {
           </p>
 
           <div className="mt-4 grid gap-3 rounded-xl border border-border bg-muted/30 p-3 text-xs sm:grid-cols-2">
-            <Row label="Empresa">{requester?.company_name ?? <span className="text-muted-foreground">—</span>}</Row>
-            <Row label="Solicitante">
+            <Row label={tr("Empresa")}>{requester?.company_name ?? <span className="text-muted-foreground">—</span>}</Row>
+            <Row label={tr("Solicitante")}>
               {requester?.requester_full_name ?? <span className="text-muted-foreground">—</span>}
             </Row>
-            <Row label="Email">
+            <Row label={tr("Email")}>
               {requester?.requester_email ? (
                 <span className="inline-flex items-center gap-1">
                   <a href={`mailto:${requester.requester_email}`} className="hover:underline">
@@ -663,19 +664,19 @@ function SupportDetailPage() {
                 <span className="text-muted-foreground">—</span>
               )}
             </Row>
-            <Row label="Aberto em">{new Date(t.created_at).toLocaleString("pt-PT")}</Row>
-            <Row label="Última atualização">{new Date(t.updated_at).toLocaleString("pt-PT")}</Row>
-            {t.resolved_at && <Row label="Resolvido em">{new Date(t.resolved_at).toLocaleString("pt-PT")}</Row>}
-            {t.closed_at && <Row label="Fechado em">{new Date(t.closed_at).toLocaleString("pt-PT")}</Row>}
+            <Row label={tr("Aberto em")}>{new Date(t.created_at).toLocaleString("pt-PT")}</Row>
+            <Row label={tr("Última atualização")}>{new Date(t.updated_at).toLocaleString("pt-PT")}</Row>
+            {t.resolved_at && <Row label={tr("Resolvido em")}>{new Date(t.resolved_at).toLocaleString("pt-PT")}</Row>}
+            {t.closed_at && <Row label={tr("Fechado em")}>{new Date(t.closed_at).toLocaleString("pt-PT")}</Row>}
           </div>
 
           <div className="mt-3 grid gap-3 rounded-xl border border-border bg-muted/20 p-3 text-xs sm:grid-cols-2">
             <div className="sm:col-span-2 font-display text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Local do erro
+              {tr("Local do erro")}
             </div>
-            {t.module && <Row label="Módulo">{t.module}</Row>}
+            {t.module && <Row label={tr("Módulo")}>{t.module}</Row>}
             {t.route && (
-              <Row label="Rota">
+              <Row label={tr("Rota")}>
                 <code className="rounded bg-background px-1">{t.route}</code>
               </Row>
             )}
@@ -700,7 +701,7 @@ function SupportDetailPage() {
 
           <details className="mt-3 rounded-xl border border-border bg-muted/20 p-3 text-xs">
             <summary className="cursor-pointer font-display text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Informações técnicas
+              {tr("Informações técnicas")}
             </summary>
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               {techEntries.map(([k, v]) => (
@@ -714,17 +715,17 @@ function SupportDetailPage() {
               onClick={() => copyText(JSON.stringify(tech, null, 2), "Contexto técnico copiado")}
               className="mt-3 inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
             >
-              <Copy className="h-3 w-3" /> copiar JSON
+              <Copy className="h-3 w-3" /> {tr("copiar JSON")}
             </button>
           </details>
         </header>
 
         <section className="space-y-3">
           <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Conversa {messages.length > 0 && <span className="text-xs text-muted-foreground">({messages.length})</span>}
+            {tr("Conversa")} {messages.length > 0 && <span className="text-xs text-muted-foreground">({messages.length})</span>}
           </h2>
           {messages.length === 0 ? (
-            <div className="text-sm text-muted-foreground">Nenhuma mensagem ainda.</div>
+            <div className="text-sm text-muted-foreground">{tr("Nenhuma mensagem ainda.")}</div>
           ) : (
             <ul className="space-y-2">
               {messages
@@ -748,14 +749,14 @@ function SupportDetailPage() {
                         <span>·</span>
                         <span>
                           {isMe
-                            ? "Você"
+                            ? tr("Você")
                             : m.author_user_id === requester?.requester_user_id
-                              ? (requester?.requester_full_name ?? "Solicitante")
-                              : "Suporte"}
+                              ? (requester?.requester_full_name ?? tr("Solicitante"))
+                              : tr("Suporte")}
                         </span>
                         {m.is_internal && (
                           <span className="inline-flex items-center gap-1 rounded bg-amber-500/20 px-1.5 py-0.5 text-amber-700 dark:text-amber-300">
-                            <Shield className="h-3 w-3" /> Nota interna
+                            <Shield className="h-3 w-3" /> {tr("Nota interna")}
                           </span>
                         )}
                       </div>
@@ -769,10 +770,10 @@ function SupportDetailPage() {
           {isClosed ? (
             <div className="space-y-2 rounded-xl border border-dashed border-border bg-card p-3">
               <p className="text-sm text-muted-foreground">
-                Este ticket está encerrado. Para responder, reabra o ticket e escolha o destino.
+                {tr("Este ticket está encerrado. Para responder, reabra o ticket e escolha o destino.")}
               </p>
               <Button variant="outline" onClick={() => setReopenOpen(true)}>
-                <RotateCcw className="mr-1 h-4 w-4" /> Responder / reabrir
+                <RotateCcw className="mr-1 h-4 w-4" /> {tr("Responder / reabrir")}
               </Button>
             </div>
           ) : (
@@ -780,7 +781,7 @@ function SupportDetailPage() {
               {isSuperAdmin && (
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                    <Zap className="h-3 w-3" /> Respostas rápidas:
+                    <Zap className="h-3 w-3" /> {tr("Respostas rápidas:")}
                   </span>
                   {QUICK_REPLIES.map((q) => (
                     <button
@@ -799,7 +800,7 @@ function SupportDetailPage() {
                 ref={replyRef}
                 value={reply}
                 onChange={(e) => setReply(e.target.value)}
-                placeholder="Escreva uma resposta…"
+                placeholder={tr("Escreva uma resposta…")}
                 rows={4}
               />
 
@@ -807,7 +808,7 @@ function SupportDetailPage() {
                 {isSuperAdmin ? (
                   <label className="flex items-center gap-2 text-sm">
                     <Switch checked={isInternal} onCheckedChange={setIsInternal} />
-                    Nota interna (não visível ao Gestor)
+                    {tr("Nota interna (não visível ao Gestor)")}
                   </label>
                 ) : (
                   <span />
@@ -815,18 +816,18 @@ function SupportDetailPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <label
                     className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-md border border-input bg-background px-3 text-sm hover:bg-muted"
-                    title="Anexar imagem ou ficheiro a este ticket"
+                    title={tr("Anexar imagem ou ficheiro a este ticket")}
                   >
                     {uploadMut.isPending ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
                       <Paperclip className="h-4 w-4" />
                     )}
-                    {uploadMut.isPending ? "A enviar…" : "Anexar"}
+                    {uploadMut.isPending ? tr("A enviar…") : tr("Anexar")}
                     <input
                       type="file"
                       className="hidden"
-                      aria-label="Anexar imagem ou ficheiro"
+                      aria-label={tr("Anexar imagem ou ficheiro")}
                       disabled={uploadMut.isPending}
                       onChange={(e) => {
                         const f = e.target.files?.[0];
@@ -838,10 +839,10 @@ function SupportDetailPage() {
                   <Button onClick={() => replyMut.mutate()} disabled={replyMut.isPending || !reply.trim()}>
                     {replyMut.isPending ? (
                       <>
-                        <Loader2 className="mr-1 h-4 w-4 animate-spin" /> Enviando
+                        <Loader2 className="mr-1 h-4 w-4 animate-spin" /> {tr("Enviando")}
                       </>
                     ) : (
-                      "Enviar"
+                      tr("Enviar")
                     )}
                   </Button>
                 </div>
@@ -853,7 +854,7 @@ function SupportDetailPage() {
         {attachments.length > 0 && (
           <section className="space-y-3">
             <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Anexos ({attachments.length})
+              {tr("Anexos (")}{attachments.length})
             </h2>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {attachments.map((a) => (
@@ -866,7 +867,7 @@ function SupportDetailPage() {
         <RelatedTicketsPanel ticketId={t.id} isSuperAdmin={isSuperAdmin} />
 
         <section className="space-y-3">
-          <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Timeline</h2>
+          <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">{tr("Timeline")}</h2>
 
           <ol className="relative space-y-2 border-l border-border pl-4 text-xs">
             {timeline.map((it) => (
@@ -881,7 +882,7 @@ function SupportDetailPage() {
                 )}
               </li>
             ))}
-            {timeline.length === 0 && <li className="text-muted-foreground">Sem eventos ainda.</li>}
+            {timeline.length === 0 && <li className="text-muted-foreground">{tr("Sem eventos ainda.")}</li>}
           </ol>
         </section>
       </div>
@@ -890,10 +891,10 @@ function SupportDetailPage() {
         {(isSuperAdmin || canServeTicket) && (
           <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
             <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              {isSuperAdmin ? "Ações do Super Admin" : "Ações do atendimento"}
+              {isSuperAdmin ? tr("Ações do Super Admin") : tr("Ações do atendimento")}
             </h3>
             <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">Status</label>
+              <label className="text-xs text-muted-foreground">{tr("Status")}</label>
               <Select value={t.status} onValueChange={(v) => statusMut.mutate(v as SupportTicketStatus)}>
                 <SelectTrigger>
                   <SelectValue />
@@ -901,14 +902,14 @@ function SupportDetailPage() {
                 <SelectContent>
                   {(isSuperAdmin ? TICKET_STATUS_LIST : QUEUE_STATUS_LIST).map((s) => (
                     <SelectItem key={s} value={s}>
-                      {TICKET_STATUS_LABEL[s]}
+                      {tr(TICKET_STATUS_LABEL[s])}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">Prioridade</label>
+              <label className="text-xs text-muted-foreground">{tr("Prioridade")}</label>
               <Select value={t.priority} onValueChange={(v) => priorityMut.mutate(v as SupportTicketPriority)}>
                 <SelectTrigger>
                   <SelectValue />
@@ -927,9 +928,9 @@ function SupportDetailPage() {
 
         <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
           <div className="flex items-center justify-between">
-            <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Anexos</h3>
+            <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">{tr("Anexos")}</h3>
             <label className="cursor-pointer text-xs text-primary hover:underline">
-              + Adicionar
+              {tr("+ Adicionar")}
               <input
                 type="file"
                 className="hidden"
@@ -942,7 +943,7 @@ function SupportDetailPage() {
             </label>
           </div>
           {attachments.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Nenhum anexo.</p>
+            <p className="text-xs text-muted-foreground">{tr("Nenhum anexo.")}</p>
           ) : (
             <ul className="space-y-1">
               {attachments.map((a) => (
@@ -968,7 +969,7 @@ function SupportDetailPage() {
                     type="button"
                     onClick={() => downloadAttachment(a)}
                     className="rounded p-0.5 text-muted-foreground hover:text-foreground"
-                    title="Download"
+                    title={tr("Download")}
                   >
                     <Download className="h-3 w-3" />
                   </button>
@@ -980,7 +981,7 @@ function SupportDetailPage() {
 
         {isClosed && (
           <Button variant="outline" className="w-full" onClick={() => setReopenOpen(true)}>
-            <RotateCcw className="mr-1 h-4 w-4" /> Reabrir ticket
+            <RotateCcw className="mr-1 h-4 w-4" /> {tr("Reabrir ticket")}
           </Button>
         )}
 
@@ -992,14 +993,14 @@ function SupportDetailPage() {
             ) : (
               <UserCheck className="mr-1 h-4 w-4" />
             )}
-            Assumir ticket
+            {tr("Assumir ticket")}
           </Button>
         )}
 
         {isArchived && (
           <p className="rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
-            Ticket arquivado em {new Date(t.archived_at as string).toLocaleString("pt-PT")}. O status continua «
-            {TICKET_STATUS_LABEL[t.status] ?? t.status}».
+            {tr("Ticket arquivado em")} {new Date(t.archived_at as string).toLocaleString("pt-PT")}{tr(". O status continua «")}
+            {TICKET_STATUS_LABEL[t.status] ? tr(TICKET_STATUS_LABEL[t.status]) : t.status}».
           </p>
         )}
 
@@ -1007,7 +1008,7 @@ function SupportDetailPage() {
         {!isArchived && awaitingValidation && canCloseTicket && (
           <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
             <p className="text-xs text-muted-foreground">
-              Este ticket aguarda a sua validação. Confirme a solução para arquivar ou informe que o problema continua.
+              {tr("Este ticket aguarda a sua validação. Confirme a solução para arquivar ou informe que o problema continua.")}
             </p>
             <Button
               className="w-full"
@@ -1017,10 +1018,10 @@ function SupportDetailPage() {
                 setArchiveOpen(true);
               }}
             >
-              <Archive className="mr-1 h-4 w-4" /> Confirmar solução e arquivar
+              <Archive className="mr-1 h-4 w-4" /> {tr("Confirmar solução e arquivar")}
             </Button>
             <Button variant="outline" className="w-full" onClick={focusReply}>
-              <RotateCcw className="mr-1 h-4 w-4" /> O problema continua
+              <RotateCcw className="mr-1 h-4 w-4" /> {tr("O problema continua")}
             </Button>
           </div>
         )}
@@ -1034,7 +1035,7 @@ function SupportDetailPage() {
               setArchiveOpen(true);
             }}
           >
-            <Archive className="mr-1 h-4 w-4" /> Arquivar ticket
+            <Archive className="mr-1 h-4 w-4" /> {tr("Arquivar ticket")}
           </Button>
         )}
       </aside>

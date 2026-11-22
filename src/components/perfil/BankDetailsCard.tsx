@@ -17,6 +17,7 @@ import {
   normalizeIban,
   type BankChangeRequest,
 } from "@/lib/employee-history";
+import { tr } from "@/i18n";
 
 /**
  * Perfil → Dados bancários. O funcionário não edita o IBAN diretamente:
@@ -84,7 +85,7 @@ export function BankDetailsCard() {
       if (error) throw new Error(error.message);
     },
     onSuccess: async () => {
-      toast.success("Pedido enviado ao gestor para aprovação.");
+      toast.success(tr("Pedido enviado ao gestor para aprovação."));
       setOpen(false);
       setIban("");
       setSwift("");
@@ -103,7 +104,7 @@ export function BankDetailsCard() {
       if (error) throw new Error(error.message);
     },
     onSuccess: async () => {
-      toast.success("Pedido cancelado.");
+      toast.success(tr("Pedido cancelado."));
       await refresh();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -116,16 +117,15 @@ export function BankDetailsCard() {
   return (
     <div className="rounded-2xl border border-border bg-card p-6">
       <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
-        <Landmark className="h-4 w-4 text-primary" /> Dados bancários
+        <Landmark className="h-4 w-4 text-primary" /> {tr("Dados bancários")}
       </h2>
       <p className="mt-1 text-xs text-muted-foreground">
-        Para mudar o NIB/IBAN, envie um pedido. O gestor aprova e fica registado quando pediu e
-        quando foi aprovado.
+        {tr("Para mudar o NIB/IBAN, envie um pedido. O gestor aprova e fica registado quando pediu e quando foi aprovado.")}
       </p>
 
       <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
         <div>
-          <dt className="text-xs uppercase text-muted-foreground">IBAN atual</dt>
+          <dt className="text-xs uppercase text-muted-foreground">{tr("IBAN atual")}</dt>
           <dd className="mt-0.5 font-medium">{maskIban(current?.iban)}</dd>
         </div>
         <div>
@@ -143,7 +143,7 @@ export function BankDetailsCard() {
           onClick={() => setOpen(true)}
         >
           <Landmark className="mr-2 h-4 w-4" />
-          {pending ? "Pedido em análise" : "Enviar novo NIB/IBAN"}
+          {pending ? tr("Pedido em análise") : tr("Enviar novo NIB/IBAN")}
         </Button>
         {pending && (
           <Button
@@ -156,13 +156,13 @@ export function BankDetailsCard() {
                 cancel.mutate(pending.id);
             }}
           >
-            Cancelar pedido
+            {tr("Cancelar pedido")}
           </Button>
         )}
       </div>
 
       {requests.length > 0 && (
-        <ul className="mt-4 space-y-2 text-sm" aria-label="Os meus pedidos de NIB/IBAN">
+        <ul className="mt-4 space-y-2 text-sm" aria-label={tr("Os meus pedidos de NIB/IBAN")}>
           {requests.map((r) => (
             <li key={r.id} className="rounded-lg border border-border px-3 py-2">
               <div className="flex flex-wrap items-baseline justify-between gap-x-3">
@@ -172,13 +172,13 @@ export function BankDetailsCard() {
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">
-                Pedido em {new Date(r.created_at).toLocaleString("pt-PT")}
+                {tr("Pedido em")} {new Date(r.created_at).toLocaleString("pt-PT")}
                 {r.decided_at && r.status !== "pendente"
                   ? ` · ${BANK_STATUS_LABEL[r.status]?.toLowerCase() ?? r.status} em ${new Date(r.decided_at).toLocaleString("pt-PT")}`
                   : ""}
               </p>
               {r.status === "rejeitado" && r.decision_reason && (
-                <p className="text-xs">Motivo: {r.decision_reason}</p>
+                <p className="text-xs">{tr("Motivo:")} {r.decision_reason}</p>
               )}
             </li>
           ))}
@@ -189,57 +189,57 @@ export function BankDetailsCard() {
         <DialogContent size="sm">
           <ModalHeader
             icon={Landmark}
-            title="Enviar novo NIB/IBAN"
-            description="O gestor confere e aprova antes de mudar na sua ficha."
+            title={tr("Enviar novo NIB/IBAN")}
+            description={tr("O gestor confere e aprova antes de mudar na sua ficha.")}
           />
           <ModalBody className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="bank-iban">Novo IBAN *</Label>
+              <Label htmlFor="bank-iban">{tr("Novo IBAN *")}</Label>
               <Input
                 id="bank-iban"
                 value={iban}
                 onChange={(e) => setIban(e.target.value)}
-                placeholder="PT50 0000 0000 0000 0000 0000 0"
+                placeholder={tr("PT50 0000 0000 0000 0000 0000 0")}
                 autoComplete="off"
                 inputMode="text"
                 maxLength={42}
               />
               {iban.trim() !== "" && !ibanOk && (
-                <p className="text-xs text-destructive">IBAN inválido. Confira o número.</p>
+                <p className="text-xs text-destructive">{tr("IBAN inválido. Confira o número.")}</p>
               )}
               {sameAsCurrent && (
-                <p className="text-xs text-destructive">Este IBAN já é o que está na sua ficha.</p>
+                <p className="text-xs text-destructive">{tr("Este IBAN já é o que está na sua ficha.")}</p>
               )}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="bank-swift">SWIFT/BIC (opcional)</Label>
+              <Label htmlFor="bank-swift">{tr("SWIFT/BIC (opcional)")}</Label>
               <Input
                 id="bank-swift"
                 value={swift}
                 onChange={(e) => setSwift(e.target.value)}
-                placeholder="Ex.: CGDIPTPL"
+                placeholder={tr("Ex.: CGDIPTPL")}
                 autoComplete="off"
                 maxLength={11}
               />
               {!swiftOk && (
-                <p className="text-xs text-destructive">SWIFT/BIC inválido (8 ou 11 caracteres).</p>
+                <p className="text-xs text-destructive">{tr("SWIFT/BIC inválido (8 ou 11 caracteres).")}</p>
               )}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="bank-note">Observação (opcional)</Label>
+              <Label htmlFor="bank-note">{tr("Observação (opcional)")}</Label>
               <Textarea
                 id="bank-note"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 maxLength={500}
                 rows={3}
-                placeholder="Ex.: mudei de banco"
+                placeholder={tr("Ex.: mudei de banco")}
               />
             </div>
           </ModalBody>
           <ModalFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Cancelar
+              {tr("Cancelar")}
             </Button>
             <Button
               type="button"
@@ -248,7 +248,7 @@ export function BankDetailsCard() {
               }
               onClick={() => submit.mutate()}
             >
-              {submit.isPending ? "Enviando..." : "Enviar pedido"}
+              {submit.isPending ? tr("Enviando...") : tr("Enviar pedido")}
             </Button>
           </ModalFooter>
         </DialogContent>

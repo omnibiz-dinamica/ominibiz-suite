@@ -35,7 +35,7 @@ describe("SUP-331 — estados da despesa", () => {
   });
 
   test("cartão mostra só o estado atual; sem botões de estado soltos", () => {
-    expect(page).toContain("{STAGE_LABEL[expenseStage(r)]}");
+    expect(page).toContain("{tr(STAGE_LABEL[expenseStage(r)])}"); // 22/11: rótulo traduzido
     expect(page).not.toContain("Marcar paga");
     expect(page).not.toContain("Aguardar pagamento\n");
     expect(page).toContain('data-testid="expense-stage-select"');

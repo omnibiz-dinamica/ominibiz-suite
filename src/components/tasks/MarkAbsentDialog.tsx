@@ -24,6 +24,7 @@ import {
   type TaskRow,
 } from "@/lib/tasks";
 import { formatWallDate, formatWallTime } from "@/lib/wall-clock";
+import { tr } from "@/i18n";
 
 export function MarkAbsentDialog({
   task,
@@ -76,7 +77,7 @@ export function MarkAbsentDialog({
       onOpenChange(false);
     } catch (e) {
       if (isOpenPunchError(e)) {
-        toast.error("Existe um ponto aberto nesta tarefa. Encerre ou regularize o ponto antes de marcar falta.");
+        toast.error(tr("Existe um ponto aberto nesta tarefa. Encerre ou regularize o ponto antes de marcar falta."));
         onOpenChange(false);
         onOpenPunch?.();
       } else {
@@ -98,38 +99,38 @@ export function MarkAbsentDialog({
       <DialogContent size="sm">
         <ModalHeader
           icon={UserX}
-          title={mode === "edit" ? "Editar falta" : "Marcar falta"}
+          title={mode === "edit" ? tr("Editar falta") : tr("Marcar falta")}
           description={
             mode === "edit"
-              ? "Altere o motivo ou a classificação. A edição fica registada no histórico."
-              : "A falta exige motivo e fica registada no histórico da tarefa e do funcionário."
+              ? tr("Altere o motivo ou a classificação. A edição fica registada no histórico.")
+              : tr("A falta exige motivo e fica registada no histórico da tarefa e do funcionário.")
           }
         />
 
         <ModalBody className="space-y-4">
-          <ModalSection title={task?.title ?? "Tarefa"} description={clientName}>
+          <ModalSection title={task?.title ?? tr("Tarefa")} description={clientName}>
             <div className="space-y-1 text-xs text-muted-foreground">
-              {employeeName && <div>Funcionário: {employeeName}</div>}
+              {employeeName && <div>{tr("Funcionário:")} {employeeName}</div>}
               <div>{dateLabel}</div>
-              <div>Status atual: {task ? STATUS_LABELS[task.status] : "-"}</div>
-              {task?.absence_reason && <div>Falta já registada: {task.absence_reason}</div>}
+              <div>{tr("Status atual:")} {task ? tr(STATUS_LABELS[task.status]) : "-"}</div>
+              {task?.absence_reason && <div>{tr("Falta já registada:")} {task.absence_reason}</div>}
             </div>
           </ModalSection>
 
           {mode === "edit" ? (
             <div className="space-y-1.5">
-              <Label htmlFor="absence-edit-reason">Motivo da falta *</Label>
+              <Label htmlFor="absence-edit-reason">{tr("Motivo da falta *")}</Label>
               <Textarea
                 id="absence-edit-reason"
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 rows={3}
-                placeholder="Explique o motivo da falta"
+                placeholder={tr("Explique o motivo da falta")}
               />
             </div>
           ) : (
             <div className="space-y-1.5">
-              <Label>Motivo da falta *</Label>
+              <Label>{tr("Motivo da falta *")}</Label>
               <Select
                 value={reason}
                 onValueChange={(r) => {
@@ -138,7 +139,7 @@ export function MarkAbsentDialog({
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione o motivo" />
+                  <SelectValue placeholder={tr("Selecione o motivo")} />
                 </SelectTrigger>
                 <SelectContent>
                   {ABSENCE_REASONS.map((r) => (
@@ -153,18 +154,18 @@ export function MarkAbsentDialog({
 
           {reason === "Outro" && (
             <div className="space-y-1.5">
-              <Label>Descreva o motivo *</Label>
+              <Label>{tr("Descreva o motivo *")}</Label>
               <Textarea
                 value={other}
                 onChange={(e) => setOther(e.target.value)}
                 rows={3}
-                placeholder="Explique o motivo da falta"
+                placeholder={tr("Explique o motivo da falta")}
               />
             </div>
           )}
 
           <div className="space-y-1.5">
-            <Label>Classificação</Label>
+            <Label>{tr("Classificação")}</Label>
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
@@ -175,7 +176,7 @@ export function MarkAbsentDialog({
                   if (isVacation) setReason("");
                 }}
               >
-                Injustificada
+                {tr("Injustificada")}
               </Button>
               <Button
                 type="button"
@@ -186,7 +187,7 @@ export function MarkAbsentDialog({
                   if (isVacation) setReason("");
                 }}
               >
-                Justificada
+                {tr("Justificada")}
               </Button>
               <Button
                 type="button"
@@ -197,7 +198,7 @@ export function MarkAbsentDialog({
                   setReason(ABSENCE_REASON_VACATION);
                 }}
               >
-                Férias
+                {tr("Férias")}
               </Button>
             </div>
           </div>
@@ -205,10 +206,10 @@ export function MarkAbsentDialog({
 
         <ModalFooter>
           <Button variant="ghost" disabled={saving} onClick={() => onOpenChange(false)}>
-            Voltar
+            {tr("Voltar")}
           </Button>
           <Button variant="destructive" disabled={saving || !valid} onClick={submit}>
-            {saving ? "Guardando..." : mode === "edit" ? "Guardar alterações" : "Confirmar falta"}
+            {saving ? tr("Guardando...") : mode === "edit" ? tr("Guardar alterações") : tr("Confirmar falta")}
           </Button>
         </ModalFooter>
       </DialogContent>

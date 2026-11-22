@@ -2,20 +2,21 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { tasksPageSource } from "./helpers/tasks-page-source";
+import { readSource } from "./helpers/read-source";
 
 const tasksPage = tasksPageSource();
-const recurrenceDialog = readFileSync(
+const recurrenceDialog = readSource(
   new URL("../src/components/tasks/EditRecurrenceDialog.tsx", import.meta.url),
   "utf8",
 );
-const materialization = readFileSync(
+const materialization = readSource(
   new URL(
     "../supabase/migrations/20260911120000_sup_2026_000145_preserve_task_groups_in_recurrence_materialization.sql",
     import.meta.url,
   ),
   "utf8",
 );
-const clientSchedule = readFileSync(new URL("../src/lib/tasks/client-schedule.ts", import.meta.url), "utf8");
+const clientSchedule = readSource(new URL("../src/lib/tasks/client-schedule.ts", import.meta.url), "utf8");
 
 test("task visibility stays company-scoped and employee-scoped by canonical IDs", () => {
   assert.match(tasksPage, /if \(currentCompanyId\) q = q\.eq\("company_id", currentCompanyId\)/);
@@ -70,9 +71,9 @@ test("recurrence materialization preserves the multi-employee task group", () =>
 });
 
 // Instruções adicionais do cliente (clients.instructions): só exibição, sem mexer no ponto.
-const punchPage = readFileSync(new URL("../src/routes/app.ponto.tsx", import.meta.url), "utf8");
-const notificationsPage = readFileSync(new URL("../src/routes/app.notificacoes.tsx", import.meta.url), "utf8");
-const notificationActions = readFileSync(new URL("../src/lib/notification-actions.ts", import.meta.url), "utf8");
+const punchPage = readSource(new URL("../src/routes/app.ponto.tsx", import.meta.url), "utf8");
+const notificationsPage = readSource(new URL("../src/routes/app.notificacoes.tsx", import.meta.url), "utf8");
+const notificationActions = readSource(new URL("../src/lib/notification-actions.ts", import.meta.url), "utf8");
 
 test("Folha de Ponto mostra instruções do cliente sem alterar endereço nem ponto", () => {
   // leitura separada e tolerante a falhas
@@ -111,7 +112,7 @@ test("notificações mostram a linha de instruções e abrem a Folha de Ponto", 
 });
 
 test("Super Admin e Owner veem pedidos de férias pendentes com outro aprovador (só leitura)", () => {
-  const vacationsPage = readFileSync(new URL("../src/routes/app.ferias.tsx", import.meta.url), "utf8");
+  const vacationsPage = readSource(new URL("../src/routes/app.ferias.tsx", import.meta.url), "utf8");
   assert.match(vacationsPage, /isSuperAdmin \|\| isOwner\s*\?\s*rows\.filter\(/);
   assert.match(vacationsPage, /Pendentes com outro aprovador/);
   assert.match(vacationsPage, /pendingWithOthers\.map\(\(r\) => \(\s*<li\s+key=\{r\.id\}\s+data-vacation-id=\{r\.id\}/);
@@ -129,7 +130,7 @@ test("datas personalizadas: sem aviso de intervalo e férias só nos dias escolh
 });
 
 test("férias aprovadas agrupadas por mês, filtro de cargo, já gozadas em cinza e data do pedido", () => {
-  const vacationsPage = readFileSync(new URL("../src/routes/app.ferias.tsx", import.meta.url), "utf8");
+  const vacationsPage = readSource(new URL("../src/routes/app.ferias.tsx", import.meta.url), "utf8");
   assert.match(vacationsPage, /function vacationMonthGroupLabel\(start: string, end: string\)/);
   assert.match(vacationsPage, /approvedGroups\.map\(\(g\) =>/);
   assert.match(vacationsPage, /const \[filterJob, setFilterJob\] = useState<string>\("all"\)/);
@@ -140,7 +141,7 @@ test("férias aprovadas agrupadas por mês, filtro de cargo, já gozadas em cinz
 });
 
 test("atividade recente pesquisa por funcionário ou cliente no servidor", () => {
-  const timeline = readFileSync(new URL("../src/components/dashboards/ActivityTimeline.tsx", import.meta.url), "utf8");
+  const timeline = readSource(new URL("../src/components/dashboards/ActivityTimeline.tsx", import.meta.url), "utf8");
   assert.match(timeline, /queryKey: \["activity-events", companyId, tab, searchTerm\]/);
   assert.match(timeline, /changes->>Funcionário\.ilike/);
   assert.match(timeline, /changes->>Cliente\.ilike/);
@@ -188,8 +189,8 @@ test("gestor vê endereço e instruções só no lápis (calendário) ou no bot�
 });
 
 test("SUP-149: qualquer gestor decide pedido de férias novo; resposta do ticket permite anexar", () => {
-  const vacationsPage = readFileSync(new URL("../src/routes/app.ferias.tsx", import.meta.url), "utf8");
-  const ticketPage = readFileSync(new URL("../src/routes/app.suporte.$id.tsx", import.meta.url), "utf8");
+  const vacationsPage = readSource(new URL("../src/routes/app.ferias.tsx", import.meta.url), "utf8");
+  const ticketPage = readSource(new URL("../src/routes/app.suporte.$id.tsx", import.meta.url), "utf8");
   assert.match(vacationsPage, /const canDecideAnyPending = isManager \|\| isOwner \|\| isSuperAdmin;/);
   // 26/10/2026: qualquer gestor/owner/super admin decide pendentes e aguardando aprovação,
   // incluindo os reencaminhados; o aprovador atribuído continua a decidir.
@@ -206,11 +207,11 @@ test("SUP-149: qualquer gestor decide pedido de férias novo; resposta do ticket
 });
 
 test("SUP-277/158/249/286/274 e Super Admin: férias por mês atual, falta como férias, dashboard em andamento, pausa, notificação filtrada", () => {
-  const vacationsPage = readFileSync(new URL("../src/routes/app.ferias.tsx", import.meta.url), "utf8");
-  const tasksLib = readFileSync(new URL("../src/lib/tasks.ts", import.meta.url), "utf8");
-  const absentDialog = readFileSync(new URL("../src/components/tasks/MarkAbsentDialog.tsx", import.meta.url), "utf8");
-  const punchMgmt = readFileSync(new URL("../src/routes/app.ponto_.gestao.tsx", import.meta.url), "utf8");
-  const nav = readFileSync(new URL("../src/lib/navigation.ts", import.meta.url), "utf8");
+  const vacationsPage = readSource(new URL("../src/routes/app.ferias.tsx", import.meta.url), "utf8");
+  const tasksLib = readSource(new URL("../src/lib/tasks.ts", import.meta.url), "utf8");
+  const absentDialog = readSource(new URL("../src/components/tasks/MarkAbsentDialog.tsx", import.meta.url), "utf8");
+  const punchMgmt = readSource(new URL("../src/routes/app.ponto_.gestao.tsx", import.meta.url), "utf8");
+  const nav = readSource(new URL("../src/lib/navigation.ts", import.meta.url), "utf8");
   // 277: mês atual primeiro (crescente), as já terminadas no fim
   assert.match(vacationsPage, /const currentMonthStartKey = todayKey\.slice\(0, 7\) \+ "-01";/);
   assert.match(vacationsPage, /if \(aPast !== bPast\) return aPast \? 1 : -1;/);
@@ -230,7 +231,7 @@ test("SUP-277/158/249/286/274 e Super Admin: férias por mês atual, falta como 
 });
 
 test("SUP-280 e SUP-249: reverter aprovação de despesa não paga; filtro de estado sem linhas só de férias", () => {
-  const expensesPage = readFileSync(new URL("../src/routes/app.despesas.tsx", import.meta.url), "utf8");
+  const expensesPage = readSource(new URL("../src/routes/app.despesas.tsx", import.meta.url), "utf8");
   // só despesas aprovadas e não pagas, e só muda estado/decisão/pagamento
   // SUP-331: reverter passou para o lápis (estado "Voltar a Pendente"), só se não estiver paga.
   assert.match(expensesPage, /expenseStage\(editingExpense\) !== "paga" && \(\s*<SelectItem value="pendente">Voltar a Pendente \(reverter aprovação\)/);

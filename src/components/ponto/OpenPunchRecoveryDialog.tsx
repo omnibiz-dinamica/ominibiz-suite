@@ -26,6 +26,7 @@ import {
   recoverOpenEntry,
   requestOpenEntryHelp,
 } from "@/lib/punch/recovery";
+import { tr } from "@/i18n";
 
 export interface RecoveryEntry {
   time_entry_id: string;
@@ -170,45 +171,45 @@ export function OpenPunchRecoveryDialog({
   };
 
   const details = (
-    <ModalSection title="Registo em aberto">
+    <ModalSection title={tr("Registo em aberto")}>
       <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
         {mode === "manager" && entry.user_name ? (
           <div className="min-w-0">
-            <dt className="text-xs text-muted-foreground">Funcionário</dt>
+            <dt className="text-xs text-muted-foreground">{tr("Funcionário")}</dt>
             <dd className="truncate font-medium">{entry.user_name}</dd>
           </div>
         ) : null}
         <div className="min-w-0">
-          <dt className="text-xs text-muted-foreground">Tarefa</dt>
-          <dd className="truncate font-medium">{entry.task_title ?? "Sem título"}</dd>
+          <dt className="text-xs text-muted-foreground">{tr("Tarefa")}</dt>
+          <dd className="truncate font-medium">{entry.task_title ?? tr("Sem título")}</dd>
         </div>
         <div className="min-w-0">
-          <dt className="text-xs text-muted-foreground">Cliente</dt>
+          <dt className="text-xs text-muted-foreground">{tr("Cliente")}</dt>
           <dd className="truncate">{entry.client_name ?? "—"}</dd>
         </div>
         <div className="min-w-0">
-          <dt className="text-xs text-muted-foreground">Entrada registada</dt>
+          <dt className="text-xs text-muted-foreground">{tr("Entrada registada")}</dt>
           <dd className="font-mono">{new Date(entry.started_at).toLocaleString("pt-PT")}</dd>
         </div>
         <div className="min-w-0">
-          <dt className="text-xs text-muted-foreground">Tempo em aberto</dt>
+          <dt className="text-xs text-muted-foreground">{tr("Tempo em aberto")}</dt>
           <dd className="font-mono">{formatOpenDuration(openMinutes)}</dd>
         </div>
         {entry.task_status ? (
           <div className="min-w-0">
-            <dt className="text-xs text-muted-foreground">Estado da tarefa</dt>
+            <dt className="text-xs text-muted-foreground">{tr("Estado da tarefa")}</dt>
             <dd className="truncate">{entry.task_status}</dd>
           </div>
         ) : null}
         {entry.company_name ? (
           <div className="min-w-0">
-            <dt className="text-xs text-muted-foreground">Empresa</dt>
+            <dt className="text-xs text-muted-foreground">{tr("Empresa")}</dt>
             <dd className="truncate">{entry.company_name}</dd>
           </div>
         ) : null}
         {entry.notes ? (
           <div className="min-w-0 sm:col-span-2">
-            <dt className="text-xs text-muted-foreground">Observação</dt>
+            <dt className="text-xs text-muted-foreground">{tr("Observação")}</dt>
             <dd className="break-words">{entry.notes}</dd>
           </div>
         ) : null}
@@ -218,12 +219,12 @@ export function OpenPunchRecoveryDialog({
 
   const form = (
     <ModalSection
-      title={mode === "manager" ? "Hora correta de saída" : "Hora real de saída"}
-      description="A duração é recalculada a partir da hora informada. Nada é fechado sem motivo registado."
+      title={mode === "manager" ? tr("Hora correta de saída") : tr("Hora real de saída")}
+      description={tr("A duração é recalculada a partir da hora informada. Nada é fechado sem motivo registado.")}
     >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="min-w-0">
-          <Label className="text-xs">Data e hora de saída *</Label>
+          <Label className="text-xs">{tr("Data e hora de saída *")}</Label>
           <Input
             type="datetime-local"
             value={endedAt}
@@ -232,10 +233,10 @@ export function OpenPunchRecoveryDialog({
           />
         </div>
         <div className="min-w-0">
-          <Label className="text-xs">Motivo *</Label>
+          <Label className="text-xs">{tr("Motivo *")}</Label>
           <Select value={reasonCode} onValueChange={setReasonCode}>
             <SelectTrigger>
-              <SelectValue placeholder="Selecione o motivo" />
+              <SelectValue placeholder={tr("Selecione o motivo")} />
             </SelectTrigger>
             <SelectContent>
               {reasons.map((r) => (
@@ -249,21 +250,21 @@ export function OpenPunchRecoveryDialog({
         {reasonRequiresText ? (
           <div className="min-w-0 sm:col-span-2">
             <Label className="text-xs">
-              Observação *
+              {tr("Observação *")}
             </Label>
             <Textarea
               rows={3}
               value={reasonText}
               onChange={(e) => setReasonText(e.target.value)}
-              placeholder="Informe o motivo desta correção."
+              placeholder={tr("Informe o motivo desta correção.")}
             />
           </div>
         ) : null}
         {computed != null ? (
           <div className="sm:col-span-2 rounded-xl border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-            Tempo calculado:{" "}
+            {tr("Tempo calculado:")}{" "}
             <span className="font-mono text-foreground">
-              {computed < 0 ? "inválido" : formatOpenDuration(computed)}
+              {computed < 0 ? tr("inválido") : formatOpenDuration(computed)}
             </span>
           </div>
         ) : null}
@@ -276,17 +277,17 @@ export function OpenPunchRecoveryDialog({
       <DialogContent size="lg">
         <ModalHeader
           icon={mode === "manager" ? AlarmClockCheck : TimerReset}
-          title={mode === "manager" ? "Regularizar ponto do funcionário" : "Você possui um ponto em aberto"}
+          title={mode === "manager" ? tr("Regularizar ponto do funcionário") : tr("Você possui um ponto em aberto")}
           description={
             mode === "manager"
-              ? "Encerre o registo informando a hora correta de saída e o motivo. Tudo fica auditado."
-              : "Resolva o registo anterior para poder iniciar uma nova tarefa."
+              ? tr("Encerre o registo informando a hora correta de saída e o motivo. Tudo fica auditado.")
+              : tr("Resolva o registo anterior para poder iniciar uma nova tarefa.")
           }
         />
         <ModalBody className="space-y-4">
           {details}
           {step === "choose" ? (
-            <ModalSection title="O que deseja fazer?">
+            <ModalSection title={tr("O que deseja fazer?")}>
               <div className="grid grid-cols-1 gap-2">
                 <Button
                   variant="outline"
@@ -297,27 +298,27 @@ export function OpenPunchRecoveryDialog({
                   }}
                 >
                   <span className="text-left">
-                    Voltar para esta tarefa
+                    {tr("Voltar para esta tarefa")}
                     <span className="block text-xs font-normal text-muted-foreground">
-                      Continuar a execução (pausar, retomar ou concluir)
+                      {tr("Continuar a execução (pausar, retomar ou concluir)")}
                     </span>
                   </span>
                   <ArrowRight className="h-4 w-4 shrink-0" />
                 </Button>
                 <Button className="justify-between" onClick={() => setStep("form")}>
                   <span className="text-left">
-                    Encerrar ponto anterior
+                    {tr("Encerrar ponto anterior")}
                     <span className="block text-xs font-normal opacity-80">
-                      Informar a hora real de saída e o motivo
+                      {tr("Informar a hora real de saída e o motivo")}
                     </span>
                   </span>
                   <TimerReset className="h-4 w-4 shrink-0" />
                 </Button>
                 <Button variant="ghost" className="justify-between" disabled={busy} onClick={askHelp}>
                   <span className="text-left">
-                    Solicitar ajuda ao gestor
+                    {tr("Solicitar ajuda ao gestor")}
                     <span className="block text-xs font-normal text-muted-foreground">
-                      O gestor recebe o pedido e regulariza por você
+                      {tr("O gestor recebe o pedido e regulariza por você")}
                     </span>
                   </span>
                   <LifeBuoy className="h-4 w-4 shrink-0" />
@@ -329,27 +330,27 @@ export function OpenPunchRecoveryDialog({
           {step === "form" ? form : null}
 
           {step === "confirm" ? (
-            <ModalSection title="Confirmar regularização">
+            <ModalSection title={tr("Confirmar regularização")}>
               <p className="text-sm">
-                Você está encerrando manualmente o ponto de{" "}
-                <strong>{entry.user_name ?? "este funcionário"}</strong>.
+                {tr("Você está encerrando manualmente o ponto de")}{" "}
+                <strong>{entry.user_name ?? tr("este funcionário")}</strong>.
               </p>
               <dl className="mt-3 grid grid-cols-1 gap-2 text-sm sm:grid-cols-3">
                 <div>
-                  <dt className="text-xs text-muted-foreground">Entrada</dt>
+                  <dt className="text-xs text-muted-foreground">{tr("Entrada")}</dt>
                   <dd className="font-mono">{new Date(entry.started_at).toLocaleString("pt-PT")}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-muted-foreground">Saída informada</dt>
+                  <dt className="text-xs text-muted-foreground">{tr("Saída informada")}</dt>
                   <dd className="font-mono">{new Date(endedAt).toLocaleString("pt-PT")}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-muted-foreground">Tempo calculado</dt>
+                  <dt className="text-xs text-muted-foreground">{tr("Tempo calculado")}</dt>
                   <dd className="font-mono">{computed != null ? formatOpenDuration(computed) : "—"}</dd>
                 </div>
               </dl>
               <p className="mt-3 text-xs text-muted-foreground">
-                Motivo: {reasons.find((r) => r.value === reasonCode)?.label ?? reasonCode}
+                {tr("Motivo:")} {reasons.find((r) => r.value === reasonCode)?.label ?? reasonCode}
                 {reasonText.trim() ? ` · ${reasonText.trim()}` : ""}
               </p>
             </ModalSection>
@@ -357,7 +358,7 @@ export function OpenPunchRecoveryDialog({
         </ModalBody>
         <ModalFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
-            Cancelar
+            {tr("Cancelar")}
           </Button>
           {step === "form" ? (
             <Button
@@ -372,16 +373,16 @@ export function OpenPunchRecoveryDialog({
                 else void submit();
               }}
             >
-              {mode === "manager" ? "Revisar" : busy ? "A encerrar…" : "Encerrar ponto"}
+              {mode === "manager" ? tr("Revisar") : busy ? tr("A encerrar…") : tr("Encerrar ponto")}
             </Button>
           ) : null}
           {step === "confirm" ? (
             <>
               <Button variant="ghost" onClick={() => setStep("form")} disabled={busy}>
-                Voltar
+                {tr("Voltar")}
               </Button>
               <Button disabled={busy} onClick={() => void submit()}>
-                {busy ? "A regularizar…" : "Confirmar regularização"}
+                {busy ? tr("A regularizar…") : tr("Confirmar regularização")}
               </Button>
             </>
           ) : null}

@@ -31,6 +31,7 @@ import { sendTransactionalEmail } from "@/lib/email/send";
 import { exportToExcel, exportToPdf } from "@/lib/exports";
 import { buildAppUrl } from "@/lib/app-url";
 import { CancelVacationDialog, type VacationCancelTarget } from "@/components/ferias/CancelVacationDialog";
+import { tr } from "@/i18n";
 
 const FOCUS_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -393,11 +394,11 @@ function FeriasPage() {
 
   const create = useMutation({
     mutationFn: async () => {
-      if (!start || !end) throw new Error("Informe início e fim");
-      if (end < start) throw new Error("Data final deve ser após o início");
-      if (!currentCompanyId || !user?.id) throw new Error("Empresa não selecionada");
+      if (!start || !end) throw new Error(tr("Informe início e fim"));
+      if (end < start) throw new Error(tr("Data final deve ser após o início"));
+      if (!currentCompanyId || !user?.id) throw new Error(tr("Empresa não selecionada"));
       if (priorValidation === "sim" && !validatedBy.trim()) {
-        throw new Error("Informe quem realizou a validação prévia");
+        throw new Error(tr("Informe quem realizou a validação prévia"));
       }
       const { data, error } = await supabase
         .from("vacation_requests")
@@ -418,7 +419,7 @@ function FeriasPage() {
     },
     onSuccess: () => {
       clearDraft();
-      toast.success("Solicitação enviada");
+      toast.success(tr("Solicitação enviada"));
       setStart("");
       setEnd("");
       setWorkLocation(profileWorkLocation);
@@ -437,10 +438,10 @@ function FeriasPage() {
   const [mgrNote, setMgrNote] = useState("");
   const mgrCreate = useMutation({
     mutationFn: async () => {
-      if (!mgrTargetUser) throw new Error("Selecione o colaborador");
-      if (!mgrStart || !mgrEnd) throw new Error("Informe início e fim");
-      if (mgrEnd < mgrStart) throw new Error("Data final deve ser após o início");
-      if (!currentCompanyId) throw new Error("Empresa não selecionada");
+      if (!mgrTargetUser) throw new Error(tr("Selecione o colaborador"));
+      if (!mgrStart || !mgrEnd) throw new Error(tr("Informe início e fim"));
+      if (mgrEnd < mgrStart) throw new Error(tr("Data final deve ser após o início"));
+      if (!currentCompanyId) throw new Error(tr("Empresa não selecionada"));
       const { data, error } = await supabase
         .from("vacation_requests")
         .insert({
@@ -465,7 +466,7 @@ function FeriasPage() {
     },
     onSuccess: () => {
       // SUP-2026-000314: férias marcadas pelo gestor ficam logo aprovadas (o banco decide).
-      toast.success("Férias marcadas e aprovadas — o colaborador foi notificado");
+      toast.success(tr("Férias marcadas e aprovadas — o colaborador foi notificado"));
       setMgrTargetUser("");
       setMgrStart("");
       setMgrEnd("");
@@ -493,7 +494,7 @@ function FeriasPage() {
       qc.invalidateQueries({ queryKey: ["vacations"] });
       if (vars.action === "cancelar") {
         setCancelTarget(null);
-        toast.success("Pedido de férias cancelado. O histórico foi preservado.");
+        toast.success(tr("Pedido de férias cancelado. O histórico foi preservado."));
       }
     },
     onError: (e: any) => toast.error(e.message ?? "Falha na operação"),
@@ -506,7 +507,7 @@ function FeriasPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["vacations"] });
-      toast.success("Pedido marcado como aguardando aprovação");
+      toast.success(tr("Pedido marcado como aguardando aprovação"));
     },
     onError: (e: any) => toast.error(e.message ?? "Falha na operação"),
   });
@@ -528,7 +529,7 @@ function FeriasPage() {
       setForwardApprover("");
       setForwardReason("");
       qc.invalidateQueries({ queryKey: ["vacations"] });
-      toast.success("Pedido enviado para autorização");
+      toast.success(tr("Pedido enviado para autorização"));
     },
     onError: (e: any) => toast.error(e.message ?? "Falha ao encaminhar pedido"),
   });
@@ -750,11 +751,11 @@ function FeriasPage() {
           <Plane className="h-5 w-5" />
         </div>
         <div>
-          <h1 className="font-display text-2xl font-semibold">Férias/Ausência</h1>
+          <h1 className="font-display text-2xl font-semibold">{tr("Férias/Ausência")}</h1>
           <p className="text-sm text-muted-foreground">
             {isManager
-              ? "Aprove solicitações e acompanhe o calendário da equipe."
-              : "Solicite e acompanhe férias ou ausências."}
+              ? tr("Aprove solicitações e acompanhe o calendário da equipe.")
+              : tr("Solicite e acompanhe férias ou ausências.")}
           </p>
         </div>
       </header>
@@ -763,7 +764,7 @@ function FeriasPage() {
       {!!user && !!currentCompanyId && (
         <section className="order-40 rounded-2xl border border-border bg-card p-5">
           <h2 className="mb-3 flex items-center gap-2 font-semibold">
-            <Plus className="h-4 w-4" /> Nova Solicitação
+            <Plus className="h-4 w-4" /> {tr("Nova Solicitação")}
           </h2>
           {draft.savedAt !== null && (
             <div className="mb-3">
@@ -789,72 +790,72 @@ function FeriasPage() {
           )}
           <div className="grid gap-3 md:grid-cols-3">
             <div>
-              <Label htmlFor="start">Data de início</Label>
+              <Label htmlFor="start">{tr("Data de início")}</Label>
               <Input id="start" type="date" value={start} onChange={(e) => setStart(e.target.value)} />
               <p className="mt-1 text-xs text-muted-foreground">
-                Coloque o primeiro dia em que não vai trabalhar, mesmo sendo sábado ou feriado.
+                {tr("Coloque o primeiro dia em que não vai trabalhar, mesmo sendo sábado ou feriado.")}
               </p>
             </div>
             <div>
-              <Label htmlFor="end">Data de fim</Label>
+              <Label htmlFor="end">{tr("Data de fim")}</Label>
               <Input id="end" type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
               <p className="mt-1 text-xs text-muted-foreground">
-                Coloque o último dia de férias/ausência; no dia seguinte assumimos disponibilidade.
+                {tr("Coloque o último dia de férias/ausência; no dia seguinte assumimos disponibilidade.")}
               </p>
             </div>
             <div>
-              <Label htmlFor="work-location">Local de trabalho</Label>
+              <Label htmlFor="work-location">{tr("Local de trabalho")}</Label>
               <Input
                 id="work-location"
                 value={workLocation}
                 onChange={(e) => setWorkLocation(e.target.value)}
-                placeholder="Informe o local de trabalho"
+                placeholder={tr("Informe o local de trabalho")}
                 maxLength={200}
               />
             </div>
             <div className="md:col-span-3">
-              <Label htmlFor="note">Observação (opcional)</Label>
+              <Label htmlFor="note">{tr("Observação (opcional)")}</Label>
               <Textarea
                 id="note"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="Motivo, contexto..."
+                placeholder={tr("Motivo, contexto...")}
               />
             </div>
             <div className="md:col-span-3 space-y-2 rounded-lg border border-border/60 bg-muted/30 p-3">
-              <Label>No local de trabalho já houve validação prévia?</Label>
+              <Label>{tr("No local de trabalho já houve validação prévia?")}</Label>
               <RadioGroup
                 value={priorValidation}
                 onValueChange={(v) => setPriorValidation(v as "sim" | "nao")}
                 className="flex gap-6"
               >
                 <label className="flex items-center gap-2 text-sm">
-                  <RadioGroupItem value="sim" id="pv-sim" /> Sim
+                  <RadioGroupItem value="sim" id="pv-sim" /> {tr("Sim")}
                 </label>
                 <label className="flex items-center gap-2 text-sm">
-                  <RadioGroupItem value="nao" id="pv-nao" /> Não
+                  <RadioGroupItem value="nao" id="pv-nao" /> {tr("Não")}
                 </label>
               </RadioGroup>
               {priorValidation === "sim" && (
                 <div>
-                  <Label htmlFor="validated-by">Quem validou?</Label>
+                  <Label htmlFor="validated-by">{tr("Quem validou?")}</Label>
                   <Input
                     id="validated-by"
                     value={validatedBy}
                     onChange={(e) => setValidatedBy(e.target.value)}
-                    placeholder="Ex.: Supervisor João, Cliente Happy Kot..."
+                    placeholder={tr("Ex.: Supervisor João, Cliente Happy Kot...")}
                     maxLength={200}
                   />
                 </div>
               )}
               <p className="text-xs text-muted-foreground">
-                Isto não substitui a aprovação do gestor — é apenas contexto operacional.
+                {tr("Isto não substitui a aprovação do gestor — é apenas contexto operacional.")}
               </p>
             </div>
           </div>
           <div className="mt-3 flex justify-end">
             <Button onClick={() => create.mutate()} disabled={create.isPending || !start || !end}>
-              Enviar solicitação
+              {tr("Enviar solicitação")}
             </Button>
           </div>
         </section>
@@ -863,9 +864,9 @@ function FeriasPage() {
       {/* Manager: pending */}
       {(isManager || toApprove.length > 0) && (
         <section className="order-10 rounded-2xl border border-border bg-card p-5">
-          <h2 className="mb-3 font-semibold">Aguardando sua decisão ({toApprove.length})</h2>
+          <h2 className="mb-3 font-semibold">{tr("Aguardando sua decisão (")}{toApprove.length})</h2>
           {toApprove.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nada para aprovar agora.</p>
+            <p className="text-sm text-muted-foreground">{tr("Nada para aprovar agora.")}</p>
           ) : (
             <ul className="space-y-2">
               {toApprove.map((r) => (
@@ -887,9 +888,9 @@ function FeriasPage() {
 
       {pendingWithOthers.length > 0 && (
         <section className="order-15 rounded-2xl border border-border bg-card p-5">
-          <h2 className="mb-1 font-semibold">Pendentes com outro aprovador ({pendingWithOthers.length})</h2>
+          <h2 className="mb-1 font-semibold">{tr("Pendentes com outro aprovador (")}{pendingWithOthers.length})</h2>
           <p className="mb-3 text-xs text-muted-foreground">
-            Visível para Super Admin e Owner. A decisão continua com o aprovador indicado.
+            {tr("Visível para Super Admin e Owner. A decisão continua com o aprovador indicado.")}
           </p>
           <ul className="space-y-2">
             {pendingWithOthers.map((r) => (
@@ -901,11 +902,11 @@ function FeriasPage() {
                 <div className="min-w-0">
                   <div className="font-medium">{nameOf(r.user_id)}</div>
                   <div className="text-sm text-muted-foreground">
-                    {fmt(r.start_date)} → {fmt(r.end_date)} · Aprovador:{" "}
-                    {r.assigned_approver_id ? nameOf(r.assigned_approver_id) : "Não definido"}
+                    {fmt(r.start_date)} → {fmt(r.end_date)} {tr("· Aprovador:")}{" "}
+                    {r.assigned_approver_id ? nameOf(r.assigned_approver_id) : tr("Não definido")}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {r.status === "aguardando_aprovacao" ? "Aguardando aprovação" : "Pendente"}
+                    {r.status === "aguardando_aprovacao" ? tr("Aguardando aprovação") : tr("Pendente")}
                   </div>
                 </div>
               </li>
@@ -915,7 +916,7 @@ function FeriasPage() {
       )}
       {isManager && forwardedByMe.length > 0 && (
         <section className="order-15 rounded-2xl border border-border bg-card p-5">
-          <h2 className="mb-3 font-semibold">Enviados para autorização ({forwardedByMe.length})</h2>
+          <h2 className="mb-3 font-semibold">{tr("Enviados para autorização (")}{forwardedByMe.length})</h2>
           <ul className="space-y-2">
             {forwardedByMe.map((r) => (
               <li
@@ -926,9 +927,9 @@ function FeriasPage() {
                 <div>
                   <div className="font-medium">{nameOf(r.user_id)}</div>
                   <div className="text-sm text-muted-foreground">
-                    {fmt(r.start_date)} → {fmt(r.end_date)} · Autorizador: {nameOf(r.assigned_approver_id)}
+                    {fmt(r.start_date)} → {fmt(r.end_date)} {tr("· Autorizador:")} {nameOf(r.assigned_approver_id)}
                   </div>
-                  <div className="text-xs text-muted-foreground">Aguardando decisão</div>
+                  <div className="text-xs text-muted-foreground">{tr("Aguardando decisão")}</div>
                 </div>
                 <Button
                   size="sm"
@@ -939,7 +940,7 @@ function FeriasPage() {
                     setForwardReason("");
                   }}
                 >
-                  <Send className="h-4 w-4" /> Reencaminhar
+                  <Send className="h-4 w-4" /> {tr("Reencaminhar")}
                 </Button>
               </li>
             ))}
@@ -951,18 +952,17 @@ function FeriasPage() {
       {isManager && (
         <section className="order-50 rounded-2xl border border-border bg-card p-5">
           <h2 className="mb-3 flex items-center gap-2 font-semibold">
-            <Plus className="h-4 w-4" /> Marcar férias a um colaborador
+            <Plus className="h-4 w-4" /> {tr("Marcar férias a um colaborador")}
           </h2>
           <p className="mb-3 text-xs text-muted-foreground">
-            As férias ficam aprovadas de imediato. O colaborador recebe uma notificação e um e-mail a
-            informar quem as marcou e o período.
+            {tr("As férias ficam aprovadas de imediato. O colaborador recebe uma notificação e um e-mail a informar quem as marcou e o período.")}
           </p>
           <div className="grid gap-3 md:grid-cols-4">
             <div className="md:col-span-2">
-              <Label>Colaborador</Label>
+              <Label>{tr("Colaborador")}</Label>
               <Select value={mgrTargetUser} onValueChange={setMgrTargetUser}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecionar…" />
+                  <SelectValue placeholder={tr("Selecionar…")} />
                 </SelectTrigger>
                 <SelectContent>
                   {members
@@ -977,19 +977,19 @@ function FeriasPage() {
               </Select>
             </div>
             <div>
-              <Label>Início</Label>
+              <Label>{tr("Início")}</Label>
               <Input type="date" value={mgrStart} onChange={(e) => setMgrStart(e.target.value)} />
             </div>
             <div>
-              <Label>Fim</Label>
+              <Label>{tr("Fim")}</Label>
               <Input type="date" value={mgrEnd} onChange={(e) => setMgrEnd(e.target.value)} />
             </div>
             <div className="md:col-span-4">
-              <Label>Nota (opcional)</Label>
+              <Label>{tr("Nota (opcional)")}</Label>
               <Textarea
                 value={mgrNote}
                 onChange={(e) => setMgrNote(e.target.value)}
-                placeholder="Contexto, motivo, instruções..."
+                placeholder={tr("Contexto, motivo, instruções...")}
               />
             </div>
           </div>
@@ -998,7 +998,7 @@ function FeriasPage() {
               onClick={() => mgrCreate.mutate()}
               disabled={mgrCreate.isPending || !mgrTargetUser || !mgrStart || !mgrEnd}
             >
-              Agendar
+              {tr("Agendar")}
             </Button>
           </div>
         </section>
@@ -1007,9 +1007,9 @@ function FeriasPage() {
       {/* Employee: vacations awaiting MY confirmation */}
       {awaitingMyConfirm.length > 0 && (
         <section className="order-16 rounded-2xl border border-amber-500/40 bg-amber-500/5 p-5">
-          <h2 className="mb-3 font-semibold">Aguardando sua confirmação ({awaitingMyConfirm.length})</h2>
+          <h2 className="mb-3 font-semibold">{tr("Aguardando sua confirmação (")}{awaitingMyConfirm.length})</h2>
           <p className="mb-3 text-xs text-muted-foreground">
-            O gestor agendou estas férias em seu nome. Confirme ou solicite alteração.
+            {tr("O gestor agendou estas férias em seu nome. Confirme ou solicite alteração.")}
           </p>
           <ul className="space-y-2">
             {awaitingMyConfirm.map((r) => (
@@ -1038,7 +1038,7 @@ function FeriasPage() {
       {isManager && awaitingTheirConfirm.length > 0 && (
         <section className="order-17 rounded-2xl border border-border bg-card p-5">
           <h2 className="mb-3 font-semibold">
-            Pendentes de confirmação do funcionário ({awaitingTheirConfirm.length})
+            {tr("Pendentes de confirmação do funcionário (")}{awaitingTheirConfirm.length})
           </h2>
           <ul className="divide-y divide-border">
             {awaitingTheirConfirm.map((r) => (
@@ -1066,7 +1066,7 @@ function FeriasPage() {
                         })
                       }
                     >
-                      Cancelar
+                      {tr("Cancelar")}
                     </Button>
                   </div>
                 </li>
@@ -1080,12 +1080,12 @@ function FeriasPage() {
       <section className="order-30 rounded-2xl border border-border bg-card p-5">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="flex items-center gap-2 font-semibold">
-            <CalendarIcon className="h-4 w-4" /> Aprovadas ({approved.length})
+            <CalendarIcon className="h-4 w-4" /> {tr("Aprovadas (")}{approved.length})
           </h2>
           {isManager && approved.length > 0 && (
             <div className="flex gap-2">
               <Button size="sm" variant="outline" onClick={() => exportVacations("xlsx", approved)}>
-                <FileSpreadsheet className="h-4 w-4" /> Excel
+                <FileSpreadsheet className="h-4 w-4" /> {tr("Excel")}
               </Button>
               <Button size="sm" variant="outline" onClick={() => exportVacations("pdf", approved)}>
                 <FileText className="h-4 w-4" /> PDF
@@ -1096,28 +1096,28 @@ function FeriasPage() {
         {isManager && (
           <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-7">
             <div>
-              <Label className="text-xs">Colaborador</Label>
+              <Label className="text-xs">{tr("Colaborador")}</Label>
               <EmployeePicker
                 employees={uniqueUsers.map((u) => ({ id: u.id, full_name: u.name }))}
                 value={filterUser === "all" ? null : filterUser}
                 onChange={(id: string) => setFilterUser(id || "all")}
                 clearable
-                placeholder="Todos"
+                placeholder={tr("Todos")}
                 ariaLabel="Filtrar por colaborador"
               />
             </div>
             <div>
-              <Label className="text-xs">Mês</Label>
+              <Label className="text-xs">{tr("Mês")}</Label>
               <Input type="month" value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} />
             </div>
             <div>
-              <Label className="text-xs">Ano</Label>
+              <Label className="text-xs">{tr("Ano")}</Label>
               <Select value={filterYear} onValueChange={setFilterYear}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="all">{tr("Todos")}</SelectItem>
                   {yearOptions.map((y) => (
                     <SelectItem key={y} value={y}>
                       {y}
@@ -1127,30 +1127,30 @@ function FeriasPage() {
               </Select>
             </div>
             <div>
-              <Label className="text-xs">Estado</Label>
+              <Label className="text-xs">{tr("Estado")}</Label>
               <Select value={filterStatus} onValueChange={setFilterStatus}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="pendente">Pendente</SelectItem>
-                  <SelectItem value="aguardando_aprovacao">Aguardando</SelectItem>
-                  <SelectItem value="pendente_confirmacao">Pendente de confirmação</SelectItem>
-                  <SelectItem value="aprovado">Aprovado</SelectItem>
-                  <SelectItem value="rejeitado">Rejeitado</SelectItem>
-                  <SelectItem value="cancelado">Cancelado</SelectItem>
+                  <SelectItem value="all">{tr("Todos")}</SelectItem>
+                  <SelectItem value="pendente">{tr("Pendente")}</SelectItem>
+                  <SelectItem value="aguardando_aprovacao">{tr("Aguardando")}</SelectItem>
+                  <SelectItem value="pendente_confirmacao">{tr("Pendente de confirmação")}</SelectItem>
+                  <SelectItem value="aprovado">{tr("Aprovado")}</SelectItem>
+                  <SelectItem value="rejeitado">{tr("Rejeitado")}</SelectItem>
+                  <SelectItem value="cancelado">{tr("Cancelado")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label className="text-xs">Cargo</Label>
+              <Label className="text-xs">{tr("Cargo")}</Label>
               <Select value={filterJob} onValueChange={setFilterJob}>
-                <SelectTrigger aria-label="Filtrar por cargo">
-                  <SelectValue placeholder="Todos" />
+                <SelectTrigger aria-label={tr("Filtrar por cargo")}>
+                  <SelectValue placeholder={tr("Todos")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="all">{tr("Todos")}</SelectItem>
                   {jobOptions.map((j) => (
                     <SelectItem key={j} value={j}>
                       {j}
@@ -1160,17 +1160,17 @@ function FeriasPage() {
               </Select>
             </div>
             <div>
-              <Label className="text-xs">Local de trabalho</Label>
+              <Label className="text-xs">{tr("Local de trabalho")}</Label>
               <Input
                 value={filterLocation}
                 onChange={(e) => setFilterLocation(e.target.value)}
-                placeholder="Filtrar por local…"
+                placeholder={tr("Filtrar por local…")}
               />
             </div>
             <div className="flex items-end gap-2">
               <Switch id="biz-only" checked={businessOnly} onCheckedChange={setBusinessOnly} />
               <Label htmlFor="biz-only" className="text-xs">
-                Contar apenas dias úteis
+                {tr("Contar apenas dias úteis")}
               </Label>
             </div>
           </div>
@@ -1180,15 +1180,14 @@ function FeriasPage() {
             role="note"
             className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-200"
           >
-            <div className="font-medium">Aviso sobre férias aprovadas</div>
+            <div className="font-medium">{tr("Aviso sobre férias aprovadas")}</div>
             <div className="mt-1">
-              Depois de aprovadas, as férias não podem ser canceladas pelo funcionário. O gestor mantém a opção de
-              cancelar o pedido.
+              {tr("Depois de aprovadas, as férias não podem ser canceladas pelo funcionário. O gestor mantém a opção de cancelar o pedido.")}
             </div>
           </div>
         )}
         {approved.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhuma férias aprovada.</p>
+          <p className="text-sm text-muted-foreground">{tr("Nenhuma férias aprovada.")}</p>
         ) : (
           <ul className="divide-y divide-border">
             {approvedGroups.map((g) => (
@@ -1200,7 +1199,7 @@ function FeriasPage() {
                   <li
                     key={r.id}
                     data-vacation-id={r.id}
-                    title={r.end_date < todayKey ? "Férias já gozadas" : undefined}
+                    title={r.end_date < todayKey ? tr("Férias já gozadas") : undefined}
                     className={`flex items-center justify-between gap-3 py-2 ${
                       r.end_date < todayKey ? "-mx-5 bg-muted/70 px-5" : ""
                     }`}
@@ -1210,7 +1209,7 @@ function FeriasPage() {
                         <span className="mr-2 font-mono text-xs font-normal text-muted-foreground">
                           {fmtRequestedAt(r.created_at)}
                         </span>
-                        {isManager ? nameOf(r.user_id) : "Você"}
+                        {isManager ? nameOf(r.user_id) : tr("Você")}
                         {isManager && (
                           <span className="ml-2 text-xs font-normal text-muted-foreground">· {jobOf(r.user_id)}</span>
                         )}
@@ -1219,7 +1218,7 @@ function FeriasPage() {
                         {fmt(r.start_date)} → {fmt(r.end_date)}
                         {" · "}
                         <span className="font-mono">
-                          {countDays(r)} {businessOnly ? "dias úteis" : "dias"}
+                          {countDays(r)} {businessOnly ? tr("dias úteis") : "dias"}
                         </span>
                         {r.work_location && <span> · {r.work_location}</span>}
                       </div>
@@ -1239,7 +1238,7 @@ function FeriasPage() {
                             })
                           }
                         >
-                          Cancelar
+                          {tr("Cancelar")}
                         </Button>
                       )}
                     </div>
@@ -1254,7 +1253,7 @@ function FeriasPage() {
       {/* Own pending list */}
       {pending.some((r) => r.user_id === user?.id) && (
         <section className="order-20 rounded-2xl border border-border bg-card p-5">
-          <h2 className="mb-3 font-semibold">Aguardando aprovação</h2>
+          <h2 className="mb-3 font-semibold">{tr("Aguardando aprovação")}</h2>
           <ul className="divide-y divide-border">
             {pending
               .filter((r) => r.user_id === user?.id)
@@ -1266,13 +1265,13 @@ function FeriasPage() {
                         {fmt(r.start_date)} → {fmt(r.end_date)}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        Aprovador: {r.assigned_approver_id ? nameOf(r.assigned_approver_id) : "Não definido"}
+                        {tr("Aprovador:")} {r.assigned_approver_id ? nameOf(r.assigned_approver_id) : tr("Não definido")}
                       </div>
                       {r.note && <div className="text-xs text-muted-foreground">{r.note}</div>}
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_TONE.pendente}`}>
-                        Aguardando aprovação
+                        {tr("Aguardando aprovação")}
                       </span>
                       <Button
                         size="sm"
@@ -1286,7 +1285,7 @@ function FeriasPage() {
                           })
                         }
                       >
-                        Cancelar
+                        {tr("Cancelar")}
                       </Button>
                     </div>
                   </li>
@@ -1298,11 +1297,11 @@ function FeriasPage() {
 
       {/* History */}
       <section className="order-60 rounded-2xl border border-border bg-card p-5">
-        <h2 className="mb-3 font-semibold">Histórico</h2>
+        <h2 className="mb-3 font-semibold">{tr("Histórico")}</h2>
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">Carregando…</p>
+          <p className="text-sm text-muted-foreground">{tr("Carregando…")}</p>
         ) : history.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Sem registros.</p>
+          <p className="text-sm text-muted-foreground">{tr("Sem registros.")}</p>
         ) : (
           <ul className="divide-y divide-border">
             {history.map((r) => (
@@ -1310,14 +1309,14 @@ function FeriasPage() {
                 <li data-vacation-id={r.id} className="flex items-center justify-between gap-3 py-2">
                   <div>
                     <div className="font-medium">
-                      {isManager ? nameOf(r.user_id) : "Você"} — {fmt(r.start_date)} → {fmt(r.end_date)}
+                      {isManager ? nameOf(r.user_id) : tr("Você")} — {fmt(r.start_date)} → {fmt(r.end_date)}
                     </div>
                     {r.decision_reason && (
-                      <div className="text-xs text-muted-foreground">Motivo: {r.decision_reason}</div>
+                      <div className="text-xs text-muted-foreground">{tr("Motivo:")} {r.decision_reason}</div>
                     )}
                   </div>
                   <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_TONE[r.status]}`}>
-                    {STATUS_LABEL[r.status]}
+                    {tr(STATUS_LABEL[r.status])}
                   </span>
                 </li>
               </RecordHistoryMenu>
@@ -1338,56 +1337,56 @@ function FeriasPage() {
         <DialogContent size="sm">
           <ModalHeader
             icon={Send}
-            title="Enviar pedido para autorização"
-            description="Selecione um gestor ativo da mesma empresa para tomar a decisão final."
+            title={tr("Enviar pedido para autorização")}
+            description={tr("Selecione um gestor ativo da mesma empresa para tomar a decisão final.")}
           />
           <ModalBody className="space-y-4">
             {forwardTarget && (
               <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm">
-                <div className="font-medium">Funcionário: {nameOf(forwardTarget.user_id)}</div>
+                <div className="font-medium">{tr("Funcionário:")} {nameOf(forwardTarget.user_id)}</div>
                 <div className="text-muted-foreground">
-                  Período: {fmt(forwardTarget.start_date)} → {fmt(forwardTarget.end_date)} · {countDays(forwardTarget)}{" "}
+                  {tr("Período:")} {fmt(forwardTarget.start_date)} → {fmt(forwardTarget.end_date)} · {countDays(forwardTarget)}{" "}
                   dias
                 </div>
                 {forwardTarget.note && (
-                  <div className="mt-1 text-muted-foreground">Observação: {forwardTarget.note}</div>
+                  <div className="mt-1 text-muted-foreground">{tr("Observação:")} {forwardTarget.note}</div>
                 )}
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="vacation-approver">Gestor autorizador *</Label>
+              <Label htmlFor="vacation-approver">{tr("Gestor autorizador *")}</Label>
               <Select value={forwardApprover} onValueChange={setForwardApprover}>
                 <SelectTrigger id="vacation-approver">
-                  <SelectValue placeholder="Selecionar gestor" />
+                  <SelectValue placeholder={tr("Selecionar gestor")} />
                 </SelectTrigger>
                 <SelectContent>
                   {approvers.map((approver) => (
                     <SelectItem key={approver.id} value={approver.id}>
-                      {approver.name} · {approver.role === "owner" ? "Owner" : "Gestor"}
+                      {approver.name} · {approver.role === "owner" ? tr("Owner") : tr("Gestor")}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               {approvers.length === 0 && (
                 <p className="text-xs text-muted-foreground">
-                  Nenhum outro gestor ativo está disponível nesta empresa.
+                  {tr("Nenhum outro gestor ativo está disponível nesta empresa.")}
                 </p>
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="vacation-forward-reason">Observação (opcional)</Label>
+              <Label htmlFor="vacation-forward-reason">{tr("Observação (opcional)")}</Label>
               <Textarea
                 id="vacation-forward-reason"
                 value={forwardReason}
                 onChange={(e) => setForwardReason(e.target.value)}
-                placeholder="Contexto para o gestor autorizador"
+                placeholder={tr("Contexto para o gestor autorizador")}
                 maxLength={500}
               />
             </div>
           </ModalBody>
           <ModalFooter>
             <Button variant="outline" onClick={() => setForwardTarget(null)} disabled={forward.isPending}>
-              Cancelar
+              {tr("Cancelar")}
             </Button>
             <Button
               onClick={() =>
@@ -1396,7 +1395,7 @@ function FeriasPage() {
               }
               disabled={forward.isPending || !forwardApprover || approvers.length === 0}
             >
-              <Send className="h-4 w-4" /> Enviar para autorização
+              <Send className="h-4 w-4" /> {tr("Enviar para autorização")}
             </Button>
           </ModalFooter>
         </DialogContent>
@@ -1426,31 +1425,31 @@ function ConfirmRow({
             {fmt(row.start_date)} → {fmt(row.end_date)}
           </div>
           {row.decision_reason && (
-            <div className="text-xs text-muted-foreground">Nota do gestor: {row.decision_reason}</div>
+            <div className="text-xs text-muted-foreground">{tr("Nota do gestor:")} {row.decision_reason}</div>
           )}
         </div>
         {!requesting ? (
           <div className="flex gap-2">
             <Button size="sm" onClick={onAccept}>
-              <Check className="h-4 w-4" /> Confirmar
+              <Check className="h-4 w-4" /> {tr("Confirmar")}
             </Button>
             <Button size="sm" variant="outline" onClick={() => setRequesting(true)}>
-              <Pencil className="h-4 w-4" /> Solicitar alteração
+              <Pencil className="h-4 w-4" /> {tr("Solicitar alteração")}
             </Button>
             <Button size="sm" variant="ghost" onClick={onCancel}>
-              <XIcon className="h-4 w-4" /> Cancelar pedido
+              <XIcon className="h-4 w-4" /> {tr("Cancelar pedido")}
             </Button>
           </div>
         ) : null}
       </div>
       {requesting && (
         <div className="mt-3 space-y-2">
-          <Label htmlFor={`c-${row.id}`}>Descreva a alteração pretendida</Label>
+          <Label htmlFor={`c-${row.id}`}>{tr("Descreva a alteração pretendida")}</Label>
           <Textarea
             id={`c-${row.id}`}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="Ex.: preferia adiar uma semana, conflito com..."
+            placeholder={tr("Ex.: preferia adiar uma semana, conflito com...")}
           />
           <div className="flex justify-end gap-2">
             <Button
@@ -1461,7 +1460,7 @@ function ConfirmRow({
                 setReason("");
               }}
             >
-              Cancelar
+              {tr("Cancelar")}
             </Button>
             <Button
               size="sm"
@@ -1472,7 +1471,7 @@ function ConfirmRow({
                 setReason("");
               }}
             >
-              Enviar pedido de alteração
+              {tr("Enviar pedido de alteração")}
             </Button>
           </div>
         </div>
@@ -1507,13 +1506,13 @@ function PendingRow({
             {fmt(row.start_date)} → {fmt(row.end_date)}
           </div>
           <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
-            <div>Local: {row.work_location ?? "—"}</div>
+            <div>{tr("Local:")} {row.work_location ?? "—"}</div>
             <div>
-              Validação prévia:{" "}
+              {tr("Validação prévia:")}{" "}
               {row.prior_validation ? (
-                <span className="text-success">Sim{row.validated_by ? ` — ${row.validated_by}` : ""}</span>
+                <span className="text-success">{tr("Sim")}{row.validated_by ? ` — ${row.validated_by}` : ""}</span>
               ) : (
-                "Não"
+                tr("Não")
               )}
             </div>
           </div>
@@ -1523,32 +1522,32 @@ function PendingRow({
           <div className="flex gap-2">
             {awaiting ? (
               <span className="rounded-full bg-amber-500/15 px-2 py-1 text-xs text-amber-700 dark:text-amber-300">
-                Aguardando aprovação
+                {tr("Aguardando aprovação")}
               </span>
             ) : (
               onForward && (
                 <Button size="sm" variant="outline" onClick={onForward}>
-                  <Send className="h-4 w-4" /> Pedir autorização
+                  <Send className="h-4 w-4" /> {tr("Pedir autorização")}
                 </Button>
               )
             )}
             <Button size="sm" onClick={onApprove}>
-              <Check className="h-4 w-4" /> Aprovar
+              <Check className="h-4 w-4" /> {tr("Aprovar")}
             </Button>
             <Button size="sm" variant="outline" onClick={() => setRejecting(true)}>
-              <XIcon className="h-4 w-4" /> Rejeitar
+              <XIcon className="h-4 w-4" /> {tr("Rejeitar")}
             </Button>
           </div>
         ) : null}
       </div>
       {rejecting && (
         <div className="mt-3 space-y-2">
-          <Label htmlFor={`r-${row.id}`}>Motivo da rejeição</Label>
+          <Label htmlFor={`r-${row.id}`}>{tr("Motivo da rejeição")}</Label>
           <Textarea
             id={`r-${row.id}`}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="Explique o motivo..."
+            placeholder={tr("Explique o motivo...")}
           />
           <div className="flex justify-end gap-2">
             <Button
@@ -1559,7 +1558,7 @@ function PendingRow({
                 setReason("");
               }}
             >
-              Cancelar
+              {tr("Cancelar")}
             </Button>
             <Button
               size="sm"
@@ -1571,7 +1570,7 @@ function PendingRow({
                 setReason("");
               }}
             >
-              Confirmar rejeição
+              {tr("Confirmar rejeição")}
             </Button>
           </div>
         </div>

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertTriangle, CalendarX } from "lucide-react";
+import { tr } from "@/i18n";
 
 export type VacationCancelTarget = {
   id: string;
@@ -51,37 +52,37 @@ export function CancelVacationDialog({
       <DialogContent size="sm">
         <ModalHeader
           icon={CalendarX}
-          title="Cancelar férias"
-          description="Ação explícita e auditada — exige motivo e confirmação final."
+          title={tr("Cancelar férias")}
+          description={tr("Ação explícita e auditada — exige motivo e confirmação final.")}
         />
 
         <ModalBody className="space-y-4">
-          <ModalSection title={target?.employeeName ?? "Funcionário"} description={target?.periodLabel}>
-            <div className="text-xs text-muted-foreground">Status atual: {target?.statusLabel ?? "-"}</div>
+          <ModalSection title={target?.employeeName ?? tr("Funcionário")} description={target?.periodLabel}>
+            <div className="text-xs text-muted-foreground">{tr("Status atual:")} {target?.statusLabel ?? "-"}</div>
           </ModalSection>
 
           {!confirming ? (
             <div className="space-y-1.5">
-              <Label>Motivo do cancelamento *</Label>
+              <Label>{tr("Motivo do cancelamento *")}</Label>
               <Textarea
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 rows={3}
-                placeholder="Explique porque este pedido de férias será cancelado"
+                placeholder={tr("Explique porque este pedido de férias será cancelado")}
               />
             </div>
           ) : (
             <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-sm">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
               <div className="space-y-1">
-                <div className="font-medium">Confirmar o cancelamento deste pedido?</div>
+                <div className="font-medium">{tr("Confirmar o cancelamento deste pedido?")}</div>
                 <div className="text-xs">
                   {target?.employeeName} · {target?.periodLabel}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  Fica registado quem cancelou, quando e o motivo. O histórico é preservado.
+                  {tr("Fica registado quem cancelou, quando e o motivo. O histórico é preservado.")}
                 </div>
-                <div className="text-xs">Motivo: {finalReason}</div>
+                <div className="text-xs">{tr("Motivo:")} {finalReason}</div>
               </div>
             </div>
           )}
@@ -91,23 +92,23 @@ export function CancelVacationDialog({
           {!confirming ? (
             <>
               <Button variant="ghost" onClick={() => onOpenChange(false)}>
-                Voltar
+                {tr("Voltar")}
               </Button>
               <Button disabled={!valid} onClick={() => setConfirming(true)}>
-                Continuar
+                {tr("Continuar")}
               </Button>
             </>
           ) : (
             <>
               <Button variant="ghost" disabled={saving} onClick={() => setConfirming(false)}>
-                Voltar
+                {tr("Voltar")}
               </Button>
               <Button
                 variant="destructive"
                 disabled={saving || !target}
                 onClick={() => target && onConfirm(target.id, finalReason)}
               >
-                {saving ? "Cancelando..." : "Confirmar cancelamento"}
+                {saving ? tr("Cancelando...") : tr("Confirmar cancelamento")}
               </Button>
             </>
           )}

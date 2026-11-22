@@ -24,6 +24,7 @@ import {
   type TaskRow,
 } from "@/lib/tasks";
 import { formatWallDate, formatWallTime } from "@/lib/wall-clock";
+import { tr } from "@/i18n";
 
 export function CancelTaskDialog({
   task,
@@ -80,12 +81,12 @@ export function CancelTaskDialog({
       } else {
         await cancelTask(task.id, finalReason);
       }
-      toast.success("Tarefa cancelada. O histórico foi preservado.");
+      toast.success(tr("Tarefa cancelada. O histórico foi preservado."));
       onDone();
       onOpenChange(false);
     } catch (e) {
       if (isOpenPunchError(e)) {
-        toast.error("Existe um ponto aberto nesta tarefa. Encerre ou regularize o ponto antes de continuar.");
+        toast.error(tr("Existe um ponto aberto nesta tarefa. Encerre ou regularize o ponto antes de continuar."));
         onOpenChange(false);
         onOpenPunch?.();
       } else {
@@ -107,30 +108,30 @@ export function CancelTaskDialog({
       <DialogContent size="sm">
         <ModalHeader
           icon={Ban}
-          title="Cancelar tarefa"
-          description="O cancelamento exige motivo e fica registado permanentemente no histórico."
+          title={tr("Cancelar tarefa")}
+          description={tr("O cancelamento exige motivo e fica registado permanentemente no histórico.")}
         />
 
         <ModalBody className="space-y-4">
-          <ModalSection title={task?.title ?? "Tarefa"} description={clientName}>
+          <ModalSection title={task?.title ?? tr("Tarefa")} description={clientName}>
             <div className="space-y-1 text-xs text-muted-foreground">
               <div>{dateLabel}</div>
-              <div>Status atual: {task ? STATUS_LABELS[task.status] : "-"}</div>
+              <div>{tr("Status atual:")} {task ? tr(STATUS_LABELS[task.status]) : "-"}</div>
             </div>
           </ModalSection>
 
           {!confirming ? (
             <>
               <div className="space-y-1.5">
-                <Label>Motivo do cancelamento *</Label>
+                <Label>{tr("Motivo do cancelamento *")}</Label>
                 <Select value={reason} onValueChange={setReason}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione o motivo" />
+                    <SelectValue placeholder={tr("Selecione o motivo")} />
                   </SelectTrigger>
                   <SelectContent>
                     {CANCEL_REASONS.map((r) => (
                       <SelectItem key={r} value={r}>
-                        {r === "Alteração de programação" ? "Alterar data / hora" : r}
+                        {r === "Alteração de programação" ? tr("Alterar data / hora") : r}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -138,23 +139,23 @@ export function CancelTaskDialog({
               </div>
               {reason === "Outro" && (
                 <div className="space-y-1.5">
-                  <Label>Descreva o motivo *</Label>
+                  <Label>{tr("Descreva o motivo *")}</Label>
                   <Textarea
                     value={other}
                     onChange={(e) => setOther(e.target.value)}
                     rows={3}
-                    placeholder="Explique o motivo do cancelamento"
+                    placeholder={tr("Explique o motivo do cancelamento")}
                   />
                 </div>
               )}
               {isScheduleChange && (
                 <div className="space-y-3 rounded-md border border-primary/30 bg-primary/5 p-3">
                   <p className="text-xs text-muted-foreground">
-                    Isto é apenas um pedido: a tarefa não é movida nem reagendada automaticamente.
+                    {tr("Isto é apenas um pedido: a tarefa não é movida nem reagendada automaticamente.")}
                   </p>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-1.5">
-                      <Label htmlFor="schedule-change-date">Nova data desejada *</Label>
+                      <Label htmlFor="schedule-change-date">{tr("Nova data desejada *")}</Label>
                       <Input
                         id="schedule-change-date"
                         type="date"
@@ -164,7 +165,7 @@ export function CancelTaskDialog({
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="schedule-change-time">Nova hora desejada</Label>
+                      <Label htmlFor="schedule-change-time">{tr("Nova hora desejada")}</Label>
                       <Input
                         id="schedule-change-time"
                         type="time"
@@ -180,20 +181,20 @@ export function CancelTaskDialog({
                       onChange={(event) => setNeedsReassignment(event.target.checked)}
                       className="h-4 w-4 rounded border-border"
                     />
-                    Necessita reatribuição para outro funcionário
+                    {tr("Necessita reatribuição para outro funcionário")}
                   </label>
                   {needsReassignment && (
                     <div className="space-y-1.5">
-                      <Label htmlFor="schedule-change-suggested">Funcionário sugerido (opcional)</Label>
+                      <Label htmlFor="schedule-change-suggested">{tr("Funcionário sugerido (opcional)")}</Label>
                       <Input
                         id="schedule-change-suggested"
                         type="text"
                         value={suggested}
                         onChange={(event) => setSuggested(event.target.value)}
-                        placeholder="Digite o nome do funcionário"
+                        placeholder={tr("Digite o nome do funcionário")}
                       />
                       <p className="text-xs text-muted-foreground">
-                        A sugestão é informativa. Só o gestor pode reatribuir a tarefa.
+                        {tr("A sugestão é informativa. Só o gestor pode reatribuir a tarefa.")}
                       </p>
                     </div>
                   )}
@@ -204,13 +205,13 @@ export function CancelTaskDialog({
             <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-sm">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
               <div className="space-y-1">
-                <div className="font-medium">Tem certeza de que deseja cancelar esta tarefa?</div>
-                <div className="text-xs text-muted-foreground">O histórico será preservado.</div>
-                <div className="text-xs">Motivo: {finalReason}</div>
+                <div className="font-medium">{tr("Tem certeza de que deseja cancelar esta tarefa?")}</div>
+                <div className="text-xs text-muted-foreground">{tr("O histórico será preservado.")}</div>
+                <div className="text-xs">{tr("Motivo:")} {finalReason}</div>
                 {isScheduleChange && (
                   <div className="text-xs">
-                    Nova data: {requestedDate}
-                    {requestedTime ? ` · Nova hora: ${requestedTime}` : ""} · Reatribuição: {needsReassignment ? "sim" : "não"}
+                    {tr("Nova data:")} {requestedDate}
+                    {requestedTime ? ` · Nova hora: ${requestedTime}` : ""} {tr("· Reatribuição:")} {needsReassignment ? "sim" : tr("não")}
                     {needsReassignment && suggested.trim()
                       ? ` · Sugerido: ${suggested.trim()}`
                       : ""}
@@ -225,19 +226,19 @@ export function CancelTaskDialog({
           {!confirming ? (
             <>
               <Button variant="ghost" onClick={() => onOpenChange(false)}>
-                Voltar
+                {tr("Voltar")}
               </Button>
               <Button disabled={!valid} onClick={() => setConfirming(true)}>
-                Continuar
+                {tr("Continuar")}
               </Button>
             </>
           ) : (
             <>
               <Button variant="ghost" disabled={saving} onClick={() => setConfirming(false)}>
-                Voltar
+                {tr("Voltar")}
               </Button>
               <Button variant="destructive" disabled={saving} onClick={submit}>
-                {saving ? "Cancelando..." : "Confirmar cancelamento"}
+                {saving ? tr("Cancelando...") : tr("Confirmar cancelamento")}
               </Button>
             </>
           )}

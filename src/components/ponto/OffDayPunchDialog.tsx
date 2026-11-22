@@ -10,6 +10,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import type { OffDayInfo } from "@/lib/punch/off-day";
+import { tr } from "@/i18n";
 
 /** Alerta antes de bater o ponto de uma tarefa que não é de hoje. */
 export function OffDayPunchDialog({
@@ -34,30 +35,30 @@ export function OffDayPunchDialog({
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
             <CalendarX className="h-5 w-5 text-warning-foreground" />
-            Este ponto não é do dia de hoje
+            {tr("Este ponto não é do dia de hoje")}
           </AlertDialogTitle>
           <AlertDialogDescription asChild>
             <div className="space-y-2">
               <p className="text-base text-foreground">
-                Esta tarefa é do dia <strong>{info?.dayLabel}</strong>. Hoje é dia{" "}
+                {tr("Esta tarefa é do dia")} <strong>{info?.dayLabel}</strong>{tr(". Hoje é dia")}{" "}
                 <strong>{info?.todayLabel}</strong>.
               </p>
               <p>
                 <strong>{taskLabel}</strong>
                 {info?.when === "past"
-                  ? " — tarefa de um dia anterior."
-                  : " — tarefa de um dia posterior."}{" "}
+                  ? tr(" — tarefa de um dia anterior.")
+                  : tr(" — tarefa de um dia posterior.")}{" "}
                 {todayTaskLabel
-                  ? "Há uma tarefa deste cliente marcada para hoje: use essa."
-                  : "Confirme que quer bater o ponto hoje nesta tarefa."}
+                  ? tr("Há uma tarefa deste cliente marcada para hoje: use essa.")
+                  : tr("Confirme que quer bater o ponto hoje nesta tarefa.")}
               </p>
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter className="flex-col gap-2 sm:flex-row">
-          <AlertDialogCancel onClick={onCancel}>Cancelar</AlertDialogCancel>
+          <AlertDialogCancel onClick={onCancel}>{tr("Cancelar")}</AlertDialogCancel>
           {onUseToday && todayTaskLabel && (
-            <AlertDialogAction onClick={onUseToday}>Usar a tarefa de hoje</AlertDialogAction>
+            <AlertDialogAction onClick={onUseToday}>{tr("Usar a tarefa de hoje")}</AlertDialogAction>
           )}
           <AlertDialogAction
             onClick={onConfirm}
@@ -67,7 +68,7 @@ export function OffDayPunchDialog({
                 : undefined
             }
           >
-            Bater o ponto mesmo assim
+            {tr("Bater o ponto mesmo assim")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

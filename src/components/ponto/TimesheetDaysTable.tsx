@@ -22,6 +22,7 @@ import {
   type ViewDay,
 } from "@/lib/timesheet-view";
 import { formatWallDate } from "@/lib/wall-clock";
+import { tr } from "@/i18n";
 
 const RED = "font-semibold text-destructive";
 
@@ -40,7 +41,7 @@ function EntryCells({ e }: { e: SnapshotEntry }) {
             className="block text-xs text-muted-foreground"
             title={`Real: ${formatMinutes(e.effective_minutes)}`}
           >
-            previsto (real {formatMinutes(e.effective_minutes)})
+            {tr("previsto (real")} {formatMinutes(e.effective_minutes)})
           </span>
         )}
       </td>
@@ -77,14 +78,14 @@ export function TimesheetDaysTable({
         <table className="w-full min-w-[720px] text-sm">
           <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
             <tr>
-              <th className="px-3 py-2 text-left">Data</th>
-              <th className="px-3 py-2 text-left">Cliente</th>
-              <th className="px-3 py-2 text-left">Entrada</th>
-              <th className="px-3 py-2 text-left">Saída</th>
-              <th className="px-3 py-2 text-left">Pausas</th>
-              <th className="px-3 py-2 text-left">Total</th>
-              <th className="px-3 py-2 text-left">Situação</th>
-              <th className="px-3 py-2 text-left">Visto</th>
+              <th className="px-3 py-2 text-left">{tr("Data")}</th>
+              <th className="px-3 py-2 text-left">{tr("Cliente")}</th>
+              <th className="px-3 py-2 text-left">{tr("Entrada")}</th>
+              <th className="px-3 py-2 text-left">{tr("Saída")}</th>
+              <th className="px-3 py-2 text-left">{tr("Pausas")}</th>
+              <th className="px-3 py-2 text-left">{tr("Total")}</th>
+              <th className="px-3 py-2 text-left">{tr("Situação")}</th>
+              <th className="px-3 py-2 text-left">{tr("Visto")}</th>
             </tr>
           </thead>
           <tbody>
@@ -142,25 +143,25 @@ export function TimesheetDaysTable({
                             {d.absence_tasks?.map((t) => t.title).join(", ")}
                           </div>
                           {d.attendance_status === "vacation_absence" && (
-                            <div className="text-xs text-amber-700">Também há férias aprovadas</div>
+                            <div className="text-xs text-amber-700">{tr("Também há férias aprovadas")}</div>
                           )}
                         </div>
                       ) : d.attendance_status === "mixed" ? (
                         <div className="space-y-1">
-                          <Badge variant="destructive">Trabalhado + falta</Badge>
+                          <Badge variant="destructive">{tr("Trabalhado + falta")}</Badge>
                           <div className="text-xs text-muted-foreground">
-                            {d.absence_task_count ?? 0} tarefa(s) sem realização
+                            {d.absence_task_count ?? 0} {tr("tarefa(s) sem realização")}
                           </div>
                         </div>
                       ) : d.day_type === "vacation" ? (
                         <div className="space-y-1">
-                          <Badge variant="secondary">Férias</Badge>
+                          <Badge variant="secondary">{tr("Férias")}</Badge>
                           {d.first_in && (
-                            <div className="text-xs text-amber-700">Conflito com ponto</div>
+                            <div className="text-xs text-amber-700">{tr("Conflito com ponto")}</div>
                           )}
                         </div>
                       ) : (
-                        "Trabalhado"
+                        tr("Trabalhado")
                       )}
                     </td>
                     <td className="px-3 py-2 align-top" rowSpan={span}>

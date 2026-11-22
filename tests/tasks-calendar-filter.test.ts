@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { readSource } from "./helpers/read-source";
 import test from "node:test";
 import { filterCalendarData, tasksForCalendarDay } from "../src/lib/tasks/calendar-filter.ts";
 import { tasksPageSource } from "./helpers/tasks-page-source";

@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Loader2, MapPin, Send, ShieldAlert, CheckCircle2 } from "lucide-react";
 import type { PunchFlowState } from "@/hooks/use-punch-flow";
+import { tr } from "@/i18n";
 
 const PHASE_LABEL: Record<PunchFlowState["phase"], string> = {
   idle: "",
@@ -49,7 +50,7 @@ export function PunchFlowOverlay({
             ) : (
               <Loader2 className="h-4 w-4 animate-spin text-primary" />
             )}
-            {PHASE_LABEL[state.phase]}
+            {PHASE_LABEL[state.phase] ? tr(PHASE_LABEL[state.phase]) : ""}
           </span>
         </div>
       )}
@@ -73,20 +74,20 @@ export function PunchFlowOverlay({
         <DialogContent size="sm">
           <ModalHeader
             icon={ShieldAlert}
-            title="Observação necessária"
+            title={tr("Observação necessária")}
             description={
               state.needsReasonMessage ??
-              "A política da empresa exige uma observação para prosseguir."
+              tr("A política da empresa exige uma observação para prosseguir.")
             }
           />
           <ModalBody>
             <div className="space-y-1.5">
-              <Label>Observação *</Label>
+              <Label>{tr("Observação *")}</Label>
               <Textarea
                 autoFocus
                 maxLength={500}
                 rows={4}
-                placeholder="Ex.: cliente em obra vizinha, sem sinal GPS, etc."
+                placeholder={tr("Ex.: cliente em obra vizinha, sem sinal GPS, etc.")}
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
               />
@@ -94,14 +95,14 @@ export function PunchFlowOverlay({
           </ModalBody>
           <ModalFooter>
             <Button type="button" variant="outline" onClick={onCancel}>
-              Cancelar
+              {tr("Cancelar")}
             </Button>
             <Button
               type="button"
               disabled={reason.trim().length < 3 || state.phase !== "awaiting_reason"}
               onClick={() => onSubmit(reason.trim())}
             >
-              <Send className="mr-2 h-4 w-4" /> Enviar
+              <Send className="mr-2 h-4 w-4" /> {tr("Enviar")}
             </Button>
           </ModalFooter>
         </DialogContent>

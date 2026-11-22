@@ -57,6 +57,7 @@ import { downloadBytes, generateTimesheetPdf, printBytes } from "@/lib/timesheet
 import { withLiveExtras } from "@/lib/timesheet-view";
 import { TimesheetDaysTable } from "@/components/ponto/TimesheetDaysTable";
 import { isDayVisto, resolveVersionSignature, signatureNotice } from "@/lib/timesheet-signature";
+import { tr } from "@/i18n";
 
 export const Route = createFileRoute("/app/ponto_/meus-relatorios")({ component: Page });
 
@@ -93,7 +94,7 @@ function MyReports() {
   // Garante que o mês corrente existe para conferência mesmo sem abertura do gestor.
   const ensureCurrent = useMutation({
     mutationFn: async (m: number) => {
-      if (!currentCompanyId || !user?.id) throw new Error("Empresa activa não definida.");
+      if (!currentCompanyId || !user?.id) throw new Error(tr("Empresa activa não definida."));
       return ensurePeriod({ companyId: currentCompanyId, employeeId: user.id, year, month: m });
     },
     onSuccess: async (row) => {
@@ -118,15 +119,15 @@ function MyReports() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-semibold tracking-tight">Meus Relatórios de Ponto</h1>
+        <h1 className="font-display text-3xl font-semibold tracking-tight">{tr("Meus Relatórios de Ponto")}</h1>
         <p className="mt-1 text-muted-foreground">
-          Confira os registos do mês, assine e guarde o seu documento.
+          {tr("Confira os registos do mês, assine e guarde o seu documento.")}
         </p>
       </div>
 
       <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-3">
         <div className="space-y-1.5">
-          <Label>Ano</Label>
+          <Label>{tr("Ano")}</Label>
           <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -137,11 +138,11 @@ function MyReports() {
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label>Mês</Label>
+          <Label>{tr("Mês")}</Label>
           <Select value={String(month)} onValueChange={(v) => setMonth(v === "all" ? "all" : Number(v))}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="all">{tr("Todos")}</SelectItem>
               {MONTH_LABELS.map((label, i) => (
                 <SelectItem key={label} value={String(i + 1)}>{label}</SelectItem>
               ))}
@@ -149,11 +150,11 @@ function MyReports() {
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label>Status</Label>
+          <Label>{tr("Status")}</Label>
           <Select value={status} onValueChange={(v) => setStatus(v as TimesheetStatus | "all")}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="all">{tr("Todos")}</SelectItem>
               {Object.entries(TIMESHEET_STATUS_LABEL).map(([k, v]) => (
                 <SelectItem key={k} value={k}>{v}</SelectItem>
               ))}
@@ -165,20 +166,20 @@ function MyReports() {
       {typeof month === "number" && !rows.some((r) => r.period_month === month) && (
         <div className="rounded-2xl border border-dashed border-border bg-card/60 p-6 text-center">
           <p className="text-sm text-muted-foreground">
-            Ainda não existe relatório para {monthLabel(month, year)}.
+            {tr("Ainda não existe relatório para")} {monthLabel(month, year)}.
           </p>
           <Button
             className="mt-3"
             disabled={ensureCurrent.isPending}
             onClick={() => ensureCurrent.mutate(month)}
           >
-            Preparar relatório de {monthLabel(month, year)}
+            {tr("Preparar relatório de")} {monthLabel(month, year)}
           </Button>
         </div>
       )}
 
       {periods.isLoading ? (
-        <div className="text-sm text-muted-foreground">Carregando...</div>
+        <div className="text-sm text-muted-foreground">{tr("Carregando...")}</div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {rows.map((p) => (
@@ -192,17 +193,17 @@ function MyReports() {
                 {monthLabel(p.period_month, p.period_year)}
               </div>
               <Badge variant={statusTone(p.status)} className="mt-2">
-                {TIMESHEET_STATUS_LABEL[p.status]}
+                {tr(TIMESHEET_STATUS_LABEL[p.status])}
               </Badge>
               <dl className="mt-3 space-y-1 text-xs text-muted-foreground">
-                <div>Total de horas: {formatMinutes(p.worked_minutes)}</div>
-                <div>Dias com registo: {p.paid_days ?? 0}</div>
-                {p.correction_reason && <div className="text-destructive">Correção: {p.correction_reason}</div>}
+                <div>{tr("Total de horas:")} {formatMinutes(p.worked_minutes)}</div>
+                <div>{tr("Dias com registo:")} {p.paid_days ?? 0}</div>
+                {p.correction_reason && <div className="text-destructive">{tr("Correção:")} {p.correction_reason}</div>}
               </dl>
             </button>
           ))}
           {rows.length === 0 && (
-            <div className="text-sm text-muted-foreground">Nenhum relatório neste filtro.</div>
+            <div className="text-sm text-muted-foreground">{tr("Nenhum relatório neste filtro.")}</div>
           )}
         </div>
       )}
@@ -295,7 +296,7 @@ function PeriodDetail({
       });
       await uploadTimesheetPdf(path, bytes);
       await registerPdf(version.id, path, await sha256Hex(bytes));
-      toast.success("Relatório assinado e arquivado.");
+      toast.success(tr("Relatório assinado e arquivado."));
       onChanged();
       onClose();
     } catch (e) {
@@ -308,13 +309,13 @@ function PeriodDetail({
   const submitCorrection = async () => {
     if (!period) return;
     if (!reason.trim()) {
-      toast.error("Descreva o que precisa de correção.");
+      toast.error(tr("Descreva o que precisa de correção."));
       return;
     }
     setBusy(true);
     try {
       await requestCorrection(period.id, reason.trim());
-      toast.success("Pedido de correção enviado ao gestor.");
+      toast.success(tr("Pedido de correção enviado ao gestor."));
       setAskCorrection(false);
       setReason("");
       onChanged();
@@ -349,12 +350,12 @@ function PeriodDetail({
       <DialogContent size="xl">
         <ModalHeader
           icon={FileSignature}
-          title={period ? `Folha de Ponto · ${monthLabel(period.period_month, period.period_year)}` : ""}
-          description={period ? TIMESHEET_STATUS_LABEL[period.status] : ""}
+          title={period ? tr("Folha de Ponto · {{month}}", { month: monthLabel(period.period_month, period.period_year) }) : ""}
+          description={period ? tr(TIMESHEET_STATUS_LABEL[period.status]) : ""}
         />
         <ModalBody>
           {snap.isLoading ? (
-            <div className="text-sm text-muted-foreground">Carregando registos...</div>
+            <div className="text-sm text-muted-foreground">{tr("Carregando registos...")}</div>
           ) : snap.data ? (
             <div className="space-y-4">
               {(() => {
@@ -391,7 +392,7 @@ function PeriodDetail({
                         }
                       }}
                     >
-                      Confirmar
+                      {tr("Confirmar")}
                     </Button>
                   )
                 }
@@ -399,22 +400,22 @@ function PeriodDetail({
 
               <div className="grid gap-2 rounded-xl border border-border bg-card/60 p-4 text-sm sm:grid-cols-3">
                 <div>
-                  <div className="text-xs uppercase text-muted-foreground">Total de horas</div>
+                  <div className="text-xs uppercase text-muted-foreground">{tr("Total de horas")}</div>
                   <div className="font-medium">{formatMinutes(snap.data.snapshot.summary.worked_minutes)}</div>
                 </div>
                 <div>
-                  <div className="text-xs uppercase text-muted-foreground">Dias com registo</div>
+                  <div className="text-xs uppercase text-muted-foreground">{tr("Dias com registo")}</div>
                   <div className="font-medium">{snap.data.snapshot.summary.paid_days}</div>
                 </div>
                 <div>
-                  <div className="text-xs uppercase text-muted-foreground">Tipo de pagamento</div>
+                  <div className="text-xs uppercase text-muted-foreground">{tr("Tipo de pagamento")}</div>
                   <div className="font-medium">{timesheetPayLabel(snap.data.snapshot.summary.payment_type_used)}</div>
                 </div>
               </div>
 
               {askCorrection ? (
                 <div className="space-y-2 rounded-xl border border-destructive/40 bg-destructive/5 p-4">
-                  <Label>O que precisa de correção?</Label>
+                  <Label>{tr("O que precisa de correção?")}</Label>
                   <Textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} />
                 </div>
               ) : (
@@ -427,42 +428,41 @@ function PeriodDetail({
                       onChange={(e) => setDeclared(e.target.checked)}
                     />
                     <span>
-                      Declaro que conferi os registos acima e confirmo as informações da minha folha de
-                      ponto.
+                      {tr("Declaro que conferi os registos acima e confirmo as informações da minha folha de ponto.")}
                     </span>
                   </label>
                 )
               )}
             </div>
           ) : (
-            <div className="text-sm text-destructive">Não foi possível carregar o relatório.</div>
+            <div className="text-sm text-destructive">{tr("Não foi possível carregar o relatório.")}</div>
           )}
         </ModalBody>
         <ModalFooter>
           <Button variant="ghost" onClick={() => exportPdf("print")} disabled={!snap.data}>
-            <Printer className="h-4 w-4" /> Imprimir
+            <Printer className="h-4 w-4" /> {tr("Imprimir")}
           </Button>
           <Button variant="outline" onClick={() => exportPdf("download")} disabled={!snap.data}>
-            <Download className="h-4 w-4" /> Baixar PDF
+            <Download className="h-4 w-4" /> {tr("Baixar PDF")}
           </Button>
           {!locked && (
             askCorrection ? (
               <>
                 <Button variant="ghost" disabled={busy} onClick={() => setAskCorrection(false)}>
-                  Voltar
+                  {tr("Voltar")}
                 </Button>
                 <Button variant="destructive" disabled={busy} onClick={submitCorrection}>
-                  Enviar pedido
+                  {tr("Enviar pedido")}
                 </Button>
               </>
             ) : (
               <>
                 <Button variant="outline" disabled={busy} onClick={() => setAskCorrection(true)}>
-                  <MessageSquareWarning className="h-4 w-4" /> Solicitar correção
+                  <MessageSquareWarning className="h-4 w-4" /> {tr("Solicitar correção")}
                 </Button>
                 <Button disabled={busy || !declared || !snap.data} onClick={sign}>
                   <FileSignature className="h-4 w-4" />
-                  {busy ? "Assinando..." : "Assinar e gerar relatório"}
+                  {busy ? tr("Assinando...") : tr("Assinar e gerar relatório")}
                 </Button>
               </>
             )

@@ -19,6 +19,7 @@ import { wallISOToDateInput, formatWallDate, formatWallTime, formatLocalTime } f
 import { ClientOption, clientAddressCache, taskClientInstructions, taskHeading, ApprovedVacation, CalendarMode, taskMemberName, RowHandlers, tasksRouteApi, splitClientHeading, weekColumnsTemplate } from "./shared";
 import type { CSSProperties } from "react";
 import { FilterChip, TaskRefusalHistory, PauseSummary, ActionButton, CompletionNoteBlock, ClientFilterEmptyState } from "./list";
+import { tr } from "@/i18n";
 
 export function TaskPlanningCalendar({
   tasks,
@@ -202,7 +203,7 @@ export function TaskPlanningCalendar({
         companyName: company?.name ?? null,
         primaryColor: company?.primary_color ?? null,
       });
-      toast.success(`PDF da semana com ${plan.taskCount} tarefa(s).`);
+      toast.success(tr("PDF da semana com {{n}} tarefa(s).", { n: plan.taskCount }));
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -215,13 +216,13 @@ export function TaskPlanningCalendar({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card px-3 py-3">
         <div className="inline-flex overflow-hidden rounded-md border border-border">
-          <Button type="button" variant="ghost" size="sm" title="Periodo anterior" onClick={() => addPeriod(-1)}>
+          <Button type="button" variant="ghost" size="sm" title={tr("Periodo anterior")} onClick={() => addPeriod(-1)}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <Button type="button" variant="ghost" size="sm" onClick={() => setCursor(new Date())}>
-            Hoje
+            {tr("Hoje")}
           </Button>
-          <Button type="button" variant="ghost" size="sm" title="Proximo periodo" onClick={() => addPeriod(1)}>
+          <Button type="button" variant="ghost" size="sm" title={tr("Proximo periodo")} onClick={() => addPeriod(1)}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
@@ -246,13 +247,13 @@ export function TaskPlanningCalendar({
           disabled={exporting}
           title={
             selectedCount > 0
-              ? `PDF da semana só com as ${selectedCount} tarefa(s) selecionada(s)`
-              : "PDF da semana com todas as tarefas do calendário"
+              ? tr("PDF da semana só com as {{n}} tarefa(s) selecionada(s)", { n: selectedCount })
+              : tr("PDF da semana com todas as tarefas do calendário")
           }
           onClick={() => void exportWeekPdf()}
         >
           <FileDown className="mr-1 h-4 w-4" />
-          {exporting ? "A gerar…" : selectedCount > 0 ? `PDF da semana (${selectedCount})` : "PDF da semana"}
+          {exporting ? tr("A gerar…") : selectedCount > 0 ? tr("PDF da semana ({{n}})", { n: selectedCount }) : tr("PDF da semana")}
         </Button>
       </div>
 
@@ -440,7 +441,7 @@ export function TaskPlanningCalendar({
                         ))}
                       </ul>
                       {monthTasks.length === 0 && monthVacations.length === 0 && (
-                        <p className="text-xs text-muted-foreground">Sem tarefas ou férias</p>
+                        <p className="text-xs text-muted-foreground">{tr("Sem tarefas ou férias")}</p>
                       )}
                       {monthTasks.length > 5 && (
                         <p className="mt-1 text-[11px] text-muted-foreground">+{monthTasks.length - 5} tarefas</p>
@@ -498,7 +499,7 @@ export function CalendarDayColumn({
         <span className="text-xs text-muted-foreground">{tasks.length + vacations.length}</span>
       </div>
       {tasks.length === 0 && vacations.length === 0 ? (
-        <p className="px-3 py-4 text-xs text-muted-foreground">Sem tarefas ou férias</p>
+        <p className="px-3 py-4 text-xs text-muted-foreground">{tr("Sem tarefas ou férias")}</p>
       ) : (
         <ul className="divide-y divide-border">
           {tasks.map((task) => (
@@ -526,7 +527,7 @@ export function ScheduleNameBadge({ name }: { name?: string | null }) {
   return (
     <span
       className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary"
-      title={`Programação do cliente: ${name}`}
+      title={tr("Programação do cliente: {{name}}", { name })}
     >
       {name}
     </span>
@@ -550,7 +551,7 @@ export function CalendarClientInstructions({ text }: { text?: string | null }) {
         className="inline-flex max-w-full items-center gap-1.5 rounded-md text-xs font-medium text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <InfoIcon className="h-3.5 w-3.5 shrink-0" aria-hidden />
-        <span className="truncate">{open ? "Ocultar instruções do cliente" : "Ver instruções do cliente"}</span>
+        <span className="truncate">{open ? tr("Ocultar instruções do cliente") : tr("Ver instruções do cliente")}</span>
         <ChevronDownIcon
           className={`h-3.5 w-3.5 shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
           aria-hidden
@@ -581,11 +582,11 @@ export function TaskClientAddress({ clientId }: { clientId?: string | null }) {
     const text = info.address ?? dest;
     if (navigator.clipboard?.writeText) {
       navigator.clipboard.writeText(text).then(
-        () => toast.success("Endereço copiado"),
-        () => toast.error("Não foi possível copiar o endereço"),
+        () => toast.success(tr("Endereço copiado")),
+        () => toast.error(tr("Não foi possível copiar o endereço")),
       );
     } else {
-      toast.error("Não foi possível copiar o endereço");
+      toast.error(tr("Não foi possível copiar o endereço"));
     }
   };
   const linkClass = "font-medium text-primary hover:underline";
@@ -598,18 +599,18 @@ export function TaskClientAddress({ clientId }: { clientId?: string | null }) {
         </div>
       )}
       <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span>Ir com:</span>
+        <span>{tr("Ir com:")}</span>
         <a href={google} target="_blank" rel="noopener noreferrer" className={linkClass}>
-          Google Maps
+          {tr("Google Maps")}
         </a>
         <a href={waze} target="_blank" rel="noopener noreferrer" className={linkClass}>
-          Waze
+          {tr("Waze")}
         </a>
         <a href={apple} target="_blank" rel="noopener noreferrer" className={linkClass}>
-          Mapas
+          {tr("Mapas")}
         </a>
         <button type="button" onClick={copy} className={linkClass}>
-          Copiar
+          {tr("Copiar")}
         </button>
       </div>
     </div>
@@ -646,10 +647,10 @@ export function MiniTaskChip({ task, startedAt, onClick }: { task: TaskRow; star
       {start ? `${start} ` : ""}
       {task.schedule_name ? `[${task.schedule_name}] ` : ""}
       {taskClientInstructions(task) ? (
-        <InfoIcon className="mr-0.5 inline h-3 w-3 align-[-2px]" aria-label="Tem instruções do cliente" />
+        <InfoIcon className="mr-0.5 inline h-3 w-3 align-[-2px]" aria-label={tr("Tem instruções do cliente")} />
       ) : null}
       {task.description ? (
-        <StickyNote className="mr-0.5 inline h-3 w-3 align-[-2px]" aria-label="Tem anotação" />
+        <StickyNote className="mr-0.5 inline h-3 w-3 align-[-2px]" aria-label={tr("Tem anotação")} />
       ) : null}
       {taskHeading(task)}
     </button>
@@ -661,9 +662,9 @@ export function MiniVacationChip({ vacation }: { vacation: ApprovedVacation }) {
   return (
     <li
       className="truncate rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-left text-[11px] font-medium text-emerald-700"
-      title={`Férias aprovadas · ${vacation.start_date} → ${vacation.end_date}`}
+      title={tr("Férias aprovadas · {{from}} → {{to}}", { from: vacation.start_date, to: vacation.end_date })}
     >
-      Férias · Aprovadas
+      {tr("Férias · Aprovadas")}
     </li>
   );
 }
@@ -673,12 +674,12 @@ export function CalendarVacationCard({ vacation }: { vacation: ApprovedVacation 
   const end = formatWallDate(vacation.end_date) || vacation.end_date;
   return (
     <li className="space-y-1 border-l-2 border-emerald-500 bg-emerald-50/70 px-3 py-3 text-emerald-800">
-      <div className="text-sm font-semibold">Férias</div>
+      <div className="text-sm font-semibold">{tr("Férias")}</div>
       <div className="text-xs">
         {start} → {end}
       </div>
       <span className="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide">
-        Aprovadas
+        {tr("Aprovadas")}
       </span>
     </li>
   );
@@ -899,7 +900,7 @@ export function CalendarTaskCard({
               size="sm"
               variant="ghost"
               className="h-7 w-7 shrink-0 p-0"
-              title={actionsOpen ? "Ocultar ações" : "Editar e mais ações"}
+              title={actionsOpen ? tr("Ocultar ações") : tr("Editar e mais ações")}
               aria-expanded={actionsOpen}
               onClick={() => setActionsOpen((open) => !open)}
             >
@@ -916,16 +917,16 @@ export function CalendarTaskCard({
                   {start || "--:--"} → {end || "--:--"}
                 </span>
               ) : dateOnly ? (
-                <span>{dateOnly} · Sem horario definido</span>
+                <span>{dateOnly} {tr("· Sem horario definido")}</span>
               ) : (
-                <span className="italic">Sem horário definido</span>
+                <span className="italic">{tr("Sem horário definido")}</span>
               )}
               <ScheduleNameBadge name={task.schedule_name} />
               {taskPunch && <PauseSummary entry={taskPunch} />}
               <span
                 className={`inline-flex items-center rounded-full px-1.5 py-px text-[9px] font-medium ${operationalStatus === "atrasada" ? "bg-destructive/15 text-destructive" : STATUS_TONE[operationalStatus]}`}
               >
-                {operationalStatus === "atrasada" ? "Atrasada" : STATUS_LABELS[operationalStatus]}
+                {operationalStatus === "atrasada" ? tr("Atrasada") : tr(STATUS_LABELS[operationalStatus])}
               </span>
             </div>
             {/* Gestor: endereço e instruções ficam no lápis (área de ações); funcionário vê sempre. */}
@@ -936,7 +937,7 @@ export function CalendarTaskCard({
       <div className="flex flex-wrap items-center gap-1">
         {lateStartMinutes != null ? (
           <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-destructive">
-            <Clock className="h-3 w-3" /> Início com atraso · {formatStartedLateMinutes(lateStartMinutes)}
+            <Clock className="h-3 w-3" /> {tr("Início com atraso ·")} {formatStartedLateMinutes(lateStartMinutes)}
           </span>
         ) : late && operationalStatus !== "atrasada" ? (
           <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-destructive">
@@ -946,10 +947,10 @@ export function CalendarTaskCard({
         {task.task_group_id && (
           <span
             className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
-            title="Tarefa criada em equipe: cada responsável tem a sua própria tarefa, com ponto e conclusão independentes."
+            title={tr("Tarefa criada em equipe: cada responsável tem a sua própria tarefa, com ponto e conclusão independentes.")}
           >
             <Users className="h-3 w-3" />
-            <span className="truncate">{groupMemberNames?.get(task.task_group_id) ?? "Em equipe"}</span>
+            <span className="truncate">{groupMemberNames?.get(task.task_group_id) ?? tr("Em equipe")}</span>
           </span>
         )}
         {task.recurrence_id && (
@@ -974,26 +975,26 @@ export function CalendarTaskCard({
       {refusal && (
         <div className="space-y-0.5 rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1.5 text-[11px]">
           <div className="font-semibold uppercase tracking-wide text-destructive">
-            Recusada · {memberNames.get(refusal.employeeId) ?? memberName}
+            {tr("Recusada ·")} {memberNames.get(refusal.employeeId) ?? memberName}
           </div>
-          <div className="whitespace-pre-wrap break-words">Motivo: {refusal.reason ?? "Motivo não registrado"}</div>
+          <div className="whitespace-pre-wrap break-words">{tr("Motivo:")} {refusal.reason ?? tr("Motivo não registrado")}</div>
           {refusal.refusedAt && (
-            <div className="text-muted-foreground">Recusada em: {formatLocalTime(refusal.refusedAt)}</div>
+            <div className="text-muted-foreground">{tr("Recusada em:")} {formatLocalTime(refusal.refusedAt)}</div>
           )}
           {refusal.requestedDate && (
             <div>
-              Nova data: {formatWallDate(refusal.requestedDate)}
+              {tr("Nova data:")} {formatWallDate(refusal.requestedDate)}
               {refusal.requestedTime ? ` · ${refusal.requestedTime}` : ""}
             </div>
           )}
-          {refusal.needsReassignment != null && <div>Reatribuição: {refusal.needsReassignment ? "Sim" : "Não"}</div>}
+          {refusal.needsReassignment != null && <div>{tr("Reatribuição:")} {refusal.needsReassignment ? tr("Sim") : tr("Não")}</div>}
           {(refusal.suggestedEmployeeName || refusal.suggestedEmployeeId) && (
             <div>
-              Sugestão (informativa):{" "}
+              {tr("Sugestão (informativa):")}{" "}
               {refusal.suggestedEmployeeName ??
                 (refusal.suggestedEmployeeId
-                  ? (memberNames.get(refusal.suggestedEmployeeId) ?? "Sem responsável")
-                  : "Sem responsável")}
+                  ? (memberNames.get(refusal.suggestedEmployeeId) ?? tr("Sem responsável"))
+                  : tr("Sem responsável"))}
             </div>
           )}
         </div>
@@ -1001,30 +1002,30 @@ export function CalendarTaskCard({
       {cancellation && (
         <div className="space-y-0.5 rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1.5 text-[11px]">
           <div className="font-semibold uppercase tracking-wide text-destructive">
-            {cancellation.byEmployee ? "Cancelada pelo funcionário" : "Tarefa cancelada"}
+            {cancellation.byEmployee ? tr("Cancelada pelo funcionário") : tr("Tarefa cancelada")}
           </div>
           <div className="whitespace-pre-wrap break-words">
-            Motivo: {cancellation.reason ?? "Motivo não registrado"}
+            {tr("Motivo:")} {cancellation.reason ?? tr("Motivo não registrado")}
           </div>
           {cancellation.cancelledAt && (
-            <div className="text-muted-foreground">Cancelada em: {formatLocalTime(cancellation.cancelledAt)}</div>
+            <div className="text-muted-foreground">{tr("Cancelada em:")} {formatLocalTime(cancellation.cancelledAt)}</div>
           )}
           {cancellation.requestedDate && (
             <div>
-              Nova data: {formatWallDate(cancellation.requestedDate)}
+              {tr("Nova data:")} {formatWallDate(cancellation.requestedDate)}
               {cancellation.requestedTime ? ` · ${cancellation.requestedTime}` : ""}
             </div>
           )}
           {cancellation.needsReassignment != null && (
-            <div>Reatribuição: {cancellation.needsReassignment ? "Sim" : "Não"}</div>
+            <div>{tr("Reatribuição:")} {cancellation.needsReassignment ? tr("Sim") : tr("Não")}</div>
           )}
           {(cancellation.suggestedEmployeeName || cancellation.suggestedEmployeeId) && (
             <div>
-              Sugestão (informativa):{" "}
+              {tr("Sugestão (informativa):")}{" "}
               {cancellation.suggestedEmployeeName ??
                 (cancellation.suggestedEmployeeId
-                  ? (memberNames.get(cancellation.suggestedEmployeeId) ?? "Sem responsável")
-                  : "Sem responsável")}
+                  ? (memberNames.get(cancellation.suggestedEmployeeId) ?? tr("Sem responsável"))
+                  : tr("Sem responsável"))}
             </div>
           )}
         </div>
@@ -1048,22 +1049,22 @@ export function CalendarTaskCard({
         <div className="flex flex-wrap justify-end gap-1">
           {isManager && (
             <>
-              <Button size="sm" variant="outline" title="Editar tarefa" onClick={() => onEdit(task)}>
+              <Button size="sm" variant="outline" title={tr("Editar tarefa")} onClick={() => onEdit(task)}>
                 <Pencil className="h-3 w-3" />
-                <span className="ml-1">Editar</span>
+                <span className="ml-1">{tr("Editar")}</span>
               </Button>
               {task.recurrence_id && (
-                <Button size="sm" variant="ghost" title="Editar série" onClick={() => onEditSeries(task)}>
+                <Button size="sm" variant="ghost" title={tr("Editar série")} onClick={() => onEditSeries(task)}>
                   <Repeat className="h-3 w-3" />
                 </Button>
               )}
-              <Button size="sm" variant="ghost" title="Reatribuir" onClick={() => onReassign(task)}>
+              <Button size="sm" variant="ghost" title={tr("Reatribuir")} onClick={() => onReassign(task)}>
                 <UserCog className="h-3 w-3" />
               </Button>
               <Button
                 size="sm"
                 variant="ghost"
-                title="Excluir tarefa"
+                title={tr("Excluir tarefa")}
                 className="text-destructive hover:text-destructive"
                 onClick={() => onDelete(task)}
               >
@@ -1075,11 +1076,11 @@ export function CalendarTaskCard({
             <Button
               size="sm"
               variant="ghost"
-              title="Registar motivo de não ter iniciado"
+              title={tr("Registar motivo de não ter iniciado")}
               onClick={() => onNoStartReason(task)}
             >
               <FileText className="h-3 w-3" />
-              <span className="ml-1 hidden sm:inline">Motivo</span>
+              <span className="ml-1 hidden sm:inline">{tr("Motivo")}</span>
             </Button>
           )}
           {actions.map((action) => (

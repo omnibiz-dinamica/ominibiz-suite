@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { destinationsForCompany, type SupportDestination } from "../src/lib/support/destinations";
+import { readSource } from "./helpers/read-source";
 
-const read = (p: string) => readFileSync(p, "utf8");
+const read = (p: string) => readSource(p, "utf8");
 const dest = (code: string, company_id: string | null = null): SupportDestination => ({
   code,
   label: code,

@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Receipt, Download, FileText, Mail } from "lucide-react";
 import { MONTH_LABEL_PT } from "@/lib/payslip-parser";
+import { tr } from "@/i18n";
 
 export const Route = createFileRoute("/app/meus-recibos")({ component: MyPayslipsPage });
 
@@ -64,23 +65,23 @@ function MyPayslipsPage() {
     <div className="space-y-6">
       <header>
         <h1 className="flex items-center gap-2 font-display text-2xl font-semibold tracking-tight">
-          <Receipt className="h-6 w-6" /> Meus Recibos
+          <Receipt className="h-6 w-6" /> {tr("Meus Recibos")}
         </h1>
-        <p className="text-sm text-muted-foreground">Histórico de recibos disponibilizados pela sua empresa.</p>
+        <p className="text-sm text-muted-foreground">{tr("Histórico de recibos disponibilizados pela sua empresa.")}</p>
       </header>
 
       <div className="flex flex-wrap gap-2">
         <Select value={year} onValueChange={setYear}>
-          <SelectTrigger className="w-32"><SelectValue placeholder="Ano" /></SelectTrigger>
+          <SelectTrigger className="w-32"><SelectValue placeholder={tr("Ano")} /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos anos</SelectItem>
+            <SelectItem value="all">{tr("Todos anos")}</SelectItem>
             {years.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={month} onValueChange={setMonth}>
-          <SelectTrigger className="w-40"><SelectValue placeholder="Mês" /></SelectTrigger>
+          <SelectTrigger className="w-40"><SelectValue placeholder={tr("Mês")} /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos meses</SelectItem>
+            <SelectItem value="all">{tr("Todos meses")}</SelectItem>
             {MONTH_LABEL_PT.map((m, i) => <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>)}
           </SelectContent>
         </Select>
@@ -89,7 +90,7 @@ function MyPayslipsPage() {
       {filtered.length === 0 ? (
         <div className="rounded-lg border border-border px-4 py-12 text-center text-sm text-muted-foreground">
           <FileText className="mx-auto mb-2 h-8 w-8 opacity-50" />
-          Nenhum recibo disponível ainda.
+          {tr("Nenhum recibo disponível ainda.")}
         </div>
       ) : (
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -104,22 +105,22 @@ function MyPayslipsPage() {
                 </div>
                 {p.status === "sent" && (
                   <Badge variant="secondary" className="bg-emerald-500/15 text-emerald-600">
-                    <Mail className="mr-1 h-3 w-3" /> Enviado
+                    <Mail className="mr-1 h-3 w-3" /> {tr("Enviado")}
                   </Badge>
                 )}
               </div>
               <div className="mt-3 flex items-end justify-between">
                 <div>
-                  <div className="text-xs text-muted-foreground">Líquido</div>
+                  <div className="text-xs text-muted-foreground">{tr("Líquido")}</div>
                   <div className="text-xl font-semibold tabular-nums">{fmtMoney(p.net_amount)}</div>
                 </div>
                 <Button size="sm" onClick={() => download.mutate(p)}>
-                  <Download className="mr-2 h-4 w-4" /> Baixar
+                  <Download className="mr-2 h-4 w-4" /> {tr("Baixar")}
                 </Button>
               </div>
               {p.email_sent_at && (
                 <div className="mt-2 text-[11px] text-muted-foreground">
-                  Enviado por email em {new Date(p.email_sent_at).toLocaleDateString("pt-PT")}
+                  {tr("Enviado por email em")} {new Date(p.email_sent_at).toLocaleDateString("pt-PT")}
                 </div>
               )}
             </div>

@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { readSource } from "./helpers/read-source";
 
-const migration = readFileSync(
+const migration = readSource(
   new URL(
     "../supabase/migrations/20260907120000_sup_2026_000143_task_schedule_change_requests.sql",
     import.meta.url,
@@ -23,7 +24,7 @@ test("schedule change is additive, tenant-scoped and occurrence-specific", () =>
 });
 
 test("repair migration exposes the exact named RPC signature used by the frontend", () => {
-  const repairMigration = readFileSync(
+  const repairMigration = readSource(
     new URL(
       "../supabase/migrations/20260908093000_sup_2026_000143_repair_schedule_cancel_rpc.sql",
       import.meta.url,
@@ -42,8 +43,8 @@ test("repair migration exposes the exact named RPC signature used by the fronten
 });
 
 test("schedule-change checkbox state is forwarded without coercing true to false", () => {
-  const tasksSource = readFileSync(new URL("../src/lib/tasks.ts", import.meta.url), "utf8");
-  const dialogSource = readFileSync(new URL("../src/components/tasks/CancelTaskDialog.tsx", import.meta.url), "utf8");
+  const tasksSource = readSource(new URL("../src/lib/tasks.ts", import.meta.url), "utf8");
+  const dialogSource = readSource(new URL("../src/components/tasks/CancelTaskDialog.tsx", import.meta.url), "utf8");
   assert.match(tasksSource, /_needs_reassignment:\s*request\.needsReassignment/);
   assert.match(dialogSource, /checked=\{needsReassignment\}/);
   assert.match(dialogSource, /setNeedsReassignment\(event\.target\.checked\)/);
@@ -51,7 +52,7 @@ test("schedule-change checkbox state is forwarded without coercing true to false
 });
 
 test("completion notification includes the client while reusing the audit event", () => {
-  const completionMigration = readFileSync(
+  const completionMigration = readSource(
     new URL(
       "../supabase/migrations/20260907130000_sup_2026_000143_completion_note_client.sql",
       import.meta.url,

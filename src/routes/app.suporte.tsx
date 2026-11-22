@@ -37,6 +37,7 @@ import {
   fetchSupportDestinations,
   supportDestinationsQueryKey,
 } from "@/lib/support/destinations";
+import { tr } from "@/i18n";
 
 export const Route = createFileRoute("/app/suporte")({
   component: () => (
@@ -165,19 +166,19 @@ function SupportListPage() {
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-semibold tracking-tight">Central de Suporte</h1>
+          <h1 className="font-display text-2xl font-semibold tracking-tight">{tr("Central de Suporte")}</h1>
           <p className="text-sm text-muted-foreground">
-            Envie pedidos, dúvidas e problemas diretamente à equipe do OmniBiz.
+            {tr("Envie pedidos, dúvidas e problemas diretamente à equipe do OmniBiz.")}
           </p>
         </div>
         <div className="flex items-center gap-2">
           {isSuperAdmin && (
             <Button asChild variant="outline">
-              <Link to="/app/admin/suporte">Central Global</Link>
+              <Link to="/app/admin/suporte">{tr("Central Global")}</Link>
             </Button>
           )}
           <Button onClick={() => setDialogOpen(true)} disabled={!currentCompanyId}>
-            <Plus className="mr-1.5 h-4 w-4" /> Novo ticket
+            <Plus className="mr-1.5 h-4 w-4" /> {tr("Novo ticket")}
           </Button>
         </div>
       </header>
@@ -186,7 +187,7 @@ function SupportListPage() {
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Buscar por título, número (SUP-…) ou pessoa"
+          placeholder={tr("Buscar por título, número (SUP-…) ou pessoa")}
           className="max-w-sm"
         />
         <Select
@@ -194,13 +195,13 @@ function SupportListPage() {
           onValueChange={(v) => setStatusFilter(v === "all" ? "" : (v as SupportTicketStatus))}
         >
           <SelectTrigger className="w-56">
-            <SelectValue placeholder="Status" />
+            <SelectValue placeholder={tr("Status")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos os status</SelectItem>
+            <SelectItem value="all">{tr("Todos os status")}</SelectItem>
             {TICKET_STATUS_LIST.map((s) => (
               <SelectItem key={s} value={s}>
-                {TICKET_STATUS_LABEL[s]}
+                {tr(TICKET_STATUS_LABEL[s])}
               </SelectItem>
             ))}
           </SelectContent>
@@ -210,10 +211,10 @@ function SupportListPage() {
           onValueChange={(v) => setDestinationFilter(v === "all" ? "" : v)}
         >
           <SelectTrigger className="w-56">
-            <SelectValue placeholder="Destino" />
+            <SelectValue placeholder={tr("Destino")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos os destinos</SelectItem>
+            <SelectItem value="all">{tr("Todos os destinos")}</SelectItem>
             {destinations.map((d) => (
               <SelectItem key={d.code} value={d.code}>
                 {d.label}
@@ -222,8 +223,8 @@ function SupportListPage() {
           </SelectContent>
         </Select>
         <Select value={sortOrder} onValueChange={(v) => changeSort(v as SupportSortOrder)}>
-          <SelectTrigger className="w-full sm:w-96" aria-label="Ordenar">
-            <SelectValue placeholder="Ordenar" />
+          <SelectTrigger className="w-full sm:w-96" aria-label={tr("Ordenar")}>
+            <SelectValue placeholder={tr("Ordenar")} />
           </SelectTrigger>
           <SelectContent>
             {SUPPORT_SORT_OPTIONS.map((o) => (
@@ -239,19 +240,19 @@ function SupportListPage() {
           variant={showArchived ? "default" : "outline"}
           onClick={() => setShowArchived((v) => !v)}
         >
-          {showArchived ? "A mostrar arquivados" : "Mostrar arquivados"}
+          {showArchived ? tr("A mostrar arquivados") : tr("Mostrar arquivados")}
         </Button>
       </div>
 
 
       {isLoading ? (
-        <div className="text-sm text-muted-foreground">Carregando…</div>
+        <div className="text-sm text-muted-foreground">{tr("Carregando…")}</div>
       ) : filtered.length === 0 ? (
         <div className="grid place-items-center rounded-2xl border border-dashed border-border bg-card p-12 text-center">
           <LifeBuoy className="h-10 w-10 text-muted-foreground" />
-          <h2 className="mt-3 font-display text-lg font-semibold">Nenhum ticket</h2>
+          <h2 className="mt-3 font-display text-lg font-semibold">{tr("Nenhum ticket")}</h2>
           <p className="mt-1 max-w-md text-sm text-muted-foreground">
-            Você ainda não abriu nenhum ticket. Use o botão “Novo ticket” para enviar sua primeira solicitação.
+            {tr("Você ainda não abriu nenhum ticket. Use o botão “Novo ticket” para enviar sua primeira solicitação.")}
           </p>
         </div>
       ) : (
@@ -267,7 +268,7 @@ function SupportListPage() {
                   <div className="flex flex-wrap items-center gap-2 text-xs">
                     <span className="font-mono text-muted-foreground">{t.ticket_number}</span>
                     <span className={"rounded px-1.5 py-0.5 " + TICKET_STATUS_TONE[t.status]}>
-                      {TICKET_STATUS_LABEL[t.status]}
+                      {tr(TICKET_STATUS_LABEL[t.status])}
                     </span>
                     <span className={"rounded px-1.5 py-0.5 " + TICKET_PRIORITY_TONE[t.priority]}>
                       {TICKET_PRIORITY_LABEL[t.priority]}
@@ -281,7 +282,7 @@ function SupportListPage() {
                   <div className="mt-1 truncate text-sm font-medium">{t.title}</div>
                   {requesterName(t) && (
                     <div className="mt-0.5 truncate text-xs text-muted-foreground" data-testid="ticket-requester">
-                      Aberto por {requesterName(t)}
+                      {tr("Aberto por")} {requesterName(t)}
                     </div>
                   )}
                 </div>

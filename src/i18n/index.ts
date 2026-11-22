@@ -30,6 +30,7 @@ import {
   frTasks,
   frTimesheetPdf,
 } from "./locales/fr";
+import { enApp, frApp, nlApp } from "./locales/app";
 
 export type AppLanguage = "pt-BR" | "en" | "nl-BE" | "fr-BE";
 export const DEFAULT_LANGUAGE: AppLanguage = "pt-BR";
@@ -70,6 +71,7 @@ export const enModules = {
   tasks: enTasks,
   timesheetPdf: enTimesheetPdf,
   notifications: enNotifications,
+  app: enApp,
 };
 export const nlModules: Record<keyof typeof enModules, Record<string, string>> = {
   navigation: nlNavigation,
@@ -80,6 +82,7 @@ export const nlModules: Record<keyof typeof enModules, Record<string, string>> =
   tasks: nlTasks,
   timesheetPdf: nlTimesheetPdf,
   notifications: nlNotifications,
+  app: nlApp,
 };
 export const frModules: Record<keyof typeof enModules, Record<string, string>> = {
   navigation: frNavigation,
@@ -90,13 +93,16 @@ export const frModules: Record<keyof typeof enModules, Record<string, string>> =
   tasks: frTasks,
   timesheetPdf: frTimesheetPdf,
   notifications: frNotifications,
+  app: frApp,
 };
 export const ptModules = Object.fromEntries(
   Object.entries(enModules).map(([m, d]) => [m, identity(d)]),
 ) as Record<keyof typeof enModules, Record<string, string>>;
 
+// "app" (telas do funcionário) entra primeiro: se a mesma chave já tiver uma
+// tradução curada noutro módulo, essa prevalece.
 const merge = (mods: Record<string, Record<string, string>>) =>
-  Object.assign({}, ...Object.values(mods));
+  Object.assign({}, mods.app, ...Object.entries(mods).filter(([m]) => m !== "app").map(([, d]) => d));
 
 if (!i18n.isInitialized) {
   void i18n.use(initReactI18next).init({
@@ -145,6 +151,15 @@ export function currentLanguage(): AppLanguage {
 export function translator(lang: AppLanguage = currentLanguage()) {
   return (key: string, opts?: Record<string, unknown>) =>
     i18n.t(key, { lng: lang, defaultValue: key, ...opts }) as string;
+}
+
+/**
+ * 22/11/2026 — tr("texto em português") fora de hooks (toasts, erros,
+ * componentes sem useT). A área da aplicação é redesenhada quando a língua
+ * muda (AppLayout), por isso tr() devolve sempre a língua ativa.
+ */
+export function tr(key: string, opts?: Record<string, unknown>): string {
+  return i18n.t(key, { defaultValue: key, ...opts }) as string;
 }
 
 /** t("texto em português") — returns the text in the active language, falling back to Portuguese. */

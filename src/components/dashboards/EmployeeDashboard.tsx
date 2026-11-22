@@ -7,6 +7,7 @@ import { Clock, ListChecks, Play } from "lucide-react";
 import type { TaskRow } from "@/lib/tasks";
 import { STATUS_LABELS, STATUS_TONE } from "@/lib/tasks";
 import { formatWallDate, formatWallTime } from "@/lib/wall-clock";
+import { tr } from "@/i18n";
 
 export function EmployeeDashboard() {
   const { user, profile } = useAuth();
@@ -35,9 +36,9 @@ export function EmployeeDashboard() {
     <div className="mx-auto w-full max-w-3xl space-y-6">
       <div>
         <h1 className="font-display text-3xl font-semibold tracking-tight">
-          Olá, {profile?.full_name ?? "colaborador"}
+          {tr("Olá,")} {profile?.full_name ?? "colaborador"}
         </h1>
-        <p className="mt-1 text-muted-foreground">Sua operação do dia. Bata o ponto e foque nas suas tarefas.</p>
+        <p className="mt-1 text-muted-foreground">{tr("Sua operação do dia. Bata o ponto e foque nas suas tarefas.")}</p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -45,8 +46,8 @@ export function EmployeeDashboard() {
           <Link to="/app/ponto">
             <Clock className="mr-3 h-6 w-6" />
             <div className="flex flex-col">
-              <span className="font-display text-base font-semibold">Folha de Ponto</span>
-              <span className="text-xs opacity-80">Iniciar, pausar e concluir</span>
+              <span className="font-display text-base font-semibold">{tr("Folha de Ponto")}</span>
+              <span className="text-xs opacity-80">{tr("Iniciar, pausar e concluir")}</span>
             </div>
           </Link>
         </Button>
@@ -54,9 +55,9 @@ export function EmployeeDashboard() {
           <Link to="/app/tarefas">
             <ListChecks className="mr-3 h-6 w-6" />
             <div className="flex flex-col">
-              <span className="font-display text-base font-semibold">Minhas Tarefas</span>
+              <span className="font-display text-base font-semibold">{tr("Minhas Tarefas")}</span>
               <span className="text-xs opacity-80">
-                {inProgress} em andamento · {pending} a iniciar
+                {inProgress} {tr("em andamento ·")} {pending} {tr("a iniciar")}
               </span>
             </div>
           </Link>
@@ -64,10 +65,10 @@ export function EmployeeDashboard() {
       </div>
 
       <section className="rounded-2xl border border-border bg-card">
-        <div className="border-b border-border px-5 py-3 text-sm font-medium">Próximas tarefas</div>
+        <div className="border-b border-border px-5 py-3 text-sm font-medium">{tr("Próximas tarefas")}</div>
         {(tasks ?? []).length === 0 ? (
           <div className="px-5 py-10 text-center text-sm text-muted-foreground">
-            Você não tem tarefas pendentes. Aproveite!
+            {tr("Você não tem tarefas pendentes. Aproveite!")}
           </div>
         ) : (
           <ul className="divide-y divide-border">
@@ -80,11 +81,11 @@ export function EmployeeDashboard() {
                       ? `${formatWallDate(t.scheduled_for)} · ${formatWallTime(t.scheduled_for)}`
                       : t.recurrence_date || t.due_at
                         ? `${formatWallDate(t.recurrence_date ?? t.due_at)} · Sem horario definido`
-                        : "Sem horário definido"}
+                        : tr("Sem horário definido")}
                   </div>
                 </div>
                 <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_TONE[t.status]}`}>
-                  {STATUS_LABELS[t.status]}
+                  {tr(STATUS_LABELS[t.status])}
                 </span>
               </li>
             ))}
@@ -93,7 +94,7 @@ export function EmployeeDashboard() {
         <div className="border-t border-border px-5 py-3 text-right">
           <Button asChild size="sm" variant="ghost">
             <Link to="/app/ponto">
-              <Play className="mr-1 h-3 w-3" /> Ir para a operação
+              <Play className="mr-1 h-3 w-3" /> {tr("Ir para a operação")}
             </Link>
           </Button>
         </div>

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Archive, ArchiveRestore } from "lucide-react";
 import { STATUS_LABELS, archiveTask, isOpenPunchError, type TaskRow } from "@/lib/tasks";
+import { tr } from "@/i18n";
 
 export function ArchiveTaskDialog({
   task,
@@ -38,7 +39,7 @@ export function ArchiveTaskDialog({
       onOpenChange(false);
     } catch (e) {
       if (isOpenPunchError(e)) {
-        toast.error("Existe um ponto aberto nesta tarefa. Encerre ou regularize o ponto antes de continuar.");
+        toast.error(tr("Existe um ponto aberto nesta tarefa. Encerre ou regularize o ponto antes de continuar."));
         onOpenChange(false);
         onOpenPunch?.();
       } else {
@@ -54,27 +55,27 @@ export function ArchiveTaskDialog({
       <DialogContent size="sm">
         <ModalHeader
           icon={archive ? Archive : ArchiveRestore}
-          title={archive ? "Arquivar esta tarefa?" : "Desarquivar esta tarefa?"}
+          title={archive ? tr("Arquivar esta tarefa?") : tr("Desarquivar esta tarefa?")}
           description={
             archive
-              ? "Ela será removida das telas operacionais, mas permanecerá disponível no histórico para a Gestão."
-              : "A tarefa volta às listagens ativas mantendo o status original."
+              ? tr("Ela será removida das telas operacionais, mas permanecerá disponível no histórico para a Gestão.")
+              : tr("A tarefa volta às listagens ativas mantendo o status original.")
           }
         />
         <ModalBody>
           <div className="rounded-xl border border-border bg-card/60 p-3.5 text-sm">
             <div className="font-medium">{task?.title}</div>
             <div className="mt-1 text-xs text-muted-foreground">
-              Status atual: {task ? STATUS_LABELS[task.status] : "-"} — o arquivamento não altera este status.
+              {tr("Status atual:")} {task ? tr(STATUS_LABELS[task.status]) : "-"} {tr("— o arquivamento não altera este status.")}
             </div>
           </div>
         </ModalBody>
         <ModalFooter>
           <Button variant="ghost" disabled={saving} onClick={() => onOpenChange(false)}>
-            Cancelar
+            {tr("Cancelar")}
           </Button>
           <Button disabled={saving} onClick={submit}>
-            {saving ? "Aguarde..." : archive ? "Arquivar" : "Desarquivar"}
+            {saving ? tr("Aguarde...") : archive ? tr("Arquivar") : tr("Desarquivar")}
           </Button>
         </ModalFooter>
       </DialogContent>

@@ -19,6 +19,7 @@ import {
   type EmployeeAttachment,
 } from "@/lib/employee-attachments";
 import { openPendingDocuments } from "@/lib/pending-documents-events";
+import { tr } from "@/i18n";
 
 export function MyDocumentsCard() {
   const { user, currentCompanyId } = useAuth();
@@ -42,7 +43,7 @@ export function MyDocumentsCard() {
 
   const download = async (path: string) => {
     const { data, error } = await supabase.storage.from("employee-docs").createSignedUrl(path, 60);
-    if (error || !data?.signedUrl) toast.error("Não foi possível abrir o arquivo.");
+    if (error || !data?.signedUrl) toast.error(tr("Não foi possível abrir o arquivo."));
     else window.open(data.signedUrl, "_blank");
   };
 
@@ -51,22 +52,21 @@ export function MyDocumentsCard() {
 
   return (
     <section className="rounded-2xl border border-border bg-card p-6" data-testid="my-documents">
-      <h2 className="font-display text-lg font-semibold">Os meus documentos</h2>
+      <h2 className="font-display text-lg font-semibold">{tr("Os meus documentos")}</h2>
       <p className="mt-1 text-xs text-muted-foreground">
-        Documentos que a gestão partilhou consigo. Pode baixar o original e, quando assinou, a cópia
-        assinada.
+        {tr("Documentos que a gestão partilhou consigo. Pode baixar o original e, quando assinou, a cópia assinada.")}
       </p>
 
       {docs.isLoading && (
         <p className="mt-4 text-sm text-muted-foreground">
-          <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />A carregar…
+          <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />{tr("A carregar…")}
         </p>
       )}
       {docs.isError && (
-        <p className="mt-4 text-sm text-destructive">Não foi possível carregar os documentos.</p>
+        <p className="mt-4 text-sm text-destructive">{tr("Não foi possível carregar os documentos.")}</p>
       )}
       {docs.isSuccess && list.length === 0 && (
-        <p className="mt-4 text-sm text-muted-foreground">Ainda não há documentos para si.</p>
+        <p className="mt-4 text-sm text-muted-foreground">{tr("Ainda não há documentos para si.")}</p>
       )}
 
       {list.length > 0 && (
@@ -94,7 +94,7 @@ export function MyDocumentsCard() {
                   {pending && (
                     <Button size="sm" onClick={() => openPendingDocuments()}>
                       <FileSignature className="h-4 w-4" />
-                      {d.employee_action === "sign" ? "Abrir para assinar" : "Abrir para ler"}
+                      {d.employee_action === "sign" ? tr("Abrir para assinar") : tr("Abrir para ler")}
                     </Button>
                   )}
                   {d.signed_storage_path && (
@@ -103,11 +103,11 @@ export function MyDocumentsCard() {
                       variant="outline"
                       onClick={() => void download(d.signed_storage_path!)}
                     >
-                      <Download className="h-4 w-4" /> Baixar assinado
+                      <Download className="h-4 w-4" /> {tr("Baixar assinado")}
                     </Button>
                   )}
                   <Button size="sm" variant="ghost" onClick={() => void download(d.storage_path)}>
-                    <Download className="h-4 w-4" /> {d.signed_storage_path ? "Original" : "Baixar"}
+                    <Download className="h-4 w-4" /> {d.signed_storage_path ? tr("Original") : tr("Baixar")}
                   </Button>
                 </div>
               </li>

@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { TaskDocument } from "@/lib/tasks/task-documents";
 import { colleaguesLabel, type TaskColleague } from "@/lib/tasks/task-work-info";
+import { tr } from "@/i18n";
 
 export function TaskWorkInfo({
   colleagues,
@@ -44,7 +45,7 @@ export function TaskWorkInfo({
         >
           <Users className={compact ? "mt-0.5 h-3 w-3 shrink-0" : "mt-0.5 h-3.5 w-3.5 shrink-0"} />
           <span>
-            Com: <span className="font-medium text-foreground">{colleaguesLabel(people)}</span>
+            {tr("Com:")} <span className="font-medium text-foreground">{colleaguesLabel(people)}</span>
           </span>
         </div>
       )}
@@ -57,7 +58,7 @@ export function TaskWorkInfo({
             className={`inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/5 px-2.5 py-1 font-medium text-primary hover:bg-primary/10 ${text}`}
           >
             <Paperclip className="h-3.5 w-3.5" />
-            {files.length === 1 ? "1 anexo" : `${files.length} anexos`}
+            {files.length === 1 ? tr("1 anexo") : `${files.length} anexos`}
             <span className="text-muted-foreground">· {open ? "esconder" : "ver"}</span>
           </button>
           {open && (
@@ -71,7 +72,7 @@ export function TaskWorkInfo({
                   >
                     <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                     <span className="min-w-0 flex-1 truncate">{d.title}</span>
-                    <span className="shrink-0 text-xs text-primary">Abrir</span>
+                    <span className="shrink-0 text-xs text-primary">{tr("Abrir")}</span>
                   </button>
                 </li>
               ))}

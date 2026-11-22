@@ -7,7 +7,8 @@ import {
   matchesForwardFilter,
 } from "../src/lib/notifications/forwarding";
 
-const read = (p: string) => readFileSync(p, "utf8");
+import { readSource } from "./helpers/read-source";
+const read = (p: string) => readSource(p, "utf8");
 
 describe("18/11 — tickets V-clean, lote 2", () => {
   test("SUP-307: anotação da tarefa visível no calendário e no formulário", () => {

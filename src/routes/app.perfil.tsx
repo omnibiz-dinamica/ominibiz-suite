@@ -16,6 +16,7 @@ import { MailCheck } from "lucide-react";
 import { submitEmailChangeRequest } from "@/lib/user-email";
 import { isValidEmailChangeReason, isValidUserEmail, normalizeUserEmail } from "@/lib/user-email-security";
 import { lastNameLabel, splitFullName, useCompanyCountry } from "@/lib/person-name";
+import { tr } from "@/i18n";
 
 export const Route = createFileRoute("/app/perfil")({ component: ProfilePage });
 
@@ -58,7 +59,7 @@ function ProfilePage() {
         reason: emailChangeReason,
       }),
     onSuccess: async () => {
-      toast.success("Pedido enviado ao Gestor para aprovação.");
+      toast.success(tr("Pedido enviado ao Gestor para aprovação."));
       setEmailRequestOpen(false);
       setRequestedEmail("");
       setEmailChangeReason("");
@@ -96,7 +97,7 @@ function ProfilePage() {
   const save = useMutation({
     mutationFn: async () => {
       if (!whatsappValid) {
-        throw new Error("WhatsApp deve estar no formato internacional, ex.: +351912345678");
+        throw new Error(tr("WhatsApp deve estar no formato internacional, ex.: +351912345678"));
       }
       const { error } = await supabase
         .from("profiles")
@@ -111,7 +112,7 @@ function ProfilePage() {
       if (error) throw error;
     },
     onSuccess: async () => {
-      toast.success("Perfil atualizado");
+      toast.success(tr("Perfil atualizado"));
       await refresh();
       qc.invalidateQueries();
     },
@@ -128,17 +129,17 @@ function ProfilePage() {
   return (
     <div className="mx-auto w-full max-w-xl space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-semibold tracking-tight">Meu Perfil</h1>
-        <p className="mt-1 text-muted-foreground">Seus dados pessoais e acesso.</p>
+        <h1 className="font-display text-3xl font-semibold tracking-tight">{tr("Meu Perfil")}</h1>
+        <p className="mt-1 text-muted-foreground">{tr("Seus dados pessoais e acesso.")}</p>
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-6">
         <dl className="grid gap-3 text-sm sm:grid-cols-2">
           <div>
-            <dt className="text-xs uppercase text-muted-foreground">Email</dt>
+            <dt className="text-xs uppercase text-muted-foreground">{tr("Email")}</dt>
             <dd className="mt-0.5 break-all font-medium">{user?.email ?? "—"}</dd>
             <dd className="mt-1 text-xs text-muted-foreground">
-              E-mail de cadastro, bloqueado para edição direta.
+              {tr("E-mail de cadastro, bloqueado para edição direta.")}
             </dd>
             <Button
               type="button"
@@ -149,41 +150,41 @@ function ProfilePage() {
               onClick={() => setEmailRequestOpen(true)}
             >
               <MailCheck className="mr-2 h-4 w-4" />
-              {pendingEmailRequest ? "Pedido em análise" : "Solicitar alteração"}
+              {pendingEmailRequest ? tr("Pedido em análise") : tr("Solicitar alteração")}
             </Button>
             {latestEmailRequest && (
               <p className="mt-2 text-xs text-muted-foreground">
-                Último pedido: {emailRequestStatusLabel(latestEmailRequest.status)} para {latestEmailRequest.requested_email}
+                {tr("Último pedido:")} {emailRequestStatusLabel(latestEmailRequest.status)} para {latestEmailRequest.requested_email}
               </p>
             )}
           </div>
           <div>
-            <dt className="text-xs uppercase text-muted-foreground">Papel</dt>
+            <dt className="text-xs uppercase text-muted-foreground">{tr("Papel")}</dt>
             <dd className="mt-0.5 font-medium">{roleLabel}</dd>
           </div>
         </dl>
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-6">
-        <h2 className="font-display text-lg font-semibold">Dados operacionais</h2>
+        <h2 className="font-display text-lg font-semibold">{tr("Dados operacionais")}</h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          Definidos pelo gestor. Para alterar, fale com seu gestor.
+          {tr("Definidos pelo gestor. Para alterar, fale com seu gestor.")}
         </p>
         <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
           <div>
-            <dt className="text-xs uppercase text-muted-foreground">Cargo</dt>
+            <dt className="text-xs uppercase text-muted-foreground">{tr("Cargo")}</dt>
             <dd className="mt-0.5 font-medium">{opData?.job_title ?? "—"}</dd>
           </div>
           <div>
-            <dt className="text-xs uppercase text-muted-foreground">Local de trabalho</dt>
+            <dt className="text-xs uppercase text-muted-foreground">{tr("Local de trabalho")}</dt>
             <dd className="mt-0.5 font-medium">{opData?.work_location ?? "—"}</dd>
           </div>
           <div>
-            <dt className="text-xs uppercase text-muted-foreground">Equipa / Departamento</dt>
+            <dt className="text-xs uppercase text-muted-foreground">{tr("Equipa / Departamento")}</dt>
             <dd className="mt-0.5 font-medium">{opData?.team ?? "—"}</dd>
           </div>
           <div>
-            <dt className="text-xs uppercase text-muted-foreground">Supervisor</dt>
+            <dt className="text-xs uppercase text-muted-foreground">{tr("Supervisor")}</dt>
             <dd className="mt-0.5 font-medium">{opData?.supervisorName ?? "—"}</dd>
           </div>
         </dl>
@@ -198,7 +199,7 @@ function ProfilePage() {
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label>Primeiro nome</Label>
+            <Label>{tr("Primeiro nome")}</Label>
             <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} maxLength={75} />
           </div>
           <div className="space-y-1.5">
@@ -207,11 +208,11 @@ function ProfilePage() {
           </div>
         </div>
         <div className="space-y-1.5">
-          <Label>Telefone</Label>
+          <Label>{tr("Telefone")}</Label>
           <Input value={phone} onChange={(e) => setPhone(e.target.value)} maxLength={40} />
         </div>
         <div className="space-y-1.5">
-          <Label>WhatsApp</Label>
+          <Label>{tr("WhatsApp")}</Label>
           <Input
             value={whatsappValue}
             onChange={(e) => setWhatsapp(e.target.value)}
@@ -219,12 +220,11 @@ function ProfilePage() {
             maxLength={20}
           />
           <p className={`text-xs ${whatsappValid ? "text-muted-foreground" : "text-destructive"}`}>
-            Formato internacional obrigatório (E.164), ex.: +351912345678. Usado nas
-            notificações de tickets.
+            {tr("Formato internacional obrigatório (E.164), ex.: +351912345678. Usado nas notificações de tickets.")}
           </p>
         </div>
         <Button type="submit" disabled={save.isPending || !whatsappValid}>
-          {save.isPending ? "Salvando..." : "Salvar"}
+          {save.isPending ? tr("Salvando...") : tr("Salvar")}
         </Button>
       </form>
 
@@ -238,16 +238,16 @@ function ProfilePage() {
         <DialogContent size="sm">
           <ModalHeader
             icon={MailCheck}
-            title="Solicitar alteração de e-mail"
-            description="O Gestor ou Super Admin precisa aprovar antes da troca."
+            title={tr("Solicitar alteração de e-mail")}
+            description={tr("O Gestor ou Super Admin precisa aprovar antes da troca.")}
           />
           <ModalBody className="space-y-4">
             <div className="space-y-1.5">
-              <Label>E-mail atual</Label>
+              <Label>{tr("E-mail atual")}</Label>
               <Input type="email" value={user?.email ?? ""} readOnly disabled />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="requested-email">Novo e-mail *</Label>
+              <Label htmlFor="requested-email">{tr("Novo e-mail *")}</Label>
               <Input
                 id="requested-email"
                 type="email"
@@ -258,20 +258,20 @@ function ProfilePage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="email-change-reason">Motivo *</Label>
+              <Label htmlFor="email-change-reason">{tr("Motivo *")}</Label>
               <Textarea
                 id="email-change-reason"
                 value={emailChangeReason}
                 onChange={(event) => setEmailChangeReason(event.target.value)}
                 maxLength={500}
                 rows={4}
-                placeholder="Explique por que precisa alterar o e-mail de acesso"
+                placeholder={tr("Explique por que precisa alterar o e-mail de acesso")}
               />
             </div>
           </ModalBody>
           <ModalFooter>
             <Button type="button" variant="outline" onClick={() => setEmailRequestOpen(false)}>
-              Cancelar
+              {tr("Cancelar")}
             </Button>
             <Button
               type="button"
@@ -284,7 +284,7 @@ function ProfilePage() {
               }
               onClick={() => requestEmailChange.mutate()}
             >
-              {requestEmailChange.isPending ? "Enviando..." : "Enviar pedido"}
+              {requestEmailChange.isPending ? tr("Enviando...") : tr("Enviar pedido")}
             </Button>
           </ModalFooter>
         </DialogContent>

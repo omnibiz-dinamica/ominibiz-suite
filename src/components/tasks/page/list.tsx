@@ -15,6 +15,7 @@ import { compareTasksForList, sortTasksForList } from "@/lib/tasks/list-order";
 import { formatWallDate, formatWallTime, formatLocalTime } from "@/lib/wall-clock";
 import { ClientOption, clientAddressCache, taskClientInstructions, taskHeading, CompletionNote, taskMemberName, RowHandlers, tasksRouteApi } from "./shared";
 import { ScheduleNameBadge, TaskClientDetails } from "./calendar";
+import { tr } from "@/i18n";
 
 export function FilterChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
@@ -71,13 +72,13 @@ export function TaskListSections({
     <div className="space-y-5">
       {openTasks.length > 0 && (
         <section className="space-y-2">
-          <h2 className="px-1 text-base font-semibold">Tarefas em aberto</h2>
+          <h2 className="px-1 text-base font-semibold">{tr("Tarefas em aberto")}</h2>
           {renderTasks(openTasks)}
         </section>
       )}
       {completedTasks.length > 0 && (
         <section className="space-y-2">
-          <h2 className="px-1 text-base font-semibold">Tarefas concluídas</h2>
+          <h2 className="px-1 text-base font-semibold">{tr("Tarefas concluídas")}</h2>
           {renderTasks(completedTasks)}
         </section>
       )}
@@ -184,13 +185,13 @@ export function TaskRefusalHistory({
   return (
     <details className={compact ? "text-[11px]" : "mt-2 text-xs"}>
       <summary className="cursor-pointer font-medium text-primary underline-offset-2 hover:underline">
-        Histórico de recusas ({records.length})
+        {tr("Histórico de recusas (")}{records.length})
       </summary>
       <div className="mt-2 space-y-2 border-l-2 border-destructive/25 pl-3">
         {records.map((record) => (
           <div key={record.id} className="space-y-0.5">
             <div className="font-medium text-foreground">
-              {memberNames.get(record.employee_id) ?? "Funcionário"} · {formatLocalTime(record.created_at)}
+              {memberNames.get(record.employee_id) ?? tr("Funcionário")} · {formatLocalTime(record.created_at)}
             </div>
             <div className="whitespace-pre-wrap break-words text-muted-foreground">{record.reason}</div>
           </div>
@@ -258,11 +259,11 @@ export function TaskRowItem({
             <span
               className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${operationalStatus === "atrasada" ? "bg-destructive/15 text-destructive" : STATUS_TONE[operationalStatus]}`}
             >
-              {operationalStatus === "atrasada" ? "Atrasada" : STATUS_LABELS[operationalStatus]}
+              {operationalStatus === "atrasada" ? tr("Atrasada") : tr(STATUS_LABELS[operationalStatus])}
             </span>
             {lateStartMinutes != null ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-destructive">
-                <Clock className="h-3 w-3" /> Início com atraso · {formatStartedLateMinutes(lateStartMinutes)}
+                <Clock className="h-3 w-3" /> {tr("Início com atraso ·")} {formatStartedLateMinutes(lateStartMinutes)}
               </span>
             ) : late && operationalStatus !== "atrasada" ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-destructive">
@@ -280,10 +281,10 @@ export function TaskRowItem({
             {t.task_group_id && (
               <span
                 className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
-                title="Tarefa criada em equipe: cada responsável tem a sua própria tarefa, com ponto e conclusão independentes."
+                title={tr("Tarefa criada em equipe: cada responsável tem a sua própria tarefa, com ponto e conclusão independentes.")}
               >
                 <Users className="h-3 w-3" />
-                <span className="truncate">{groupMemberNames?.get(t.task_group_id) ?? "Em equipe"}</span>
+                <span className="truncate">{groupMemberNames?.get(t.task_group_id) ?? tr("Em equipe")}</span>
               </span>
             )}
             <ScheduleNameBadge name={t.schedule_name} />
@@ -292,30 +293,30 @@ export function TaskRowItem({
           {(!isManager || clientInfoOpen) && <TaskClientDetails task={t} />}
           {refusal && (
             <div className="mt-2 space-y-0.5 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs">
-              <div className="font-semibold uppercase tracking-wide text-destructive">Recusada pelo funcionário</div>
+              <div className="font-semibold uppercase tracking-wide text-destructive">{tr("Recusada pelo funcionário")}</div>
               <div className="whitespace-pre-wrap break-words">
-                Funcionário: {memberNames.get(refusal.employeeId) ?? "Funcionário"}
+                {tr("Funcionário:")} {memberNames.get(refusal.employeeId) ?? tr("Funcionário")}
               </div>
-              <div className="whitespace-pre-wrap break-words">Motivo: {refusal.reason ?? "Motivo não registrado"}</div>
+              <div className="whitespace-pre-wrap break-words">{tr("Motivo:")} {refusal.reason ?? tr("Motivo não registrado")}</div>
               {refusal.refusedAt && (
-                <div className="text-muted-foreground">Recusada em: {formatLocalTime(refusal.refusedAt)}</div>
+                <div className="text-muted-foreground">{tr("Recusada em:")} {formatLocalTime(refusal.refusedAt)}</div>
               )}
               {refusal.requestedDate && (
                 <div>
-                  Nova data desejada: {formatWallDate(refusal.requestedDate)}
+                  {tr("Nova data desejada:")} {formatWallDate(refusal.requestedDate)}
                   {refusal.requestedTime ? ` · ${refusal.requestedTime}` : ""}
                 </div>
               )}
               {refusal.needsReassignment != null && (
-                <div>Reatribuição necessária: {refusal.needsReassignment ? "Sim" : "Não"}</div>
+                <div>{tr("Reatribuição necessária:")} {refusal.needsReassignment ? tr("Sim") : tr("Não")}</div>
               )}
               {(refusal.suggestedEmployeeName || refusal.suggestedEmployeeId) && (
                 <div>
-                  Funcionário sugerido (informativo):{" "}
+                  {tr("Funcionário sugerido (informativo):")}{" "}
                   {refusal.suggestedEmployeeName ??
                     (refusal.suggestedEmployeeId
-                      ? (memberNames.get(refusal.suggestedEmployeeId) ?? "Sem responsável")
-                      : "Sem responsável")}
+                      ? (memberNames.get(refusal.suggestedEmployeeId) ?? tr("Sem responsável"))
+                      : tr("Sem responsável"))}
                 </div>
               )}
               {isManager && (
@@ -324,7 +325,7 @@ export function TaskRowItem({
                   className="mt-1 font-medium text-primary underline underline-offset-2"
                   onClick={() => onReassign(t)}
                 >
-                  Reatribuir tarefa
+                  {tr("Reatribuir tarefa")}
                 </button>
               )}
             </div>
@@ -332,30 +333,30 @@ export function TaskRowItem({
           {cancellation && (
             <div className="mt-2 space-y-0.5 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs">
               <div className="font-semibold uppercase tracking-wide text-destructive">
-                {cancellation.byEmployee ? "Cancelada pelo funcionário" : "Tarefa cancelada"}
+                {cancellation.byEmployee ? tr("Cancelada pelo funcionário") : tr("Tarefa cancelada")}
               </div>
               <div className="whitespace-pre-wrap break-words">
-                Motivo: {cancellation.reason ?? "Motivo não registrado"}
+                {tr("Motivo:")} {cancellation.reason ?? tr("Motivo não registrado")}
               </div>
               {cancellation.cancelledAt && (
-                <div className="text-muted-foreground">Cancelada em: {formatLocalTime(cancellation.cancelledAt)}</div>
+                <div className="text-muted-foreground">{tr("Cancelada em:")} {formatLocalTime(cancellation.cancelledAt)}</div>
               )}
               {cancellation.requestedDate && (
                 <div>
-                  Nova data desejada: {formatWallDate(cancellation.requestedDate)}
+                  {tr("Nova data desejada:")} {formatWallDate(cancellation.requestedDate)}
                   {cancellation.requestedTime ? ` · ${cancellation.requestedTime}` : ""}
                 </div>
               )}
               {cancellation.needsReassignment != null && (
-                <div>Reatribuição necessária: {cancellation.needsReassignment ? "Sim" : "Não"}</div>
+                <div>{tr("Reatribuição necessária:")} {cancellation.needsReassignment ? tr("Sim") : tr("Não")}</div>
               )}
               {(cancellation.suggestedEmployeeName || cancellation.suggestedEmployeeId) && (
                 <div>
-                  Funcionário sugerido (informativo):{" "}
+                  {tr("Funcionário sugerido (informativo):")}{" "}
                   {cancellation.suggestedEmployeeName ??
                     (cancellation.suggestedEmployeeId
-                      ? (memberNames.get(cancellation.suggestedEmployeeId) ?? "Sem responsável")
-                      : "Sem responsável")}
+                      ? (memberNames.get(cancellation.suggestedEmployeeId) ?? tr("Sem responsável"))
+                      : tr("Sem responsável"))}
                 </div>
               )}
             </div>
@@ -365,21 +366,21 @@ export function TaskRowItem({
             <div className="mt-2 space-y-0.5 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs">
               <div className="font-semibold uppercase tracking-wide text-destructive">
                 {t.absence_source === "employee"
-                  ? "Falta registada pelo funcionário"
+                  ? tr("Falta registada pelo funcionário")
                   : t.absence_source === "manual"
-                    ? "Falta registada pelo gestor"
-                    : "Ausência automática"}
+                    ? tr("Falta registada pelo gestor")
+                    : tr("Ausência automática")}
               </div>
               {t.absence_reason ? (
                 <div>
-                  Motivo: {t.absence_reason}
-                  {t.absence_justified != null && (t.absence_justified ? " · justificada" : " · injustificada")}
+                  {tr("Motivo:")} {t.absence_reason}
+                  {t.absence_justified != null && (t.absence_justified ? tr(" · justificada") : tr(" · injustificada"))}
                 </div>
               ) : (
-                <div className="text-muted-foreground">Falta ainda sem motivo registado.</div>
+                <div className="text-muted-foreground">{tr("Falta ainda sem motivo registado.")}</div>
               )}
               {t.marked_absent_at && (
-                <div className="text-muted-foreground">Marcada em: {formatLocalTime(t.marked_absent_at)}</div>
+                <div className="text-muted-foreground">{tr("Marcada em:")} {formatLocalTime(t.marked_absent_at)}</div>
               )}
             </div>
           )}
@@ -391,9 +392,9 @@ export function TaskRowItem({
                 {start || "--:--"} → {end || "--:--"}
               </span>
             ) : (
-              !t.scheduled_for && <span className="italic">Sem horário definido</span>
+              !t.scheduled_for && <span className="italic">{tr("Sem horário definido")}</span>
             )}
-            {updated && <span>Atualizado: {updated}</span>}
+            {updated && <span>{tr("Atualizado:")} {updated}</span>}
             {taskPunch && <PauseSummary entry={taskPunch} />}
           </div>
           {t.description && <div className="mt-1 line-clamp-1 text-xs text-muted-foreground">{t.description}</div>}
@@ -410,14 +411,14 @@ export function TaskRowItem({
       <div className="flex flex-wrap justify-end gap-2">
         {isManager && (
           <>
-            <Button size="sm" variant="ghost" title="Editar" onClick={() => onEdit(t)}>
+            <Button size="sm" variant="ghost" title={tr("Editar")} onClick={() => onEdit(t)}>
               <Pencil className="h-3 w-3" />
             </Button>
             {hasClientInfo && (
               <Button
                 size="sm"
                 variant={clientInfoOpen ? "secondary" : "ghost"}
-                title={clientInfoOpen ? "Ocultar endereço e instruções" : "Ver endereço e instruções"}
+                title={clientInfoOpen ? tr("Ocultar endereço e instruções") : tr("Ver endereço e instruções")}
                 aria-expanded={clientInfoOpen}
                 onClick={() => setClientInfoOpen((open) => !open)}
               >
@@ -425,11 +426,11 @@ export function TaskRowItem({
               </Button>
             )}
             {t.recurrence_id && (
-              <Button size="sm" variant="ghost" title="Editar série" onClick={() => onEditSeries(t)}>
+              <Button size="sm" variant="ghost" title={tr("Editar série")} onClick={() => onEditSeries(t)}>
                 <Repeat className="h-3 w-3" />
               </Button>
             )}
-            <Button size="sm" variant="ghost" title="Reatribuir" onClick={() => onReassign(t)}>
+            <Button size="sm" variant="ghost" title={tr("Reatribuir")} onClick={() => onReassign(t)}>
               <UserCog className="h-3 w-3" />
             </Button>
             <Button
@@ -437,8 +438,8 @@ export function TaskRowItem({
               variant="ghost"
               title={
                 t.status === "em_andamento" || t.status === "concluido"
-                  ? "Tarefa com histórico operacional — não pode ser excluída"
-                  : "Excluir tarefa"
+                  ? tr("Tarefa com histórico operacional — não pode ser excluída")
+                  : tr("Excluir tarefa")
               }
               className="text-destructive hover:text-destructive"
               onClick={() => onDelete(t)}
@@ -449,7 +450,7 @@ export function TaskRowItem({
               <Button
                 size="sm"
                 variant="ghost"
-                title="Desarquivar"
+                title={tr("Desarquivar")}
                 disabled={archivePending}
                 onClick={() => onArchive(t.id, false)}
               >
@@ -460,7 +461,7 @@ export function TaskRowItem({
                 size="sm"
                 variant="ghost"
                 title={
-                  archivable ? "Arquivar" : "Apenas tarefas concluídas, canceladas ou ausentes podem ser arquivadas"
+                  archivable ? tr("Arquivar") : tr("Apenas tarefas concluídas, canceladas ou ausentes podem ser arquivadas")
                 }
                 disabled={archivePending || !archivable}
                 onClick={() => onArchive(t.id, true)}
@@ -475,22 +476,22 @@ export function TaskRowItem({
           <Button
             size="sm"
             variant="ghost"
-            title={t.status === "ausente" ? "Registar motivo da falta" : "Marcar falta"}
+            title={t.status === "ausente" ? tr("Registar motivo da falta") : tr("Marcar falta")}
             onClick={() => onTransition(t, "marcar_ausente")}
           >
             <UserX className="h-3 w-3" />
-            <span className="ml-1 hidden sm:inline">{t.status === "ausente" ? "Registar falta" : "Marcar falta"}</span>
+            <span className="ml-1 hidden sm:inline">{t.status === "ausente" ? tr("Registar falta") : tr("Marcar falta")}</span>
           </Button>
         )}
         {onNoStartReason && (t.status === "pendente" || t.status === "autorizado") && late && (
           <Button
             size="sm"
             variant="ghost"
-            title="Registar motivo de não ter iniciado"
+            title={tr("Registar motivo de não ter iniciado")}
             onClick={() => onNoStartReason(t)}
           >
             <FileText className="h-3 w-3" />
-            <span className="ml-1 hidden sm:inline">Motivo</span>
+            <span className="ml-1 hidden sm:inline">{tr("Motivo")}</span>
           </Button>
         )}
         {actions.map((a) => (
@@ -508,7 +509,7 @@ export function PauseSummary({ entry }: { entry: TimeEntryRow }) {
   return (
     <span className="inline-flex items-center gap-1 rounded-full bg-warning/15 px-2 py-0.5 font-medium text-warning-foreground">
       <Clock className="h-3 w-3" />
-      {entry.paused_at && !entry.resumed_at && !entry.ended_at ? "Em pausa" : `Pausa ${formatDuration(minutes)}`}
+      {entry.paused_at && !entry.resumed_at && !entry.ended_at ? tr("Em pausa") : `Pausa ${formatDuration(minutes)}`}
     </span>
   );
 }
@@ -553,15 +554,15 @@ export function CompletionNoteBlock({
       className={`${compact ? "mt-2 px-2 py-1.5 text-[11px]" : "mt-2 px-3 py-2 text-xs"} rounded-md border border-success/30 bg-success/10`}
     >
       <div className="font-semibold uppercase tracking-wide text-success-foreground">
-        {byEmployee ? "Concluída pelo funcionário" : "Observação da conclusão"}
+        {byEmployee ? tr("Concluída pelo funcionário") : tr("Observação da conclusão")}
       </div>
       <div className="mt-0.5 text-foreground">
-        <span className="font-medium">Funcionário:</span> {actorName}
+        <span className="font-medium">{tr("Funcionário:")}</span> {actorName}
       </div>
       <div className="mt-0.5 whitespace-pre-wrap break-words text-foreground">
-        <span className="font-medium">Observação:</span> {note.reason}
+        <span className="font-medium">{tr("Observação:")}</span> {note.reason}
       </div>
-      <div className="mt-1 text-muted-foreground">Concluída em: {formatLocalTime(timestamp)}</div>
+      <div className="mt-1 text-muted-foreground">{tr("Concluída em:")} {formatLocalTime(timestamp)}</div>
     </div>
   );
 }

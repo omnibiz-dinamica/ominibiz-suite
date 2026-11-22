@@ -41,6 +41,7 @@ import { cleanSignatureImage, fitInBox } from "@/lib/signature-image";
 import { SignaturePlacementPicker } from "@/components/perfil/SignaturePlacementPicker";
 import { OPEN_PENDING_DOCUMENTS_EVENT } from "@/lib/pending-documents-events";
 import { saveSignatureToProfile, type SignatureKind } from "@/lib/employee-signature-save";
+import { tr } from "@/i18n";
 
 async function toPng(bytes: Uint8Array): Promise<Uint8Array> {
   const bmp = await createImageBitmap(new Blob([bytes as BlobPart]));
@@ -49,7 +50,7 @@ async function toPng(bytes: Uint8Array): Promise<Uint8Array> {
   canvas.height = bmp.height;
   canvas.getContext("2d")!.drawImage(bmp, 0, 0);
   const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
-  if (!blob) throw new Error("Não foi possível preparar a assinatura.");
+  if (!blob) throw new Error(tr("Não foi possível preparar a assinatura."));
   return new Uint8Array(await blob.arrayBuffer());
 }
 
@@ -153,7 +154,7 @@ function DocumentStep({
     setBusy(true);
     try {
       await markAttachmentViewed(doc.id);
-      toast.success("Leitura confirmada.");
+      toast.success(tr("Leitura confirmada."));
       await onDone();
     } catch (e) {
       toast.error((e as Error).message);
@@ -171,7 +172,7 @@ function DocumentStep({
           ) : (
             <CheckCircle2 className="h-5 w-5 text-primary" />
           )}
-          {sign ? "Documento para assinar" : "Documento para ler"}
+          {sign ? tr("Documento para assinar") : tr("Documento para ler")}
           {total > 1 && (
             <span className="text-sm font-normal text-muted-foreground">
               ({index} de {total})
@@ -189,15 +190,15 @@ function DocumentStep({
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
             {!atEnd && !loadError && (
               <span className="text-xs text-muted-foreground sm:mr-auto">
-                Role até ao fim do documento para {sign ? "assinar" : "confirmar a leitura"}.
+                {tr("Role até ao fim do documento para")} {sign ? "assinar" : tr("confirmar a leitura")}.
               </span>
             )}
             <Button variant="ghost" onClick={onLater} disabled={busy}>
-              Mais tarde
+              {tr("Mais tarde")}
             </Button>
             {sign ? (
               <Button disabled={!atEnd || !bytes} onClick={() => setSigning(true)}>
-                <FileSignature className="h-4 w-4" /> Assinar
+                <FileSignature className="h-4 w-4" /> {tr("Assinar")}
               </Button>
             ) : (
               <Button disabled={!atEnd || busy} onClick={() => void confirmRead()}>
@@ -206,7 +207,7 @@ function DocumentStep({
                 ) : (
                   <CheckCircle2 className="h-4 w-4" />
                 )}{" "}
-                Lido
+                {tr("Lido")}
               </Button>
             )}
           </div>
@@ -304,14 +305,14 @@ function Viewer({
     if (data?.signedUrl) {
       window.open(data.signedUrl, "_blank");
       onEnd();
-    } else toast.error("Não foi possível abrir o arquivo.");
+    } else toast.error(tr("Não foi possível abrir o arquivo."));
   };
 
   if (error) return <p className="py-10 text-center text-sm text-destructive">{error}</p>;
   if (!bytes)
     return (
       <p className="py-10 text-center text-sm text-muted-foreground">
-        <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />A abrir documento…
+        <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />{tr("A abrir documento…")}
       </p>
     );
 
@@ -319,10 +320,10 @@ function Viewer({
     return (
       <div className="space-y-3 rounded-xl border border-dashed border-border p-6 text-center text-sm">
         <p className="text-muted-foreground">
-          Este arquivo não pode ser mostrado aqui. Abra-o, leia até ao fim e volte para confirmar.
+          {tr("Este arquivo não pode ser mostrado aqui. Abra-o, leia até ao fim e volte para confirmar.")}
         </p>
         <Button variant="outline" onClick={() => void openExternal()}>
-          <ExternalLink className="h-4 w-4" /> Abrir arquivo
+          <ExternalLink className="h-4 w-4" /> {tr("Abrir arquivo")}
         </Button>
       </div>
     );
@@ -339,7 +340,7 @@ function Viewer({
         <>
           {rendering && (
             <p className="py-10 text-center text-sm text-muted-foreground">
-              <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />A preparar páginas…
+              <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />{tr("A preparar páginas…")}
             </p>
           )}
           <div ref={pagesRef} />
@@ -363,7 +364,7 @@ async function storedSignaturePng(path: string): Promise<CleanPng> {
   const dataUrl = await new Promise<string>((resolve, reject) => {
     const fr = new FileReader();
     fr.onload = () => resolve(String(fr.result));
-    fr.onerror = () => reject(new Error("Não foi possível ler a imagem."));
+    fr.onerror = () => reject(new Error(tr("Não foi possível ler a imagem.")));
     fr.readAsDataURL(new Blob([bytes as BlobPart]));
   });
   return dataUrlToCleanPng(dataUrl);
@@ -506,12 +507,12 @@ function SignStep({
   const run = async () => {
     setBusy(true);
     try {
-      if (!layout.data || !placement) throw new Error("O documento ainda está a ser preparado.");
-      if (!placeChosen) throw new Error("Toque na página, no sítio onde quer assinar.");
+      if (!layout.data || !placement) throw new Error(tr("O documento ainda está a ser preparado."));
+      if (!placeChosen) throw new Error(tr("Toque na página, no sítio onde quer assinar."));
       // 19/11/2026: assina-se sempre com a assinatura e o visto GUARDADOS
       // (1. guardar assinatura → 2. guardar visto → 3. enviar).
-      if (!profile.data?.path || showPad) throw new Error("Guarde primeiro a sua assinatura.");
-      if (!profile.data?.vistoPath || showVistoPad) throw new Error("Guarde primeiro o seu visto.");
+      if (!profile.data?.path || showPad) throw new Error(tr("Guarde primeiro a sua assinatura."));
+      if (!profile.data?.vistoPath || showVistoPad) throw new Error(tr("Guarde primeiro o seu visto."));
       const signature: CleanPng = await storedSignaturePng(profile.data.path);
       const source: "profile" | "drawn" = "profile";
       const vistoPng: CleanPng = await storedSignaturePng(profile.data.vistoPath);
@@ -543,7 +544,7 @@ function SignStep({
         });
       if (up.error) throw new Error(up.error.message);
       await saveSignedAttachment(doc.id, path, source, finalPlacement);
-      toast.success("Documento assinado. A gestão foi avisada.");
+      toast.success(tr("Documento assinado. A gestão foi avisada."));
       await onDone();
     } catch (e) {
       toast.error((e as Error).message);
@@ -560,35 +561,33 @@ function SignStep({
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pr-1">
         {(profile.isLoading || layout.isLoading) && (
           <p className="py-6 text-center text-sm text-muted-foreground">
-            <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />A preparar a assinatura…
+            <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />{tr("A preparar a assinatura…")}
           </p>
         )}
         {profile.isError && (
           <p className="py-6 text-center text-sm text-destructive">
-            Não foi possível carregar a sua assinatura.
+            {tr("Não foi possível carregar a sua assinatura.")}
           </p>
         )}
         {layout.isError && (
           <p className="py-6 text-center text-sm text-destructive">
-            Não foi possível abrir este PDF para assinar (protegido ou danificado). Peça ao gestor
-            outra versão.
+            {tr("Não foi possível abrir este PDF para assinar (protegido ou danificado). Peça ao gestor outra versão.")}
           </p>
         )}
 
         {layout.data && placement && (
           <div className="space-y-2 rounded-xl border border-border p-3">
-            <p className="text-sm font-medium">Onde vai a assinatura</p>
+            <p className="text-sm font-medium">{tr("Onde vai a assinatura")}</p>
             {placement.found === "fallback" && !placeChosen ? (
               <p
                 className="rounded-md border border-warning/40 bg-warning/10 px-2 py-1 text-xs"
                 data-testid="signature-place-required"
               >
-                Não encontrámos o lugar da assinatura neste documento (por exemplo, PDF
-                digitalizado). Vá à página certa e toque no sítio onde quer assinar.
+                {tr("Não encontrámos o lugar da assinatura neste documento (por exemplo, PDF digitalizado). Vá à página certa e toque no sítio onde quer assinar.")}
               </p>
             ) : (
               <p className="text-xs text-muted-foreground">
-                Para mudar, toque noutro sítio da página ou mude de página.
+                {tr("Para mudar, toque noutro sítio da página ou mude de página.")}
               </p>
             )}
             <SignaturePlacementPicker
@@ -607,12 +606,12 @@ function SignStep({
         {profile.isSuccess && !showPad && (
           <div className="space-y-2 rounded-xl border border-border p-3">
             <p className="flex items-center gap-1 text-sm">
-              <CheckCircle2 className="h-4 w-4 text-success" /> 1. Assinatura guardada:
+              <CheckCircle2 className="h-4 w-4 text-success" /> {tr("1. Assinatura guardada:")}
             </p>
             {profile.data.preview ? (
               <img
                 src={profile.data.preview}
-                alt="A sua assinatura"
+                alt={tr("A sua assinatura")}
                 className="h-16 rounded-md border border-border bg-white object-contain px-2"
               />
             ) : null}
@@ -621,7 +620,7 @@ function SignStep({
               className="text-xs text-primary underline"
               onClick={() => setDraw(true)}
             >
-              Desenhar outra
+              {tr("Desenhar outra")}
             </button>
           </div>
         )}
@@ -629,13 +628,13 @@ function SignStep({
           <div className="space-y-2" data-testid="signature-pad">
             <p className="text-sm font-medium">
               {hasSaved
-                ? "1. Desenhe a nova assinatura e guarde:"
-                : "1. Ainda não tem assinatura guardada. Desenhe-a aqui e clique em Guardar assinatura:"}
+                ? tr("1. Desenhe a nova assinatura e guarde:")
+                : tr("1. Ainda não tem assinatura guardada. Desenhe-a aqui e clique em Guardar assinatura:")}
             </p>
             <canvas
               ref={sig.canvasRef}
               className="h-32 w-full touch-none rounded-md border border-dashed border-border bg-white"
-              aria-label="Área para desenhar a assinatura"
+              aria-label={tr("Área para desenhar a assinatura")}
             />
             <div className="flex flex-wrap gap-2">
               <Button
@@ -644,7 +643,7 @@ function SignStep({
                 variant="outline"
                 onClick={() => sig.padRef.current?.clear()}
               >
-                <Eraser className="h-4 w-4" /> Limpar
+                <Eraser className="h-4 w-4" /> {tr("Limpar")}
               </Button>
               <Button
                 type="button"
@@ -658,11 +657,11 @@ function SignStep({
                 ) : (
                   <Save className="h-4 w-4" />
                 )}
-                Guardar assinatura
+                {tr("Guardar assinatura")}
               </Button>
               {hasSaved && (
                 <Button type="button" size="sm" variant="ghost" onClick={() => setDraw(false)}>
-                  Cancelar
+                  {tr("Cancelar")}
                 </Button>
               )}
             </div>
@@ -675,13 +674,12 @@ function SignStep({
             data-testid="visto-profile"
           >
             <p className="flex items-center gap-1 text-sm">
-              <CheckCircle2 className="h-4 w-4 text-success" /> 2. Visto (rubrica) guardado — vai em
-              cada página:
+              <CheckCircle2 className="h-4 w-4 text-success" /> {tr("2. Visto (rubrica) guardado — vai em cada página:")}
             </p>
             {profile.data.vistoPreview ? (
               <img
                 src={profile.data.vistoPreview}
-                alt="O seu visto"
+                alt={tr("O seu visto")}
                 className="h-12 rounded-md border border-border bg-white object-contain px-2"
               />
             ) : null}
@@ -690,7 +688,7 @@ function SignStep({
               className="text-xs text-primary underline"
               onClick={() => setDrawVisto(true)}
             >
-              Desenhar outro
+              {tr("Desenhar outro")}
             </button>
           </div>
         )}
@@ -698,13 +696,13 @@ function SignStep({
           <div className="space-y-2" data-testid="visto-pad">
             <p className="text-sm font-medium">
               {hasVisto
-                ? "2. Desenhe o novo visto (rubrica) e guarde:"
-                : "2. Ainda não tem visto guardado. Desenhe a sua rubrica (vai em cada página) e clique em Guardar visto:"}
+                ? tr("2. Desenhe o novo visto (rubrica) e guarde:")
+                : tr("2. Ainda não tem visto guardado. Desenhe a sua rubrica (vai em cada página) e clique em Guardar visto:")}
             </p>
             <canvas
               ref={visto.canvasRef}
               className="h-24 w-full max-w-xs touch-none rounded-md border border-dashed border-border bg-white"
-              aria-label="Área para desenhar o visto"
+              aria-label={tr("Área para desenhar o visto")}
             />
             <div className="flex flex-wrap gap-2">
               <Button
@@ -713,7 +711,7 @@ function SignStep({
                 variant="outline"
                 onClick={() => visto.padRef.current?.clear()}
               >
-                <Eraser className="h-4 w-4" /> Limpar
+                <Eraser className="h-4 w-4" /> {tr("Limpar")}
               </Button>
               <Button
                 type="button"
@@ -727,11 +725,11 @@ function SignStep({
                 ) : (
                   <Save className="h-4 w-4" />
                 )}
-                Guardar visto
+                {tr("Guardar visto")}
               </Button>
               {hasVisto && (
                 <Button type="button" size="sm" variant="ghost" onClick={() => setDrawVisto(false)}>
-                  Cancelar
+                  {tr("Cancelar")}
                 </Button>
               )}
             </div>
@@ -739,8 +737,7 @@ function SignStep({
         )}
 
         <p className="text-xs text-muted-foreground">
-          A assinatura vai no sítio escolhido e o visto no canto inferior de cada página. É guardada
-          uma cópia assinada; o original não é alterado.
+          {tr("A assinatura vai no sítio escolhido e o visto no canto inferior de cada página. É guardada uma cópia assinada; o original não é alterado.")}
         </p>
       </div>
       <div
@@ -752,12 +749,12 @@ function SignStep({
             className="text-xs font-medium text-warning-foreground"
             data-testid="send-signature-hint"
           >
-            Guarde a assinatura e o visto para poder enviar.
+            {tr("Guarde a assinatura e o visto para poder enviar.")}
           </p>
         )}
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button variant="ghost" onClick={onBack} disabled={busy}>
-            Voltar
+            {tr("Voltar")}
           </Button>
           <Button
             data-testid="send-signature"
@@ -769,7 +766,7 @@ function SignStep({
               !placeChosen ||
               !readyToSend
             }
-            title={readyToSend ? undefined : "Guarde primeiro a assinatura e o visto"}
+            title={readyToSend ? undefined : tr("Guarde primeiro a assinatura e o visto")}
             onClick={() => void run()}
           >
             {busy ? (
@@ -777,7 +774,7 @@ function SignStep({
             ) : (
               <FileSignature className="h-4 w-4" />
             )}
-            {busy ? "A enviar…" : "3. Enviar assinatura"}
+            {busy ? tr("A enviar…") : tr("3. Enviar assinatura")}
           </Button>
         </div>
       </div>

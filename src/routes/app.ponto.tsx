@@ -84,6 +84,7 @@ import { offDayInfo, sameClientTaskToday } from "@/lib/punch/off-day";
 import { applyLocalEvent, isLocalEntryId, type OfflinePunchEvent } from "@/lib/punch/offline-queue";
 import { finishedPauses, formatPauseSeconds, type PauseRow } from "@/lib/ponto/history";
 import { RefuseTaskDialog, type RefusalSubmitPayload } from "@/components/tasks/RefuseTaskDialog";
+import { tr } from "@/i18n";
 
 export const Route = createFileRoute("/app/ponto")({ component: PontoPage });
 
@@ -308,7 +309,7 @@ function PontoPage() {
 
   const refuseTask = useMutation({
     mutationFn: async (payload: RefusalSubmitPayload) => {
-      if (!refuseTarget) throw new Error("Tarefa não encontrada.");
+      if (!refuseTarget) throw new Error(tr("Tarefa não encontrada."));
       if (payload.requestedDate) {
         return transitionTaskWithScheduleRequest(refuseTarget.id, "recusar", payload.reason, {
           requestedDate: payload.requestedDate,
@@ -324,7 +325,7 @@ function PontoPage() {
       qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
       qc.invalidateQueries({ queryKey: ["tasks"] });
       qc.invalidateQueries({ queryKey: ["notifications"] });
-      toast.success("Tarefa recusada. O gestor foi notificado.");
+      toast.success(tr("Tarefa recusada. O gestor foi notificado."));
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -403,7 +404,7 @@ function PontoPage() {
 
   const pauseMut = useMutation({
     mutationFn: async () => {
-      if (!openEntry) throw new Error("Sem ponto aberto.");
+      if (!openEntry) throw new Error(tr("Sem ponto aberto."));
       const res = await punch.run({
         op: "pause",
         entryId: openEntry.id,
@@ -418,7 +419,7 @@ function PontoPage() {
   });
   const resumeMut = useMutation({
     mutationFn: async () => {
-      if (!openEntry) throw new Error("Sem ponto aberto.");
+      if (!openEntry) throw new Error(tr("Sem ponto aberto."));
       const res = await punch.run({
         op: "resume",
         entryId: openEntry.id,
@@ -436,7 +437,7 @@ function PontoPage() {
   });
   const endMut = useMutation({
     mutationFn: async ({ note }: { note: string }) => {
-      if (!openEntry || !openTask) throw new Error("Sem tarefa em andamento.");
+      if (!openEntry || !openTask) throw new Error(tr("Sem tarefa em andamento."));
       // 1) Fecha o time_entry via v2 (grava geopoint + política de geofencing).
       const res = await punch.run({
         op: "stop",
@@ -470,8 +471,8 @@ function PontoPage() {
       qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
       qc.invalidateQueries({ queryKey: ["tasks"] });
       qc.invalidateQueries({ queryKey: ["notifications"] });
-      if (noteSaved) toast.success("Tarefa concluída");
-      else toast.warning("Tarefa concluída, mas a observação não foi salva.");
+      if (noteSaved) toast.success(tr("Tarefa concluída"));
+      else toast.warning(tr("Tarefa concluída, mas a observação não foi salva."));
     },
     onError: (error: Error) => {
       toast.error(error.message || "Não foi possível concluir a tarefa.");
@@ -517,7 +518,7 @@ function PontoPage() {
   const manualStartMut = useMutation({
     mutationFn: async ({ taskId, startedAt }: { taskId: string; startedAt: string }) => {
       const entry = await punchEmployeeManualStart(taskId, localInputToIso(startedAt));
-      toast.success("Entrada manual registrada.");
+      toast.success(tr("Entrada manual registrada."));
       return entry;
     },
     onSuccess: () => {
@@ -540,10 +541,10 @@ function PontoPage() {
       note: string;
     }) => {
       if (!openEntry) {
-        throw new Error("Sem ponto aberto.");
+        throw new Error(tr("Sem ponto aberto."));
       }
       if (isLocalEntryId(entryId)) {
-        throw new Error("Este ponto foi iniciado sem rede. Conclua-o pelo botão de concluir; o envio é feito quando a rede voltar.");
+        throw new Error(tr("Este ponto foi iniciado sem rede. Conclua-o pelo botão de concluir; o envio é feito quando a rede voltar."));
       }
       const entry = await punchEmployeeManualEnd(entryId, localInputToIso(endedAt), true, reason);
       let noteSaved = true;
@@ -566,8 +567,8 @@ function PontoPage() {
       qc.invalidateQueries({ queryKey: ["punch-history"] });
       qc.invalidateQueries({ queryKey: ["tasks"] });
       qc.invalidateQueries({ queryKey: ["notifications"] });
-      if (noteSaved) toast.success("Saida manual registrada.");
-      else toast.warning("Saida manual registrada, mas a observação não foi salva.");
+      if (noteSaved) toast.success(tr("Saida manual registrada."));
+      else toast.warning(tr("Saida manual registrada, mas a observação não foi salva."));
     },
     onError: (error: Error) => {
       toast.error(error.message || "Não foi possível finalizar o ponto.");
@@ -576,7 +577,7 @@ function PontoPage() {
   const requestAuthMut = useMutation({
     mutationFn: (taskId: string) => requestTaskAuthorization(taskId),
     onSuccess: () => {
-      toast.success("Solicitação enviada ao gestor");
+      toast.success(tr("Solicitação enviada ao gestor"));
       qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
       qc.invalidateQueries({ queryKey: ["tasks"] });
     },
@@ -630,15 +631,15 @@ function PontoPage() {
     <div className="mx-auto w-full max-w-3xl space-y-6">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl font-semibold tracking-tight">Folha de Ponto</h1>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">{tr("Folha de Ponto")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Sua central operacional do dia. Inicie, pause e conclua tarefas em um clique.
+            {tr("Sua central operacional do dia. Inicie, pause e conclua tarefas em um clique.")}
           </p>
         </div>
         {isManager && (
           <Button asChild size="sm" className="shrink-0">
             <Link to="/app/tarefas">
-              <Plus className="mr-1 h-4 w-4" /> Nova tarefa
+              <Plus className="mr-1 h-4 w-4" /> {tr("Nova tarefa")}
             </Link>
           </Button>
         )}
@@ -712,17 +713,17 @@ function PontoPage() {
       {/* === HISTÓRICO === */}
       <section className="rounded-2xl border border-border bg-card">
         <div className="border-b border-border px-5 py-3 text-sm font-medium">
-          {isManager ? "Histórico recente da equipe" : "Seu histórico recente"}
+          {isManager ? tr("Histórico recente da equipe") : tr("Seu histórico recente")}
         </div>
         {(history ?? []).length === 0 ? (
-          <div className="px-5 py-10 text-center text-sm text-muted-foreground">Sem registros encerrados ainda.</div>
+          <div className="px-5 py-10 text-center text-sm text-muted-foreground">{tr("Sem registros encerrados ainda.")}</div>
         ) : (
           <ul className="divide-y divide-border">
             {(history ?? []).map((h) => (
               <li key={h.id} className="grid grid-cols-12 items-center gap-3 px-5 py-3 text-sm">
                 <div className="col-span-7 min-w-0">
                   <div className="truncate font-semibold">
-                    {(h.tasks?.client_id ? clientsMap?.[h.tasks.client_id] : undefined) || h.tasks?.title || "Tarefa"}
+                    {(h.tasks?.client_id ? clientsMap?.[h.tasks.client_id] : undefined) || h.tasks?.title || tr("Tarefa")}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {new Date(h.started_at).toLocaleString()} →{" "}
@@ -733,7 +734,7 @@ function PontoPage() {
                     started_at: h.started_at,
                   }) != null && (
                     <span className="mt-1 inline-flex items-center gap-1 rounded bg-destructive/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-destructive">
-                      <AlertCircle className="h-3 w-3" /> Início com atraso ·{" "}
+                      <AlertCircle className="h-3 w-3" /> {tr("Início com atraso ·")}{" "}
                       {formatStartedLateMinutes(
                         startedLateMinutes({
                           scheduled_for: h.tasks?.scheduled_for,
@@ -743,7 +744,7 @@ function PontoPage() {
                     </span>
                   )}
                 </div>
-                <div className="col-span-2 text-xs text-muted-foreground">{h.paused_at ? "c/ pausa" : "s/ pausa"}</div>
+                <div className="col-span-2 text-xs text-muted-foreground">{h.paused_at ? tr("c/ pausa") : tr("s/ pausa")}</div>
                 <div className="col-span-3 text-right font-mono text-sm">
                   {formatDuration(h.effective_minutes ?? 0)}
                 </div>
@@ -774,7 +775,7 @@ function PontoPage() {
           qc.invalidateQueries({ queryKey: ["punch-history"] });
           qc.invalidateQueries({ queryKey: ["punch-upcoming"] });
           qc.invalidateQueries({ queryKey: ["tasks"] });
-          toast.info("Ponto anterior encerrado. Toque em \u201cIniciar tarefa\u201d para começar a próxima.");
+          toast.info(tr("Ponto anterior encerrado. Toque em “Iniciar tarefa” para começar a próxima."));
         }}
       />
 
@@ -825,8 +826,8 @@ function PontoPage() {
         <DialogContent size="sm">
           <ModalHeader
             icon={Timer}
-            title="Como deseja registrar?"
-            description="Esta empresa permite ambos os modos. Escolha como abrir o ponto para esta tarefa."
+            title={tr("Como deseja registrar?")}
+            description={tr("Esta empresa permite ambos os modos. Escolha como abrir o ponto para esta tarefa.")}
           />
           <ModalBody>
             <div className="grid gap-2">
@@ -841,8 +842,8 @@ function PontoPage() {
               >
                 <Zap className="mr-2 h-5 w-5" />
                 <div className="text-left">
-                  <div className="text-sm font-semibold">Automático</div>
-                  <div className="text-xs opacity-80">Inicia tarefa e abre o ponto em um clique.</div>
+                  <div className="text-sm font-semibold">{tr("Automático")}</div>
+                  <div className="text-xs opacity-80">{tr("Inicia tarefa e abre o ponto em um clique.")}</div>
                 </div>
               </Button>
               <Button
@@ -858,8 +859,8 @@ function PontoPage() {
               >
                 <Hand className="mr-2 h-5 w-5" />
                 <div className="text-left">
-                  <div className="text-sm font-semibold">Manual</div>
-                  <div className="text-xs opacity-80">Bater entrada/saída manualmente durante a tarefa.</div>
+                  <div className="text-sm font-semibold">{tr("Manual")}</div>
+                  <div className="text-xs opacity-80">{tr("Bater entrada/saída manualmente durante a tarefa.")}</div>
                 </div>
               </Button>
             </div>
@@ -871,8 +872,8 @@ function PontoPage() {
         <DialogContent size="sm">
           <ModalHeader
             icon={LogInIcon}
-            title="Registrar entrada manual"
-            description="Informe o horário real de entrada para iniciar esta tarefa manualmente."
+            title={tr("Registrar entrada manual")}
+            description={tr("Informe o horário real de entrada para iniciar esta tarefa manualmente.")}
           />
           <ModalBody>
             <form
@@ -886,7 +887,7 @@ function PontoPage() {
             >
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="manual-start-at">
-                  Hora de entrada
+                  {tr("Hora de entrada")}
                 </label>
                 <Input
                   id="manual-start-at"
@@ -900,11 +901,11 @@ function PontoPage() {
           </ModalBody>
           <ModalFooter>
             <Button variant="outline" onClick={() => setManualStartTask(null)} disabled={manualStartMut.isPending}>
-              Cancelar
+              {tr("Cancelar")}
             </Button>
             <Button type="submit" form="manual-start-form" disabled={manualStartMut.isPending}>
               <LogIn className="mr-2 h-4 w-4" />
-              {manualStartMut.isPending ? "Registrando..." : "Iniciar manual"}
+              {manualStartMut.isPending ? tr("Registrando...") : tr("Iniciar manual")}
             </Button>
           </ModalFooter>
         </DialogContent>
@@ -914,8 +915,8 @@ function PontoPage() {
         <DialogContent size="sm">
           <ModalHeader
             icon={LogOut}
-            title="Finalizar ponto manual"
-            description="Informe o horário real de saída. A tarefa será concluída com este apontamento."
+            title={tr("Finalizar ponto manual")}
+            description={tr("Informe o horário real de saída. A tarefa será concluída com este apontamento.")}
           />
           <ModalBody>
             <form
@@ -935,7 +936,7 @@ function PontoPage() {
             >
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="manual-end-at">
-                  Hora de saída
+                  {tr("Hora de saída")}
                 </label>
                 <Input
                   id="manual-end-at"
@@ -947,7 +948,7 @@ function PontoPage() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="manual-end-reason">
-                  Observação (opcional)
+                  {tr("Observação (opcional)")}
                 </label>
                 <Textarea
                   id="manual-end-reason"
@@ -955,12 +956,12 @@ function PontoPage() {
                   onChange={(e) => setManualEndReason(e.target.value)}
                   rows={3}
                   maxLength={500}
-                  placeholder="Ex.: esqueci de bater saída ontem; horário correto confirmado com o gestor."
+                  placeholder={tr("Ex.: esqueci de bater saída ontem; horário correto confirmado com o gestor.")}
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="manual-completion-note">
-                  Observação da conclusão (opcional)
+                  {tr("Observação da conclusão (opcional)")}
                 </label>
                 <Textarea
                   id="manual-completion-note"
@@ -968,18 +969,18 @@ function PontoPage() {
                   onChange={(e) => setManualCompletionNote(e.target.value)}
                   rows={3}
                   maxLength={2000}
-                  placeholder="Ex.: cliente solicitou algo adicional, houve algum problema, material em falta..."
+                  placeholder={tr("Ex.: cliente solicitou algo adicional, houve algum problema, material em falta...")}
                 />
               </div>
             </form>
           </ModalBody>
           <ModalFooter>
             <Button variant="outline" onClick={() => setManualEndOpen(false)} disabled={manualEndMut.isPending}>
-              Cancelar
+              {tr("Cancelar")}
             </Button>
             <Button type="submit" form="manual-end-form" disabled={manualEndMut.isPending}>
               <LogOut className="mr-2 h-4 w-4" />
-              {manualEndMut.isPending ? "Finalizando..." : "Finalizar manual"}
+              {manualEndMut.isPending ? tr("Finalizando...") : tr("Finalizar manual")}
             </Button>
           </ModalFooter>
         </DialogContent>
@@ -997,8 +998,8 @@ function PontoPage() {
         <DialogContent size="sm">
           <ModalHeader
             icon={Square}
-            title="Concluir tarefa"
-            description="Registre uma observação opcional sobre a conclusão."
+            title={tr("Concluir tarefa")}
+            description={tr("Registre uma observação opcional sobre a conclusão.")}
           />
           <ModalBody>
             <form
@@ -1010,11 +1011,11 @@ function PontoPage() {
               }}
             >
               <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm font-medium">
-                {(openTask?.client_id ? clientsMap?.[openTask.client_id] : undefined) || openTask?.title || "Tarefa"}
+                {(openTask?.client_id ? clientsMap?.[openTask.client_id] : undefined) || openTask?.title || tr("Tarefa")}
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="punch-completion-note">
-                  Observação da conclusão (opcional)
+                  {tr("Observação da conclusão (opcional)")}
                 </label>
                 <Textarea
                   id="punch-completion-note"
@@ -1022,7 +1023,7 @@ function PontoPage() {
                   onChange={(e) => setCompletionNote(e.target.value)}
                   rows={4}
                   maxLength={2000}
-                  placeholder="Ex.: cliente solicitou algo adicional, houve algum problema, material em falta..."
+                  placeholder={tr("Ex.: cliente solicitou algo adicional, houve algum problema, material em falta...")}
                 />
               </div>
             </form>
@@ -1034,11 +1035,11 @@ function PontoPage() {
               disabled={endMut.isPending}
               onClick={() => setCompletionDialogOpen(false)}
             >
-              Cancelar
+              {tr("Cancelar")}
             </Button>
             <Button type="submit" form="punch-completion-form" disabled={endMut.isPending}>
               <Square className="mr-2 h-4 w-4" />
-              {endMut.isPending ? "Concluindo..." : "Concluir tarefa"}
+              {endMut.isPending ? tr("Concluindo...") : tr("Concluir tarefa")}
             </Button>
           </ModalFooter>
         </DialogContent>
@@ -1128,7 +1129,7 @@ function ActiveTaskCard({
   return (
     <section className="min-w-0 overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card shadow-lg">
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-b border-border/60 px-4 py-3 text-xs font-medium uppercase tracking-wide text-primary sm:px-5">
-        <span>Tarefa em andamento</span>
+        <span>{tr("Tarefa em andamento")}</span>
         <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] tracking-normal">
           {mode === "manual" ? (
             <Hand className="h-3 w-3" />
@@ -1150,7 +1151,7 @@ function ActiveTaskCard({
           <ClientInstructionsToggle text={task.client_id ? activeInstructions[task.client_id] : undefined} />
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_TONE[task.status]}`}>
-              {STATUS_LABELS[task.status]}
+              {tr(STATUS_LABELS[task.status])}
             </span>
             {task.scheduled_for && (
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
@@ -1159,7 +1160,7 @@ function ActiveTaskCard({
               </span>
             )}
             <span className="text-xs text-muted-foreground">
-              iniciado às {new Date(entry.started_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              {tr("iniciado às")} {new Date(entry.started_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
             </span>
           </div>
         </div>
@@ -1167,14 +1168,14 @@ function ActiveTaskCard({
         {/* Cronômetro */}
         {isManualEntry ? (
           <div className="rounded-xl bg-background/60 px-4 py-5 text-center">
-            <div className="text-[11px] uppercase tracking-widest text-muted-foreground">Entrada manual registrada</div>
+            <div className="text-[11px] uppercase tracking-widest text-muted-foreground">{tr("Entrada manual registrada")}</div>
             <div className="mt-1 font-display text-3xl font-semibold">
               {new Date(entry.started_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
             </div>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center rounded-xl bg-background/60 py-6">
-            <div className="text-[11px] uppercase tracking-widest text-muted-foreground">Tempo efetivo</div>
+            <div className="text-[11px] uppercase tracking-widest text-muted-foreground">{tr("Tempo efetivo")}</div>
             <div className="flex max-w-full items-center justify-center gap-3 sm:gap-5">
               <div className="min-w-0 break-all font-display text-5xl font-semibold tabular-nums sm:text-6xl">
                 {formatHMS(liveSec)}
@@ -1184,7 +1185,7 @@ function ActiveTaskCard({
                   className="shrink-0 border-l border-border pl-3 text-left text-xs leading-5 sm:pl-4 sm:text-sm"
                   data-testid="done-pauses"
                 >
-                  <div className="font-medium text-muted-foreground">Pausa</div>
+                  <div className="font-medium text-muted-foreground">{tr("Pausa")}</div>
                   {donePauses.map((p, i) => (
                     <div key={i} className="whitespace-nowrap tabular-nums">
                       <span className="text-muted-foreground">{i + 1}ª</span>{" "}
@@ -1196,11 +1197,11 @@ function ActiveTaskCard({
             </div>
             {state === "pausado" && (
               <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-warning/15 px-2.5 py-1 text-xs font-medium text-warning-foreground">
-                <Coffee className="h-3 w-3" /> Em pausa
+                <Coffee className="h-3 w-3" /> {tr("Em pausa")}
                 {hasPauseStart && (
                   <span data-testid="pause-since">
                     {" "}
-                    desde {pausedAtLabel} · há {pauseElapsedLabel}
+                    desde {pausedAtLabel} {tr("· há")} {pauseElapsedLabel}
                   </span>
                 )}
               </div>
@@ -1218,12 +1219,12 @@ function ActiveTaskCard({
               disabled={pausing}
               onClick={onPause}
             >
-              <Pause className="mr-2 h-5 w-5" /> Pausa almoço
+              <Pause className="mr-2 h-5 w-5" /> {tr("Pausa almoço")}
             </Button>
           )}
           {!useManualExit && state === "pausado" && (
             <Button size="lg" variant="outline" className="h-14 text-base" disabled={resuming} onClick={onResume}>
-              <Play className="mr-2 h-5 w-5" /> Retorno almoço
+              <Play className="mr-2 h-5 w-5" /> {tr("Retorno almoço")}
             </Button>
           )}
           {useManualExit && state !== "encerrado" && (
@@ -1234,12 +1235,12 @@ function ActiveTaskCard({
               disabled={manualEnding}
               onClick={onManualEnd}
             >
-              <LogOut className="mr-2 h-5 w-5" /> Finalizar
+              <LogOut className="mr-2 h-5 w-5" /> {tr("Finalizar")}
             </Button>
           )}
           {!useManualExit && (
             <Button size="lg" className="h-14 min-w-0 text-sm sm:col-span-2" disabled={ending} onClick={onComplete}>
-              <Square className="mr-2 h-5 w-5" /> Concluir tarefa
+              <Square className="mr-2 h-5 w-5" /> {tr("Concluir tarefa")}
             </Button>
           )}
         </div>
@@ -1305,16 +1306,16 @@ function UpcomingTasks({
         <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-muted text-muted-foreground">
           <ClockIcon className="h-6 w-6" />
         </div>
-        <h2 className="mt-4 font-display text-xl font-semibold">Sem tarefas pendentes</h2>
+        <h2 className="mt-4 font-display text-xl font-semibold">{tr("Sem tarefas pendentes")}</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           {isManager
-            ? "Nenhuma tarefa pendente na empresa. Crie uma nova para começar a operação."
-            : "Você está livre. Quando uma nova tarefa for atribuída, ela aparecerá aqui."}
+            ? tr("Nenhuma tarefa pendente na empresa. Crie uma nova para começar a operação.")
+            : tr("Você está livre. Quando uma nova tarefa for atribuída, ela aparecerá aqui.")}
         </p>
         {isManager && (
           <Button asChild size="lg" className="mt-5">
             <Link to="/app/tarefas">
-              <Plus className="mr-2 h-5 w-5" /> Criar nova tarefa
+              <Plus className="mr-2 h-5 w-5" /> {tr("Criar nova tarefa")}
             </Link>
           </Button>
         )}
@@ -1353,7 +1354,7 @@ function UpcomingTasks({
   const nextLateStartMinutes = startedLateMinutes(nextStartable);
   const nextLateLabel =
     nextLateStartMinutes !== null
-      ? `Início com atraso · ${formatStartedLateMinutes(nextLateStartMinutes)}`
+      ? tr("Início com atraso · {{min}}", { min: formatStartedLateMinutes(nextLateStartMinutes) })
       : nextOperationalStatus === "atrasada" || nextLate
         ? "Atrasada"
         : null;
@@ -1364,7 +1365,7 @@ function UpcomingTasks({
       {/* HERO — próxima tarefa do funcionário, ação imediata */}
       <section className="overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card shadow-lg">
         <div className="flex items-center justify-between border-b border-border/60 px-5 py-3">
-          <span className="text-xs font-medium uppercase tracking-wide text-primary">Próxima tarefa</span>
+          <span className="text-xs font-medium uppercase tracking-wide text-primary">{tr("Próxima tarefa")}</span>
           {(nextStartable.scheduled_for || nextStartable.recurrence_date || nextStartable.due_at) && (
             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
               <ClockIcon className="h-3 w-3" />
@@ -1404,7 +1405,7 @@ function UpcomingTasks({
               <div className="flex items-start gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">
                 <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
                 <span>
-                  Tarefa marcada como <b>ausente</b>. Solicite nova autorização ao gestor para retomar a execução.
+                  {tr("Tarefa marcada como")} <b>ausente</b>{tr(". Solicite nova autorização ao gestor para retomar a execução.")}
                 </span>
               </div>
               <Button
@@ -1415,7 +1416,7 @@ function UpcomingTasks({
                 onClick={() => onRequestAuth(nextStartable.id)}
               >
                 <Send className="mr-2 h-5 w-5" />
-                {nextRequesting ? "Enviando..." : "Solicitar autorização"}
+                {nextRequesting ? tr("Enviando...") : tr("Solicitar autorização")}
               </Button>
             </div>
           ) : (
@@ -1427,15 +1428,15 @@ function UpcomingTasks({
             >
               {effectiveMode(nextStartable) === "manual" ? (
                 <>
-                  <LogIn className="mr-2 h-6 w-6" /> Bater entrada
+                  <LogIn className="mr-2 h-6 w-6" /> {tr("Bater entrada")}
                 </>
               ) : nextStartable.status === "em_andamento" ? (
                 <>
-                  <LogIn className="mr-2 h-6 w-6" /> Bater entrada
+                  <LogIn className="mr-2 h-6 w-6" /> {tr("Bater entrada")}
                 </>
               ) : (
                 <>
-                  <Play className="mr-2 h-6 w-6" /> Iniciar tarefa
+                  <Play className="mr-2 h-6 w-6" /> {tr("Iniciar tarefa")}
                 </>
               )}
             </Button>
@@ -1448,7 +1449,7 @@ function UpcomingTasks({
               disabled={markingAbsent && markingAbsentId === nextStartable.id}
               onClick={() => onMarkAbsent(nextStartable.id)}
             >
-              <UserX className="mr-2 h-5 w-5" /> Marcar falta
+              <UserX className="mr-2 h-5 w-5" /> {tr("Marcar falta")}
             </Button>
           )}
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -1459,7 +1460,7 @@ function UpcomingTasks({
                 className="h-12 w-full text-base"
                 onClick={() => onRefuseTask(nextStartable)}
               >
-                <XCircle className="mr-2 h-5 w-5" /> Recusar tarefa
+                <XCircle className="mr-2 h-5 w-5" /> {tr("Recusar tarefa")}
               </Button>
             )}
             {currentUserId && canCancelTask(nextStartable, { userId: currentUserId, isManager }) && (
@@ -1469,7 +1470,7 @@ function UpcomingTasks({
                 className="h-12 w-full text-base"
                 onClick={() => onCancelTask(nextStartable)}
               >
-                <Ban className="mr-2 h-5 w-5" /> Cancelar tarefa
+                <Ban className="mr-2 h-5 w-5" /> {tr("Cancelar tarefa")}
               </Button>
             )}
             {((currentUserId && canArchiveBy(nextStartable, { userId: currentUserId, isManager })) ||
@@ -1482,7 +1483,7 @@ function UpcomingTasks({
                     className="h-8 px-3 text-xs text-muted-foreground"
                     onClick={() => onArchiveTask(nextStartable)}
                   >
-                    <Archive className="mr-1.5 h-4 w-4" /> Arquivar
+                    <Archive className="mr-1.5 h-4 w-4" /> {tr("Arquivar")}
                   </Button>
                 )}
                 {nextLateLabel && <LateBadge label={nextLateLabel} />}
@@ -1495,8 +1496,8 @@ function UpcomingTasks({
       {rest.length > 0 && (
         <section className="rounded-2xl border border-border bg-card">
           <div className="flex items-center justify-between border-b border-border px-5 py-3">
-            <div className="text-sm font-medium">Depois</div>
-            <div className="text-xs text-muted-foreground">{rest.length} na fila</div>
+            <div className="text-sm font-medium">{tr("Depois")}</div>
+            <div className="text-xs text-muted-foreground">{rest.length} {tr("na fila")}</div>
           </div>
           <ul className="divide-y divide-border">
             {rest.map((t) => {
@@ -1505,7 +1506,7 @@ function UpcomingTasks({
               const operationalStatus = resolveOperationalStatus(t);
               const lateLabel =
                 lateStartMinutes !== null
-                  ? `Início atrasado · ${formatStartedLateMinutes(lateStartMinutes)}`
+                  ? tr("Início atrasado · {{min}}", { min: formatStartedLateMinutes(lateStartMinutes) })
                   : operationalStatus === "atrasada" || late
                     ? "Atrasada"
                     : null;
@@ -1544,7 +1545,7 @@ function UpcomingTasks({
                         ? `${formatWallDate(t.scheduled_for)} · ${formatWallTime(t.scheduled_for)}`
                         : t.recurrence_date || t.due_at
                           ? `${formatWallDate(t.recurrence_date ?? t.due_at)} · Sem horario definido`
-                          : "Sem horário definido"}
+                          : tr("Sem horário definido")}
                     </div>
                   </div>
                   <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
@@ -1563,17 +1564,17 @@ function UpcomingTasks({
                         {operationalStatus === "ausente" ? (
                           <>
                             <Send className="mr-2 h-5 w-5" />
-                            Solicitar autorização
+                            {tr("Solicitar autorização")}
                           </>
                         ) : tMode === "manual" || t.status === "em_andamento" ? (
                           <>
                             <LogIn className="mr-2 h-5 w-5" />
-                            Bater entrada
+                            {tr("Bater entrada")}
                           </>
                         ) : (
                           <>
                             <Play className="mr-2 h-5 w-5" />
-                            Iniciar
+                            {tr("Iniciar")}
                           </>
                         )}
                       </Button>
@@ -1586,17 +1587,17 @@ function UpcomingTasks({
                         disabled={markingAbsent && markingAbsentId === t.id}
                         onClick={() => onMarkAbsent(t.id)}
                       >
-                        <UserX className="mr-2 h-5 w-5" /> Marcar falta
+                        <UserX className="mr-2 h-5 w-5" /> {tr("Marcar falta")}
                       </Button>
                     )}
                     {currentUserId && canRefuseTask(t, { userId: currentUserId }) && (
                       <Button size="lg" variant="outline" className="h-12 shrink-0" onClick={() => onRefuseTask(t)}>
-                        <XCircle className="mr-2 h-5 w-5" /> Recusar tarefa
+                        <XCircle className="mr-2 h-5 w-5" /> {tr("Recusar tarefa")}
                       </Button>
                     )}
                     {currentUserId && canCancelTask(t, { userId: currentUserId, isManager }) && (
                       <Button size="lg" variant="outline" className="h-12 shrink-0" onClick={() => onCancelTask(t)}>
-                        <Ban className="mr-2 h-5 w-5" /> Cancelar tarefa
+                        <Ban className="mr-2 h-5 w-5" /> {tr("Cancelar tarefa")}
                       </Button>
                     )}
                     {((currentUserId && canArchiveBy(t, { userId: currentUserId, isManager })) || lateLabel) && (
@@ -1608,7 +1609,7 @@ function UpcomingTasks({
                             className="h-8 shrink-0 px-3 text-xs text-muted-foreground"
                             onClick={() => onArchiveTask(t)}
                           >
-                            <Archive className="mr-1.5 h-4 w-4" /> Arquivar
+                            <Archive className="mr-1.5 h-4 w-4" /> {tr("Arquivar")}
                           </Button>
                         )}
                         {lateLabel && <LateBadge label={lateLabel} />}
@@ -1696,20 +1697,20 @@ function ClientAddressBlock({ info, compact = false }: { info?: ClientAddressInf
         document.execCommand("copy");
         document.body.removeChild(el);
       }
-      toast.success("Endereço copiado");
+      toast.success(tr("Endereço copiado"));
     } catch {
-      toast.error("Não foi possível copiar o endereço");
+      toast.error(tr("Não foi possível copiar o endereço"));
     }
   };
   return (
     <div className={compact ? "mt-1.5 space-y-1.5" : "mt-2 space-y-2"}>
       <div className={`flex items-start gap-1.5 text-muted-foreground ${compact ? "text-xs" : "text-sm"}`}>
         <MapPin className={compact ? "mt-0.5 h-3 w-3 shrink-0" : "mt-0.5 h-3.5 w-3.5 shrink-0"} />
-        <span className="break-words">{text ?? "Localização do cliente no mapa"}</span>
+        <span className="break-words">{text ?? tr("Localização do cliente no mapa")}</span>
       </div>
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
-          <Navigation className="h-3 w-3" /> Ir com:
+          <Navigation className="h-3 w-3" /> {tr("Ir com:")}
         </span>
         {links.map((l) => (
           <a
@@ -1727,7 +1728,7 @@ function ClientAddressBlock({ info, compact = false }: { info?: ClientAddressInf
           onClick={() => void copy()}
           className="inline-flex h-8 items-center gap-1 rounded-md border border-border bg-background px-2.5 text-xs font-medium hover:bg-muted"
         >
-          <Copy className="h-3.5 w-3.5" /> Copiar
+          <Copy className="h-3.5 w-3.5" /> {tr("Copiar")}
         </button>
       </div>
     </div>
@@ -1793,7 +1794,7 @@ function ClientInstructionsToggle({ text, compact = false }: { text?: string | n
         className="inline-flex max-w-full items-center gap-1.5 rounded-md text-xs font-medium text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <InfoIcon className="h-3.5 w-3.5 shrink-0" aria-hidden />
-        <span className="truncate">{open ? "Ocultar instruções do cliente" : "Ver instruções do cliente"}</span>
+        <span className="truncate">{open ? tr("Ocultar instruções do cliente") : tr("Ver instruções do cliente")}</span>
         <ChevronDownIcon
           className={`h-3.5 w-3.5 shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
           aria-hidden

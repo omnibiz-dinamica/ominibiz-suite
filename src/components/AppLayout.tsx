@@ -21,7 +21,7 @@ import { resolveAvailableNavigation, type NavGroup } from "@/lib/navigation";
 import { getAppVersion } from "@/lib/app-version";
 import { appReleaseLabel, appVersionDetails } from "@/lib/app-release";
 import { useT } from "@/i18n";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { LanguageProfileSync, LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { latestChangeId } from "@/lib/change-log";
 import {
   Dialog,
@@ -99,7 +99,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
   const { user, isManager, isSuperAdmin, currentCompanyId, signOut, effectiveRole, switchCompany, initialized } =
     useAuth();
   const { theme, toggle } = useTheme();
-  const { t } = useT();
+  const { t, lang } = useT();
   const nav = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
@@ -608,7 +608,12 @@ export function AppLayout({ children }: { children?: ReactNode }) {
             </Button>
           )}
         </header>
-        <main className="min-w-0 flex-1 px-3 py-6 sm:px-4 md:px-8 md:py-10">{children ?? <Outlet />}</main>
+        <main className="min-w-0 flex-1 px-3 py-6 sm:px-4 md:px-8 md:py-10">
+          {/* 22/11/2026: ao mudar de língua, a página é redesenhada (textos com tr()). */}
+          <div key={lang} className="contents">
+            {children ?? <Outlet />}
+          </div>
+        </main>
         {(import.meta.env.DEV || import.meta.env.VITE_SHOW_DIAGNOSTICS === "true") && (
           <footer className="border-t border-border bg-muted/30 px-4 py-2 text-[10px] text-muted-foreground md:px-8">
             <DeploymentDiagnostics />
@@ -622,6 +627,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
 
       {/* Documentos que o gestor marcou para o funcionário ler ou assinar. */}
       {user?.id && currentCompanyId && <PendingDocumentsModal userId={user.id} companyId={currentCompanyId} />}
+      <LanguageProfileSync />
 
       <NewTicketDialog
         open={reportDialogOpen}

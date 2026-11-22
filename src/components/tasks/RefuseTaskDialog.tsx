@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { REASSIGN_REASON, REFUSAL_REASONS, SCHEDULE_CHANGE_REASON, type TaskRow } from "@/lib/tasks";
+import { tr } from "@/i18n";
 
 export type RefusalSubmitPayload = {
   reason: string;
@@ -65,15 +66,15 @@ export function RefuseTaskDialog({
   const submit = () => {
     if (!task) return;
     if (isOther && reason.length < 3) {
-      toast.error("Descreva o motivo da recusa.");
+      toast.error(tr("Descreva o motivo da recusa."));
       return;
     }
     if (isReassign && suggested.trim().length < 2) {
-      toast.error("Indique o nome do colega sugerido.");
+      toast.error(tr("Indique o nome do colega sugerido."));
       return;
     }
     if (isScheduleChange && !requestedDate) {
-      toast.error("Informe a nova data desejada.");
+      toast.error(tr("Informe a nova data desejada."));
       return;
     }
     onConfirm({
@@ -94,14 +95,14 @@ export function RefuseTaskDialog({
       <DialogContent size="sm">
         <ModalHeader
           icon={XCircle}
-          title="Recusar tarefa"
-          description="A recusa exige motivo e fica registada no histórico. O gestor decide os próximos passos."
+          title={tr("Recusar tarefa")}
+          description={tr("A recusa exige motivo e fica registada no histórico. O gestor decide os próximos passos.")}
         />
         <ModalBody className="space-y-4">
-          <ModalSection title={task?.title ?? "Tarefa"} description={clientName} />
+          <ModalSection title={task?.title ?? tr("Tarefa")} description={clientName} />
 
           <div className="space-y-1.5">
-            <Label htmlFor="task-refusal-type">Motivo da recusa *</Label>
+            <Label htmlFor="task-refusal-type">{tr("Motivo da recusa *")}</Label>
             <Select value={reasonType} onValueChange={setReasonType}>
               <SelectTrigger id="task-refusal-type">
                 <SelectValue />
@@ -118,29 +119,29 @@ export function RefuseTaskDialog({
 
           {isOther && (
             <div className="space-y-1.5">
-              <Label htmlFor="task-refusal-reason">Descreva o motivo *</Label>
+              <Label htmlFor="task-refusal-reason">{tr("Descreva o motivo *")}</Label>
               <Textarea
                 id="task-refusal-reason"
                 value={freeText}
                 onChange={(event) => setFreeText(event.target.value)}
                 rows={3}
-                placeholder="Explique o motivo da recusa"
+                placeholder={tr("Explique o motivo da recusa")}
               />
             </div>
           )}
 
           {isReassign && (
             <div className="space-y-1.5">
-              <Label htmlFor="task-refusal-colleague">Nome do colega sugerido *</Label>
+              <Label htmlFor="task-refusal-colleague">{tr("Nome do colega sugerido *")}</Label>
               <Input
                 id="task-refusal-colleague"
                 type="text"
                 value={suggested}
                 onChange={(event) => setSuggested(event.target.value)}
-                placeholder="Escreva o nome do colega"
+                placeholder={tr("Escreva o nome do colega")}
               />
               <p className="text-xs text-muted-foreground">
-                A sugestão é informativa. Só o gestor pode reatribuir a tarefa.
+                {tr("A sugestão é informativa. Só o gestor pode reatribuir a tarefa.")}
               </p>
             </div>
           )}
@@ -148,11 +149,11 @@ export function RefuseTaskDialog({
           {isScheduleChange && (
             <div className="space-y-3 rounded-md border border-primary/30 bg-primary/5 p-3">
               <p className="text-xs text-muted-foreground">
-                Isto é apenas um pedido: a tarefa não é movida nem reagendada automaticamente.
+                {tr("Isto é apenas um pedido: a tarefa não é movida nem reagendada automaticamente.")}
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="task-refusal-date">Nova data desejada *</Label>
+                  <Label htmlFor="task-refusal-date">{tr("Nova data desejada *")}</Label>
                   <Input
                     id="task-refusal-date"
                     type="date"
@@ -162,7 +163,7 @@ export function RefuseTaskDialog({
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="task-refusal-time">Nova hora desejada</Label>
+                  <Label htmlFor="task-refusal-time">{tr("Nova hora desejada")}</Label>
                   <Input
                     id="task-refusal-time"
                     type="time"
@@ -176,10 +177,10 @@ export function RefuseTaskDialog({
         </ModalBody>
         <ModalFooter>
           <Button type="button" variant="ghost" disabled={pending} onClick={() => onOpenChange(false)}>
-            Voltar
+            {tr("Voltar")}
           </Button>
           <Button type="button" variant="destructive" disabled={pending} onClick={submit}>
-            {pending ? "Recusando..." : "Confirmar recusa"}
+            {pending ? tr("Recusando...") : tr("Confirmar recusa")}
           </Button>
         </ModalFooter>
       </DialogContent>

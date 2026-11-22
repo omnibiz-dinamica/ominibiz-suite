@@ -1,0 +1,3912 @@
+{
+ "Tarefa não encontrada.": [
+  "Task not found.",
+  "Taak niet gevonden.",
+  "Tâche introuvable."
+ ],
+ "Tarefa recusada. O gestor foi notificado.": [
+  "Task refused. The manager has been notified.",
+  "Taak geweigerd. De manager is op de hoogte gebracht.",
+  "Tâche refusée. Le responsable a été prévenu."
+ ],
+ "Sem ponto aberto.": [
+  "No open punch.",
+  "Geen open prikking.",
+  "Aucun pointage ouvert."
+ ],
+ "Sem tarefa em andamento.": [
+  "No task in progress.",
+  "Geen taak bezig.",
+  "Aucune tâche en cours."
+ ],
+ "Tarefa concluída": [
+  "Task completed",
+  "Taak voltooid",
+  "Tâche terminée"
+ ],
+ "Tarefa concluída, mas a observação não foi salva.": [
+  "Task completed, but the note was not saved.",
+  "Taak voltooid, maar de opmerking is niet opgeslagen.",
+  "Tâche terminée, mais la remarque n'a pas été enregistrée."
+ ],
+ "Entrada manual registrada.": [
+  "Manual clock-in recorded.",
+  "Manuele aankomst geregistreerd.",
+  "Arrivée manuelle enregistrée."
+ ],
+ "Este ponto foi iniciado sem rede. Conclua-o pelo botão de concluir; o envio é feito quando a rede voltar.": [
+  "This punch was started offline. Finish it with the complete button; it will be sent when the connection is back.",
+  "Deze prikking is zonder netwerk gestart. Rond ze af met de knop voltooien; ze wordt verzonden zodra het netwerk terug is.",
+  "Ce pointage a été commencé hors connexion. Terminez-le avec le bouton terminer ; l'envoi se fera au retour du réseau."
+ ],
+ "Saida manual registrada.": [
+  "Manual clock-out recorded.",
+  "Manueel vertrek geregistreerd.",
+  "Départ manuel enregistré."
+ ],
+ "Saida manual registrada, mas a observação não foi salva.": [
+  "Manual clock-out recorded, but the note was not saved.",
+  "Manueel vertrek geregistreerd, maar de opmerking is niet opgeslagen.",
+  "Départ manuel enregistré, mais la remarque n'a pas été enregistrée."
+ ],
+ "Solicitação enviada ao gestor": [
+  "Request sent to the manager",
+  "Aanvraag naar de manager gestuurd",
+  "Demande envoyée au responsable"
+ ],
+ "Folha de Ponto": [
+  "Timesheet",
+  "Tijdregistratie",
+  "Feuille de présence"
+ ],
+ "Sua central operacional do dia. Inicie, pause e conclua tarefas em um clique.": [
+  "Your operations hub for the day. Start, pause and complete tasks in one tap.",
+  "Uw operationeel centrum van de dag. Start, pauzeer en voltooi taken met één tik.",
+  "Votre centre opérationnel du jour. Démarrez, mettez en pause et terminez les tâches en un clic."
+ ],
+ "Nova tarefa": [
+  "New task",
+  "Nieuwe taak",
+  "Nouvelle tâche"
+ ],
+ "Histórico recente da equipe": [
+  "Recent team history",
+  "Recente geschiedenis van het team",
+  "Historique récent de l'équipe"
+ ],
+ "Seu histórico recente": [
+  "Your recent history",
+  "Uw recente geschiedenis",
+  "Votre historique récent"
+ ],
+ "Sem registros encerrados ainda.": [
+  "No closed records yet.",
+  "Nog geen afgesloten registraties.",
+  "Aucun enregistrement clôturé pour l'instant."
+ ],
+ "Tarefa": [
+  "Task",
+  "Taak",
+  "Tâche"
+ ],
+ "Início com atraso ·": [
+  "Late start ·",
+  "Te late start ·",
+  "Début en retard ·"
+ ],
+ "c/ pausa": [
+  "w/ break",
+  "m. pauze",
+  "av. pause"
+ ],
+ "s/ pausa": [
+  "no break",
+  "z. pauze",
+  "s. pause"
+ ],
+ "Ponto anterior encerrado. Toque em “Iniciar tarefa” para começar a próxima.": [
+  "Previous punch closed. Tap “Start task” to begin the next one.",
+  "Vorige prikking afgesloten. Tik op “Taak starten” om de volgende te beginnen.",
+  "Pointage précédent clôturé. Touchez « Démarrer la tâche » pour commencer la suivante."
+ ],
+ "Como deseja registrar?": [
+  "How do you want to record it?",
+  "Hoe wilt u registreren?",
+  "Comment voulez-vous enregistrer ?"
+ ],
+ "Esta empresa permite ambos os modos. Escolha como abrir o ponto para esta tarefa.": [
+  "This company allows both modes. Choose how to open the punch for this task.",
+  "Dit bedrijf staat beide manieren toe. Kies hoe u de prikking voor deze taak opent.",
+  "Cette entreprise autorise les deux modes. Choisissez comment ouvrir le pointage pour cette tâche."
+ ],
+ "Automático": [
+  "Automatic",
+  "Automatisch",
+  "Automatique"
+ ],
+ "Inicia tarefa e abre o ponto em um clique.": [
+  "Starts the task and opens the punch in one tap.",
+  "Start de taak en opent de prikking met één tik.",
+  "Démarre la tâche et ouvre le pointage en un clic."
+ ],
+ "Manual": [
+  "Manual",
+  "Manueel",
+  "Manuel"
+ ],
+ "Bater entrada/saída manualmente durante a tarefa.": [
+  "Clock in/out manually during the task.",
+  "Aankomst/vertrek manueel prikken tijdens de taak.",
+  "Pointer l'arrivée/le départ manuellement pendant la tâche."
+ ],
+ "Registrar entrada manual": [
+  "Record manual clock-in",
+  "Manuele aankomst registreren",
+  "Enregistrer une arrivée manuelle"
+ ],
+ "Informe o horário real de entrada para iniciar esta tarefa manualmente.": [
+  "Enter the real start time to start this task manually.",
+  "Vul het echte aankomstuur in om deze taak manueel te starten.",
+  "Indiquez l'heure réelle d'arrivée pour démarrer cette tâche manuellement."
+ ],
+ "Hora de entrada": [
+  "Clock-in time",
+  "Aankomstuur",
+  "Heure d'arrivée"
+ ],
+ "Cancelar": [
+  "Cancel",
+  "Annuleren",
+  "Annuler"
+ ],
+ "Registrando...": [
+  "Recording...",
+  "Registreren...",
+  "Enregistrement..."
+ ],
+ "Iniciar manual": [
+  "Start manually",
+  "Manueel starten",
+  "Démarrer manuellement"
+ ],
+ "Finalizar ponto manual": [
+  "Finish manual punch",
+  "Manuele prikking afronden",
+  "Terminer le pointage manuel"
+ ],
+ "Informe o horário real de saída. A tarefa será concluída com este apontamento.": [
+  "Enter the real end time. The task will be completed with this entry.",
+  "Vul het echte vertrekuur in. De taak wordt met deze registratie voltooid.",
+  "Indiquez l'heure réelle de départ. La tâche sera terminée avec cet enregistrement."
+ ],
+ "Hora de saída": [
+  "Clock-out time",
+  "Vertrekuur",
+  "Heure de départ"
+ ],
+ "Observação (opcional)": [
+  "Note (optional)",
+  "Opmerking (optioneel)",
+  "Remarque (facultatif)"
+ ],
+ "Ex.: esqueci de bater saída ontem; horário correto confirmado com o gestor.": [
+  "E.g.: I forgot to clock out yesterday; correct time confirmed with the manager.",
+  "Bv.: ik vergat gisteren uit te prikken; juist uur bevestigd met de manager.",
+  "Ex. : j'ai oublié de pointer la sortie hier ; heure correcte confirmée avec le responsable."
+ ],
+ "Observação da conclusão (opcional)": [
+  "Completion note (optional)",
+  "Opmerking bij voltooiing (optioneel)",
+  "Remarque de fin (facultatif)"
+ ],
+ "Ex.: cliente solicitou algo adicional, houve algum problema, material em falta...": [
+  "E.g.: the client asked for something extra, there was a problem, missing material...",
+  "Bv.: de klant vroeg iets extra, er was een probleem, materiaal ontbrak...",
+  "Ex. : le client a demandé un supplément, il y a eu un problème, matériel manquant..."
+ ],
+ "Finalizando...": [
+  "Finishing...",
+  "Afronden...",
+  "Finalisation..."
+ ],
+ "Finalizar manual": [
+  "Finish manually",
+  "Manueel afronden",
+  "Terminer manuellement"
+ ],
+ "Concluir tarefa": [
+  "Complete task",
+  "Taak voltooien",
+  "Terminer la tâche"
+ ],
+ "Registre uma observação opcional sobre a conclusão.": [
+  "Add an optional note about the completion.",
+  "Voeg een optionele opmerking over de voltooiing toe.",
+  "Ajoutez une remarque facultative sur la fin de la tâche."
+ ],
+ "Concluindo...": [
+  "Completing...",
+  "Voltooien...",
+  "Finalisation..."
+ ],
+ "Tarefa em andamento": [
+  "Task in progress",
+  "Taak bezig",
+  "Tâche en cours"
+ ],
+ "iniciado às": [
+  "started at",
+  "gestart om",
+  "commencée à"
+ ],
+ "Entrada manual registrada": [
+  "Manual clock-in recorded",
+  "Manuele aankomst geregistreerd",
+  "Arrivée manuelle enregistrée"
+ ],
+ "Tempo efetivo": [
+  "Effective time",
+  "Effectieve tijd",
+  "Temps effectif"
+ ],
+ "Pausa": [
+  "Break",
+  "Pauze",
+  "Pause"
+ ],
+ "Em pausa": [
+  "On break",
+  "In pauze",
+  "En pause"
+ ],
+ "· há": [
+  "· for",
+  "· sinds",
+  "· depuis"
+ ],
+ "Pausa almoço": [
+  "Lunch break",
+  "Middagpauze",
+  "Pause déjeuner"
+ ],
+ "Retorno almoço": [
+  "Back from lunch",
+  "Terug van middagpauze",
+  "Retour de déjeuner"
+ ],
+ "Finalizar": [
+  "Finish",
+  "Afronden",
+  "Terminer"
+ ],
+ "Sem tarefas pendentes": [
+  "No pending tasks",
+  "Geen openstaande taken",
+  "Aucune tâche en attente"
+ ],
+ "Nenhuma tarefa pendente na empresa. Crie uma nova para começar a operação.": [
+  "No pending tasks in the company. Create a new one to start operations.",
+  "Geen openstaande taken in het bedrijf. Maak een nieuwe aan om te starten.",
+  "Aucune tâche en attente dans l'entreprise. Créez-en une pour commencer."
+ ],
+ "Você está livre. Quando uma nova tarefa for atribuída, ela aparecerá aqui.": [
+  "You're free. When a new task is assigned, it will appear here.",
+  "U bent vrij. Zodra er een nieuwe taak wordt toegewezen, verschijnt die hier.",
+  "Vous êtes libre. Quand une nouvelle tâche vous sera attribuée, elle apparaîtra ici."
+ ],
+ "Criar nova tarefa": [
+  "Create new task",
+  "Nieuwe taak aanmaken",
+  "Créer une nouvelle tâche"
+ ],
+ "Próxima tarefa": [
+  "Next task",
+  "Volgende taak",
+  "Tâche suivante"
+ ],
+ "Tarefa marcada como": [
+  "Task marked as",
+  "Taak gemarkeerd als",
+  "Tâche marquée comme"
+ ],
+ ". Solicite nova autorização ao gestor para retomar a execução.": [
+  ". Ask the manager for a new authorisation to resume.",
+  ". Vraag de manager een nieuwe toestemming om verder te gaan.",
+  ". Demandez une nouvelle autorisation au responsable pour reprendre."
+ ],
+ "Enviando...": [
+  "Sending...",
+  "Verzenden...",
+  "Envoi..."
+ ],
+ "Solicitar autorização": [
+  "Request authorisation",
+  "Toestemming vragen",
+  "Demander une autorisation"
+ ],
+ "Bater entrada": [
+  "Clock in",
+  "Aankomst prikken",
+  "Pointer l'arrivée"
+ ],
+ "Iniciar tarefa": [
+  "Start task",
+  "Taak starten",
+  "Démarrer la tâche"
+ ],
+ "Marcar falta": [
+  "Mark absence",
+  "Afwezigheid markeren",
+  "Marquer l'absence"
+ ],
+ "Recusar tarefa": [
+  "Refuse task",
+  "Taak weigeren",
+  "Refuser la tâche"
+ ],
+ "Cancelar tarefa": [
+  "Cancel task",
+  "Taak annuleren",
+  "Annuler la tâche"
+ ],
+ "Arquivar": [
+  "Archive",
+  "Archiveren",
+  "Archiver"
+ ],
+ "Depois": [
+  "Later",
+  "Later",
+  "Plus tard"
+ ],
+ "na fila": [
+  "in the queue",
+  "in de wachtrij",
+  "dans la file"
+ ],
+ "Sem horário definido": [
+  "No time set",
+  "Geen uur vastgelegd",
+  "Sans horaire défini"
+ ],
+ "Iniciar": [
+  "Start",
+  "Starten",
+  "Démarrer"
+ ],
+ "Endereço copiado": [
+  "Address copied",
+  "Adres gekopieerd",
+  "Adresse copiée"
+ ],
+ "Não foi possível copiar o endereço": [
+  "Could not copy the address",
+  "Kon het adres niet kopiëren",
+  "Impossible de copier l'adresse"
+ ],
+ "Localização do cliente no mapa": [
+  "Client location on the map",
+  "Locatie van de klant op de kaart",
+  "Emplacement du client sur la carte"
+ ],
+ "Ir com:": [
+  "Go with:",
+  "Gaan met:",
+  "Y aller avec :"
+ ],
+ "Copiar": [
+  "Copy",
+  "Kopiëren",
+  "Copier"
+ ],
+ "Ocultar instruções do cliente": [
+  "Hide client instructions",
+  "Instructies van de klant verbergen",
+  "Masquer les instructions du client"
+ ],
+ "Ver instruções do cliente": [
+  "Show client instructions",
+  "Instructies van de klant tonen",
+  "Voir les instructions du client"
+ ],
+ "Pedido enviado ao Gestor para aprovação.": [
+  "Request sent to the Manager for approval.",
+  "Aanvraag ter goedkeuring naar de manager gestuurd.",
+  "Demande envoyée au responsable pour approbation."
+ ],
+ "WhatsApp deve estar no formato internacional, ex.: +351912345678": [
+  "WhatsApp must be in international format, e.g.: +351912345678",
+  "WhatsApp moet in internationaal formaat, bv.: +351912345678",
+  "WhatsApp doit être au format international, ex. : +351912345678"
+ ],
+ "Perfil atualizado": [
+  "Profile updated",
+  "Profiel bijgewerkt",
+  "Profil mis à jour"
+ ],
+ "Meu Perfil": [
+  "My Profile",
+  "Mijn profiel",
+  "Mon profil"
+ ],
+ "Seus dados pessoais e acesso.": [
+  "Your personal data and access.",
+  "Uw persoonlijke gegevens en toegang.",
+  "Vos données personnelles et votre accès."
+ ],
+ "Email": [
+  "Email",
+  "E-mail",
+  "E-mail"
+ ],
+ "E-mail de cadastro, bloqueado para edição direta.": [
+  "Registration email, locked for direct editing.",
+  "Registratie-e-mail, niet rechtstreeks te wijzigen.",
+  "E-mail d'inscription, non modifiable directement."
+ ],
+ "Pedido em análise": [
+  "Request under review",
+  "Aanvraag in behandeling",
+  "Demande en cours d'examen"
+ ],
+ "Solicitar alteração": [
+  "Request change",
+  "Wijziging aanvragen",
+  "Demander une modification"
+ ],
+ "Último pedido:": [
+  "Last request:",
+  "Laatste aanvraag:",
+  "Dernière demande :"
+ ],
+ "Papel": [
+  "Role",
+  "Rol",
+  "Rôle"
+ ],
+ "Dados operacionais": [
+  "Work details",
+  "Werkgegevens",
+  "Données de travail"
+ ],
+ "Definidos pelo gestor. Para alterar, fale com seu gestor.": [
+  "Set by the manager. To change them, speak to your manager.",
+  "Vastgelegd door de manager. Spreek uw manager aan om ze te wijzigen.",
+  "Définies par le responsable. Pour les modifier, parlez à votre responsable."
+ ],
+ "Cargo": [
+  "Job title",
+  "Functie",
+  "Fonction"
+ ],
+ "Local de trabalho": [
+  "Workplace",
+  "Werkplaats",
+  "Lieu de travail"
+ ],
+ "Equipa / Departamento": [
+  "Team / Department",
+  "Ploeg / Afdeling",
+  "Équipe / Département"
+ ],
+ "Supervisor": [
+  "Supervisor",
+  "Leidinggevende",
+  "Superviseur"
+ ],
+ "Primeiro nome": [
+  "First name",
+  "Voornaam",
+  "Prénom"
+ ],
+ "Telefone": [
+  "Phone",
+  "Telefoon",
+  "Téléphone"
+ ],
+ "WhatsApp": [
+  "WhatsApp",
+  "WhatsApp",
+  "WhatsApp"
+ ],
+ "Formato internacional obrigatório (E.164), ex.: +351912345678. Usado nas notificações de tickets.": [
+  "International format required (E.164), e.g.: +351912345678. Used for ticket notifications.",
+  "Internationaal formaat verplicht (E.164), bv.: +351912345678. Gebruikt voor meldingen over tickets.",
+  "Format international obligatoire (E.164), ex. : +351912345678. Utilisé pour les notifications de tickets."
+ ],
+ "Salvando...": [
+  "Saving...",
+  "Opslaan...",
+  "Enregistrement..."
+ ],
+ "Salvar": [
+  "Save",
+  "Opslaan",
+  "Enregistrer"
+ ],
+ "Solicitar alteração de e-mail": [
+  "Request email change",
+  "Wijziging van e-mail aanvragen",
+  "Demander un changement d'e-mail"
+ ],
+ "O Gestor ou Super Admin precisa aprovar antes da troca.": [
+  "The Manager or Super Admin must approve before the change.",
+  "De manager of Super Admin moet eerst goedkeuren.",
+  "Le responsable ou le Super Admin doit approuver avant le changement."
+ ],
+ "E-mail atual": [
+  "Current email",
+  "Huidig e-mailadres",
+  "E-mail actuel"
+ ],
+ "Novo e-mail *": [
+  "New email *",
+  "Nieuw e-mailadres *",
+  "Nouvel e-mail *"
+ ],
+ "Motivo *": [
+  "Reason *",
+  "Reden *",
+  "Motif *"
+ ],
+ "Explique por que precisa alterar o e-mail de acesso": [
+  "Explain why you need to change your login email",
+  "Leg uit waarom u uw login-e-mail wilt wijzigen",
+  "Expliquez pourquoi vous devez changer votre e-mail de connexion"
+ ],
+ "Enviar pedido": [
+  "Send request",
+  "Aanvraag versturen",
+  "Envoyer la demande"
+ ],
+ "Pedido enviado ao gestor para aprovação.": [
+  "Request sent to the manager for approval.",
+  "Aanvraag ter goedkeuring naar de manager gestuurd.",
+  "Demande envoyée au responsable pour approbation."
+ ],
+ "Pedido cancelado.": [
+  "Request cancelled.",
+  "Aanvraag geannuleerd.",
+  "Demande annulée."
+ ],
+ "Dados bancários": [
+  "Bank details",
+  "Bankgegevens",
+  "Coordonnées bancaires"
+ ],
+ "Para mudar o NIB/IBAN, envie um pedido. O gestor aprova e fica registado quando pediu e quando foi aprovado.": [
+  "To change your IBAN, send a request. The manager approves it and the request and approval dates are recorded.",
+  "Om uw IBAN te wijzigen, stuurt u een aanvraag. De manager keurt goed en de datum van aanvraag en goedkeuring wordt bewaard.",
+  "Pour changer votre IBAN, envoyez une demande. Le responsable l'approuve et les dates de demande et d'approbation sont enregistrées."
+ ],
+ "IBAN atual": [
+  "Current IBAN",
+  "Huidige IBAN",
+  "IBAN actuel"
+ ],
+ "Enviar novo NIB/IBAN": [
+  "Send new IBAN",
+  "Nieuwe IBAN versturen",
+  "Envoyer un nouvel IBAN"
+ ],
+ "Cancelar pedido": [
+  "Cancel request",
+  "Aanvraag annuleren",
+  "Annuler la demande"
+ ],
+ "Os meus pedidos de NIB/IBAN": [
+  "My IBAN requests",
+  "Mijn IBAN-aanvragen",
+  "Mes demandes d'IBAN"
+ ],
+ "Pedido em": [
+  "Requested on",
+  "Aangevraagd op",
+  "Demandé le"
+ ],
+ "Motivo:": [
+  "Reason:",
+  "Reden:",
+  "Motif :"
+ ],
+ "O gestor confere e aprova antes de mudar na sua ficha.": [
+  "The manager checks and approves it before changing your record.",
+  "De manager controleert en keurt goed voordat uw fiche wordt gewijzigd.",
+  "Le responsable vérifie et approuve avant de modifier votre fiche."
+ ],
+ "Novo IBAN *": [
+  "New IBAN *",
+  "Nieuwe IBAN *",
+  "Nouvel IBAN *"
+ ],
+ "PT50 0000 0000 0000 0000 0000 0": [
+  "PT50 0000 0000 0000 0000 0000 0",
+  "PT50 0000 0000 0000 0000 0000 0",
+  "PT50 0000 0000 0000 0000 0000 0"
+ ],
+ "IBAN inválido. Confira o número.": [
+  "Invalid IBAN. Check the number.",
+  "Ongeldige IBAN. Controleer het nummer.",
+  "IBAN invalide. Vérifiez le numéro."
+ ],
+ "Este IBAN já é o que está na sua ficha.": [
+  "This IBAN is already the one on your record.",
+  "Deze IBAN staat al op uw fiche.",
+  "Cet IBAN est déjà celui de votre fiche."
+ ],
+ "SWIFT/BIC (opcional)": [
+  "SWIFT/BIC (optional)",
+  "SWIFT/BIC (optioneel)",
+  "SWIFT/BIC (facultatif)"
+ ],
+ "Ex.: CGDIPTPL": [
+  "E.g.: CGDIPTPL",
+  "Bv.: CGDIPTPL",
+  "Ex. : CGDIPTPL"
+ ],
+ "SWIFT/BIC inválido (8 ou 11 caracteres).": [
+  "Invalid SWIFT/BIC (8 or 11 characters).",
+  "Ongeldige SWIFT/BIC (8 of 11 tekens).",
+  "SWIFT/BIC invalide (8 ou 11 caractères)."
+ ],
+ "Ex.: mudei de banco": [
+  "E.g.: I changed banks",
+  "Bv.: ik ben van bank veranderd",
+  "Ex. : j'ai changé de banque"
+ ],
+ "Não foi possível abrir o arquivo.": [
+  "Could not open the file.",
+  "Kon het bestand niet openen.",
+  "Impossible d'ouvrir le fichier."
+ ],
+ "Os meus documentos": [
+  "My documents",
+  "Mijn documenten",
+  "Mes documents"
+ ],
+ "Documentos que a gestão partilhou consigo. Pode baixar o original e, quando assinou, a cópia assinada.": [
+  "Documents the management shared with you. You can download the original and, once signed, the signed copy.",
+  "Documenten die het management met u deelde. U kunt het origineel downloaden en, na ondertekening, de ondertekende kopie.",
+  "Documents partagés avec vous par la direction. Vous pouvez télécharger l'original et, une fois signé, la copie signée."
+ ],
+ "A carregar…": [
+  "Loading…",
+  "Laden…",
+  "Chargement…"
+ ],
+ "Não foi possível carregar os documentos.": [
+  "Could not load the documents.",
+  "Kon de documenten niet laden.",
+  "Impossible de charger les documents."
+ ],
+ "Ainda não há documentos para si.": [
+  "No documents for you yet.",
+  "Nog geen documenten voor u.",
+  "Aucun document pour vous pour l'instant."
+ ],
+ "Abrir para assinar": [
+  "Open to sign",
+  "Openen om te ondertekenen",
+  "Ouvrir pour signer"
+ ],
+ "Abrir para ler": [
+  "Open to read",
+  "Openen om te lezen",
+  "Ouvrir pour lire"
+ ],
+ "Baixar assinado": [
+  "Download signed",
+  "Ondertekend downloaden",
+  "Télécharger signé"
+ ],
+ "Original": [
+  "Original",
+  "Origineel",
+  "Original"
+ ],
+ "Baixar": [
+  "Download",
+  "Downloaden",
+  "Télécharger"
+ ],
+ "Não foi possível preparar a assinatura.": [
+  "Could not prepare the signature.",
+  "Kon de handtekening niet voorbereiden.",
+  "Impossible de préparer la signature."
+ ],
+ "Leitura confirmada.": [
+  "Reading confirmed.",
+  "Lezing bevestigd.",
+  "Lecture confirmée."
+ ],
+ "Documento para assinar": [
+  "Document to sign",
+  "Document om te ondertekenen",
+  "Document à signer"
+ ],
+ "Documento para ler": [
+  "Document to read",
+  "Document om te lezen",
+  "Document à lire"
+ ],
+ "Role até ao fim do documento para": [
+  "Scroll to the end of the document to",
+  "Scrol tot het einde van het document om",
+  "Faites défiler jusqu'à la fin du document pour"
+ ],
+ "confirmar a leitura": [
+  "confirm reading",
+  "de lezing te bevestigen",
+  "confirmer la lecture"
+ ],
+ "Mais tarde": [
+  "Later",
+  "Later",
+  "Plus tard"
+ ],
+ "Assinar": [
+  "Sign",
+  "Ondertekenen",
+  "Signer"
+ ],
+ "Lido": [
+  "Read",
+  "Gelezen",
+  "Lu"
+ ],
+ "A abrir documento…": [
+  "Opening document…",
+  "Document openen…",
+  "Ouverture du document…"
+ ],
+ "Este arquivo não pode ser mostrado aqui. Abra-o, leia até ao fim e volte para confirmar.": [
+  "This file can't be shown here. Open it, read it to the end and come back to confirm.",
+  "Dit bestand kan hier niet getoond worden. Open het, lees het tot het einde en kom terug om te bevestigen.",
+  "Ce fichier ne peut pas être affiché ici. Ouvrez-le, lisez-le jusqu'au bout et revenez confirmer."
+ ],
+ "Abrir arquivo": [
+  "Open file",
+  "Bestand openen",
+  "Ouvrir le fichier"
+ ],
+ "A preparar páginas…": [
+  "Preparing pages…",
+  "Pagina's voorbereiden…",
+  "Préparation des pages…"
+ ],
+ "Não foi possível ler a imagem.": [
+  "Could not read the image.",
+  "Kon de afbeelding niet lezen.",
+  "Impossible de lire l'image."
+ ],
+ "O documento ainda está a ser preparado.": [
+  "The document is still being prepared.",
+  "Het document wordt nog voorbereid.",
+  "Le document est encore en préparation."
+ ],
+ "Toque na página, no sítio onde quer assinar.": [
+  "Tap the page where you want to sign.",
+  "Tik op de pagina, op de plaats waar u wilt ondertekenen.",
+  "Touchez la page à l'endroit où vous voulez signer."
+ ],
+ "Guarde primeiro a sua assinatura.": [
+  "Save your signature first.",
+  "Sla eerst uw handtekening op.",
+  "Enregistrez d'abord votre signature."
+ ],
+ "Guarde primeiro o seu visto.": [
+  "Save your initials first.",
+  "Sla eerst uw paraaf op.",
+  "Enregistrez d'abord votre paraphe."
+ ],
+ "Documento assinado. A gestão foi avisada.": [
+  "Document signed. The management has been notified.",
+  "Document ondertekend. Het management is verwittigd.",
+  "Document signé. La direction a été prévenue."
+ ],
+ "A preparar a assinatura…": [
+  "Preparing the signature…",
+  "Handtekening voorbereiden…",
+  "Préparation de la signature…"
+ ],
+ "Não foi possível carregar a sua assinatura.": [
+  "Could not load your signature.",
+  "Kon uw handtekening niet laden.",
+  "Impossible de charger votre signature."
+ ],
+ "Não foi possível abrir este PDF para assinar (protegido ou danificado). Peça ao gestor outra versão.": [
+  "Could not open this PDF for signing (protected or damaged). Ask the manager for another version.",
+  "Kon deze pdf niet openen om te ondertekenen (beveiligd of beschadigd). Vraag de manager een andere versie.",
+  "Impossible d'ouvrir ce PDF pour le signer (protégé ou endommagé). Demandez une autre version au responsable."
+ ],
+ "Onde vai a assinatura": [
+  "Where the signature goes",
+  "Waar de handtekening komt",
+  "Emplacement de la signature"
+ ],
+ "Não encontrámos o lugar da assinatura neste documento (por exemplo, PDF digitalizado). Vá à página certa e toque no sítio onde quer assinar.": [
+  "We couldn't find the signature place in this document (e.g. a scanned PDF). Go to the right page and tap where you want to sign.",
+  "We vonden de plaats voor de handtekening niet in dit document (bv. een gescande pdf). Ga naar de juiste pagina en tik waar u wilt ondertekenen.",
+  "Nous n'avons pas trouvé l'emplacement de la signature dans ce document (ex. PDF scanné). Allez à la bonne page et touchez l'endroit où vous voulez signer."
+ ],
+ "Para mudar, toque noutro sítio da página ou mude de página.": [
+  "To change it, tap another spot on the page or change page.",
+  "Tik op een andere plaats of ga naar een andere pagina om te wijzigen.",
+  "Pour changer, touchez un autre endroit de la page ou changez de page."
+ ],
+ "1. Assinatura guardada:": [
+  "1. Signature saved:",
+  "1. Handtekening opgeslagen:",
+  "1. Signature enregistrée :"
+ ],
+ "A sua assinatura": [
+  "Your signature",
+  "Uw handtekening",
+  "Votre signature"
+ ],
+ "Desenhar outra": [
+  "Draw another",
+  "Een andere tekenen",
+  "En dessiner une autre"
+ ],
+ "1. Desenhe a nova assinatura e guarde:": [
+  "1. Draw the new signature and save:",
+  "1. Teken de nieuwe handtekening en sla op:",
+  "1. Dessinez la nouvelle signature et enregistrez :"
+ ],
+ "1. Ainda não tem assinatura guardada. Desenhe-a aqui e clique em Guardar assinatura:": [
+  "1. You don't have a saved signature yet. Draw it here and tap Save signature:",
+  "1. U hebt nog geen opgeslagen handtekening. Teken ze hier en tik op Handtekening opslaan:",
+  "1. Vous n'avez pas encore de signature enregistrée. Dessinez-la ici et touchez Enregistrer la signature :"
+ ],
+ "Área para desenhar a assinatura": [
+  "Signature drawing area",
+  "Tekenvak voor de handtekening",
+  "Zone pour dessiner la signature"
+ ],
+ "Limpar": [
+  "Clear",
+  "Wissen",
+  "Effacer"
+ ],
+ "Guardar assinatura": [
+  "Save signature",
+  "Handtekening opslaan",
+  "Enregistrer la signature"
+ ],
+ "2. Visto (rubrica) guardado — vai em cada página:": [
+  "2. Initials saved — on every page:",
+  "2. Paraaf opgeslagen — op elke pagina:",
+  "2. Paraphe enregistré — sur chaque page :"
+ ],
+ "O seu visto": [
+  "Your initials",
+  "Uw paraaf",
+  "Votre paraphe"
+ ],
+ "Desenhar outro": [
+  "Draw another",
+  "Een andere tekenen",
+  "En dessiner un autre"
+ ],
+ "2. Desenhe o novo visto (rubrica) e guarde:": [
+  "2. Draw the new initials and save:",
+  "2. Teken de nieuwe paraaf en sla op:",
+  "2. Dessinez le nouveau paraphe et enregistrez :"
+ ],
+ "2. Ainda não tem visto guardado. Desenhe a sua rubrica (vai em cada página) e clique em Guardar visto:": [
+  "2. You don't have saved initials yet. Draw your initials (they go on every page) and tap Save initials:",
+  "2. U hebt nog geen opgeslagen paraaf. Teken uw paraaf (komt op elke pagina) en tik op Paraaf opslaan:",
+  "2. Vous n'avez pas encore de paraphe enregistré. Dessinez votre paraphe (il figure sur chaque page) et touchez Enregistrer le paraphe :"
+ ],
+ "Área para desenhar o visto": [
+  "Initials drawing area",
+  "Tekenvak voor de paraaf",
+  "Zone pour dessiner le paraphe"
+ ],
+ "Guardar visto": [
+  "Save initials",
+  "Paraaf opslaan",
+  "Enregistrer le paraphe"
+ ],
+ "A assinatura vai no sítio escolhido e o visto no canto inferior de cada página. É guardada uma cópia assinada; o original não é alterado.": [
+  "The signature goes where you chose and the initials at the bottom corner of every page. A signed copy is saved; the original is not changed.",
+  "De handtekening komt op de gekozen plaats en de paraaf onderaan in de hoek van elke pagina. Er wordt een ondertekende kopie bewaard; het origineel blijft ongewijzigd.",
+  "La signature est placée à l'endroit choisi et le paraphe dans le coin inférieur de chaque page. Une copie signée est enregistrée ; l'original n'est pas modifié."
+ ],
+ "Guarde a assinatura e o visto para poder enviar.": [
+  "Save the signature and initials to be able to send.",
+  "Sla de handtekening en de paraaf op om te kunnen verzenden.",
+  "Enregistrez la signature et le paraphe pour pouvoir envoyer."
+ ],
+ "Voltar": [
+  "Back",
+  "Terug",
+  "Retour"
+ ],
+ "Guarde primeiro a assinatura e o visto": [
+  "Save the signature and initials first",
+  "Sla eerst de handtekening en de paraaf op",
+  "Enregistrez d'abord la signature et le paraphe"
+ ],
+ "A enviar…": [
+  "Sending…",
+  "Verzenden…",
+  "Envoi…"
+ ],
+ "3. Enviar assinatura": [
+  "3. Send signature",
+  "3. Handtekening verzenden",
+  "3. Envoyer la signature"
+ ],
+ "Página anterior": [
+  "Previous page",
+  "Vorige pagina",
+  "Page précédente"
+ ],
+ "Página": [
+  "Page",
+  "Pagina",
+  "Page"
+ ],
+ "Página seguinte": [
+  "Next page",
+  "Volgende pagina",
+  "Page suivante"
+ ],
+ "Assinatura": [
+  "Signature",
+  "Handtekening",
+  "Signature"
+ ],
+ "A preparar a página…": [
+  "Preparing the page…",
+  "Pagina voorbereiden…",
+  "Préparation de la page…"
+ ],
+ "Não foi possível mostrar a página.": [
+  "Could not show the page.",
+  "Kon de pagina niet tonen.",
+  "Impossible d'afficher la page."
+ ],
+ "Desenhe antes de guardar.": [
+  "Draw before saving.",
+  "Teken eerst voordat u opslaat.",
+  "Dessinez avant d'enregistrer."
+ ],
+ "Envie uma imagem.": [
+  "Upload an image.",
+  "Stuur een afbeelding.",
+  "Envoyez une image."
+ ],
+ "Imagem demasiado grande (máx. 8 MB).": [
+  "Image too large (max. 8 MB).",
+  "Afbeelding te groot (max. 8 MB).",
+  "Image trop grande (max. 8 Mo)."
+ ],
+ "Imagem guardada sem fundo.": [
+  "Image saved without background.",
+  "Afbeelding opgeslagen zonder achtergrond.",
+  "Image enregistrée sans fond."
+ ],
+ "Removido. Pode cadastrar novamente.": [
+  "Removed. You can register it again.",
+  "Verwijderd. U kunt opnieuw registreren.",
+  "Supprimé. Vous pouvez l'enregistrer à nouveau."
+ ],
+ "Assinatura completa": [
+  "Full signature",
+  "Volledige handtekening",
+  "Signature complète"
+ ],
+ "Visto / Rubrica": [
+  "Initials",
+  "Paraaf",
+  "Paraphe"
+ ],
+ "Remover": [
+  "Remove",
+  "Verwijderen",
+  "Supprimer"
+ ],
+ "Cadastrado actualmente": [
+  "Currently registered",
+  "Momenteel geregistreerd",
+  "Actuellement enregistré"
+ ],
+ "Assinatura cadastrada": [
+  "Signature registered",
+  "Handtekening geregistreerd",
+  "Signature enregistrée"
+ ],
+ "Visto cadastrado": [
+  "Initials registered",
+  "Paraaf geregistreerd",
+  "Paraphe enregistré"
+ ],
+ "Desenhe com o rato, com o dedo ou com a caneta e toque em guardar.": [
+  "Draw with the mouse, your finger or a pen and tap save.",
+  "Teken met de muis, met uw vinger of met een pen en tik op opslaan.",
+  "Dessinez avec la souris, le doigt ou un stylet et touchez enregistrer."
+ ],
+ "Substituir": [
+  "Replace",
+  "Vervangen",
+  "Remplacer"
+ ],
+ "Guardar": [
+  "Save",
+  "Opslaan",
+  "Enregistrer"
+ ],
+ "Enviar imagem": [
+  "Upload image",
+  "Afbeelding versturen",
+  "Envoyer une image"
+ ],
+ "Assinatura e Visto": [
+  "Signature and Initials",
+  "Handtekening en paraaf",
+  "Signature et paraphe"
+ ],
+ "Usados na sua Folha de Ponto mensal. Ficheiros privados — nunca ficam públicos.": [
+  "Used on your monthly Timesheet. Private files — never public.",
+  "Gebruikt op uw maandelijkse tijdregistratie. Privébestanden — nooit openbaar.",
+  "Utilisés sur votre feuille de présence mensuelle. Fichiers privés — jamais publics."
+ ],
+ "Selecione uma empresa activa para cadastrar a assinatura.": [
+  "Select an active company to register the signature.",
+  "Kies een actief bedrijf om de handtekening te registreren.",
+  "Sélectionnez une entreprise active pour enregistrer la signature."
+ ],
+ "Meus Recibos": [
+  "My Payslips",
+  "Mijn loonstroken",
+  "Mes fiches de paie"
+ ],
+ "Histórico de recibos disponibilizados pela sua empresa.": [
+  "History of payslips provided by your company.",
+  "Overzicht van de loonstroken die uw bedrijf ter beschikking stelde.",
+  "Historique des fiches de paie mises à disposition par votre entreprise."
+ ],
+ "Ano": [
+  "Year",
+  "Jaar",
+  "Année"
+ ],
+ "Todos anos": [
+  "All years",
+  "Alle jaren",
+  "Toutes les années"
+ ],
+ "Mês": [
+  "Month",
+  "Maand",
+  "Mois"
+ ],
+ "Todos meses": [
+  "All months",
+  "Alle maanden",
+  "Tous les mois"
+ ],
+ "Nenhum recibo disponível ainda.": [
+  "No payslips available yet.",
+  "Nog geen loonstroken beschikbaar.",
+  "Aucune fiche de paie disponible pour l'instant."
+ ],
+ "Enviado": [
+  "Sent",
+  "Verzonden",
+  "Envoyé"
+ ],
+ "Líquido": [
+  "Net",
+  "Netto",
+  "Net"
+ ],
+ "Enviado por email em": [
+  "Sent by email on",
+  "Per e-mail verzonden op",
+  "Envoyé par e-mail le"
+ ],
+ "Informe início e fim": [
+  "Enter start and end",
+  "Vul begin en einde in",
+  "Indiquez le début et la fin"
+ ],
+ "Data final deve ser após o início": [
+  "End date must be after the start",
+  "Einddatum moet na de begindatum liggen",
+  "La date de fin doit être après le début"
+ ],
+ "Empresa não selecionada": [
+  "No company selected",
+  "Geen bedrijf geselecteerd",
+  "Aucune entreprise sélectionnée"
+ ],
+ "Informe quem realizou a validação prévia": [
+  "Say who did the prior validation",
+  "Vermeld wie de voorafgaande goedkeuring gaf",
+  "Indiquez qui a fait la validation préalable"
+ ],
+ "Solicitação enviada": [
+  "Request sent",
+  "Aanvraag verzonden",
+  "Demande envoyée"
+ ],
+ "Selecione o colaborador": [
+  "Select the employee",
+  "Kies de medewerker",
+  "Sélectionnez le collaborateur"
+ ],
+ "Férias marcadas e aprovadas — o colaborador foi notificado": [
+  "Holiday booked and approved — the employee has been notified",
+  "Verlof ingepland en goedgekeurd — de medewerker is verwittigd",
+  "Congés planifiés et approuvés — le collaborateur a été prévenu"
+ ],
+ "Pedido de férias cancelado. O histórico foi preservado.": [
+  "Holiday request cancelled. The history has been kept.",
+  "Verlofaanvraag geannuleerd. De geschiedenis is bewaard.",
+  "Demande de congés annulée. L'historique a été conservé."
+ ],
+ "Pedido marcado como aguardando aprovação": [
+  "Request marked as awaiting approval",
+  "Aanvraag gemarkeerd als wachtend op goedkeuring",
+  "Demande marquée en attente d'approbation"
+ ],
+ "Pedido enviado para autorização": [
+  "Request sent for authorisation",
+  "Aanvraag ter toestemming verzonden",
+  "Demande envoyée pour autorisation"
+ ],
+ "Férias/Ausência": [
+  "Holidays/Absence",
+  "Verlof/Afwezigheid",
+  "Congés/Absence"
+ ],
+ "Aprove solicitações e acompanhe o calendário da equipe.": [
+  "Approve requests and follow the team calendar.",
+  "Keur aanvragen goed en volg de teamkalender.",
+  "Approuvez les demandes et suivez le calendrier de l'équipe."
+ ],
+ "Solicite e acompanhe férias ou ausências.": [
+  "Request and follow holidays or absences.",
+  "Vraag verlof of afwezigheid aan en volg ze op.",
+  "Demandez et suivez vos congés ou absences."
+ ],
+ "Nova Solicitação": [
+  "New Request",
+  "Nieuwe aanvraag",
+  "Nouvelle demande"
+ ],
+ "Data de início": [
+  "Start date",
+  "Begindatum",
+  "Date de début"
+ ],
+ "Coloque o primeiro dia em que não vai trabalhar, mesmo sendo sábado ou feriado.": [
+  "Enter the first day you won't work, even if it's a Saturday or a public holiday.",
+  "Vul de eerste dag in waarop u niet werkt, ook als dat een zaterdag of feestdag is.",
+  "Indiquez le premier jour où vous ne travaillez pas, même un samedi ou un jour férié."
+ ],
+ "Data de fim": [
+  "End date",
+  "Einddatum",
+  "Date de fin"
+ ],
+ "Coloque o último dia de férias/ausência; no dia seguinte assumimos disponibilidade.": [
+  "Enter the last day of holiday/absence; the day after we assume you're available.",
+  "Vul de laatste dag van verlof/afwezigheid in; de dag erna gaan we ervan uit dat u beschikbaar bent.",
+  "Indiquez le dernier jour de congé/absence ; le lendemain, nous vous considérons disponible."
+ ],
+ "Informe o local de trabalho": [
+  "Enter the workplace",
+  "Vul de werkplaats in",
+  "Indiquez le lieu de travail"
+ ],
+ "Motivo, contexto...": [
+  "Reason, context...",
+  "Reden, context...",
+  "Motif, contexte..."
+ ],
+ "No local de trabalho já houve validação prévia?": [
+  "Was there a prior validation at the workplace?",
+  "Was er al een voorafgaande goedkeuring op de werkplaats?",
+  "Y a-t-il déjà eu une validation préalable sur le lieu de travail ?"
+ ],
+ "Sim": [
+  "Yes",
+  "Ja",
+  "Oui"
+ ],
+ "Não": [
+  "No",
+  "Nee",
+  "Non"
+ ],
+ "Quem validou?": [
+  "Who validated it?",
+  "Wie keurde het goed?",
+  "Qui a validé ?"
+ ],
+ "Ex.: Supervisor João, Cliente Happy Kot...": [
+  "E.g.: Supervisor João, client Happy Kot...",
+  "Bv.: leidinggevende João, klant Happy Kot...",
+  "Ex. : superviseur João, client Happy Kot..."
+ ],
+ "Isto não substitui a aprovação do gestor — é apenas contexto operacional.": [
+  "This doesn't replace the manager's approval — it's only operational context.",
+  "Dit vervangt de goedkeuring van de manager niet — het is enkel operationele context.",
+  "Cela ne remplace pas l'approbation du responsable — c'est seulement un contexte opérationnel."
+ ],
+ "Enviar solicitação": [
+  "Send request",
+  "Aanvraag versturen",
+  "Envoyer la demande"
+ ],
+ "Aguardando sua decisão (": [
+  "Awaiting your decision (",
+  "Wacht op uw beslissing (",
+  "En attente de votre décision ("
+ ],
+ "Nada para aprovar agora.": [
+  "Nothing to approve now.",
+  "Momenteel niets goed te keuren.",
+  "Rien à approuver pour l'instant."
+ ],
+ "Pendentes com outro aprovador (": [
+  "Pending with another approver (",
+  "In behandeling bij een andere goedkeurder (",
+  "En attente chez un autre approbateur ("
+ ],
+ "Visível para Super Admin e Owner. A decisão continua com o aprovador indicado.": [
+  "Visible to Super Admin and Owner. The decision stays with the indicated approver.",
+  "Zichtbaar voor Super Admin en eigenaar. De beslissing blijft bij de aangeduide goedkeurder.",
+  "Visible pour le Super Admin et le propriétaire. La décision reste à l'approbateur indiqué."
+ ],
+ "· Aprovador:": [
+  "· Approver:",
+  "· Goedkeurder:",
+  "· Approbateur :"
+ ],
+ "Não definido": [
+  "Not set",
+  "Niet bepaald",
+  "Non défini"
+ ],
+ "Aguardando aprovação": [
+  "Awaiting approval",
+  "Wacht op goedkeuring",
+  "En attente d'approbation"
+ ],
+ "Pendente": [
+  "Pending",
+  "In behandeling",
+  "En attente"
+ ],
+ "Enviados para autorização (": [
+  "Sent for authorisation (",
+  "Ter toestemming verzonden (",
+  "Envoyées pour autorisation ("
+ ],
+ "· Autorizador:": [
+  "· Authoriser:",
+  "· Toestemmingverlener:",
+  "· Autorisateur :"
+ ],
+ "Aguardando decisão": [
+  "Awaiting decision",
+  "Wacht op beslissing",
+  "En attente de décision"
+ ],
+ "Reencaminhar": [
+  "Forward",
+  "Doorsturen",
+  "Transférer"
+ ],
+ "Marcar férias a um colaborador": [
+  "Book holiday for an employee",
+  "Verlof inplannen voor een medewerker",
+  "Planifier des congés pour un collaborateur"
+ ],
+ "As férias ficam aprovadas de imediato. O colaborador recebe uma notificação e um e-mail a informar quem as marcou e o período.": [
+  "The holiday is approved immediately. The employee receives a notification and an email saying who booked it and the period.",
+  "Het verlof is meteen goedgekeurd. De medewerker krijgt een melding en een e-mail met wie het inplande en de periode.",
+  "Les congés sont approuvés immédiatement. Le collaborateur reçoit une notification et un e-mail indiquant qui les a planifiés et la période."
+ ],
+ "Colaborador": [
+  "Employee",
+  "Medewerker",
+  "Collaborateur"
+ ],
+ "Selecionar…": [
+  "Select…",
+  "Kiezen…",
+  "Sélectionner…"
+ ],
+ "Início": [
+  "Start",
+  "Begin",
+  "Début"
+ ],
+ "Fim": [
+  "End",
+  "Einde",
+  "Fin"
+ ],
+ "Nota (opcional)": [
+  "Note (optional)",
+  "Notitie (optioneel)",
+  "Note (facultatif)"
+ ],
+ "Contexto, motivo, instruções...": [
+  "Context, reason, instructions...",
+  "Context, reden, instructies...",
+  "Contexte, motif, instructions..."
+ ],
+ "Agendar": [
+  "Schedule",
+  "Inplannen",
+  "Planifier"
+ ],
+ "Aguardando sua confirmação (": [
+  "Awaiting your confirmation (",
+  "Wacht op uw bevestiging (",
+  "En attente de votre confirmation ("
+ ],
+ "O gestor agendou estas férias em seu nome. Confirme ou solicite alteração.": [
+  "The manager scheduled this holiday for you. Confirm it or request a change.",
+  "De manager plande dit verlof voor u in. Bevestig het of vraag een wijziging.",
+  "Le responsable a planifié ces congés pour vous. Confirmez ou demandez une modification."
+ ],
+ "Pendentes de confirmação do funcionário (": [
+  "Pending employee confirmation (",
+  "Wacht op bevestiging van de medewerker (",
+  "En attente de confirmation du collaborateur ("
+ ],
+ "Aprovadas (": [
+  "Approved (",
+  "Goedgekeurd (",
+  "Approuvées ("
+ ],
+ "Excel": [
+  "Excel",
+  "Excel",
+  "Excel"
+ ],
+ "Todos": [
+  "All",
+  "Alle",
+  "Tous"
+ ],
+ "Estado": [
+  "Status",
+  "Status",
+  "Statut"
+ ],
+ "Aguardando": [
+  "Waiting",
+  "Wachtend",
+  "En attente"
+ ],
+ "Pendente de confirmação": [
+  "Pending confirmation",
+  "Wacht op bevestiging",
+  "En attente de confirmation"
+ ],
+ "Aprovado": [
+  "Approved",
+  "Goedgekeurd",
+  "Approuvé"
+ ],
+ "Rejeitado": [
+  "Rejected",
+  "Geweigerd",
+  "Refusé"
+ ],
+ "Cancelado": [
+  "Cancelled",
+  "Geannuleerd",
+  "Annulé"
+ ],
+ "Filtrar por cargo": [
+  "Filter by job title",
+  "Filteren op functie",
+  "Filtrer par fonction"
+ ],
+ "Filtrar por local…": [
+  "Filter by place…",
+  "Filteren op plaats…",
+  "Filtrer par lieu…"
+ ],
+ "Contar apenas dias úteis": [
+  "Count working days only",
+  "Enkel werkdagen tellen",
+  "Compter uniquement les jours ouvrables"
+ ],
+ "Aviso sobre férias aprovadas": [
+  "Notice about approved holidays",
+  "Opmerking over goedgekeurd verlof",
+  "Avis sur les congés approuvés"
+ ],
+ "Depois de aprovadas, as férias não podem ser canceladas pelo funcionário. O gestor mantém a opção de cancelar o pedido.": [
+  "Once approved, the employee can't cancel the holiday. The manager can still cancel the request.",
+  "Eenmaal goedgekeurd kan de medewerker het verlof niet meer annuleren. De manager kan de aanvraag nog wel annuleren.",
+  "Une fois approuvés, les congés ne peuvent plus être annulés par le collaborateur. Le responsable peut toujours annuler la demande."
+ ],
+ "Nenhuma férias aprovada.": [
+  "No approved holidays.",
+  "Geen goedgekeurd verlof.",
+  "Aucun congé approuvé."
+ ],
+ "Férias já gozadas": [
+  "Holidays already taken",
+  "Reeds opgenomen verlof",
+  "Congés déjà pris"
+ ],
+ "Você": [
+  "You",
+  "U",
+  "Vous"
+ ],
+ "dias úteis": [
+  "working days",
+  "werkdagen",
+  "jours ouvrables"
+ ],
+ "Aprovador:": [
+  "Approver:",
+  "Goedkeurder:",
+  "Approbateur :"
+ ],
+ "Histórico": [
+  "History",
+  "Geschiedenis",
+  "Historique"
+ ],
+ "Carregando…": [
+  "Loading…",
+  "Laden…",
+  "Chargement…"
+ ],
+ "Sem registros.": [
+  "No records.",
+  "Geen registraties.",
+  "Aucun enregistrement."
+ ],
+ "Enviar pedido para autorização": [
+  "Send request for authorisation",
+  "Aanvraag ter toestemming versturen",
+  "Envoyer la demande pour autorisation"
+ ],
+ "Selecione um gestor ativo da mesma empresa para tomar a decisão final.": [
+  "Select an active manager from the same company to make the final decision.",
+  "Kies een actieve manager van hetzelfde bedrijf voor de eindbeslissing.",
+  "Sélectionnez un responsable actif de la même entreprise pour la décision finale."
+ ],
+ "Funcionário:": [
+  "Employee:",
+  "Medewerker:",
+  "Collaborateur :"
+ ],
+ "Período:": [
+  "Period:",
+  "Periode:",
+  "Période :"
+ ],
+ "Observação:": [
+  "Note:",
+  "Opmerking:",
+  "Remarque :"
+ ],
+ "Gestor autorizador *": [
+  "Authorising manager *",
+  "Manager die toestemming geeft *",
+  "Responsable autorisateur *"
+ ],
+ "Selecionar gestor": [
+  "Select manager",
+  "Manager kiezen",
+  "Sélectionner un responsable"
+ ],
+ "Owner": [
+  "Owner",
+  "Eigenaar",
+  "Propriétaire"
+ ],
+ "Gestor": [
+  "Manager",
+  "Manager",
+  "Responsable"
+ ],
+ "Nenhum outro gestor ativo está disponível nesta empresa.": [
+  "No other active manager is available in this company.",
+  "Er is geen andere actieve manager in dit bedrijf.",
+  "Aucun autre responsable actif n'est disponible dans cette entreprise."
+ ],
+ "Contexto para o gestor autorizador": [
+  "Context for the authorising manager",
+  "Context voor de manager die toestemming geeft",
+  "Contexte pour le responsable autorisateur"
+ ],
+ "Enviar para autorização": [
+  "Send for authorisation",
+  "Ter toestemming versturen",
+  "Envoyer pour autorisation"
+ ],
+ "Nota do gestor:": [
+  "Manager's note:",
+  "Notitie van de manager:",
+  "Note du responsable :"
+ ],
+ "Confirmar": [
+  "Confirm",
+  "Bevestigen",
+  "Confirmer"
+ ],
+ "Descreva a alteração pretendida": [
+  "Describe the change you want",
+  "Beschrijf de gewenste wijziging",
+  "Décrivez la modification souhaitée"
+ ],
+ "Ex.: preferia adiar uma semana, conflito com...": [
+  "E.g.: I'd rather postpone a week, conflict with...",
+  "Bv.: ik stel liever een week uit, conflict met...",
+  "Ex. : je préférerais reporter d'une semaine, conflit avec..."
+ ],
+ "Enviar pedido de alteração": [
+  "Send change request",
+  "Wijzigingsaanvraag versturen",
+  "Envoyer la demande de modification"
+ ],
+ "Local:": [
+  "Place:",
+  "Plaats:",
+  "Lieu :"
+ ],
+ "Validação prévia:": [
+  "Prior validation:",
+  "Voorafgaande goedkeuring:",
+  "Validation préalable :"
+ ],
+ "Pedir autorização": [
+  "Ask for authorisation",
+  "Toestemming vragen",
+  "Demander une autorisation"
+ ],
+ "Aprovar": [
+  "Approve",
+  "Goedkeuren",
+  "Approuver"
+ ],
+ "Rejeitar": [
+  "Reject",
+  "Weigeren",
+  "Refuser"
+ ],
+ "Motivo da rejeição": [
+  "Reason for rejection",
+  "Reden van weigering",
+  "Motif du refus"
+ ],
+ "Explique o motivo...": [
+  "Explain the reason...",
+  "Leg de reden uit...",
+  "Expliquez le motif..."
+ ],
+ "Confirmar rejeição": [
+  "Confirm rejection",
+  "Weigering bevestigen",
+  "Confirmer le refus"
+ ],
+ "O comprovante deve ter no máximo 20 MB.": [
+  "The receipt must be at most 20 MB.",
+  "Het bewijsstuk mag maximaal 20 MB zijn.",
+  "Le justificatif doit faire au maximum 20 Mo."
+ ],
+ "Formato não suportado. Use uma imagem (JPG, PNG, WEBP, HEIC) ou PDF.": [
+  "Unsupported format. Use an image (JPG, PNG, WEBP, HEIC) or a PDF.",
+  "Niet-ondersteund formaat. Gebruik een afbeelding (JPG, PNG, WEBP, HEIC) of pdf.",
+  "Format non pris en charge. Utilisez une image (JPG, PNG, WEBP, HEIC) ou un PDF."
+ ],
+ "Comprovante anexado. Envie a despesa para guardar.": [
+  "Receipt attached. Send the expense to save it.",
+  "Bewijsstuk bijgevoegd. Verstuur de onkost om op te slaan.",
+  "Justificatif joint. Envoyez la dépense pour l'enregistrer."
+ ],
+ "Valor inválido": [
+  "Invalid amount",
+  "Ongeldig bedrag",
+  "Montant invalide"
+ ],
+ "Indique o motivo": [
+  "Give the reason",
+  "Vermeld de reden",
+  "Indiquez le motif"
+ ],
+ "Despesa enviada para aprovação": [
+  "Expense sent for approval",
+  "Onkost ter goedkeuring verzonden",
+  "Dépense envoyée pour approbation"
+ ],
+ "Sem permissão para excluir esta despesa": [
+  "You're not allowed to delete this expense",
+  "U mag deze onkost niet verwijderen",
+  "Vous n'êtes pas autorisé à supprimer cette dépense"
+ ],
+ "Despesa excluída": [
+  "Expense deleted",
+  "Onkost verwijderd",
+  "Dépense supprimée"
+ ],
+ "Não foi possível reverter: a despesa pode já estar paga ou ter mudado.": [
+  "Could not revert: the expense may already be paid or have changed.",
+  "Kon niet terugzetten: de onkost is mogelijk al betaald of gewijzigd.",
+  "Impossible d'annuler : la dépense est peut-être déjà payée ou a changé."
+ ],
+ "Indique a data da despesa": [
+  "Enter the expense date",
+  "Vul de datum van de onkost in",
+  "Indiquez la date de la dépense"
+ ],
+ "Sem permissão para editar esta despesa": [
+  "You're not allowed to edit this expense",
+  "U mag deze onkost niet wijzigen",
+  "Vous n'êtes pas autorisé à modifier cette dépense"
+ ],
+ "Despesa atualizada": [
+  "Expense updated",
+  "Onkost bijgewerkt",
+  "Dépense mise à jour"
+ ],
+ "Não há despesas para exportar com os filtros atuais.": [
+  "No expenses to export with the current filters.",
+  "Geen onkosten om te exporteren met de huidige filters.",
+  "Aucune dépense à exporter avec les filtres actuels."
+ ],
+ "Empresa não selecionada.": [
+  "No company selected.",
+  "Geen bedrijf geselecteerd.",
+  "Aucune entreprise sélectionnée."
+ ],
+ "Sessão expirada. Entre novamente.": [
+  "Session expired. Log in again.",
+  "Sessie verlopen. Meld u opnieuw aan.",
+  "Session expirée. Reconnectez-vous."
+ ],
+ "Despesas": [
+  "Expenses",
+  "Onkosten",
+  "Dépenses"
+ ],
+ "Aprove ou rejeite as despesas dos colaboradores.": [
+  "Approve or reject employees' expenses.",
+  "Keur de onkosten van de medewerkers goed of weiger ze.",
+  "Approuvez ou refusez les dépenses des collaborateurs."
+ ],
+ "Registe despesas para serem aprovadas pelo gestor.": [
+  "Record expenses for the manager to approve.",
+  "Registreer onkosten ter goedkeuring door de manager.",
+  "Enregistrez des dépenses à faire approuver par le responsable."
+ ],
+ "Nova despesa": [
+  "New expense",
+  "Nieuwe onkost",
+  "Nouvelle dépense"
+ ],
+ "Data": [
+  "Date",
+  "Datum",
+  "Date"
+ ],
+ "Valor (€)": [
+  "Amount (€)",
+  "Bedrag (€)",
+  "Montant (€)"
+ ],
+ "Motivo": [
+  "Reason",
+  "Reden",
+  "Motif"
+ ],
+ "Ex.: combustível obra X": [
+  "E.g.: fuel, site X",
+  "Bv.: brandstof werf X",
+  "Ex. : carburant chantier X"
+ ],
+ "Observações": [
+  "Notes",
+  "Opmerkingen",
+  "Remarques"
+ ],
+ "Escolher da galeria/arquivos": [
+  "Choose from gallery/files",
+  "Kiezen uit galerij/bestanden",
+  "Choisir dans la galerie/les fichiers"
+ ],
+ "Tirar foto": [
+  "Take photo",
+  "Foto nemen",
+  "Prendre une photo"
+ ],
+ "Remover anexo": [
+  "Remove attachment",
+  "Bijlage verwijderen",
+  "Supprimer la pièce jointe"
+ ],
+ "Pré-visualização do comprovante": [
+  "Receipt preview",
+  "Voorbeeld van het bewijsstuk",
+  "Aperçu du justificatif"
+ ],
+ "MB ·": [
+  "MB ·",
+  "MB ·",
+  "Mo ·"
+ ],
+ "tipo desconhecido": [
+  "unknown type",
+  "onbekend type",
+  "type inconnu"
+ ],
+ "Imagem ou PDF até 20 MB (opcional).": [
+  "Image or PDF up to 20 MB (optional).",
+  "Afbeelding of pdf tot 20 MB (optioneel).",
+  "Image ou PDF jusqu'à 20 Mo (facultatif)."
+ ],
+ "Comprovante pronto. Clique em Enviar despesa para guardar.": [
+  "Receipt ready. Tap Send expense to save it.",
+  "Bewijsstuk klaar. Tik op Onkost versturen om op te slaan.",
+  "Justificatif prêt. Touchez Envoyer la dépense pour l'enregistrer."
+ ],
+ "Enviar despesa": [
+  "Send expense",
+  "Onkost versturen",
+  "Envoyer la dépense"
+ ],
+ "Aguardando aprovação (": [
+  "Awaiting approval (",
+  "Wacht op goedkeuring (",
+  "En attente d'approbation ("
+ ],
+ "Todos os estados": [
+  "All statuses",
+  "Alle statussen",
+  "Tous les statuts"
+ ],
+ "Aprovada": [
+  "Approved",
+  "Goedgekeurd",
+  "Approuvée"
+ ],
+ "Rejeitada": [
+  "Rejected",
+  "Geweigerd",
+  "Refusée"
+ ],
+ "Todos os pagamentos": [
+  "All payments",
+  "Alle betalingen",
+  "Tous les paiements"
+ ],
+ "Aguarda pagamento": [
+  "Awaiting payment",
+  "Wacht op betaling",
+  "En attente de paiement"
+ ],
+ "Paga": [
+  "Paid",
+  "Betaald",
+  "Payée"
+ ],
+ "Todos os colaboradores": [
+  "All employees",
+  "Alle medewerkers",
+  "Tous les collaborateurs"
+ ],
+ "Filtrar por cargo ou função": [
+  "Filter by job title or role",
+  "Filteren op functie of rol",
+  "Filtrer par fonction ou rôle"
+ ],
+ "Cargo / função": [
+  "Job title / role",
+  "Functie / rol",
+  "Fonction / rôle"
+ ],
+ "Todos os cargos / funções": [
+  "All job titles / roles",
+  "Alle functies / rollen",
+  "Toutes les fonctions / rôles"
+ ],
+ "Sem cargo / função": [
+  "No job title / role",
+  "Zonder functie / rol",
+  "Sans fonction / rôle"
+ ],
+ "Ordenar relatório": [
+  "Sort report",
+  "Rapport sorteren",
+  "Trier le rapport"
+ ],
+ "Ordenar: Mais recentes": [
+  "Sort: Most recent",
+  "Sorteren: meest recent",
+  "Trier : plus récentes"
+ ],
+ "Ordenar: Nome (A-Z)": [
+  "Sort: Name (A-Z)",
+  "Sorteren: naam (A-Z)",
+  "Trier : nom (A-Z)"
+ ],
+ "Extrair por": [
+  "Extract by",
+  "Uittrekken op",
+  "Extraire par"
+ ],
+ "Data da despesa": [
+  "Expense date",
+  "Datum van de onkost",
+  "Date de la dépense"
+ ],
+ "Data de envio": [
+  "Submission date",
+  "Datum van indiening",
+  "Date d'envoi"
+ ],
+ "Data inicial": [
+  "Start date",
+  "Begindatum",
+  "Date de début"
+ ],
+ "Data final": [
+  "End date",
+  "Einddatum",
+  "Date de fin"
+ ],
+ "Este mês": [
+  "This month",
+  "Deze maand",
+  "Ce mois-ci"
+ ],
+ "Mês anterior": [
+  "Last month",
+  "Vorige maand",
+  "Mois précédent"
+ ],
+ "Limpa colaborador, estado, pagamento, datas e ordenação": [
+  "Clears employee, status, payment, dates and sorting",
+  "Wist medewerker, status, betaling, datums en sortering",
+  "Efface collaborateur, statut, paiement, dates et tri"
+ ],
+ "Limpar filtros": [
+  "Clear filters",
+  "Filters wissen",
+  "Effacer les filtres"
+ ],
+ "com comprovante anexado": [
+  "with receipt attached",
+  "met bewijsstuk bijgevoegd",
+  "avec justificatif joint"
+ ],
+ "sem comprovante (fora do pacote)": [
+  "without receipt (not in the package)",
+  "zonder bewijsstuk (niet in het pakket)",
+  "sans justificatif (hors du paquet)"
+ ],
+ "Para baixar comprovantes, volte o Cargo / Função para Todos (pode filtrar por colaborador).": [
+  "To download receipts, set Job title / role back to All (you can filter by employee).",
+  "Om bewijsstukken te downloaden, zet Functie / rol terug op Alle (u kunt filteren op medewerker).",
+  "Pour télécharger les justificatifs, remettez Fonction / rôle sur Tous (vous pouvez filtrer par collaborateur)."
+ ],
+ "A preparar…": [
+  "Preparing…",
+  "Voorbereiden…",
+  "Préparation…"
+ ],
+ "Baixar comprovantes": [
+  "Download receipts",
+  "Bewijsstukken downloaden",
+  "Télécharger les justificatifs"
+ ],
+ "Nenhum comprovante para estes filtros": [
+  "No receipts for these filters",
+  "Geen bewijsstukken voor deze filters",
+  "Aucun justificatif pour ces filtres"
+ ],
+ "A seleção inclui despesas pendentes ou rejeitadas.": [
+  "The selection includes pending or rejected expenses.",
+  "De selectie bevat onkosten in behandeling of geweigerde onkosten.",
+  "La sélection inclut des dépenses en attente ou refusées."
+ ],
+ "Incluir despesas não aprovadas?": [
+  "Include unapproved expenses?",
+  "Niet-goedgekeurde onkosten opnemen?",
+  "Inclure les dépenses non approuvées ?"
+ ],
+ "A seleção inclui": [
+  "The selection includes",
+  "De selectie bevat",
+  "La sélection inclut"
+ ],
+ "pendente(s) e": [
+  "pending and",
+  "in behandeling en",
+  "en attente et"
+ ],
+ "rejeitada(s). Os comprovantes destas despesas também entram no pacote. Deseja continuar?": [
+  "rejected. The receipts of these expenses are also included in the package. Do you want to continue?",
+  "geweigerd. De bewijsstukken van deze onkosten zitten ook in het pakket. Wilt u doorgaan?",
+  "refusée(s). Les justificatifs de ces dépenses sont aussi inclus dans le paquet. Voulez-vous continuer ?"
+ ],
+ "Baixar mesmo assim": [
+  "Download anyway",
+  "Toch downloaden",
+  "Télécharger quand même"
+ ],
+ "Sem despesas registadas.": [
+  "No expenses recorded.",
+  "Geen onkosten geregistreerd.",
+  "Aucune dépense enregistrée."
+ ],
+ "Abrir anexo": [
+  "Open attachment",
+  "Bijlage openen",
+  "Ouvrir la pièce jointe"
+ ],
+ "Incluída no Resumo para pagamento deste mês": [
+  "Included in this month's payment summary",
+  "Opgenomen in het betalingsoverzicht van deze maand",
+  "Incluse dans le récapitulatif de paiement de ce mois"
+ ],
+ "Pagamento": [
+  "Payment",
+  "Betaling",
+  "Paiement"
+ ],
+ "Editar despesa e estado": [
+  "Edit expense and status",
+  "Onkost en status wijzigen",
+  "Modifier la dépense et le statut"
+ ],
+ "Editar despesa": [
+  "Edit expense",
+  "Onkost wijzigen",
+  "Modifier la dépense"
+ ],
+ "Excluir despesa": [
+  "Delete expense",
+  "Onkost verwijderen",
+  "Supprimer la dépense"
+ ],
+ "Esta despesa já está marcada como paga. Confirme se o novo valor corresponde ao pagamento feito.": [
+  "This expense is already marked as paid. Confirm that the new amount matches the payment made.",
+  "Deze onkost is al als betaald gemarkeerd. Bevestig dat het nieuwe bedrag overeenkomt met de betaling.",
+  "Cette dépense est déjà marquée comme payée. Confirmez que le nouveau montant correspond au paiement effectué."
+ ],
+ "Voltar a Pendente (reverter aprovação)": [
+  "Back to Pending (revert approval)",
+  "Terug naar In behandeling (goedkeuring terugdraaien)",
+  "Revenir à En attente (annuler l'approbation)"
+ ],
+ "A despesa volta a Pendente; depois pode aprovar ou rejeitar de novo. Data, valor, motivo e comprovante não mudam.": [
+  "The expense goes back to Pending; you can then approve or reject it again. Date, amount, reason and receipt don't change.",
+  "De onkost gaat terug naar In behandeling; daarna kunt u ze opnieuw goedkeuren of weigeren. Datum, bedrag, reden en bewijsstuk blijven ongewijzigd.",
+  "La dépense revient à En attente ; vous pouvez ensuite l'approuver ou la refuser à nouveau. Date, montant, motif et justificatif ne changent pas."
+ ],
+ "A guardar...": [
+  "Saving...",
+  "Opslaan...",
+  "Enregistrement..."
+ ],
+ "Guardar alterações": [
+  "Save changes",
+  "Wijzigingen opslaan",
+  "Enregistrer les modifications"
+ ],
+ "Excluir despesa?": [
+  "Delete expense?",
+  "Onkost verwijderen?",
+  "Supprimer la dépense ?"
+ ],
+ "A excluir...": [
+  "Deleting...",
+  "Verwijderen...",
+  "Suppression..."
+ ],
+ "Excluir": [
+  "Delete",
+  "Verwijderen",
+  "Supprimer"
+ ],
+ "Anexo": [
+  "Attachment",
+  "Bijlage",
+  "Pièce jointe"
+ ],
+ "Central de Suporte": [
+  "Support Centre",
+  "Supportcentrum",
+  "Centre d'assistance"
+ ],
+ "Envie pedidos, dúvidas e problemas diretamente à equipe do OmniBiz.": [
+  "Send requests, questions and problems directly to the OmniBiz team.",
+  "Stuur aanvragen, vragen en problemen rechtstreeks naar het OmniBiz-team.",
+  "Envoyez demandes, questions et problèmes directement à l'équipe OmniBiz."
+ ],
+ "Central Global": [
+  "Global Centre",
+  "Globaal centrum",
+  "Centre global"
+ ],
+ "Novo ticket": [
+  "New ticket",
+  "Nieuw ticket",
+  "Nouveau ticket"
+ ],
+ "Buscar por título, número (SUP-…) ou pessoa": [
+  "Search by title, number (SUP-…) or person",
+  "Zoeken op titel, nummer (SUP-…) of persoon",
+  "Rechercher par titre, numéro (SUP-…) ou personne"
+ ],
+ "Status": [
+  "Status",
+  "Status",
+  "Statut"
+ ],
+ "Todos os status": [
+  "All statuses",
+  "Alle statussen",
+  "Tous les statuts"
+ ],
+ "Destino": [
+  "Destination",
+  "Bestemming",
+  "Destination"
+ ],
+ "Todos os destinos": [
+  "All destinations",
+  "Alle bestemmingen",
+  "Toutes les destinations"
+ ],
+ "Ordenar": [
+  "Sort",
+  "Sorteren",
+  "Trier"
+ ],
+ "A mostrar arquivados": [
+  "Showing archived",
+  "Gearchiveerde getoond",
+  "Archivés affichés"
+ ],
+ "Mostrar arquivados": [
+  "Show archived",
+  "Gearchiveerde tonen",
+  "Afficher les archivés"
+ ],
+ "Nenhum ticket": [
+  "No tickets",
+  "Geen tickets",
+  "Aucun ticket"
+ ],
+ "Você ainda não abriu nenhum ticket. Use o botão “Novo ticket” para enviar sua primeira solicitação.": [
+  "You haven't opened any ticket yet. Use the “New ticket” button to send your first request.",
+  "U hebt nog geen ticket geopend. Gebruik de knop “Nieuw ticket” om uw eerste aanvraag te versturen.",
+  "Vous n'avez encore ouvert aucun ticket. Utilisez le bouton « Nouveau ticket » pour envoyer votre première demande."
+ ],
+ "Aberto por": [
+  "Opened by",
+  "Geopend door",
+  "Ouvert par"
+ ],
+ "Abrir em nova aba": [
+  "Open in new tab",
+  "Openen in nieuw tabblad",
+  "Ouvrir dans un nouvel onglet"
+ ],
+ "Abrir": [
+  "Open",
+  "Openen",
+  "Ouvrir"
+ ],
+ "Download": [
+  "Download",
+  "Downloaden",
+  "Télécharger"
+ ],
+ "Ticket reencaminhado.": [
+  "Ticket forwarded.",
+  "Ticket doorgestuurd.",
+  "Ticket transféré."
+ ],
+ "Mensagem vazia": [
+  "Empty message",
+  "Leeg bericht",
+  "Message vide"
+ ],
+ "Mensagem enviada.": [
+  "Message sent.",
+  "Bericht verzonden.",
+  "Message envoyé."
+ ],
+ "Status atualizado.": [
+  "Status updated.",
+  "Status bijgewerkt.",
+  "Statut mis à jour."
+ ],
+ "Ticket assumido. Você é o responsável.": [
+  "Ticket taken. You are the person in charge.",
+  "Ticket overgenomen. U bent de verantwoordelijke.",
+  "Ticket pris en charge. Vous en êtes le responsable."
+ ],
+ "Prioridade atualizada.": [
+  "Priority updated.",
+  "Prioriteit bijgewerkt.",
+  "Priorité mise à jour."
+ ],
+ "Ticket não carregado": [
+  "Ticket not loaded",
+  "Ticket niet geladen",
+  "Ticket non chargé"
+ ],
+ "Anexo enviado.": [
+  "Attachment sent.",
+  "Bijlage verzonden.",
+  "Pièce jointe envoyée."
+ ],
+ "Não foi possível copiar": [
+  "Could not copy",
+  "Kon niet kopiëren",
+  "Impossible de copier"
+ ],
+ "Ticket não encontrado": [
+  "Ticket not found",
+  "Ticket niet gevonden",
+  "Ticket introuvable"
+ ],
+ "Ele pode ter sido movido ou pertence a outra empresa.": [
+  "It may have been moved or belong to another company.",
+  "Het is mogelijk verplaatst of hoort bij een ander bedrijf.",
+  "Il a peut-être été déplacé ou appartient à une autre entreprise."
+ ],
+ "Fila de destino do ticket": [
+  "Ticket destination queue",
+  "Bestemmingswachtrij van het ticket",
+  "File de destination du ticket"
+ ],
+ "Copiar número": [
+  "Copy number",
+  "Nummer kopiëren",
+  "Copier le numéro"
+ ],
+ "copiar nº": [
+  "copy no.",
+  "nr. kopiëren",
+  "copier n°"
+ ],
+ "Reencaminhar para:": [
+  "Forward to:",
+  "Doorsturen naar:",
+  "Transférer à :"
+ ],
+ "Selecionar destino": [
+  "Select destination",
+  "Bestemming kiezen",
+  "Sélectionner la destination"
+ ],
+ "Copiar título + descrição": [
+  "Copy title + description",
+  "Titel + beschrijving kopiëren",
+  "Copier titre + description"
+ ],
+ "Empresa": [
+  "Company",
+  "Bedrijf",
+  "Entreprise"
+ ],
+ "Solicitante": [
+  "Requester",
+  "Aanvrager",
+  "Demandeur"
+ ],
+ "Aberto em": [
+  "Opened on",
+  "Geopend op",
+  "Ouvert le"
+ ],
+ "Última atualização": [
+  "Last update",
+  "Laatste update",
+  "Dernière mise à jour"
+ ],
+ "Resolvido em": [
+  "Resolved on",
+  "Opgelost op",
+  "Résolu le"
+ ],
+ "Fechado em": [
+  "Closed on",
+  "Gesloten op",
+  "Fermé le"
+ ],
+ "Local do erro": [
+  "Error location",
+  "Plaats van de fout",
+  "Emplacement de l'erreur"
+ ],
+ "Módulo": [
+  "Module",
+  "Module",
+  "Module"
+ ],
+ "Rota": [
+  "Route",
+  "Route",
+  "Route"
+ ],
+ "Informações técnicas": [
+  "Technical information",
+  "Technische informatie",
+  "Informations techniques"
+ ],
+ "copiar JSON": [
+  "copy JSON",
+  "JSON kopiëren",
+  "copier le JSON"
+ ],
+ "Conversa": [
+  "Conversation",
+  "Gesprek",
+  "Conversation"
+ ],
+ "Nenhuma mensagem ainda.": [
+  "No messages yet.",
+  "Nog geen berichten.",
+  "Aucun message pour l'instant."
+ ],
+ "Suporte": [
+  "Support",
+  "Support",
+  "Assistance"
+ ],
+ "Nota interna": [
+  "Internal note",
+  "Interne notitie",
+  "Note interne"
+ ],
+ "Este ticket está encerrado. Para responder, reabra o ticket e escolha o destino.": [
+  "This ticket is closed. To reply, reopen the ticket and choose the destination.",
+  "Dit ticket is afgesloten. Heropen het ticket en kies de bestemming om te antwoorden.",
+  "Ce ticket est clôturé. Pour répondre, rouvrez le ticket et choisissez la destination."
+ ],
+ "Responder / reabrir": [
+  "Reply / reopen",
+  "Antwoorden / heropenen",
+  "Répondre / rouvrir"
+ ],
+ "Respostas rápidas:": [
+  "Quick replies:",
+  "Snelle antwoorden:",
+  "Réponses rapides :"
+ ],
+ "Escreva uma resposta…": [
+  "Write a reply…",
+  "Schrijf een antwoord…",
+  "Écrivez une réponse…"
+ ],
+ "Nota interna (não visível ao Gestor)": [
+  "Internal note (not visible to the Manager)",
+  "Interne notitie (niet zichtbaar voor de manager)",
+  "Note interne (non visible par le responsable)"
+ ],
+ "Anexar imagem ou ficheiro a este ticket": [
+  "Attach an image or file to this ticket",
+  "Een afbeelding of bestand bij dit ticket voegen",
+  "Joindre une image ou un fichier à ce ticket"
+ ],
+ "Anexar": [
+  "Attach",
+  "Bijvoegen",
+  "Joindre"
+ ],
+ "Anexar imagem ou ficheiro": [
+  "Attach image or file",
+  "Afbeelding of bestand bijvoegen",
+  "Joindre une image ou un fichier"
+ ],
+ "Enviando": [
+  "Sending",
+  "Verzenden",
+  "Envoi"
+ ],
+ "Enviar": [
+  "Send",
+  "Versturen",
+  "Envoyer"
+ ],
+ "Anexos (": [
+  "Attachments (",
+  "Bijlagen (",
+  "Pièces jointes ("
+ ],
+ "Timeline": [
+  "Timeline",
+  "Tijdlijn",
+  "Chronologie"
+ ],
+ "Sem eventos ainda.": [
+  "No events yet.",
+  "Nog geen gebeurtenissen.",
+  "Aucun événement pour l'instant."
+ ],
+ "Ações do Super Admin": [
+  "Super Admin actions",
+  "Acties van de Super Admin",
+  "Actions du Super Admin"
+ ],
+ "Ações do atendimento": [
+  "Support actions",
+  "Acties van de ondersteuning",
+  "Actions de l'assistance"
+ ],
+ "Prioridade": [
+  "Priority",
+  "Prioriteit",
+  "Priorité"
+ ],
+ "Anexos": [
+  "Attachments",
+  "Bijlagen",
+  "Pièces jointes"
+ ],
+ "+ Adicionar": [
+  "+ Add",
+  "+ Toevoegen",
+  "+ Ajouter"
+ ],
+ "Nenhum anexo.": [
+  "No attachments.",
+  "Geen bijlagen.",
+  "Aucune pièce jointe."
+ ],
+ "Reabrir ticket": [
+  "Reopen ticket",
+  "Ticket heropenen",
+  "Rouvrir le ticket"
+ ],
+ "Assumir ticket": [
+  "Take ticket",
+  "Ticket overnemen",
+  "Prendre en charge le ticket"
+ ],
+ "Ticket arquivado em": [
+  "Ticket archived on",
+  "Ticket gearchiveerd op",
+  "Ticket archivé le"
+ ],
+ ". O status continua «": [
+  ". The status remains «",
+  ". De status blijft «",
+  ". Le statut reste «"
+ ],
+ "Este ticket aguarda a sua validação. Confirme a solução para arquivar ou informe que o problema continua.": [
+  "This ticket awaits your validation. Confirm the solution to archive it or say the problem continues.",
+  "Dit ticket wacht op uw bevestiging. Bevestig de oplossing om te archiveren of meld dat het probleem blijft.",
+  "Ce ticket attend votre validation. Confirmez la solution pour l'archiver ou indiquez que le problème persiste."
+ ],
+ "Confirmar solução e arquivar": [
+  "Confirm solution and archive",
+  "Oplossing bevestigen en archiveren",
+  "Confirmer la solution et archiver"
+ ],
+ "O problema continua": [
+  "The problem continues",
+  "Het probleem blijft",
+  "Le problème persiste"
+ ],
+ "Arquivar ticket": [
+  "Archive ticket",
+  "Ticket archiveren",
+  "Archiver le ticket"
+ ],
+ "Empresa activa não definida.": [
+  "No active company set.",
+  "Geen actief bedrijf ingesteld.",
+  "Aucune entreprise active définie."
+ ],
+ "Meus Relatórios de Ponto": [
+  "My Timesheet Reports",
+  "Mijn tijdregistratierapporten",
+  "Mes rapports de présence"
+ ],
+ "Confira os registos do mês, assine e guarde o seu documento.": [
+  "Check the month's records, sign and keep your document.",
+  "Controleer de registraties van de maand, onderteken en bewaar uw document.",
+  "Vérifiez les enregistrements du mois, signez et conservez votre document."
+ ],
+ "Ainda não existe relatório para": [
+  "There is no report yet for",
+  "Er is nog geen rapport voor",
+  "Il n'existe pas encore de rapport pour"
+ ],
+ "Preparar relatório de": [
+  "Prepare report for",
+  "Rapport voorbereiden voor",
+  "Préparer le rapport de"
+ ],
+ "Carregando...": [
+  "Loading...",
+  "Laden...",
+  "Chargement..."
+ ],
+ "Total de horas:": [
+  "Total hours:",
+  "Totaal uren:",
+  "Total d'heures :"
+ ],
+ "Dias com registo:": [
+  "Days with records:",
+  "Dagen met registratie:",
+  "Jours avec enregistrement :"
+ ],
+ "Correção:": [
+  "Correction:",
+  "Correctie:",
+  "Correction :"
+ ],
+ "Nenhum relatório neste filtro.": [
+  "No report for this filter.",
+  "Geen rapport voor deze filter.",
+  "Aucun rapport pour ce filtre."
+ ],
+ "Relatório assinado e arquivado.": [
+  "Report signed and filed.",
+  "Rapport ondertekend en gearchiveerd.",
+  "Rapport signé et archivé."
+ ],
+ "Descreva o que precisa de correção.": [
+  "Describe what needs correcting.",
+  "Beschrijf wat gecorrigeerd moet worden.",
+  "Décrivez ce qui doit être corrigé."
+ ],
+ "Pedido de correção enviado ao gestor.": [
+  "Correction request sent to the manager.",
+  "Correctieaanvraag naar de manager gestuurd.",
+  "Demande de correction envoyée au responsable."
+ ],
+ "Carregando registos...": [
+  "Loading records...",
+  "Registraties laden...",
+  "Chargement des enregistrements..."
+ ],
+ "Total de horas": [
+  "Total hours",
+  "Totaal uren",
+  "Total d'heures"
+ ],
+ "Dias com registo": [
+  "Days with records",
+  "Dagen met registratie",
+  "Jours avec enregistrement"
+ ],
+ "Tipo de pagamento": [
+  "Payment type",
+  "Betalingstype",
+  "Type de paiement"
+ ],
+ "O que precisa de correção?": [
+  "What needs correcting?",
+  "Wat moet gecorrigeerd worden?",
+  "Que faut-il corriger ?"
+ ],
+ "Declaro que conferi os registos acima e confirmo as informações da minha folha de ponto.": [
+  "I declare that I checked the records above and confirm the information on my timesheet.",
+  "Ik verklaar dat ik de registraties hierboven heb nagekeken en bevestig de gegevens van mijn tijdregistratie.",
+  "Je déclare avoir vérifié les enregistrements ci-dessus et confirme les informations de ma feuille de présence."
+ ],
+ "Não foi possível carregar o relatório.": [
+  "Could not load the report.",
+  "Kon het rapport niet laden.",
+  "Impossible de charger le rapport."
+ ],
+ "Imprimir": [
+  "Print",
+  "Afdrukken",
+  "Imprimer"
+ ],
+ "Baixar PDF": [
+  "Download PDF",
+  "Pdf downloaden",
+  "Télécharger le PDF"
+ ],
+ "Solicitar correção": [
+  "Request correction",
+  "Correctie aanvragen",
+  "Demander une correction"
+ ],
+ "Assinando...": [
+  "Signing...",
+  "Ondertekenen...",
+  "Signature..."
+ ],
+ "Assinar e gerar relatório": [
+  "Sign and generate report",
+  "Ondertekenen en rapport maken",
+  "Signer et générer le rapport"
+ ],
+ "Os seus pontos encerrados: horário previsto, o que registou, pausas e total.": [
+  "Your closed punches: planned time, what you recorded, breaks and total.",
+  "Uw afgesloten prikkingen: gepland uur, wat u registreerde, pauzes en totaal.",
+  "Vos pointages clôturés : horaire prévu, ce que vous avez enregistré, pauses et total."
+ ],
+ "De": [
+  "From",
+  "Van",
+  "Du"
+ ],
+ "Até": [
+  "To",
+  "Tot",
+  "Au"
+ ],
+ "Cliente": [
+  "Client",
+  "Klant",
+  "Client"
+ ],
+ "Todos os clientes": [
+  "All clients",
+  "Alle klanten",
+  "Tous les clients"
+ ],
+ "Pesquisar": [
+  "Search",
+  "Zoeken",
+  "Rechercher"
+ ],
+ "Nome do cliente": [
+  "Client name",
+  "Naam van de klant",
+  "Nom du client"
+ ],
+ "Hoje": [
+  "Today",
+  "Vandaag",
+  "Aujourd'hui"
+ ],
+ "7 dias": [
+  "7 days",
+  "7 dagen",
+  "7 jours"
+ ],
+ "A data \"De\" tem de ser anterior ou igual a \"Até\".": [
+  "The \"From\" date must be before or equal to \"To\".",
+  "De datum \"Van\" moet voor of gelijk aan \"Tot\" zijn.",
+  "La date « Du » doit être antérieure ou égale à « Au »."
+ ],
+ "Carregando histórico...": [
+  "Loading history...",
+  "Geschiedenis laden...",
+  "Chargement de l'historique..."
+ ],
+ "Tentar de novo": [
+  "Try again",
+  "Opnieuw proberen",
+  "Réessayer"
+ ],
+ "Nenhum ponto encontrado neste período.": [
+  "No punches found in this period.",
+  "Geen prikkingen gevonden in deze periode.",
+  "Aucun pointage trouvé sur cette période."
+ ],
+ "registo(s) · total": [
+  "record(s) · total",
+  "registratie(s) · totaal",
+  "enregistrement(s) · total"
+ ],
+ "Dia": [
+  "Day",
+  "Dag",
+  "Jour"
+ ],
+ "Previsto": [
+  "Planned",
+  "Gepland",
+  "Prévu"
+ ],
+ "Entrada": [
+  "Clock-in",
+  "Aankomst",
+  "Arrivée"
+ ],
+ "Saída": [
+  "Clock-out",
+  "Vertrek",
+  "Départ"
+ ],
+ "Pausas": [
+  "Breaks",
+  "Pauzes",
+  "Pauses"
+ ],
+ "Total": [
+  "Total",
+  "Totaal",
+  "Total"
+ ],
+ "sem pausa": [
+  "no break",
+  "zonder pauze",
+  "sans pause"
+ ],
+ "Registado": [
+  "Recorded",
+  "Geregistreerd",
+  "Enregistré"
+ ],
+ "Periodo anterior": [
+  "Previous period",
+  "Vorige periode",
+  "Période précédente"
+ ],
+ "Proximo periodo": [
+  "Next period",
+  "Volgende periode",
+  "Période suivante"
+ ],
+ "PDF da semana com todas as tarefas do calendário": [
+  "Week PDF with all the calendar tasks",
+  "Pdf van de week met alle taken van de kalender",
+  "PDF de la semaine avec toutes les tâches du calendrier"
+ ],
+ "A gerar…": [
+  "Generating…",
+  "Aanmaken…",
+  "Génération…"
+ ],
+ "PDF da semana": [
+  "Week PDF",
+  "Pdf van de week",
+  "PDF de la semaine"
+ ],
+ "Sem tarefas ou férias": [
+  "No tasks or holidays",
+  "Geen taken of verlof",
+  "Aucune tâche ni congé"
+ ],
+ "Google Maps": [
+  "Google Maps",
+  "Google Maps",
+  "Google Maps"
+ ],
+ "Waze": [
+  "Waze",
+  "Waze",
+  "Waze"
+ ],
+ "Mapas": [
+  "Maps",
+  "Kaarten",
+  "Plans"
+ ],
+ "Tem instruções do cliente": [
+  "Has client instructions",
+  "Heeft instructies van de klant",
+  "A des instructions du client"
+ ],
+ "Tem anotação": [
+  "Has a note",
+  "Heeft een notitie",
+  "A une note"
+ ],
+ "Férias · Aprovadas": [
+  "Holidays · Approved",
+  "Verlof · Goedgekeurd",
+  "Congés · Approuvés"
+ ],
+ "Férias": [
+  "Holidays",
+  "Verlof",
+  "Congés"
+ ],
+ "Aprovadas": [
+  "Approved",
+  "Goedgekeurd",
+  "Approuvés"
+ ],
+ "Ocultar ações": [
+  "Hide actions",
+  "Acties verbergen",
+  "Masquer les actions"
+ ],
+ "Editar e mais ações": [
+  "Edit and more actions",
+  "Wijzigen en meer acties",
+  "Modifier et autres actions"
+ ],
+ "· Sem horario definido": [
+  "· No time set",
+  "· Geen uur vastgelegd",
+  "· Sans horaire défini"
+ ],
+ "Atrasada": [
+  "Late",
+  "Te laat",
+  "En retard"
+ ],
+ "Tarefa criada em equipe: cada responsável tem a sua própria tarefa, com ponto e conclusão independentes.": [
+  "Task created as a team: each person in charge has their own task, with independent punch and completion.",
+  "Taak in team aangemaakt: elke verantwoordelijke heeft een eigen taak, met eigen prikking en voltooiing.",
+  "Tâche créée en équipe : chaque responsable a sa propre tâche, avec pointage et fin indépendants."
+ ],
+ "Em equipe": [
+  "As a team",
+  "In team",
+  "En équipe"
+ ],
+ "Recusada ·": [
+  "Refused ·",
+  "Geweigerd ·",
+  "Refusée ·"
+ ],
+ "Motivo não registrado": [
+  "Reason not recorded",
+  "Reden niet geregistreerd",
+  "Motif non enregistré"
+ ],
+ "Recusada em:": [
+  "Refused on:",
+  "Geweigerd op:",
+  "Refusée le :"
+ ],
+ "Nova data:": [
+  "New date:",
+  "Nieuwe datum:",
+  "Nouvelle date :"
+ ],
+ "Reatribuição:": [
+  "Reassignment:",
+  "Herverdeling:",
+  "Réattribution :"
+ ],
+ "Sugestão (informativa):": [
+  "Suggestion (for information):",
+  "Suggestie (ter info):",
+  "Suggestion (à titre indicatif) :"
+ ],
+ "Sem responsável": [
+  "No one in charge",
+  "Geen verantwoordelijke",
+  "Sans responsable"
+ ],
+ "Cancelada pelo funcionário": [
+  "Cancelled by the employee",
+  "Geannuleerd door de medewerker",
+  "Annulée par le collaborateur"
+ ],
+ "Tarefa cancelada": [
+  "Task cancelled",
+  "Taak geannuleerd",
+  "Tâche annulée"
+ ],
+ "Cancelada em:": [
+  "Cancelled on:",
+  "Geannuleerd op:",
+  "Annulée le :"
+ ],
+ "Editar tarefa": [
+  "Edit task",
+  "Taak wijzigen",
+  "Modifier la tâche"
+ ],
+ "Editar": [
+  "Edit",
+  "Wijzigen",
+  "Modifier"
+ ],
+ "Editar série": [
+  "Edit series",
+  "Reeks wijzigen",
+  "Modifier la série"
+ ],
+ "Reatribuir": [
+  "Reassign",
+  "Opnieuw toewijzen",
+  "Réattribuer"
+ ],
+ "Excluir tarefa": [
+  "Delete task",
+  "Taak verwijderen",
+  "Supprimer la tâche"
+ ],
+ "Registar motivo de não ter iniciado": [
+  "Record reason for not starting",
+  "Reden van niet starten registreren",
+  "Enregistrer le motif de non-démarrage"
+ ],
+ "Tarefas em aberto": [
+  "Open tasks",
+  "Openstaande taken",
+  "Tâches ouvertes"
+ ],
+ "Tarefas concluídas": [
+  "Completed tasks",
+  "Voltooide taken",
+  "Tâches terminées"
+ ],
+ "Histórico de recusas (": [
+  "Refusal history (",
+  "Geschiedenis van weigeringen (",
+  "Historique des refus ("
+ ],
+ "Funcionário": [
+  "Employee",
+  "Medewerker",
+  "Collaborateur"
+ ],
+ "Recusada pelo funcionário": [
+  "Refused by the employee",
+  "Geweigerd door de medewerker",
+  "Refusée par le collaborateur"
+ ],
+ "Nova data desejada:": [
+  "Desired new date:",
+  "Gewenste nieuwe datum:",
+  "Nouvelle date souhaitée :"
+ ],
+ "Reatribuição necessária:": [
+  "Reassignment needed:",
+  "Herverdeling nodig:",
+  "Réattribution nécessaire :"
+ ],
+ "Funcionário sugerido (informativo):": [
+  "Suggested employee (for information):",
+  "Voorgestelde medewerker (ter info):",
+  "Collaborateur suggéré (à titre indicatif) :"
+ ],
+ "Reatribuir tarefa": [
+  "Reassign task",
+  "Taak opnieuw toewijzen",
+  "Réattribuer la tâche"
+ ],
+ "Falta registada pelo funcionário": [
+  "Absence recorded by the employee",
+  "Afwezigheid geregistreerd door de medewerker",
+  "Absence enregistrée par le collaborateur"
+ ],
+ "Falta registada pelo gestor": [
+  "Absence recorded by the manager",
+  "Afwezigheid geregistreerd door de manager",
+  "Absence enregistrée par le responsable"
+ ],
+ "Ausência automática": [
+  "Automatic absence",
+  "Automatische afwezigheid",
+  "Absence automatique"
+ ],
+ " · justificada": [
+  " · justified",
+  " · gerechtvaardigd",
+  " · justifiée"
+ ],
+ " · injustificada": [
+  " · unjustified",
+  " · ongerechtvaardigd",
+  " · injustifiée"
+ ],
+ "Falta ainda sem motivo registado.": [
+  "Absence with no reason recorded yet.",
+  "Afwezigheid nog zonder geregistreerde reden.",
+  "Absence sans motif enregistré pour l'instant."
+ ],
+ "Marcada em:": [
+  "Marked on:",
+  "Gemarkeerd op:",
+  "Marquée le :"
+ ],
+ "Atualizado:": [
+  "Updated:",
+  "Bijgewerkt:",
+  "Mis à jour :"
+ ],
+ "Ocultar endereço e instruções": [
+  "Hide address and instructions",
+  "Adres en instructies verbergen",
+  "Masquer l'adresse et les instructions"
+ ],
+ "Ver endereço e instruções": [
+  "View address and instructions",
+  "Adres en instructies bekijken",
+  "Voir l'adresse et les instructions"
+ ],
+ "Tarefa com histórico operacional — não pode ser excluída": [
+  "Task with operational history — cannot be deleted",
+  "Taak met operationele geschiedenis — kan niet verwijderd worden",
+  "Tâche avec historique opérationnel — ne peut pas être supprimée"
+ ],
+ "Desarquivar": [
+  "Unarchive",
+  "Dearchiveren",
+  "Désarchiver"
+ ],
+ "Apenas tarefas concluídas, canceladas ou ausentes podem ser arquivadas": [
+  "Only completed, cancelled or absent tasks can be archived",
+  "Alleen voltooide, geannuleerde of afwezige taken kunnen gearchiveerd worden",
+  "Seules les tâches terminées, annulées ou absentes peuvent être archivées"
+ ],
+ "Registar motivo da falta": [
+  "Record reason for absence",
+  "Reden van afwezigheid registreren",
+  "Enregistrer le motif de l'absence"
+ ],
+ "Registar falta": [
+  "Record absence",
+  "Afwezigheid registreren",
+  "Enregistrer une absence"
+ ],
+ "Concluída pelo funcionário": [
+  "Completed by the employee",
+  "Voltooid door de medewerker",
+  "Terminée par le collaborateur"
+ ],
+ "Observação da conclusão": [
+  "Completion note",
+  "Opmerking bij voltooiing",
+  "Remarque de fin"
+ ],
+ "Concluída em:": [
+  "Completed on:",
+  "Voltooid op:",
+  "Terminée le :"
+ ],
+ "Olá,": [
+  "Hello,",
+  "Hallo,",
+  "Bonjour,"
+ ],
+ "Sua operação do dia. Bata o ponto e foque nas suas tarefas.": [
+  "Your day's work. Clock in and focus on your tasks.",
+  "Uw werk van vandaag. Prik in en focus op uw taken.",
+  "Votre journée de travail. Pointez et concentrez-vous sur vos tâches."
+ ],
+ "Iniciar, pausar e concluir": [
+  "Start, pause and complete",
+  "Starten, pauzeren en voltooien",
+  "Démarrer, mettre en pause et terminer"
+ ],
+ "Minhas Tarefas": [
+  "My Tasks",
+  "Mijn taken",
+  "Mes tâches"
+ ],
+ "em andamento ·": [
+  "in progress ·",
+  "bezig ·",
+  "en cours ·"
+ ],
+ "a iniciar": [
+  "to start",
+  "te starten",
+  "à démarrer"
+ ],
+ "Próximas tarefas": [
+  "Upcoming tasks",
+  "Volgende taken",
+  "Prochaines tâches"
+ ],
+ "Você não tem tarefas pendentes. Aproveite!": [
+  "You have no pending tasks. Enjoy!",
+  "U hebt geen openstaande taken. Geniet ervan!",
+  "Vous n'avez aucune tâche en attente. Profitez-en !"
+ ],
+ "Ir para a operação": [
+  "Go to operations",
+  "Naar de operatie",
+  "Aller aux opérations"
+ ],
+ "Cancelar férias": [
+  "Cancel holidays",
+  "Verlof annuleren",
+  "Annuler les congés"
+ ],
+ "Ação explícita e auditada — exige motivo e confirmação final.": [
+  "Explicit, audited action — requires a reason and final confirmation.",
+  "Expliciete, geauditeerde actie — vereist een reden en eindbevestiging.",
+  "Action explicite et auditée — exige un motif et une confirmation finale."
+ ],
+ "Status atual:": [
+  "Current status:",
+  "Huidige status:",
+  "Statut actuel :"
+ ],
+ "Motivo do cancelamento *": [
+  "Cancellation reason *",
+  "Reden van annulering *",
+  "Motif de l'annulation *"
+ ],
+ "Explique porque este pedido de férias será cancelado": [
+  "Explain why this holiday request will be cancelled",
+  "Leg uit waarom deze verlofaanvraag geannuleerd wordt",
+  "Expliquez pourquoi cette demande de congés sera annulée"
+ ],
+ "Confirmar o cancelamento deste pedido?": [
+  "Confirm cancelling this request?",
+  "Annulering van deze aanvraag bevestigen?",
+  "Confirmer l'annulation de cette demande ?"
+ ],
+ "Fica registado quem cancelou, quando e o motivo. O histórico é preservado.": [
+  "Who cancelled, when and why is recorded. The history is preserved.",
+  "Wie annuleerde, wanneer en waarom wordt geregistreerd. De geschiedenis blijft bewaard.",
+  "Qui a annulé, quand et pourquoi est enregistré. L'historique est conservé."
+ ],
+ "Continuar": [
+  "Continue",
+  "Doorgaan",
+  "Continuer"
+ ],
+ "Cancelando...": [
+  "Cancelling...",
+  "Annuleren...",
+  "Annulation..."
+ ],
+ "Confirmar cancelamento": [
+  "Confirm cancellation",
+  "Annulering bevestigen",
+  "Confirmer l'annulation"
+ ],
+ "Este ponto não é do dia de hoje": [
+  "This punch is not for today",
+  "Deze prikking is niet van vandaag",
+  "Ce pointage n'est pas d'aujourd'hui"
+ ],
+ "Esta tarefa é do dia": [
+  "This task is for",
+  "Deze taak is van",
+  "Cette tâche est du"
+ ],
+ ". Hoje é dia": [
+  ". Today is",
+  ". Vandaag is het",
+  ". Aujourd'hui nous sommes le"
+ ],
+ " — tarefa de um dia anterior.": [
+  " — task from an earlier day.",
+  " — taak van een eerdere dag.",
+  " — tâche d'un jour précédent."
+ ],
+ " — tarefa de um dia posterior.": [
+  " — task from a later day.",
+  " — taak van een latere dag.",
+  " — tâche d'un jour ultérieur."
+ ],
+ "Há uma tarefa deste cliente marcada para hoje: use essa.": [
+  "There is a task for this client scheduled today: use that one.",
+  "Er is vandaag een taak voor deze klant gepland: gebruik die.",
+  "Une tâche de ce client est prévue aujourd'hui : utilisez-la."
+ ],
+ "Confirme que quer bater o ponto hoje nesta tarefa.": [
+  "Confirm you want to clock in today on this task.",
+  "Bevestig dat u vandaag op deze taak wilt prikken.",
+  "Confirmez que vous voulez pointer aujourd'hui sur cette tâche."
+ ],
+ "Usar a tarefa de hoje": [
+  "Use today's task",
+  "De taak van vandaag gebruiken",
+  "Utiliser la tâche d'aujourd'hui"
+ ],
+ "Bater o ponto mesmo assim": [
+  "Clock in anyway",
+  "Toch prikken",
+  "Pointer quand même"
+ ],
+ "Sem rede.": [
+  "No network.",
+  "Geen netwerk.",
+  "Pas de réseau."
+ ],
+ "A enviar marcações…": [
+  "Sending punches…",
+  "Prikkingen verzenden…",
+  "Envoi des pointages…"
+ ],
+ "Rede disponível.": [
+  "Network available.",
+  "Netwerk beschikbaar.",
+  "Réseau disponible."
+ ],
+ "As marcações ficam guardadas no telemóvel e são enviadas quando a rede voltar.": [
+  "Punches are kept on the phone and sent when the network returns.",
+  "Prikkingen worden op de telefoon bewaard en verzonden zodra er weer netwerk is.",
+  "Les pointages sont conservés sur le téléphone et envoyés au retour du réseau."
+ ],
+ "Enviar agora": [
+  "Send now",
+  "Nu verzenden",
+  "Envoyer maintenant"
+ ],
+ "Marcações sem rede não aceites — fale com o gestor": [
+  "Offline punches not accepted — talk to your manager",
+  "Offline prikkingen niet aanvaard — spreek met uw manager",
+  "Pointages hors ligne non acceptés — parlez à votre responsable"
+ ],
+ "Já avisei o gestor": [
+  "I have told my manager",
+  "Ik heb mijn manager verwittigd",
+  "J'ai prévenu mon responsable"
+ ],
+ "Registo em aberto": [
+  "Open record",
+  "Open registratie",
+  "Enregistrement ouvert"
+ ],
+ "Sem título": [
+  "Untitled",
+  "Zonder titel",
+  "Sans titre"
+ ],
+ "Entrada registada": [
+  "Clock-in recorded",
+  "Aankomst geregistreerd",
+  "Arrivée enregistrée"
+ ],
+ "Tempo em aberto": [
+  "Open time",
+  "Open tijd",
+  "Temps ouvert"
+ ],
+ "Estado da tarefa": [
+  "Task status",
+  "Status van de taak",
+  "Statut de la tâche"
+ ],
+ "Observação": [
+  "Note",
+  "Opmerking",
+  "Remarque"
+ ],
+ "Hora correta de saída": [
+  "Correct clock-out time",
+  "Juiste vertrektijd",
+  "Heure de départ correcte"
+ ],
+ "Hora real de saída": [
+  "Actual clock-out time",
+  "Werkelijke vertrektijd",
+  "Heure de départ réelle"
+ ],
+ "A duração é recalculada a partir da hora informada. Nada é fechado sem motivo registado.": [
+  "The duration is recalculated from the time entered. Nothing is closed without a recorded reason.",
+  "De duur wordt herberekend op basis van het ingevoerde uur. Niets wordt afgesloten zonder geregistreerde reden.",
+  "La durée est recalculée à partir de l'heure saisie. Rien n'est clôturé sans motif enregistré."
+ ],
+ "Data e hora de saída *": [
+  "Clock-out date and time *",
+  "Datum en uur van vertrek *",
+  "Date et heure de départ *"
+ ],
+ "Selecione o motivo": [
+  "Select the reason",
+  "Kies de reden",
+  "Sélectionnez le motif"
+ ],
+ "Observação *": [
+  "Note *",
+  "Opmerking *",
+  "Remarque *"
+ ],
+ "Informe o motivo desta correção.": [
+  "Give the reason for this correction.",
+  "Geef de reden van deze correctie.",
+  "Indiquez le motif de cette correction."
+ ],
+ "Tempo calculado:": [
+  "Calculated time:",
+  "Berekende tijd:",
+  "Temps calculé :"
+ ],
+ "inválido": [
+  "invalid",
+  "ongeldig",
+  "invalide"
+ ],
+ "Regularizar ponto do funcionário": [
+  "Regularise employee punch",
+  "Prikking van medewerker regulariseren",
+  "Régulariser le pointage du collaborateur"
+ ],
+ "Você possui um ponto em aberto": [
+  "You have an open punch",
+  "U hebt een open prikking",
+  "Vous avez un pointage ouvert"
+ ],
+ "Encerre o registo informando a hora correta de saída e o motivo. Tudo fica auditado.": [
+  "Close the record by entering the correct clock-out time and the reason. Everything is audited.",
+  "Sluit de registratie af met het juiste vertrekuur en de reden. Alles wordt geauditeerd.",
+  "Clôturez l'enregistrement en indiquant l'heure de départ correcte et le motif. Tout est audité."
+ ],
+ "Resolva o registo anterior para poder iniciar uma nova tarefa.": [
+  "Resolve the previous record to start a new task.",
+  "Los de vorige registratie op om een nieuwe taak te starten.",
+  "Résolvez l'enregistrement précédent pour démarrer une nouvelle tâche."
+ ],
+ "O que deseja fazer?": [
+  "What do you want to do?",
+  "Wat wilt u doen?",
+  "Que voulez-vous faire ?"
+ ],
+ "Voltar para esta tarefa": [
+  "Go back to this task",
+  "Terug naar deze taak",
+  "Revenir à cette tâche"
+ ],
+ "Continuar a execução (pausar, retomar ou concluir)": [
+  "Continue working (pause, resume or complete)",
+  "Verder werken (pauzeren, hervatten of voltooien)",
+  "Continuer (pause, reprise ou fin)"
+ ],
+ "Encerrar ponto anterior": [
+  "Close previous punch",
+  "Vorige prikking afsluiten",
+  "Clôturer le pointage précédent"
+ ],
+ "Informar a hora real de saída e o motivo": [
+  "Enter the actual clock-out time and the reason",
+  "Geef het werkelijke vertrekuur en de reden",
+  "Indiquer l'heure de départ réelle et le motif"
+ ],
+ "Solicitar ajuda ao gestor": [
+  "Ask the manager for help",
+  "Hulp vragen aan de manager",
+  "Demander de l'aide au responsable"
+ ],
+ "O gestor recebe o pedido e regulariza por você": [
+  "The manager receives the request and regularises it for you",
+  "De manager ontvangt de aanvraag en regulariseert voor u",
+  "Le responsable reçoit la demande et régularise pour vous"
+ ],
+ "Confirmar regularização": [
+  "Confirm regularisation",
+  "Regularisatie bevestigen",
+  "Confirmer la régularisation"
+ ],
+ "Você está encerrando manualmente o ponto de": [
+  "You are manually closing the punch of",
+  "U sluit handmatig de prikking af van",
+  "Vous clôturez manuellement le pointage de"
+ ],
+ "este funcionário": [
+  "this employee",
+  "deze medewerker",
+  "ce collaborateur"
+ ],
+ "Saída informada": [
+  "Clock-out entered",
+  "Ingevoerd vertrek",
+  "Départ indiqué"
+ ],
+ "Tempo calculado": [
+  "Calculated time",
+  "Berekende tijd",
+  "Temps calculé"
+ ],
+ "Revisar": [
+  "Review",
+  "Nakijken",
+  "Vérifier"
+ ],
+ "A encerrar…": [
+  "Closing…",
+  "Afsluiten…",
+  "Clôture…"
+ ],
+ "Encerrar ponto": [
+  "Close punch",
+  "Prikking afsluiten",
+  "Clôturer le pointage"
+ ],
+ "A regularizar…": [
+  "Regularising…",
+  "Regulariseren…",
+  "Régularisation…"
+ ],
+ "Observação necessária": [
+  "Note required",
+  "Opmerking vereist",
+  "Remarque requise"
+ ],
+ "A política da empresa exige uma observação para prosseguir.": [
+  "Company policy requires a note to continue.",
+  "Het bedrijfsbeleid vereist een opmerking om verder te gaan.",
+  "La politique de l'entreprise exige une remarque pour continuer."
+ ],
+ "Ex.: cliente em obra vizinha, sem sinal GPS, etc.": [
+  "E.g.: client at a neighbouring site, no GPS signal, etc.",
+  "Bv.: klant op een naburige werf, geen gps-signaal, enz.",
+  "Ex. : client sur un chantier voisin, pas de signal GPS, etc."
+ ],
+ "previsto (real": [
+  "planned (actual",
+  "gepland (werkelijk",
+  "prévu (réel"
+ ],
+ "Situação": [
+  "Situation",
+  "Situatie",
+  "Situation"
+ ],
+ "Visto": [
+  "Seen",
+  "Gezien",
+  "Vu"
+ ],
+ "Também há férias aprovadas": [
+  "There are also approved holidays",
+  "Er is ook goedgekeurd verlof",
+  "Il y a aussi des congés approuvés"
+ ],
+ "Trabalhado + falta": [
+  "Worked + absence",
+  "Gewerkt + afwezigheid",
+  "Travaillé + absence"
+ ],
+ "tarefa(s) sem realização": [
+  "task(s) not carried out",
+  "taak/taken niet uitgevoerd",
+  "tâche(s) non réalisée(s)"
+ ],
+ "Conflito com ponto": [
+  "Conflict with punch",
+  "Conflict met prikking",
+  "Conflit avec le pointage"
+ ],
+ "Trabalhado": [
+  "Worked",
+  "Gewerkt",
+  "Travaillé"
+ ],
+ "Descreva o motivo da recusa.": [
+  "Describe the reason for refusing.",
+  "Beschrijf de reden van weigering.",
+  "Décrivez le motif du refus."
+ ],
+ "Indique o nome do colega sugerido.": [
+  "Enter the name of the suggested colleague.",
+  "Geef de naam van de voorgestelde collega.",
+  "Indiquez le nom du collègue suggéré."
+ ],
+ "Informe a nova data desejada.": [
+  "Enter the desired new date.",
+  "Geef de gewenste nieuwe datum.",
+  "Indiquez la nouvelle date souhaitée."
+ ],
+ "A recusa exige motivo e fica registada no histórico. O gestor decide os próximos passos.": [
+  "Refusing requires a reason and is recorded in the history. The manager decides the next steps.",
+  "Weigeren vereist een reden en wordt in de geschiedenis geregistreerd. De manager beslist over de volgende stappen.",
+  "Le refus exige un motif et est enregistré dans l'historique. Le responsable décide de la suite."
+ ],
+ "Motivo da recusa *": [
+  "Reason for refusing *",
+  "Reden van weigering *",
+  "Motif du refus *"
+ ],
+ "Descreva o motivo *": [
+  "Describe the reason *",
+  "Beschrijf de reden *",
+  "Décrivez le motif *"
+ ],
+ "Explique o motivo da recusa": [
+  "Explain the reason for refusing",
+  "Leg de reden van weigering uit",
+  "Expliquez le motif du refus"
+ ],
+ "Nome do colega sugerido *": [
+  "Name of the suggested colleague *",
+  "Naam van de voorgestelde collega *",
+  "Nom du collègue suggéré *"
+ ],
+ "Escreva o nome do colega": [
+  "Write the colleague's name",
+  "Schrijf de naam van de collega",
+  "Écrivez le nom du collègue"
+ ],
+ "A sugestão é informativa. Só o gestor pode reatribuir a tarefa.": [
+  "The suggestion is for information only. Only the manager can reassign the task.",
+  "De suggestie is enkel ter info. Alleen de manager kan de taak opnieuw toewijzen.",
+  "La suggestion est indicative. Seul le responsable peut réattribuer la tâche."
+ ],
+ "Isto é apenas um pedido: a tarefa não é movida nem reagendada automaticamente.": [
+  "This is only a request: the task is not moved or rescheduled automatically.",
+  "Dit is enkel een aanvraag: de taak wordt niet automatisch verplaatst of herpland.",
+  "Ce n'est qu'une demande : la tâche n'est ni déplacée ni replanifiée automatiquement."
+ ],
+ "Nova data desejada *": [
+  "Desired new date *",
+  "Gewenste nieuwe datum *",
+  "Nouvelle date souhaitée *"
+ ],
+ "Nova hora desejada": [
+  "Desired new time",
+  "Gewenst nieuw uur",
+  "Nouvelle heure souhaitée"
+ ],
+ "Recusando...": [
+  "Refusing...",
+  "Weigeren...",
+  "Refus..."
+ ],
+ "Confirmar recusa": [
+  "Confirm refusal",
+  "Weigering bevestigen",
+  "Confirmer le refus"
+ ],
+ "Existe um ponto aberto nesta tarefa. Encerre ou regularize o ponto antes de marcar falta.": [
+  "There is an open punch on this task. Close or regularise it before marking an absence.",
+  "Er is een open prikking op deze taak. Sluit of regulariseer de prikking voor u een afwezigheid registreert.",
+  "Un pointage est ouvert sur cette tâche. Clôturez ou régularisez-le avant de marquer une absence."
+ ],
+ "Editar falta": [
+  "Edit absence",
+  "Afwezigheid wijzigen",
+  "Modifier l'absence"
+ ],
+ "Altere o motivo ou a classificação. A edição fica registada no histórico.": [
+  "Change the reason or classification. The edit is recorded in the history.",
+  "Wijzig de reden of de classificatie. De wijziging wordt in de geschiedenis geregistreerd.",
+  "Modifiez le motif ou la classification. La modification est enregistrée dans l'historique."
+ ],
+ "A falta exige motivo e fica registada no histórico da tarefa e do funcionário.": [
+  "An absence requires a reason and is recorded in the task and employee history.",
+  "Een afwezigheid vereist een reden en wordt geregistreerd in de geschiedenis van de taak en de medewerker.",
+  "Une absence exige un motif et est enregistrée dans l'historique de la tâche et du collaborateur."
+ ],
+ "Falta já registada:": [
+  "Absence already recorded:",
+  "Afwezigheid al geregistreerd:",
+  "Absence déjà enregistrée :"
+ ],
+ "Motivo da falta *": [
+  "Reason for absence *",
+  "Reden van afwezigheid *",
+  "Motif de l'absence *"
+ ],
+ "Explique o motivo da falta": [
+  "Explain the reason for the absence",
+  "Leg de reden van de afwezigheid uit",
+  "Expliquez le motif de l'absence"
+ ],
+ "Classificação": [
+  "Classification",
+  "Classificatie",
+  "Classification"
+ ],
+ "Injustificada": [
+  "Unjustified",
+  "Ongerechtvaardigd",
+  "Injustifiée"
+ ],
+ "Justificada": [
+  "Justified",
+  "Gerechtvaardigd",
+  "Justifiée"
+ ],
+ "Guardando...": [
+  "Saving...",
+  "Opslaan...",
+  "Enregistrement..."
+ ],
+ "Confirmar falta": [
+  "Confirm absence",
+  "Afwezigheid bevestigen",
+  "Confirmer l'absence"
+ ],
+ "Documento removido": [
+  "Document removed",
+  "Document verwijderd",
+  "Document supprimé"
+ ],
+ "Documentos operacionais": [
+  "Operational documents",
+  "Operationele documenten",
+  "Documents opérationnels"
+ ],
+ "Selecionar ficheiros": [
+  "Select files",
+  "Bestanden kiezen",
+  "Sélectionner des fichiers"
+ ],
+ "Selecionados (": [
+  "Selected (",
+  "Geselecteerd (",
+  "Sélectionnés ("
+ ],
+ "Nenhum documento.": [
+  "No documents.",
+  "Geen documenten.",
+  "Aucun document."
+ ],
+ "Anexe instruções, ordens de trabalho ou procedimentos.": [
+  "Attach instructions, work orders or procedures.",
+  "Voeg instructies, werkorders of procedures toe.",
+  "Joignez des instructions, ordres de travail ou procédures."
+ ],
+ "PDF, JPG ou PNG até 10 MB por ficheiro. É possível adicionar vários documentos.": [
+  "PDF, JPG or PNG up to 10 MB per file. Several documents can be added.",
+  "PDF, JPG of PNG tot 10 MB per bestand. U kunt meerdere documenten toevoegen.",
+  "PDF, JPG ou PNG jusqu'à 10 Mo par fichier. Plusieurs documents peuvent être ajoutés."
+ ],
+ "Com:": [
+  "With:",
+  "Met:",
+  "Avec :"
+ ],
+ "1 anexo": [
+  "1 attachment",
+  "1 bijlage",
+  "1 pièce jointe"
+ ],
+ "Tarefa cancelada. O histórico foi preservado.": [
+  "Task cancelled. The history was preserved.",
+  "Taak geannuleerd. De geschiedenis is bewaard.",
+  "Tâche annulée. L'historique a été conservé."
+ ],
+ "Existe um ponto aberto nesta tarefa. Encerre ou regularize o ponto antes de continuar.": [
+  "There is an open punch on this task. Close or regularise it before continuing.",
+  "Er is een open prikking op deze taak. Sluit of regulariseer de prikking voor u verdergaat.",
+  "Un pointage est ouvert sur cette tâche. Clôturez ou régularisez-le avant de continuer."
+ ],
+ "O cancelamento exige motivo e fica registado permanentemente no histórico.": [
+  "Cancelling requires a reason and is permanently recorded in the history.",
+  "Annuleren vereist een reden en wordt permanent in de geschiedenis geregistreerd.",
+  "L'annulation exige un motif et est enregistrée définitivement dans l'historique."
+ ],
+ "Alterar data / hora": [
+  "Change date / time",
+  "Datum / uur wijzigen",
+  "Modifier la date / l'heure"
+ ],
+ "Explique o motivo do cancelamento": [
+  "Explain the reason for cancelling",
+  "Leg de reden van annulering uit",
+  "Expliquez le motif de l'annulation"
+ ],
+ "Necessita reatribuição para outro funcionário": [
+  "Needs reassignment to another employee",
+  "Moet aan een andere medewerker toegewezen worden",
+  "Doit être réattribuée à un autre collaborateur"
+ ],
+ "Funcionário sugerido (opcional)": [
+  "Suggested employee (optional)",
+  "Voorgestelde medewerker (optioneel)",
+  "Collaborateur suggéré (facultatif)"
+ ],
+ "Digite o nome do funcionário": [
+  "Type the employee's name",
+  "Typ de naam van de medewerker",
+  "Saisissez le nom du collaborateur"
+ ],
+ "Tem certeza de que deseja cancelar esta tarefa?": [
+  "Are you sure you want to cancel this task?",
+  "Weet u zeker dat u deze taak wilt annuleren?",
+  "Voulez-vous vraiment annuler cette tâche ?"
+ ],
+ "O histórico será preservado.": [
+  "The history will be preserved.",
+  "De geschiedenis blijft bewaard.",
+  "L'historique sera conservé."
+ ],
+ "· Reatribuição:": [
+  "· Reassignment:",
+  "· Herverdeling:",
+  "· Réattribution :"
+ ],
+ "não": [
+  "no",
+  "nee",
+  "non"
+ ],
+ "Arquivar esta tarefa?": [
+  "Archive this task?",
+  "Deze taak archiveren?",
+  "Archiver cette tâche ?"
+ ],
+ "Desarquivar esta tarefa?": [
+  "Unarchive this task?",
+  "Deze taak dearchiveren?",
+  "Désarchiver cette tâche ?"
+ ],
+ "Ela será removida das telas operacionais, mas permanecerá disponível no histórico para a Gestão.": [
+  "It will be removed from the operational screens but remain available in the history for Management.",
+  "Ze wordt uit de operationele schermen verwijderd maar blijft beschikbaar in de geschiedenis voor het beheer.",
+  "Elle sera retirée des écrans opérationnels mais restera disponible dans l'historique pour la gestion."
+ ],
+ "A tarefa volta às listagens ativas mantendo o status original.": [
+  "The task returns to the active lists keeping its original status.",
+  "De taak keert terug naar de actieve lijsten met behoud van de oorspronkelijke status.",
+  "La tâche revient dans les listes actives en conservant son statut d'origine."
+ ],
+ "— o arquivamento não altera este status.": [
+  "— archiving does not change this status.",
+  "— archiveren wijzigt deze status niet.",
+  "— l'archivage ne modifie pas ce statut."
+ ],
+ "Aguarde...": [
+  "Please wait...",
+  "Even geduld...",
+  "Veuillez patienter..."
+ ],
+ "Este registo foi alterado depois do seu rascunho.": [
+  "This record was changed after your draft.",
+  "Deze registratie is gewijzigd na uw concept.",
+  "Cet enregistrement a été modifié après votre brouillon."
+ ],
+ "Usar o meu rascunho": [
+  "Use my draft",
+  "Mijn concept gebruiken",
+  "Utiliser mon brouillon"
+ ],
+ "Descartar rascunho": [
+  "Discard draft",
+  "Concept verwijderen",
+  "Supprimer le brouillon"
+ ],
+ "Rascunho recuperado (gravado às": [
+  "Draft recovered (saved at",
+  "Concept hersteld (opgeslagen om",
+  "Brouillon récupéré (enregistré à"
+ ],
+ "Autorizado": [
+  "Authorised",
+  "Toegestaan",
+  "Autorisée"
+ ],
+ "Em andamento": [
+  "In progress",
+  "Bezig",
+  "En cours"
+ ],
+ "Concluído": [
+  "Completed",
+  "Voltooid",
+  "Terminée"
+ ],
+ "Ausente": [
+  "Absent",
+  "Afwezig",
+  "Absent"
+ ],
+ "Obtendo localização…": [
+  "Getting location…",
+  "Locatie ophalen…",
+  "Localisation en cours…"
+ ],
+ "Registrando ponto…": [
+  "Recording punch…",
+  "Prikking registreren…",
+  "Enregistrement du pointage…"
+ ],
+ "Aguardando observação…": [
+  "Waiting for a note…",
+  "Wachten op opmerking…",
+  "En attente d'une remarque…"
+ ],
+ "Reenviando com observação…": [
+  "Resending with note…",
+  "Opnieuw verzenden met opmerking…",
+  "Renvoi avec remarque…"
+ ],
+ "Concluído.": [
+  "Done.",
+  "Klaar.",
+  "Terminé."
+ ],
+ "Erro ao registrar.": [
+  "Error recording.",
+  "Fout bij registreren.",
+  "Erreur d'enregistrement."
+ ],
+ "Retomar": [
+  "Resume",
+  "Hervatten",
+  "Reprendre"
+ ],
+ "de": [
+  "at",
+  "om",
+  "de"
+ ],
+ "pendente": [
+  "pending",
+  "in afwachting",
+  "en attente"
+ ],
+ "aprovada": [
+  "approved",
+  "goedgekeurd",
+  "approuvée"
+ ],
+ "rejeitada": [
+  "rejected",
+  "afgewezen",
+  "rejetée"
+ ],
+ "Estado atual: {{stage}}. Pode mudar o estado e as informações.": [
+  "Current status: {{stage}}. You can change the status and the details.",
+  "Huidige status: {{stage}}. U kunt de status en de gegevens wijzigen.",
+  "Statut actuel : {{stage}}. Vous pouvez modifier le statut et les informations."
+ ],
+ "Estado atual: {{stage}}. Para aprovar ou rejeitar use os botões da despesa pendente.": [
+  "Current status: {{stage}}. To approve or reject, use the buttons on the pending expense.",
+  "Huidige status: {{stage}}. Gebruik de knoppen van de openstaande onkost om goed te keuren of af te wijzen.",
+  "Statut actuel : {{stage}}. Pour approuver ou rejeter, utilisez les boutons de la dépense en attente."
+ ],
+ "A despesa e o comprovante serão apagados e não podem ser recuperados.": [
+  "The expense and the receipt will be deleted and cannot be recovered.",
+  "De onkost en het bewijsstuk worden verwijderd en kunnen niet hersteld worden.",
+  "La dépense et le justificatif seront supprimés et ne pourront pas être récupérés."
+ ],
+ "pendente de confirmação": [
+  "awaiting confirmation",
+  "wacht op bevestiging",
+  "en attente de confirmation"
+ ],
+ "aguardando": [
+  "waiting",
+  "wachtend",
+  "en attente"
+ ],
+ "aprovado": [
+  "approved",
+  "goedgekeurd",
+  "approuvé"
+ ],
+ "rejeitado": [
+  "rejected",
+  "afgewezen",
+  "rejeté"
+ ],
+ "cancelado": [
+  "cancelled",
+  "geannuleerd",
+  "annulé"
+ ],
+ "Aberto": [
+  "Open",
+  "Open",
+  "Ouvert"
+ ],
+ "Em análise": [
+  "Under review",
+  "In behandeling",
+  "En analyse"
+ ],
+ "Aguardando cliente": [
+  "Waiting for client",
+  "Wacht op klant",
+  "En attente du client"
+ ],
+ "Em desenvolvimento": [
+  "In development",
+  "In ontwikkeling",
+  "En développement"
+ ],
+ "Em validação": [
+  "In validation",
+  "In validatie",
+  "En validation"
+ ],
+ "Resolvido": [
+  "Resolved",
+  "Opgelost",
+  "Résolu"
+ ],
+ "Arquivado": [
+  "Archived",
+  "Gearchiveerd",
+  "Archivé"
+ ],
+ "Em análise pelo gestor": [
+  "Under manager review",
+  "In behandeling bij de manager",
+  "En analyse par le responsable"
+ ],
+ "Aguardando funcionário": [
+  "Waiting for employee",
+  "Wacht op medewerker",
+  "En attente du collaborateur"
+ ],
+ "Encaminhado ao Desenvolvimento": [
+  "Forwarded to Development",
+  "Doorgestuurd naar Ontwikkeling",
+  "Transmis au Développement"
+ ],
+ "Em análise técnica": [
+  "Under technical review",
+  "In technische behandeling",
+  "En analyse technique"
+ ],
+ "Aguardando gestor": [
+  "Waiting for manager",
+  "Wacht op manager",
+  "En attente du responsable"
+ ],
+ "Devolvido ao gestor": [
+  "Returned to manager",
+  "Teruggestuurd naar manager",
+  "Renvoyé au responsable"
+ ],
+ "Em aberto": [
+  "Open",
+  "Open",
+  "Ouvert"
+ ],
+ "Aguardando assinatura do funcionário": [
+  "Awaiting employee signature",
+  "Wacht op handtekening van de medewerker",
+  "En attente de la signature du collaborateur"
+ ],
+ "Aguardando correção": [
+  "Awaiting correction",
+  "Wacht op correctie",
+  "En attente de correction"
+ ],
+ "Assinado pelo funcionário": [
+  "Signed by the employee",
+  "Ondertekend door de medewerker",
+  "Signé par le collaborateur"
+ ],
+ "Em conferência": [
+  "Under review",
+  "In controle",
+  "En vérification"
+ ],
+ "Fechado pelo gestor": [
+  "Closed by the manager",
+  "Afgesloten door de manager",
+  "Clôturé par le responsable"
+ ],
+ "Disponível para contabilidade": [
+  "Available to accounting",
+  "Beschikbaar voor de boekhouding",
+  "Disponible pour la comptabilité"
+ ],
+ "Folha de Ponto · {{month}}": [
+  "Timesheet · {{month}}",
+  "Tijdregistratie · {{month}}",
+  "Feuille de présence · {{month}}"
+ ],
+ "Início com atraso · {{min}}": [
+  "Late start · {{min}}",
+  "Laattijdige start · {{min}}",
+  "Début en retard · {{min}}"
+ ],
+ "Início atrasado · {{min}}": [
+  "Started late · {{min}}",
+  "Te laat gestart · {{min}}",
+  "Démarré en retard · {{min}}"
+ ],
+ "PDF da semana com {{n}} tarefa(s).": [
+  "Week PDF with {{n}} task(s).",
+  "Pdf van de week met {{n}} taak/taken.",
+  "PDF de la semaine avec {{n}} tâche(s)."
+ ],
+ "PDF da semana só com as {{n}} tarefa(s) selecionada(s)": [
+  "Week PDF with only the {{n}} selected task(s)",
+  "Pdf van de week met enkel de {{n}} geselecteerde taak/taken",
+  "PDF de la semaine avec seulement la/les {{n}} tâche(s) sélectionnée(s)"
+ ],
+ "PDF da semana ({{n}})": [
+  "Week PDF ({{n}})",
+  "Pdf van de week ({{n}})",
+  "PDF de la semaine ({{n}})"
+ ],
+ "Programação do cliente: {{name}}": [
+  "Client schedule: {{name}}",
+  "Planning van de klant: {{name}}",
+  "Programmation du client : {{name}}"
+ ],
+ "Férias aprovadas · {{from}} → {{to}}": [
+  "Approved holidays · {{from}} → {{to}}",
+  "Goedgekeurd verlof · {{from}} → {{to}}",
+  "Congés approuvés · {{from}} → {{to}}"
+ ]
+}

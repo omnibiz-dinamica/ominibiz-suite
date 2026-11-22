@@ -33,6 +33,7 @@ import {
   type HistoryEntry,
   type HistoryRpcRow,
 } from "@/lib/ponto/history";
+import { tr } from "@/i18n";
 
 export const Route = createFileRoute("/app/ponto_/historico")({ component: Page });
 
@@ -131,16 +132,16 @@ function MyHistory() {
     <div className="mx-auto max-w-6xl space-y-5 p-4 sm:p-6">
       <div>
         <h1 className="flex items-center gap-2 font-display text-2xl font-semibold sm:text-3xl">
-          <History className="h-6 w-6" /> Histórico
+          <History className="h-6 w-6" /> {tr("Histórico")}
         </h1>
         <p className="text-sm text-muted-foreground">
-          Os seus pontos encerrados: horário previsto, o que registou, pausas e total.
+          {tr("Os seus pontos encerrados: horário previsto, o que registou, pausas e total.")}
         </p>
       </div>
 
       <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-1.5">
-          <Label htmlFor="h-from">De</Label>
+          <Label htmlFor="h-from">{tr("De")}</Label>
           <Input
             id="h-from"
             type="date"
@@ -150,7 +151,7 @@ function MyHistory() {
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="h-to">Até</Label>
+          <Label htmlFor="h-to">{tr("Até")}</Label>
           <Input
             id="h-to"
             type="date"
@@ -160,13 +161,13 @@ function MyHistory() {
           />
         </div>
         <div className="space-y-1.5">
-          <Label>Cliente</Label>
+          <Label>{tr("Cliente")}</Label>
           <Select value={clientId} onValueChange={setClientId}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos os clientes</SelectItem>
+              <SelectItem value="all">{tr("Todos os clientes")}</SelectItem>
               {clientOptions.map(([id, name]) => (
                 <SelectItem key={id} value={id}>
                   {name}
@@ -176,14 +177,14 @@ function MyHistory() {
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="h-text">Pesquisar</Label>
+          <Label htmlFor="h-text">{tr("Pesquisar")}</Label>
           <div className="relative">
             <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               id="h-text"
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Nome do cliente"
+              placeholder={tr("Nome do cliente")}
               className="pl-8"
             />
           </div>
@@ -197,7 +198,7 @@ function MyHistory() {
               setTo(today);
             }}
           >
-            Hoje
+            {tr("Hoje")}
           </Button>
           <Button
             size="sm"
@@ -207,7 +208,7 @@ function MyHistory() {
               setTo(today);
             }}
           >
-            7 dias
+            {tr("7 dias")}
           </Button>
           <Button
             size="sm"
@@ -217,7 +218,7 @@ function MyHistory() {
               setTo(today);
             }}
           >
-            Este mês
+            {tr("Este mês")}
           </Button>
           {(clientId !== "all" || text) && (
             <Button
@@ -228,7 +229,7 @@ function MyHistory() {
                 setText("");
               }}
             >
-              Limpar filtros
+              {tr("Limpar filtros")}
             </Button>
           )}
         </div>
@@ -236,27 +237,27 @@ function MyHistory() {
 
       {from > to ? (
         <div className="rounded-2xl border border-border bg-card p-6 text-sm text-destructive">
-          A data "De" tem de ser anterior ou igual a "Até".
+          {tr("A data \"De\" tem de ser anterior ou igual a \"Até\".")}
         </div>
       ) : entries.isLoading ? (
         <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">
-          Carregando histórico...
+          {tr("Carregando histórico...")}
         </div>
       ) : entries.isError ? (
         <div className="flex items-center justify-between gap-3 rounded-2xl border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
           <span>{(entries.error as Error).message}</span>
           <Button size="sm" variant="outline" onClick={() => entries.refetch()}>
-            Tentar de novo
+            {tr("Tentar de novo")}
           </Button>
         </div>
       ) : rows.length === 0 ? (
         <div className="rounded-2xl border border-border bg-card p-10 text-center text-sm text-muted-foreground">
-          Nenhum ponto encontrado neste período.
+          {tr("Nenhum ponto encontrado neste período.")}
         </div>
       ) : (
         <>
           <div className="text-sm text-muted-foreground">
-            {rows.length} registo(s) · total{" "}
+            {rows.length} {tr("registo(s) · total")}{" "}
             <span className="font-semibold text-foreground">{formatDuration(totalMin)}</span>
           </div>
 
@@ -265,13 +266,13 @@ function MyHistory() {
             <table className="w-full text-sm">
               <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
                 <tr>
-                  <th className="px-3 py-2 text-left">Dia</th>
-                  <th className="px-3 py-2 text-left">Cliente</th>
-                  <th className="px-3 py-2 text-left">Previsto</th>
-                  <th className="px-3 py-2 text-left">Entrada</th>
-                  <th className="px-3 py-2 text-left">Saída</th>
-                  <th className="px-3 py-2 text-left">Pausas</th>
-                  <th className="px-3 py-2 text-right">Total</th>
+                  <th className="px-3 py-2 text-left">{tr("Dia")}</th>
+                  <th className="px-3 py-2 text-left">{tr("Cliente")}</th>
+                  <th className="px-3 py-2 text-left">{tr("Previsto")}</th>
+                  <th className="px-3 py-2 text-left">{tr("Entrada")}</th>
+                  <th className="px-3 py-2 text-left">{tr("Saída")}</th>
+                  <th className="px-3 py-2 text-left">{tr("Pausas")}</th>
+                  <th className="px-3 py-2 text-right">{tr("Total")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -294,7 +295,7 @@ function MyHistory() {
                             </div>
                           ))
                         ) : (
-                          <span className="text-muted-foreground">sem pausa</span>
+                          <span className="text-muted-foreground">{tr("sem pausa")}</span>
                         )}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2 text-right font-mono">
@@ -323,13 +324,13 @@ function MyHistory() {
                     </div>
                   </div>
                   <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-                    <span className="text-muted-foreground">Previsto</span>
+                    <span className="text-muted-foreground">{tr("Previsto")}</span>
                     <span>{plannedWindow(e.tasks) ?? "—"}</span>
-                    <span className="text-muted-foreground">Registado</span>
+                    <span className="text-muted-foreground">{tr("Registado")}</span>
                     <span>
                       {fmtTime(e.started_at)} – {fmtTime(e.ended_at)}
                     </span>
-                    <span className="text-muted-foreground">Pausas</span>
+                    <span className="text-muted-foreground">{tr("Pausas")}</span>
                     <span>
                       {ps
                         ? ps.map((p) => (
@@ -337,7 +338,7 @@ function MyHistory() {
                               {p.label} {p.dur}
                             </span>
                           ))
-                        : "sem pausa"}
+                        : tr("sem pausa")}
                     </span>
                   </div>
                 </li>

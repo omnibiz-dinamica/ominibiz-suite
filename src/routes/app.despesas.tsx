@@ -53,6 +53,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { tr } from "@/i18n";
 
 const FOCUS_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -359,12 +360,12 @@ function DespesasPage() {
     const selected = input.files?.[0] ?? null;
     if (!selected) return; // usuário cancelou: mantém o anexo anterior
     if (selected.size > 20 * 1024 * 1024) {
-      toast.error("O comprovante deve ter no máximo 20 MB.");
+      toast.error(tr("O comprovante deve ter no máximo 20 MB."));
       input.value = "";
       return;
     }
     if (!isExpenseFileSupported(selected)) {
-      toast.error("Formato não suportado. Use uma imagem (JPG, PNG, WEBP, HEIC) ou PDF.");
+      toast.error(tr("Formato não suportado. Use uma imagem (JPG, PNG, WEBP, HEIC) ou PDF."));
       input.value = "";
       return;
     }
@@ -377,15 +378,15 @@ function DespesasPage() {
     }
     setFile(selected);
     void saveExpenseDraftAttachment(attachmentDraftKey, selected).catch(() => undefined);
-    toast.success("Comprovante anexado. Envie a despesa para guardar.");
+    toast.success(tr("Comprovante anexado. Envie a despesa para guardar."));
   };
 
   const create = useMutation({
     mutationFn: async () => {
-      if (!currentCompanyId || !user?.id) throw new Error("Empresa não selecionada");
+      if (!currentCompanyId || !user?.id) throw new Error(tr("Empresa não selecionada"));
       const value = Number(amount.replace(",", "."));
-      if (!Number.isFinite(value) || value < 0) throw new Error("Valor inválido");
-      if (!reason.trim()) throw new Error("Indique o motivo");
+      if (!Number.isFinite(value) || value < 0) throw new Error(tr("Valor inválido"));
+      if (!reason.trim()) throw new Error(tr("Indique o motivo"));
       const { data: expense, error } = await (supabase as any)
         .from("employee_expenses")
         .insert({
@@ -427,7 +428,7 @@ function DespesasPage() {
       }
     },
     onSuccess: () => {
-      toast.success("Despesa enviada para aprovação");
+      toast.success(tr("Despesa enviada para aprovação"));
       if (draftStorageKey) sessionStorage.removeItem(draftStorageKey);
       void clearExpenseDraftAttachment(attachmentDraftKey).catch(() => undefined);
       setExpenseDate(new Date().toISOString().slice(0, 10));
@@ -465,7 +466,7 @@ function DespesasPage() {
       // para nunca perder o ficheiro de uma despesa que não pôde ser apagada.
       const { data, error } = await (supabase as any).from("employee_expenses").delete().eq("id", row.id).select("id");
       if (error) throw error;
-      if (!data || data.length === 0) throw new Error("Sem permissão para excluir esta despesa");
+      if (!data || data.length === 0) throw new Error(tr("Sem permissão para excluir esta despesa"));
       if (row.attachment_path) {
         const { error: fileError } = await supabase.storage.from("employee-expenses").remove([row.attachment_path]);
         if (fileError) console.warn("[despesas] comprovante não removido", fileError);
@@ -473,7 +474,7 @@ function DespesasPage() {
     },
     onSuccess: () => {
       setDeleteTarget(null);
-      toast.success("Despesa excluída");
+      toast.success(tr("Despesa excluída"));
       qc.invalidateQueries({ queryKey: ["expenses"] });
     },
     onError: (e: any) => toast.error(e.message ?? "Falha"),
@@ -501,7 +502,7 @@ function DespesasPage() {
         .select("id");
       if (error) throw error;
       if (!data || data.length === 0) {
-        throw new Error("Não foi possível reverter: a despesa pode já estar paga ou ter mudado.");
+        throw new Error(tr("Não foi possível reverter: a despesa pode já estar paga ou ter mudado."));
       }
   };
   /** Gestor ou owner edita qualquer despesa (pendente, aprovada ou rejeitada). Status, aprovador e pagamento mantêm-se; o RLS valida no servidor. */
@@ -524,9 +525,9 @@ function DespesasPage() {
     mutationFn: async () => {
       if (!editingExpense) return;
       const value = Number(editAmount.trim().replace(",", "."));
-      if (!editAmount.trim() || !Number.isFinite(value) || value < 0) throw new Error("Valor inválido");
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(editDate)) throw new Error("Indique a data da despesa");
-      if (!editReason.trim()) throw new Error("Indique o motivo");
+      if (!editAmount.trim() || !Number.isFinite(value) || value < 0) throw new Error(tr("Valor inválido"));
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(editDate)) throw new Error(tr("Indique a data da despesa"));
+      if (!editReason.trim()) throw new Error(tr("Indique o motivo"));
       const { data, error } = await (supabase as any)
         .from("employee_expenses")
         .update({
@@ -538,7 +539,7 @@ function DespesasPage() {
         .eq("id", editingExpense.id)
         .select("id");
       if (error) throw error;
-      if (!data || data.length === 0) throw new Error("Sem permissão para editar esta despesa");
+      if (!data || data.length === 0) throw new Error(tr("Sem permissão para editar esta despesa"));
       // SUP-331: mudança de estado (validada no banco pelas RPCs/RLS).
       const change = stageChange(expenseStage(editingExpense), editStage);
       if (change.kind === "revert") await revertApprovalRow(editingExpense);
@@ -551,7 +552,7 @@ function DespesasPage() {
       }
     },
     onSuccess: () => {
-      toast.success("Despesa atualizada");
+      toast.success(tr("Despesa atualizada"));
       setEditingExpense(null);
       qc.invalidateQueries({ queryKey: ["expenses"] });
     },
@@ -680,7 +681,7 @@ function DespesasPage() {
 
   const exportExpenses = (kind: "xlsx" | "pdf") => {
     if (filtered.length === 0) {
-      toast.info("Não há despesas para exportar com os filtros atuais.");
+      toast.info(tr("Não há despesas para exportar com os filtros atuais."));
       return;
     }
     const columns: ExportColumn<ExpenseRow>[] = [
@@ -726,10 +727,10 @@ function DespesasPage() {
   };
 
   const fetchAttachmentReport = async (format: "manifest" | "zip") => {
-    if (!currentCompanyId) throw new Error("Empresa não selecionada.");
+    if (!currentCompanyId) throw new Error(tr("Empresa não selecionada."));
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData.session?.access_token;
-    if (!token) throw new Error("Sessão expirada. Entre novamente.");
+    if (!token) throw new Error(tr("Sessão expirada. Entre novamente."));
     const params = expenseFilterParams(selection);
     params.set("companyId", currentCompanyId);
     params.set("format", format);
@@ -776,26 +777,26 @@ function DespesasPage() {
           <CreditCard className="h-5 w-5" />
         </div>
         <div>
-          <h1 className="font-display text-2xl font-semibold">Despesas</h1>
+          <h1 className="font-display text-2xl font-semibold">{tr("Despesas")}</h1>
           <p className="text-sm text-muted-foreground">
             {isManager
-              ? "Aprove ou rejeite as despesas dos colaboradores."
-              : "Registe despesas para serem aprovadas pelo gestor."}
+              ? tr("Aprove ou rejeite as despesas dos colaboradores.")
+              : tr("Registe despesas para serem aprovadas pelo gestor.")}
           </p>
         </div>
       </header>
 
       <section className="rounded-2xl border border-border bg-card p-5">
         <h2 className="mb-3 flex items-center gap-2 font-semibold">
-          <Plus className="h-4 w-4" /> Nova despesa
+          <Plus className="h-4 w-4" /> {tr("Nova despesa")}
         </h2>
         <div className="grid gap-3 md:grid-cols-3">
           <div>
-            <Label htmlFor="exp-date">Data</Label>
+            <Label htmlFor="exp-date">{tr("Data")}</Label>
             <Input id="exp-date" type="date" value={expenseDate} onChange={(e) => setExpenseDate(e.target.value)} />
           </div>
           <div>
-            <Label htmlFor="exp-amount">Valor (€)</Label>
+            <Label htmlFor="exp-amount">{tr("Valor (€)")}</Label>
             <Input
               id="exp-amount"
               type="number"
@@ -807,17 +808,17 @@ function DespesasPage() {
             />
           </div>
           <div>
-            <Label htmlFor="exp-reason">Motivo</Label>
+            <Label htmlFor="exp-reason">{tr("Motivo")}</Label>
             <Input
               id="exp-reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Ex.: combustível obra X"
+              placeholder={tr("Ex.: combustível obra X")}
               maxLength={200}
             />
           </div>
           <div className="md:col-span-3">
-            <Label htmlFor="exp-notes">Observações</Label>
+            <Label htmlFor="exp-notes">{tr("Observações")}</Label>
             <Textarea id="exp-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
           </div>
           <div className="md:col-span-3 space-y-2">
@@ -829,10 +830,10 @@ function DespesasPage() {
             */}
             <div className="flex flex-wrap items-center gap-2">
               <Button type="button" variant="outline" onClick={() => openPicker(galleryInputRef)}>
-                <Upload className="h-4 w-4" /> Escolher da galeria/arquivos
+                <Upload className="h-4 w-4" /> {tr("Escolher da galeria/arquivos")}
               </Button>
               <Button type="button" variant="outline" onClick={() => openPicker(cameraInputRef)}>
-                <Camera className="h-4 w-4" /> Tirar foto
+                <Camera className="h-4 w-4" /> {tr("Tirar foto")}
               </Button>
               {file && (
                 <Button
@@ -846,7 +847,7 @@ function DespesasPage() {
                     if (cameraInputRef.current) cameraInputRef.current.value = "";
                   }}
                 >
-                  <XIcon className="h-4 w-4" /> Remover anexo
+                  <XIcon className="h-4 w-4" /> {tr("Remover anexo")}
                 </Button>
               )}
             </div>
@@ -872,7 +873,7 @@ function DespesasPage() {
                 {filePreview ? (
                   <img
                     src={filePreview}
-                    alt="Pré-visualização do comprovante"
+                    alt={tr("Pré-visualização do comprovante")}
                     className="h-16 w-16 rounded-md border border-border object-cover"
                   />
                 ) : (
@@ -881,28 +882,28 @@ function DespesasPage() {
                 <div className="min-w-0 text-xs">
                   <p className="truncate font-medium">{file.name}</p>
                   <p className="text-muted-foreground">
-                    {(file.size / 1024 / 1024).toFixed(2)} MB · {expenseFileMime(file) || "tipo desconhecido"}
+                    {(file.size / 1024 / 1024).toFixed(2)} {tr("MB ·")} {expenseFileMime(file) || tr("tipo desconhecido")}
                   </p>
                 </div>
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground">Imagem ou PDF até 20 MB (opcional).</p>
+              <p className="text-xs text-muted-foreground">{tr("Imagem ou PDF até 20 MB (opcional).")}</p>
             )}
             <span aria-live="polite" className="text-xs text-muted-foreground">
-              {file ? "Comprovante pronto. Clique em Enviar despesa para guardar." : ""}
+              {file ? tr("Comprovante pronto. Clique em Enviar despesa para guardar.") : ""}
             </span>
           </div>
         </div>
         <div className="mt-3 flex justify-end">
           <Button type="button" onClick={() => create.mutate()} disabled={create.isPending}>
-            Enviar despesa
+            {tr("Enviar despesa")}
           </Button>
         </div>
       </section>
 
       {isManager && pending.length > 0 && (
         <section className="rounded-2xl border border-border bg-card p-5">
-          <h2 className="mb-3 font-semibold">Aguardando aprovação ({pending.length})</h2>
+          <h2 className="mb-3 font-semibold">{tr("Aguardando aprovação (")}{pending.length})</h2>
           <ul className="space-y-2">
             {pending.map((r) => (
               <PendingRow
@@ -920,12 +921,12 @@ function DespesasPage() {
 
       <section className="rounded-2xl border border-border bg-card p-5">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-semibold">Histórico</h2>
+          <h2 className="font-semibold">{tr("Histórico")}</h2>
           <div className="flex flex-wrap gap-2">
             {isManager && (
               <>
                 <Button size="sm" variant="outline" onClick={() => exportExpenses("xlsx")}>
-                  <FileSpreadsheet className="h-4 w-4" /> Excel
+                  <FileSpreadsheet className="h-4 w-4" /> {tr("Excel")}
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => exportExpenses("pdf")}>
                   <FileText className="h-4 w-4" /> PDF
@@ -937,10 +938,10 @@ function DespesasPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos os estados</SelectItem>
-                <SelectItem value="pendente">Pendente</SelectItem>
-                <SelectItem value="aprovada">Aprovada</SelectItem>
-                <SelectItem value="rejeitada">Rejeitada</SelectItem>
+                <SelectItem value="all">{tr("Todos os estados")}</SelectItem>
+                <SelectItem value="pendente">{tr("Pendente")}</SelectItem>
+                <SelectItem value="aprovada">{tr("Aprovada")}</SelectItem>
+                <SelectItem value="rejeitada">{tr("Rejeitada")}</SelectItem>
               </SelectContent>
             </Select>
             <Select value={filterPayment} onValueChange={(v) => setFilterPayment(v as any)}>
@@ -948,9 +949,9 @@ function DespesasPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos os pagamentos</SelectItem>
-                <SelectItem value="aguardando_pagamento">Aguarda pagamento</SelectItem>
-                <SelectItem value="paga">Paga</SelectItem>
+                <SelectItem value="all">{tr("Todos os pagamentos")}</SelectItem>
+                <SelectItem value="aguardando_pagamento">{tr("Aguarda pagamento")}</SelectItem>
+                <SelectItem value="paga">{tr("Paga")}</SelectItem>
               </SelectContent>
             </Select>
             {isManager && (
@@ -963,34 +964,34 @@ function DespesasPage() {
                   value={filterUser === "all" ? null : filterUser}
                   onChange={(id: string) => setFilterUser(id || "all")}
                 clearable
-                  placeholder="Todos os colaboradores"
+                  placeholder={tr("Todos os colaboradores")}
                   ariaLabel="Filtrar por colaborador"
                 />
               </div>
             )}
             {isManager && (
               <Select value={filterJob} onValueChange={setFilterJob}>
-                <SelectTrigger className="w-[220px]" aria-label="Filtrar por cargo ou função">
-                  <SelectValue placeholder="Cargo / função" />
+                <SelectTrigger className="w-[220px]" aria-label={tr("Filtrar por cargo ou função")}>
+                  <SelectValue placeholder={tr("Cargo / função")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos os cargos / funções</SelectItem>
+                  <SelectItem value="all">{tr("Todos os cargos / funções")}</SelectItem>
                   {jobOptions.options.map((job) => (
                     <SelectItem key={job.key} value={job.key}>
                       {job.label}
                     </SelectItem>
                   ))}
-                  {jobOptions.hasEmpty && <SelectItem value="__sem_cargo__">Sem cargo / função</SelectItem>}
+                  {jobOptions.hasEmpty && <SelectItem value="__sem_cargo__">{tr("Sem cargo / função")}</SelectItem>}
                 </SelectContent>
               </Select>
             )}
             <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
-              <SelectTrigger className="w-[180px]" aria-label="Ordenar relatório">
+              <SelectTrigger className="w-[180px]" aria-label={tr("Ordenar relatório")}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="date_desc">Ordenar: Mais recentes</SelectItem>
-                <SelectItem value="name_asc">Ordenar: Nome (A-Z)</SelectItem>
+                <SelectItem value="date_desc">{tr("Ordenar: Mais recentes")}</SelectItem>
+                <SelectItem value="name_asc">{tr("Ordenar: Nome (A-Z)")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -998,20 +999,20 @@ function DespesasPage() {
         {isManager && (
           <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div>
-              <Label className="text-xs">Extrair por</Label>
+              <Label className="text-xs">{tr("Extrair por")}</Label>
               <Select value={filterDateBy} onValueChange={(v) => setFilterDateBy(v as typeof filterDateBy)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="expense_date">Data da despesa</SelectItem>
-                  <SelectItem value="created_at">Data de envio</SelectItem>
+                  <SelectItem value="expense_date">{tr("Data da despesa")}</SelectItem>
+                  <SelectItem value="created_at">{tr("Data de envio")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
               <Label htmlFor="expense-export-start" className="text-xs">
-                Data inicial
+                {tr("Data inicial")}
               </Label>
               <Input
                 id="expense-export-start"
@@ -1022,7 +1023,7 @@ function DespesasPage() {
             </div>
             <div>
               <Label htmlFor="expense-export-end" className="text-xs">
-                Data final
+                {tr("Data final")}
               </Label>
               <Input
                 id="expense-export-end"
@@ -1044,7 +1045,7 @@ function DespesasPage() {
                     setFilterEndDate(r.end);
                   }}
                 >
-                  {k === "current" ? "Este mês" : "Mês anterior"}
+                  {k === "current" ? tr("Este mês") : tr("Mês anterior")}
                 </Button>
               ))}
               <Button
@@ -1052,9 +1053,9 @@ function DespesasPage() {
                 variant="ghost"
                 size="sm"
                 onClick={handleClearAllFilters}
-                title="Limpa colaborador, estado, pagamento, datas e ordenação"
+                title={tr("Limpa colaborador, estado, pagamento, datas e ordenação")}
               >
-                Limpar filtros
+                {tr("Limpar filtros")}
               </Button>
             </div>
           </div>
@@ -1063,7 +1064,7 @@ function DespesasPage() {
           <div className="mb-4 space-y-2 border-t border-border pt-4" data-testid="expense-attachments-block">
             <div className="text-xs" data-testid="expense-selection-summary" aria-live="polite">
               {isLoading ? (
-                <span className="text-muted-foreground">Carregando…</span>
+                <span className="text-muted-foreground">{tr("Carregando…")}</span>
               ) : (
                 <>
                   <div className="font-medium">
@@ -1072,11 +1073,11 @@ function DespesasPage() {
                     {selectionSummary.statusText ? ` · ${selectionSummary.statusText}` : ""}
                   </div>
                   <div className="text-muted-foreground">
-                    {selectionSummary.withFile} com comprovante anexado
+                    {selectionSummary.withFile} {tr("com comprovante anexado")}
                     {selectionSummary.missing > 0 && (
                       <span className="text-warning">
                         {" "}
-                        · {selectionSummary.missing} sem comprovante (fora do pacote)
+                        · {selectionSummary.missing} {tr("sem comprovante (fora do pacote)")}
                       </span>
                     )}
                   </div>
@@ -1097,40 +1098,39 @@ function DespesasPage() {
                 }
                 title={
                   filterJob !== "all"
-                    ? "Para baixar comprovantes, volte o Cargo / Função para Todos (pode filtrar por colaborador)."
+                    ? tr("Para baixar comprovantes, volte o Cargo / Função para Todos (pode filtrar por colaborador).")
                     : undefined
                 }
                 onClick={requestDownload}
               >
-                <Package className="h-4 w-4" /> {attachmentAction === "zip" ? "A preparar…" : "Baixar comprovantes"}
+                <Package className="h-4 w-4" /> {attachmentAction === "zip" ? tr("A preparar…") : tr("Baixar comprovantes")}
               </Button>
               {!isLoading && selectionSummary.withFile === 0 && (
-                <span className="text-xs text-muted-foreground">Nenhum comprovante para estes filtros</span>
+                <span className="text-xs text-muted-foreground">{tr("Nenhum comprovante para estes filtros")}</span>
               )}
               {!isLoading && selectionSummary.nonApproved > 0 && selectionSummary.withFile > 0 && (
-                <span className="text-xs text-warning">A seleção inclui despesas pendentes ou rejeitadas.</span>
+                <span className="text-xs text-warning">{tr("A seleção inclui despesas pendentes ou rejeitadas.")}</span>
               )}
             </div>
             {attachmentResult && <div className="text-xs text-success">{attachmentResult}</div>}
             <AlertDialog open={confirmDownload} onOpenChange={setConfirmDownload}>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Incluir despesas não aprovadas?</AlertDialogTitle>
+                  <AlertDialogTitle>{tr("Incluir despesas não aprovadas?")}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    A seleção inclui {selectionSummary.byStatus.pendente ?? 0} pendente(s) e{" "}
-                    {selectionSummary.byStatus.rejeitada ?? 0} rejeitada(s). Os comprovantes destas despesas também
-                    entram no pacote. Deseja continuar?
+                    {tr("A seleção inclui")} {selectionSummary.byStatus.pendente ?? 0} {tr("pendente(s) e")}{" "}
+                    {selectionSummary.byStatus.rejeitada ?? 0} {tr("rejeitada(s). Os comprovantes destas despesas também entram no pacote. Deseja continuar?")}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogCancel>{tr("Cancelar")}</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={() => {
                       setConfirmDownload(false);
                       void downloadAttachments();
                     }}
                   >
-                    Baixar mesmo assim
+                    {tr("Baixar mesmo assim")}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -1138,9 +1138,9 @@ function DespesasPage() {
           </div>
         )}
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">Carregando…</p>
+          <p className="text-sm text-muted-foreground">{tr("Carregando…")}</p>
         ) : decided.length === 0 && pending.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Sem despesas registadas.</p>
+          <p className="text-sm text-muted-foreground">{tr("Sem despesas registadas.")}</p>
         ) : (
           <ul className="divide-y divide-border">
             {(isManager ? decided : filtered).map((r) => (
@@ -1148,7 +1148,7 @@ function DespesasPage() {
               <li data-expense-id={r.id} className="flex items-center justify-between gap-3 py-3">
                 <div className="min-w-0">
                   <div className="font-medium">
-                    {isManager ? (names[r.user_id] ?? "Colaborador") : "Você"} · {fmtEur(r.amount)}
+                    {isManager ? (names[r.user_id] ?? tr("Colaborador")) : tr("Você")} · {fmtEur(r.amount)}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {fmtDate(r.expense_date)} · {r.reason}
@@ -1161,7 +1161,7 @@ function DespesasPage() {
                       size="icon"
                       variant="ghost"
                       onClick={() => openAttachment(r.attachment_path!)}
-                      title="Abrir anexo"
+                      title={tr("Abrir anexo")}
                     >
                       <Download className="h-4 w-4" />
                     </Button>
@@ -1171,15 +1171,15 @@ function DespesasPage() {
                     data-testid="expense-stage"
                     className={`rounded-full px-2 py-0.5 text-xs ${STAGE_TONE[expenseStage(r)]}`}
                   >
-                    {STAGE_LABEL[expenseStage(r)]}
+                    {tr(STAGE_LABEL[expenseStage(r)])}
                   </span>
                   {r.payroll_year && r.payroll_month ? (
                     <span
                       data-testid="expense-payroll-month"
                       className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary"
-                      title="Incluída no Resumo para pagamento deste mês"
+                      title={tr("Incluída no Resumo para pagamento deste mês")}
                     >
-                      Pagamento {String(r.payroll_month).padStart(2, "0")}/{r.payroll_year}
+                      {tr("Pagamento")} {String(r.payroll_month).padStart(2, "0")}/{r.payroll_year}
                     </span>
                   ) : null}
                   {isManager && (
@@ -1187,8 +1187,8 @@ function DespesasPage() {
                       size="icon"
                       variant="ghost"
                       onClick={() => openEditExpense(r)}
-                      title="Editar despesa e estado"
-                      aria-label="Editar despesa"
+                      title={tr("Editar despesa e estado")}
+                      aria-label={tr("Editar despesa")}
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -1201,8 +1201,8 @@ function DespesasPage() {
                       size="icon"
                       variant="ghost"
                       onClick={() => setDeleteTarget(r)}
-                      title="Excluir despesa"
-                      aria-label="Excluir despesa"
+                      title={tr("Excluir despesa")}
+                      aria-label={tr("Excluir despesa")}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -1222,24 +1222,24 @@ function DespesasPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Editar despesa</AlertDialogTitle>
+            <AlertDialogTitle>{tr("Editar despesa")}</AlertDialogTitle>
             <AlertDialogDescription>
               {editingExpense
                 ? editingExpense.status === "aprovada"
-                  ? `Estado atual: ${STAGE_LABEL[expenseStage(editingExpense)]}. Pode mudar o estado e as informações.`
-                  : `Estado atual: ${STAGE_LABEL[expenseStage(editingExpense)]}. Para aprovar ou rejeitar use os botões da despesa pendente.`
+                  ? tr("Estado atual: {{stage}}. Pode mudar o estado e as informações.", { stage: tr(STAGE_LABEL[expenseStage(editingExpense)]) })
+                  : tr("Estado atual: {{stage}}. Para aprovar ou rejeitar use os botões da despesa pendente.", { stage: tr(STAGE_LABEL[expenseStage(editingExpense)]) })
                 : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {editingExpense?.status === "aprovada" && editingExpense.payment_status === "paga" && (
             <p className="rounded-md bg-warning/10 p-2 text-xs text-warning">
-              Esta despesa já está marcada como paga. Confirme se o novo valor corresponde ao pagamento feito.
+              {tr("Esta despesa já está marcada como paga. Confirme se o novo valor corresponde ao pagamento feito.")}
             </p>
           )}
           <div className="grid gap-3 sm:grid-cols-2">
             {editingExpense?.status === "aprovada" && (
               <div className="space-y-1.5 sm:col-span-2" data-testid="expense-stage-select">
-                <Label>Estado</Label>
+                <Label>{tr("Estado")}</Label>
                 <Select value={editStage} onValueChange={(v) => setEditStage(v as ExpenseStage)}>
                   <SelectTrigger>
                     <SelectValue />
@@ -1247,24 +1247,23 @@ function DespesasPage() {
                   <SelectContent>
                     {APPROVED_STAGES.map((st) => (
                       <SelectItem key={st} value={st}>
-                        {STAGE_LABEL[st]}
+                        {tr(STAGE_LABEL[st])}
                       </SelectItem>
                     ))}
                     {expenseStage(editingExpense) !== "paga" && (
-                      <SelectItem value="pendente">Voltar a Pendente (reverter aprovação)</SelectItem>
+                      <SelectItem value="pendente">{tr("Voltar a Pendente (reverter aprovação)")}</SelectItem>
                     )}
                   </SelectContent>
                 </Select>
                 {editStage === "pendente" && (
                   <p className="text-xs text-muted-foreground">
-                    A despesa volta a Pendente; depois pode aprovar ou rejeitar de novo. Data, valor, motivo e
-                    comprovante não mudam.
+                    {tr("A despesa volta a Pendente; depois pode aprovar ou rejeitar de novo. Data, valor, motivo e comprovante não mudam.")}
                   </p>
                 )}
               </div>
             )}
             <div className="space-y-1.5">
-              <Label htmlFor="edit-expense-date">Data</Label>
+              <Label htmlFor="edit-expense-date">{tr("Data")}</Label>
               <Input
                 id="edit-expense-date"
                 type="date"
@@ -1273,7 +1272,7 @@ function DespesasPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="edit-expense-amount">Valor (€)</Label>
+              <Label htmlFor="edit-expense-amount">{tr("Valor (€)")}</Label>
               <Input
                 id="edit-expense-amount"
                 inputMode="decimal"
@@ -1282,7 +1281,7 @@ function DespesasPage() {
               />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="edit-expense-reason">Motivo</Label>
+              <Label htmlFor="edit-expense-reason">{tr("Motivo")}</Label>
               <Input
                 id="edit-expense-reason"
                 maxLength={250}
@@ -1291,7 +1290,7 @@ function DespesasPage() {
               />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="edit-expense-notes">Observações</Label>
+              <Label htmlFor="edit-expense-notes">{tr("Observações")}</Label>
               <Textarea
                 id="edit-expense-notes"
                 rows={3}
@@ -1301,9 +1300,9 @@ function DespesasPage() {
             </div>
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={updateExpense.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={updateExpense.isPending}>{tr("Cancelar")}</AlertDialogCancel>
             <Button type="button" onClick={() => updateExpense.mutate()} disabled={updateExpense.isPending}>
-              {updateExpense.isPending ? "A guardar..." : "Guardar alterações"}
+              {updateExpense.isPending ? tr("A guardar...") : tr("Guardar alterações")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1316,22 +1315,22 @@ function DespesasPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir despesa?</AlertDialogTitle>
+            <AlertDialogTitle>{tr("Excluir despesa?")}</AlertDialogTitle>
             <AlertDialogDescription>
               {deleteTarget
-                ? `${deleteTarget.reason} · ${Number(deleteTarget.amount).toFixed(2).replace(".", ",")} € · ${STATUS_LABEL[deleteTarget.status]}. A despesa e o comprovante serão apagados e não podem ser recuperados.`
+                ? `${deleteTarget.reason} · ${Number(deleteTarget.amount).toFixed(2).replace(".", ",")} € · ${tr(STATUS_LABEL[deleteTarget.status])}. ${tr("A despesa e o comprovante serão apagados e não podem ser recuperados.")}`
                 : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={remove.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={remove.isPending}>{tr("Cancelar")}</AlertDialogCancel>
             <Button
               type="button"
               variant="destructive"
               disabled={remove.isPending || !deleteTarget}
               onClick={() => deleteTarget && remove.mutate(deleteTarget)}
             >
-              {remove.isPending ? "A excluir..." : "Excluir"}
+              {remove.isPending ? tr("A excluir...") : tr("Excluir")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1371,16 +1370,16 @@ function PendingRow({
         <div className="flex items-center gap-2">
           {row.attachment_path && (
             <Button size="sm" variant="ghost" onClick={() => onOpen(row.attachment_path!)}>
-              <Download className="h-4 w-4" /> Anexo
+              <Download className="h-4 w-4" /> {tr("Anexo")}
             </Button>
           )}
           {!rejecting && (
             <>
               <Button size="sm" onClick={onApprove}>
-                <Check className="h-4 w-4" /> Aprovar
+                <Check className="h-4 w-4" /> {tr("Aprovar")}
               </Button>
               <Button size="sm" variant="outline" onClick={() => setRejecting(true)}>
-                <XIcon className="h-4 w-4" /> Rejeitar
+                <XIcon className="h-4 w-4" /> {tr("Rejeitar")}
               </Button>
             </>
           )}
@@ -1388,7 +1387,7 @@ function PendingRow({
       </div>
       {rejecting && (
         <div className="mt-3 space-y-2">
-          <Label htmlFor={`rj-${row.id}`}>Motivo da rejeição</Label>
+          <Label htmlFor={`rj-${row.id}`}>{tr("Motivo da rejeição")}</Label>
           <Textarea id={`rj-${row.id}`} value={reason} onChange={(e) => setReason(e.target.value)} rows={2} />
           <div className="flex justify-end gap-2">
             <Button
@@ -1399,10 +1398,10 @@ function PendingRow({
                 setReason("");
               }}
             >
-              Cancelar
+              {tr("Cancelar")}
             </Button>
             <Button size="sm" variant="destructive" disabled={!reason.trim()} onClick={() => onReject(reason.trim())}>
-              Confirmar rejeição
+              {tr("Confirmar rejeição")}
             </Button>
           </div>
         </div>

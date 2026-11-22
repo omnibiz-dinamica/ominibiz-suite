@@ -12,6 +12,7 @@ import {
   uploadTaskDocuments,
   type TaskDocument,
 } from "@/lib/tasks/task-documents";
+import { tr } from "@/i18n";
 
 export function TaskDocuments({
   taskId,
@@ -64,7 +65,7 @@ export function TaskDocuments({
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Documento removido");
+      toast.success(tr("Documento removido"));
       qc.invalidateQueries({ queryKey: ["task-docs", taskId] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -82,7 +83,7 @@ export function TaskDocuments({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <div className="text-sm font-medium">Documentos operacionais</div>
+        <div className="text-sm font-medium">{tr("Documentos operacionais")}</div>
         {canManage && (
           <>
             <Input
@@ -99,14 +100,14 @@ export function TaskDocuments({
             />
             <Button size="sm" variant="outline" disabled={uploading} onClick={() => fileRef.current?.click()}>
               <Upload className="mr-1 h-3.5 w-3.5" />
-              {uploading ? "Enviando..." : "Selecionar ficheiros"}
+              {uploading ? tr("Enviando...") : tr("Selecionar ficheiros")}
             </Button>
           </>
         )}
       </div>
       {canManage && selectedFiles.length > 0 && (
         <div className="space-y-2 rounded-lg border border-dashed border-border bg-muted/20 p-3">
-          <p className="text-xs font-medium">Selecionados ({selectedFiles.length})</p>
+          <p className="text-xs font-medium">{tr("Selecionados (")}{selectedFiles.length})</p>
           <ul className="space-y-1">
             {selectedFiles.map((file) => (
               <li key={`${file.name}-${file.lastModified}-${file.size}`} className="flex items-center gap-2 text-xs">
@@ -127,15 +128,15 @@ export function TaskDocuments({
             ))}
           </ul>
           <Button type="button" size="sm" disabled={uploading} onClick={() => void upload()}>
-            <Upload className="mr-1 h-3.5 w-3.5" /> Enviar {selectedFiles.length === 1 ? "documento" : "documentos"}
+            <Upload className="mr-1 h-3.5 w-3.5" /> {tr("Enviar")} {selectedFiles.length === 1 ? "documento" : "documentos"}
           </Button>
         </div>
       )}
       {isLoading ? (
-        <div className="text-xs text-muted-foreground">Carregando...</div>
+        <div className="text-xs text-muted-foreground">{tr("Carregando...")}</div>
       ) : (docs ?? []).length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
-          Nenhum documento. {canManage && "Anexe instruções, ordens de trabalho ou procedimentos."}
+          {tr("Nenhum documento.")} {canManage && tr("Anexe instruções, ordens de trabalho ou procedimentos.")}
         </div>
       ) : (
         <ul className="divide-y divide-border rounded-lg border border-border">
@@ -151,11 +152,11 @@ export function TaskDocuments({
                 >
                   {d.title}
                 </button>
-                <Button size="sm" variant="ghost" onClick={() => openDoc(d)} title="Abrir">
+                <Button size="sm" variant="ghost" onClick={() => openDoc(d)} title={tr("Abrir")}>
                   <ExternalLink className="h-3.5 w-3.5" />
                 </Button>
                 {canManage && (
-                  <Button size="sm" variant="ghost" onClick={() => remove.mutate(d)} title="Remover">
+                  <Button size="sm" variant="ghost" onClick={() => remove.mutate(d)} title={tr("Remover")}>
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 )}
@@ -165,7 +166,7 @@ export function TaskDocuments({
         </ul>
       )}
       <p className="text-[11px] text-muted-foreground">
-        PDF, JPG ou PNG até 10 MB por ficheiro. É possível adicionar vários documentos.
+        {tr("PDF, JPG ou PNG até 10 MB por ficheiro. É possível adicionar vários documentos.")}
       </p>
     </div>
   );

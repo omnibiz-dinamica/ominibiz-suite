@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Eraser, PenLine, Trash2, Upload } from "lucide-react";
 import { cleanSignatureFile } from "@/lib/signature-image";
+import { tr } from "@/i18n";
 
 type Kind = "signature" | "initials";
 
@@ -91,7 +92,7 @@ function Pad({
 
   const saveDrawing = async () => {
     if (!padRef.current || padRef.current.isEmpty()) {
-      toast.error("Desenhe antes de guardar.");
+      toast.error(tr("Desenhe antes de guardar."));
       return;
     }
     setBusy(true);
@@ -111,18 +112,18 @@ function Pad({
 
   const upload = async (file: File) => {
     if (!file.type.startsWith("image/")) {
-      toast.error("Envie uma imagem.");
+      toast.error(tr("Envie uma imagem."));
       return;
     }
     if (file.size > 8 * 1024 * 1024) {
-      toast.error("Imagem demasiado grande (máx. 8 MB).");
+      toast.error(tr("Imagem demasiado grande (máx. 8 MB)."));
       return;
     }
     setBusy(true);
     try {
       // Fundo removido automaticamente: fica só o traço, em PNG transparente.
       await persist(await cleanSignatureFile(file));
-      toast.success("Imagem guardada sem fundo.");
+      toast.success(tr("Imagem guardada sem fundo."));
       onSaved();
     } catch (e) {
       toast.error((e as Error).message);
@@ -138,7 +139,7 @@ function Pad({
       const patch = kind === "signature" ? { signature_url: null } : { initials_url: null };
       const { error } = await supabase.from("profiles").update(patch).eq("id", userId);
       if (error) throw error;
-      toast.success("Removido. Pode cadastrar novamente.");
+      toast.success(tr("Removido. Pode cadastrar novamente."));
       onSaved();
     } catch (e) {
       toast.error((e as Error).message);
@@ -151,21 +152,21 @@ function Pad({
     <div className="rounded-xl border border-border bg-card/60 p-4">
       <div className="flex items-center justify-between gap-2">
         <div className="text-sm font-medium">
-          {kind === "signature" ? "Assinatura completa" : "Visto / Rubrica"}
+          {kind === "signature" ? tr("Assinatura completa") : tr("Visto / Rubrica")}
         </div>
         {currentPath && (
           <Button variant="ghost" size="sm" disabled={busy} onClick={remove}>
-            <Trash2 className="h-4 w-4" /> Remover
+            <Trash2 className="h-4 w-4" /> {tr("Remover")}
           </Button>
         )}
       </div>
 
       {preview && (
         <div className="mt-3">
-          <div className="text-xs text-muted-foreground">Cadastrado actualmente</div>
+          <div className="text-xs text-muted-foreground">{tr("Cadastrado actualmente")}</div>
           <img
             src={preview}
-            alt={kind === "signature" ? "Assinatura cadastrada" : "Visto cadastrado"}
+            alt={kind === "signature" ? tr("Assinatura cadastrada") : tr("Visto cadastrado")}
             className="mt-1 h-16 rounded-md border border-border bg-white object-contain px-2"
           />
         </div>
@@ -177,7 +178,7 @@ function Pad({
           className="h-32 w-full touch-none rounded-md border border-dashed border-border bg-white"
         />
         <p className="mt-1 text-xs text-muted-foreground">
-          Desenhe com o rato, com o dedo ou com a caneta e toque em guardar.
+          {tr("Desenhe com o rato, com o dedo ou com a caneta e toque em guardar.")}
         </p>
       </div>
 
@@ -195,7 +196,7 @@ function Pad({
 
       <div className="mt-3 flex flex-wrap gap-2">
         <Button type="button" size="sm" disabled={busy} onClick={saveDrawing}>
-          <PenLine className="h-4 w-4" /> {currentPath ? "Substituir" : "Guardar"}
+          <PenLine className="h-4 w-4" /> {currentPath ? tr("Substituir") : tr("Guardar")}
         </Button>
         <Button
           type="button"
@@ -204,7 +205,7 @@ function Pad({
           disabled={busy}
           onClick={() => padRef.current?.clear()}
         >
-          <Eraser className="h-4 w-4" /> Limpar
+          <Eraser className="h-4 w-4" /> {tr("Limpar")}
         </Button>
         <Button
           type="button"
@@ -213,7 +214,7 @@ function Pad({
           disabled={busy}
           onClick={() => fileRef.current?.click()}
         >
-          <Upload className="h-4 w-4" /> Enviar imagem
+          <Upload className="h-4 w-4" /> {tr("Enviar imagem")}
         </Button>
       </div>
     </div>
@@ -248,13 +249,13 @@ export function SignatureVistoCard() {
 
   return (
     <section className="rounded-2xl border border-border bg-card p-6">
-      <h2 className="font-display text-lg font-semibold">Assinatura e Visto</h2>
+      <h2 className="font-display text-lg font-semibold">{tr("Assinatura e Visto")}</h2>
       <p className="mt-1 text-xs text-muted-foreground">
-        Usados na sua Folha de Ponto mensal. Ficheiros privados — nunca ficam públicos.
+        {tr("Usados na sua Folha de Ponto mensal. Ficheiros privados — nunca ficam públicos.")}
       </p>
       {!currentCompanyId ? (
         <p className="mt-4 text-sm text-muted-foreground">
-          Selecione uma empresa activa para cadastrar a assinatura.
+          {tr("Selecione uma empresa activa para cadastrar a assinatura.")}
         </p>
       ) : (
         <div className="mt-4 grid gap-4 lg:grid-cols-2">

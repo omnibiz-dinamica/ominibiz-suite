@@ -11,6 +11,7 @@ import {
   type PdfPageSize,
   type SignaturePlacement,
 } from "@/lib/employee-attachments";
+import { tr } from "@/i18n";
 
 export function SignaturePlacementPicker({
   pdf,
@@ -97,12 +98,12 @@ export function SignaturePlacementPicker({
           variant="outline"
           disabled={page.page <= 1}
           onClick={() => goPage(page.page - 1)}
-          aria-label="Página anterior"
+          aria-label={tr("Página anterior")}
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
         <span className="text-xs text-muted-foreground">
-          Página {page.page} de {pages.length}
+          {tr("Página")} {page.page} de {pages.length}
         </span>
         <Button
           type="button"
@@ -110,7 +111,7 @@ export function SignaturePlacementPicker({
           variant="outline"
           disabled={page.page >= pages.length}
           onClick={() => goPage(page.page + 1)}
-          aria-label="Página seguinte"
+          aria-label={tr("Página seguinte")}
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
@@ -128,19 +129,19 @@ export function SignaturePlacementPicker({
               aria-hidden
             >
               <span className="absolute -top-5 left-0 whitespace-nowrap rounded bg-primary px-1 text-[10px] text-primary-foreground">
-                Assinatura
+                {tr("Assinatura")}
               </span>
             </div>
           )}
         </div>
         {rendering && (
           <p className="py-6 text-center text-xs text-muted-foreground">
-            <Loader2 className="mr-1 inline h-3 w-3 animate-spin" />A preparar a página…
+            <Loader2 className="mr-1 inline h-3 w-3 animate-spin" />{tr("A preparar a página…")}
           </p>
         )}
         {failed && (
           <p className="py-6 text-center text-xs text-destructive">
-            Não foi possível mostrar a página.
+            {tr("Não foi possível mostrar a página.")}
           </p>
         )}
       </div>

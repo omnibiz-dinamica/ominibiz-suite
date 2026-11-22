@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { readSource } from "./helpers/read-source";
 
-const page = readFileSync(new URL("../src/routes/app.ferias.tsx", import.meta.url), "utf8");
+const page = readSource(new URL("../src/routes/app.ferias.tsx", import.meta.url), "utf8");
 
 const sectionOrder = (className: string) => {
   const match = page.match(new RegExp(`className=\\\"${className}[^\\\"]*\\\"`));

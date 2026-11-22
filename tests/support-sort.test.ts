@@ -8,6 +8,7 @@ import {
   sortSupportTickets,
 } from "../src/lib/support/sort";
 
+import { readSource } from "./helpers/read-source";
 const tickets = [
   { id: "b1", priority: "baixa" as const, created_at: "2026-11-01T10:00:00Z" },
   { id: "u2", priority: "urgente" as const, created_at: "2026-11-04T10:00:00Z" },
@@ -77,7 +78,7 @@ test("as duas telas têm o seletor Ordenar com as 4 opções", () => {
     "Prioridade: Baixa → Urgente · data mais antiga → mais nova",
   ]);
   for (const file of ["../src/routes/app.suporte.tsx", "../src/routes/app.admin.suporte.tsx"]) {
-    const src = readFileSync(new URL(file, import.meta.url), "utf8");
+    const src = readSource(new URL(file, import.meta.url), "utf8");
     expect(src).toMatch(/aria-label="Ordenar"/);
     expect(src).toMatch(/sortSupportTickets\((found|arr), sortOrder\)/);
   }

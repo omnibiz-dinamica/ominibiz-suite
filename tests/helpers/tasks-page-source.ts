@@ -1,3 +1,4 @@
+import { stripTr } from "./read-source";
 import { readdirSync, readFileSync } from "node:fs";
 
 /**
@@ -13,5 +14,5 @@ export function tasksPageSource(): string {
   for (const name of readdirSync(dir).sort()) {
     if (/\.(ts|tsx)$/.test(name)) parts.push(readFileSync(new URL(name, dir), "utf8"));
   }
-  return parts.join("\n");
+  return stripTr(parts.join("\n"));
 }
