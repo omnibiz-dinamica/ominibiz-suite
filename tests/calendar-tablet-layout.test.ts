@@ -22,7 +22,7 @@ describe("Calendário no tablet", () => {
 
   test("dias vazios ficam estreitos; semana vazia = colunas iguais", () => {
     expect(weekColumnsTemplate([5, 6, 3, 3, 3, 0, 0])).toBe(
-      "minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(4.5rem, 0.35fr) minmax(4.5rem, 0.35fr)",
+      "minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(7.5rem, 0.5fr) minmax(7.5rem, 0.5fr)",
     );
     expect(weekColumnsTemplate([0, 0, 0, 0, 0, 0, 0])).toBe("repeat(7, minmax(0, 1fr))");
   });
@@ -32,5 +32,8 @@ describe("Calendário no tablet", () => {
     expect(cal).toContain('data-testid="task-card-toolbar"');
     expect(cal).toContain("<TaskCardHeading name={taskHeading(task)} />");
     expect(cal).toContain("lg:[grid-template-columns:var(--week-cols)]");
+    // cabeçalho do dia não transborda (domingo vazio no tablet)
+    expect(cal).toContain('data-testid="calendar-day-header"');
+    expect(cal).toContain("min-h-40 min-w-0 overflow-hidden");
   });
 });

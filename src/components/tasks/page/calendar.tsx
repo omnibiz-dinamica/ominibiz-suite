@@ -480,7 +480,7 @@ export function CalendarDayColumn({
 }) {
   return (
     <div
-      className="min-h-40 rounded-lg border border-border bg-background transition hover:border-primary/40"
+      className="min-h-40 min-w-0 overflow-hidden rounded-lg border border-border bg-background transition hover:border-primary/40"
       onDragOver={(event) => {
         if (handlers.isManager) event.preventDefault();
       }}
@@ -491,12 +491,16 @@ export function CalendarDayColumn({
         if (taskId) handlers.onMoveDate(taskId, dateKeyValue);
       }}
     >
-      <div className="flex items-center justify-between border-b border-border px-3 py-2">
-        <div className="flex items-center gap-2 text-sm font-medium capitalize">
-          <CalendarDays className="h-4 w-4 text-muted-foreground" />
-          {label}
+      {/* 22/11/2026 (tablet): o cabeçalho nunca sai da coluna (sábado/domingo vazios). */}
+      <div
+        className="flex items-start justify-between gap-1 border-b border-border px-3 py-2"
+        data-testid="calendar-day-header"
+      >
+        <div className="flex min-w-0 items-start gap-2 text-sm font-medium capitalize">
+          <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+          <span className="min-w-0 break-words">{label}</span>
         </div>
-        <span className="text-xs text-muted-foreground">{tasks.length + vacations.length}</span>
+        <span className="shrink-0 text-xs text-muted-foreground">{tasks.length + vacations.length}</span>
       </div>
       {tasks.length === 0 && vacations.length === 0 ? (
         <p className="px-3 py-4 text-xs text-muted-foreground">{tr("Sem tarefas ou férias")}</p>

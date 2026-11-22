@@ -151,5 +151,5 @@ export function splitClientHeading(name: string): { prefix: string | null; main:
  */
 export function weekColumnsTemplate(countsPerDay: number[]): string {
   if (countsPerDay.every((n) => n === 0)) return "repeat(7, minmax(0, 1fr))";
-  return countsPerDay.map((n) => (n > 0 ? "minmax(0, 1fr)" : "minmax(4.5rem, 0.35fr)")).join(" ");
+  return countsPerDay.map((n) => (n > 0 ? "minmax(0, 1fr)" : "minmax(7.5rem, 0.5fr)")).join(" ");
 }
