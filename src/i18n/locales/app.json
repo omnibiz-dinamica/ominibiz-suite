@@ -3908,5 +3908,40 @@
   "Approved holidays · {{from}} → {{to}}",
   "Goedgekeurd verlof · {{from}} → {{to}}",
   "Congés approuvés · {{from}} → {{to}}"
+ ],
+ "Desfazer": [
+  "Undo",
+  "Ongedaan maken",
+  "Annuler"
+ ],
+ "Desfazer esta edição?": [
+  "Undo this edit?",
+  "Deze wijziging ongedaan maken?",
+  "Annuler cette modification ?"
+ ],
+ "Edição desfeita.": [
+  "Edit undone.",
+  "Wijziging ongedaan gemaakt.",
+  "Modification annulée."
+ ],
+ "Edição desfeita · {{n}} tarefa(s) reposta(s).": [
+  "Edit undone · {{n}} task(s) restored.",
+  "Wijziging ongedaan gemaakt · {{n}} taak/taken hersteld.",
+  "Modification annulée · {{n}} tâche(s) rétablie(s)."
+ ],
+ "Não foi possível desfazer.": [
+  "Could not undo.",
+  "Kon niet ongedaan maken.",
+  "Impossible d'annuler."
+ ],
+ "Disponível até {{when}}": [
+  "Available until {{when}}",
+  "Beschikbaar tot {{when}}",
+  "Disponible jusqu'au {{when}}"
+ ],
+ "A série volta a ficar como estava antes e as tarefas apagadas por esta edição voltam. Só é possível uma vez, até 24 horas depois, e se nenhuma tarefa da série tiver sido iniciada entretanto.": [
+  "The series goes back to how it was and the tasks deleted by this edit come back. This can only be done once, within 24 hours, and only if no task of the series has been started since.",
+  "De reeks wordt teruggezet zoals ze was en de taken die door deze wijziging verwijderd werden komen terug. Dit kan maar één keer, binnen 24 uur, en enkel als er intussen geen taak van de reeks gestart is.",
+  "La série revient à son état précédent et les tâches supprimées par cette modification sont rétablies. Possible une seule fois, dans les 24 heures, et seulement si aucune tâche de la série n'a été démarrée entre-temps."
  ]
 }

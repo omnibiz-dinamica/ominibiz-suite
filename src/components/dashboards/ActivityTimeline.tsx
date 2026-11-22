@@ -1,12 +1,24 @@
 import { useEffect, useState } from "react";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Activity, ChevronDown, Loader2, Search, UserCheck } from "lucide-react";
+import { Activity, ChevronDown, Loader2, Search, Undo2, UserCheck } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeInvalidate } from "@/lib/realtime/subscribe";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useT, dateLocale } from "@/i18n";
+import { applySeriesUndo, fetchUndoableSeriesEdits, findUndoSnapshot } from "@/lib/tasks/series-undo";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type Tab = "gestao" | "execucao";
 type EventRow = {
@@ -17,6 +29,8 @@ type EventRow = {
   source: string;
   created_at: string;
   changes: Record<string, unknown> | null;
+  action?: string | null;
+  entity_id?: string | null;
 };
 
 export const ROLE_LABEL: Record<string, string> = {
@@ -130,7 +144,7 @@ export function ActivityTimeline({ companyId }: { companyId: string }) {
     queryFn: async ({ pageParam }) => {
       let q = (supabase as any)
         .from("activity_events")
-        .select("id, actor_name, actor_role, summary, source, created_at, changes")
+        .select("id, actor_name, actor_role, summary, source, created_at, changes, action, entity_id")
         .eq("company_id", companyId)
         .eq("tab", tab)
         .order("created_at", { ascending: false })
@@ -182,6 +196,36 @@ export function ActivityTimeline({ companyId }: { companyId: string }) {
     queryClient: qc,
     invalidate: (client) => void client.invalidateQueries({ queryKey: ["activity-in-progress", companyId] }),
   });
+
+  // 22/11/2026: "Desfazer" a edição de uma série (24 h). O servidor valida tudo.
+  const undoable = useQuery({
+    queryKey: ["series-undo", companyId],
+    queryFn: () => fetchUndoableSeriesEdits(companyId),
+    enabled: tab === "gestao",
+  });
+  const [undoTarget, setUndoTarget] = useState<{ id: string; summary: string } | null>(null);
+  const [undoing, setUndoing] = useState(false);
+  const confirmUndo = async () => {
+    if (!undoTarget) return;
+    setUndoing(true);
+    try {
+      const r = await applySeriesUndo(undoTarget.id);
+      toast.success(
+        r.restored > 0
+          ? tr("Edição desfeita · {{n}} tarefa(s) reposta(s).", { n: r.restored })
+          : tr("Edição desfeita."),
+      );
+      setUndoTarget(null);
+      void qc.invalidateQueries({ queryKey: ["series-undo", companyId] });
+      void qc.invalidateQueries({ queryKey: ["activity-events", companyId] });
+      void qc.invalidateQueries({ queryKey: ["tasks"] });
+      void qc.invalidateQueries({ queryKey: ["recurrences"] });
+    } catch (err) {
+      toast.error((err as { message?: string })?.message ?? tr("Não foi possível desfazer."));
+    } finally {
+      setUndoing(false);
+    }
+  };
 
   const rows = events.data?.pages.flat() ?? [];
   const busy = inProgress.data ?? [];
@@ -263,6 +307,7 @@ export function ActivityTimeline({ companyId }: { companyId: string }) {
           const locale = dateLocale(lang);
           const isOpen = openEventId === e.id;
           const lines = isOpen ? detailLines(e.changes, locale) : [];
+          const undoSnap = isOpen ? findUndoSnapshot(e, undoable.data ?? [], now) : null;
           return (
             <li key={e.id} className="py-1">
               <button
@@ -313,12 +358,60 @@ export function ActivityTimeline({ companyId }: { companyId: string }) {
                       ))}
                     </dl>
                   )}
+                  {undoSnap && (
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        data-testid="activity-undo-series"
+                        onClick={() => setUndoTarget({ id: undoSnap.id, summary: e.summary })}
+                      >
+                        <Undo2 className="mr-1 h-4 w-4" /> {tr("Desfazer")}
+                      </Button>
+                      <span className="text-muted-foreground">
+                        {tr("Disponível até {{when}}", {
+                          when: new Date(undoSnap.expires_at).toLocaleString(locale, {
+                            dateStyle: "short",
+                            timeStyle: "short",
+                          }),
+                        })}
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </li>
           );
         })}
       </ul>
+
+      <AlertDialog open={!!undoTarget} onOpenChange={(o) => !o && !undoing && setUndoTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{tr("Desfazer esta edição?")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {undoTarget?.summary}
+              <br />
+              {tr(
+                "A série volta a ficar como estava antes e as tarefas apagadas por esta edição voltam. Só é possível uma vez, até 24 horas depois, e se nenhuma tarefa da série tiver sido iniciada entretanto.",
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={undoing}>{tr("Cancelar")}</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={undoing}
+              onClick={(ev) => {
+                ev.preventDefault();
+                void confirmUndo();
+              }}
+            >
+              {undoing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {tr("Desfazer")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {events.hasNextPage && (
         <div className="mt-3 text-center">
