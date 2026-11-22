@@ -16,7 +16,8 @@ import { useAuth } from "@/lib/auth";
 import { sortTasksForList } from "@/lib/tasks/list-order";
 import { taskOperationalDay } from "@/lib/tasks/dashboard-counters";
 import { wallISOToDateInput, formatWallDate, formatWallTime, formatLocalTime } from "@/lib/wall-clock";
-import { ClientOption, clientAddressCache, taskClientInstructions, taskHeading, ApprovedVacation, CalendarMode, taskMemberName, RowHandlers, tasksRouteApi } from "./shared";
+import { ClientOption, clientAddressCache, taskClientInstructions, taskHeading, ApprovedVacation, CalendarMode, taskMemberName, RowHandlers, tasksRouteApi, splitClientHeading, weekColumnsTemplate } from "./shared";
+import type { CSSProperties } from "react";
 import { FilterChip, TaskRefusalHistory, PauseSummary, ActionButton, CompletionNoteBlock, ClientFilterEmptyState } from "./list";
 
 export function TaskPlanningCalendar({
@@ -320,7 +321,21 @@ export function TaskPlanningCalendar({
             )}
 
             {mode === "week" && (
-              <div className="grid gap-3 p-4 lg:grid-cols-7">
+              <div
+                className="grid gap-3 p-4 lg:[grid-template-columns:var(--week-cols)]"
+                style={
+                  {
+                    // 22/11/2026 (tablet): dias sem tarefas ficam estreitos; os outros ganham largura.
+                    "--week-cols": weekColumnsTemplate(
+                      weekDays.map(
+                        (day) =>
+                          tasksForKey(groupTasks, dateKey(day)).length +
+                          vacationsForKey(groupVacations, dateKey(day)).length,
+                      ),
+                    ),
+                  } as CSSProperties
+                }
+              >
                 {weekDays.map((day) => (
                   <CalendarDayColumn
                     key={dateKey(day)}
@@ -791,6 +806,23 @@ export function TaskCalendar({
   );
 }
 
+/** Nome do cliente: prefixo curto pequeno + morada/nome em destaque, a quebrar entre palavras. */
+export function TaskCardHeading({ name }: { name: string }) {
+  const { prefix, main } = splitClientHeading(name);
+  return (
+    <div className="leading-snug" title={name} data-testid="task-card-heading">
+      {prefix && (
+        <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          {prefix}
+        </div>
+      )}
+      <div className="hyphens-auto text-sm font-semibold [overflow-wrap:anywhere] [word-break:normal]">
+        {main}
+      </div>
+    </div>
+  );
+}
+
 export function CalendarTaskCard({
   task,
   members,
@@ -848,19 +880,36 @@ export function CalendarTaskCard({
         event.dataTransfer.setData("text/task-id", task.id);
       }}
     >
-      <div className="flex items-start justify-between gap-1">
-        <div className="flex min-w-0 items-start gap-2">
-          {isManager && onToggleTaskSelection && (
-            <input
-              type="checkbox"
-              aria-label={`Selecionar tarefa ${task.title}`}
-              checked={selectedTaskIds?.has(task.id) ?? false}
-              onChange={() => onToggleTaskSelection(task.id)}
-              className="mt-1 h-4 w-4 accent-primary"
-            />
-          )}
+      {/* 22/11/2026 (tablet): seleção e lápis numa linha própria; o nome ocupa a largura toda. */}
+      <div className="space-y-1">
+        {isManager && (
+          <div className="flex items-center justify-between" data-testid="task-card-toolbar">
+            {onToggleTaskSelection ? (
+              <input
+                type="checkbox"
+                aria-label={`Selecionar tarefa ${task.title}`}
+                checked={selectedTaskIds?.has(task.id) ?? false}
+                onChange={() => onToggleTaskSelection(task.id)}
+                className="h-4 w-4 accent-primary"
+              />
+            ) : (
+              <span />
+            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 w-7 shrink-0 p-0"
+              title={actionsOpen ? "Ocultar ações" : "Editar e mais ações"}
+              aria-expanded={actionsOpen}
+              onClick={() => setActionsOpen((open) => !open)}
+            >
+              <Pencil className="h-3 w-3" />
+            </Button>
+          </div>
+        )}
+        <div>
           <div className="min-w-0">
-            <div className="break-words text-sm font-semibold leading-snug">{taskHeading(task)}</div>
+            <TaskCardHeading name={taskHeading(task)} />
             <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
               {start || end ? (
                 <span className="font-mono">
@@ -883,18 +932,6 @@ export function CalendarTaskCard({
             {!isManager && <TaskClientDetails task={task} />}
           </div>
         </div>
-        {isManager && (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="shrink-0"
-            title={actionsOpen ? "Ocultar ações" : "Editar e mais ações"}
-            aria-expanded={actionsOpen}
-            onClick={() => setActionsOpen((open) => !open)}
-          >
-            <Pencil className="h-3 w-3" />
-          </Button>
-        )}
       </div>
       <div className="flex flex-wrap items-center gap-1">
         {lateStartMinutes != null ? (

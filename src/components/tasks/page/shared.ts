@@ -7,7 +7,8 @@ import { type TaskAction, type TaskRow, type TimeEntryRow } from "@/lib/tasks";
 
 import { type TaskRefusalRecord } from "@/lib/task-refusal-view";
 
-export const tt = (key: string, opts?: Record<string, unknown>) => i18n.t(key, { defaultValue: key, ...opts }) as string;
+export const tt = (key: string, opts?: Record<string, unknown>) =>
+  i18n.t(key, { defaultValue: key, ...opts }) as string;
 
 // Filtros aceitos via search-params. `atrasadas` e `canceladas` são filtros
 // derivados e compartilham as regras canônicas do dashboard.
@@ -46,7 +47,11 @@ export const clientNameCache = new Map<string, string>();
 /** "Instruções adicionais" do cliente (clients.instructions), para o calendário. Vazio = sem instruções. */
 export const clientInstructionsCache = new Map<string, string>();
 /** Endereço do cliente (clients.address / geo) para a lista e o calendário de tarefas. */
-export type TaskClientAddressInfo = { address: string | null; lat: number | null; lng: number | null };
+export type TaskClientAddressInfo = {
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+};
 export const clientAddressCache = new Map<string, TaskClientAddressInfo>();
 export function taskClientInstructions(t: { client_id?: string | null }): string | undefined {
   return t.client_id ? clientInstructionsCache.get(t.client_id) : undefined;
@@ -84,7 +89,11 @@ export type TaskMember = {
  * liste, pesquise ou selecione funcionário. O corte, quando necessário, é
  * apenas visual (CSS truncate + tooltip), nunca na lógica ou no dado exibido.
  */
-export function taskMemberName(members: readonly TaskMember[], id: string | null, unassigned = "Sem responsável") {
+export function taskMemberName(
+  members: readonly TaskMember[],
+  id: string | null,
+  unassigned = "Sem responsável",
+) {
   if (!id) return unassigned;
   return members.find((member) => member.id === id)?.full_name?.trim() || "Funcionário";
 }
@@ -122,3 +131,25 @@ export interface RowHandlers {
 }
 /** Search params da rota /app/tarefas, para os componentes fora do ficheiro da rota. */
 export const tasksRouteApi = getRouteApi("/app/tarefas");
+
+/**
+ * 22/11/2026 (tablet): "HappyKot - CASTER 4 CM" → prefixo pequeno "HappyKot"
+ * + destaque "CASTER 4 CM". Só separa quando o prefixo é curto (≤ 20) — assim
+ * "Trabalho novo perto do Spork cafe - CM" fica inteiro.
+ */
+export function splitClientHeading(name: string): { prefix: string | null; main: string } {
+  const m = /^(.{2,20}?)\s+-\s+(.{3,})$/.exec((name ?? "").trim());
+  return m
+    ? { prefix: m[1].trim(), main: m[2].trim() }
+    : { prefix: null, main: (name ?? "").trim() };
+}
+
+/**
+ * 22/11/2026 (tablet): colunas da vista Semana — dia sem nada fica estreito
+ * (o mínimo para o cabeçalho), os dias com tarefas dividem o resto. Se a
+ * semana estiver toda vazia, colunas iguais.
+ */
+export function weekColumnsTemplate(countsPerDay: number[]): string {
+  if (countsPerDay.every((n) => n === 0)) return "repeat(7, minmax(0, 1fr))";
+  return countsPerDay.map((n) => (n > 0 ? "minmax(0, 1fr)" : "minmax(4.5rem, 0.35fr)")).join(" ");
+}
