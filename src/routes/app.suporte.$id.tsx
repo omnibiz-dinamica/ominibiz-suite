@@ -1048,6 +1048,8 @@ function SupportDetailPage() {
         requesterName={requesterQ.data?.requester_full_name ?? requesterQ.data?.requester_email ?? null}
         employees={employeesQ.data ?? []}
         onDone={() => invalidateSupportTicket(qc, id)}
+        asRequester={closeCtx.isRequester && !closeCtx.isCompanyManager && !isSuperAdmin}
+        destinationName={t.destination_code ? destinationLabel(t.destination_code, destinations) : null}
       />
 
       <ArchiveTicketDialog

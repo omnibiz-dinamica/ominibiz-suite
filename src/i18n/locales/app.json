@@ -3963,5 +3963,95 @@
   "The copy is on the same day and time as the original task. Choose another date or turn on the recurrence.",
   "De kopie staat op dezelfde dag en hetzelfde uur als de oorspronkelijke taak. Kies een andere datum of zet de herhaling aan.",
   "La copie est au même jour et à la même heure que la tâche d'origine. Choisissez une autre date ou activez la récurrence."
+ ],
+ "Este ticket está encerrado. Ao enviar uma nova mensagem, ele será reaberto.": [
+  "This ticket is closed. Sending a new message will reopen it.",
+  "Dit ticket is afgesloten. Door een nieuw bericht te sturen wordt het heropend.",
+  "Ce ticket est clôturé. L'envoi d'un nouveau message le rouvrira."
+ ],
+ "Mensagem": [
+  "Message",
+  "Bericht",
+  "Message"
+ ],
+ "Descreva a situação ou a orientação para quem vai continuar.": [
+  "Describe the situation or the guidance for whoever continues.",
+  "Beschrijf de situatie of de instructie voor wie verdergaat.",
+  "Décrivez la situation ou les consignes pour la personne qui poursuit."
+ ],
+ "Escreva a mensagem…": [
+  "Write the message…",
+  "Schrijf het bericht…",
+  "Écrivez le message…"
+ ],
+ "Ticket": [
+  "Ticket",
+  "Ticket",
+  "Ticket"
+ ],
+ "Número": [
+  "Number",
+  "Nummer",
+  "Numéro"
+ ],
+ "Título": [
+  "Title",
+  "Titel",
+  "Titre"
+ ],
+ "Status atual": [
+  "Current status",
+  "Huidige status",
+  "Statut actuel"
+ ],
+ "O ticket volta para:": [
+  "The ticket goes back to:",
+  "Het ticket gaat terug naar:",
+  "Le ticket retourne à :"
+ ],
+ "Gestão": [
+  "Management",
+  "Beheer",
+  "Gestion"
+ ],
+ "(Em análise pelo gestor)": [
+  "(Under manager review)",
+  "(In behandeling bij de manager)",
+  "(En analyse par le responsable)"
+ ],
+ "Ticket reaberto. A gestão foi avisada.": [
+  "Ticket reopened. Management has been notified.",
+  "Ticket heropend. Het beheer is verwittigd.",
+  "Ticket rouvert. La gestion a été prévenue."
+ ],
+ "Só quem abriu o ticket pode reabri-lo.": [
+  "Only the person who opened the ticket can reopen it.",
+  "Alleen wie het ticket opende kan het heropenen.",
+  "Seule la personne qui a ouvert le ticket peut le rouvrir."
+ ],
+ "Este ticket já está aberto.": [
+  "This ticket is already open.",
+  "Dit ticket is al open.",
+  "Ce ticket est déjà ouvert."
+ ],
+ "Escreva uma mensagem para reabrir o ticket.": [
+  "Write a message to reopen the ticket.",
+  "Schrijf een bericht om het ticket te heropenen.",
+  "Écrivez un message pour rouvrir le ticket."
+ ],
+ "A reabertura pelo funcionário ainda não está ativa. Fale com a gestão.": [
+  "Reopening by the employee is not active yet. Talk to management.",
+  "Heropenen door de medewerker is nog niet actief. Spreek met het beheer.",
+  "La réouverture par le collaborateur n'est pas encore active. Parlez à la gestion."
+ ],
+ "Não foi possível reabrir o ticket.": [
+  "Could not reopen the ticket.",
+  "Kon het ticket niet heropenen.",
+  "Impossible de rouvrir le ticket."
+ ],
+ "Resolvido pelo gestor": [
+  "Resolved by manager",
+  "Opgelost door de manager",
+  "Résolu par le responsable"
  ]
 }

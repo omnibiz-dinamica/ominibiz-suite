@@ -107,6 +107,18 @@ export async function reopenTicket(ticketId: string, reason: string): Promise<vo
 }
 
 /**
+ * 22/11/2026 — quem abriu o ticket reabre-o (RPC support_requester_reopen):
+ * volta à mesma fila em "Em análise pelo gestor", com a mensagem na conversa.
+ */
+export async function requesterReopenTicket(ticketId: string, message: string): Promise<void> {
+  const { error } = await (supabase as any).rpc("support_requester_reopen", {
+    _ticket_id: ticketId,
+    _message: message.trim(),
+  });
+  if (error) throw error;
+}
+
+/**
  * Reabertura atómica com mensagem + encaminhamento (ADR-029).
  * Toda a lógica (validação, status, evento append-only e notificação)
  * vive na RPC public.reopen_support_ticket_with_message.
