@@ -28,6 +28,7 @@ import {
   type ReassignScope,
 } from "@/lib/tasks";
 import { addWallMinutes } from "@/lib/tasks/contracted-hours";
+import { durationFromTimes, endTimeFromDuration } from "@/lib/tasks/start-end-time";
 import { localDateToDateKey } from "@/lib/tasks/custom-recurrence";
 import { formatWallDate, formatWallTime, wallDateTimeToISO, wallInputToISO, wallISOToInput } from "@/lib/wall-clock";
 import { AlertTriangle, Repeat } from "lucide-react";
@@ -405,11 +406,15 @@ export function EditRecurrenceDialog({
 
             {scope === "this" ? (
               <div className="space-y-1.5 col-span-2">
-                <Label>Data/hora</Label>
+                <Label>Data e hora de início</Label>
                 <Input
                   type="datetime-local"
                   value={scheduledFor}
                   onChange={(e) => {
+                    // 22/11/2026: a hora de fim fica igual; a duração ajusta-se.
+                    const keepEnd = endTimeFromDuration(scheduledFor.slice(11, 16), duration);
+                    if (keepEnd && /T\d{2}:\d{2}/.test(e.target.value))
+                      setDuration(durationFromTimes(e.target.value.slice(11, 16), keepEnd));
                     setScheduledFor(e.target.value);
                     // SUP-318: a hora escolhida segue para o campo da série se mudar o âmbito.
                     if (/T\d{2}:\d{2}/.test(e.target.value)) setScheduledTime(e.target.value.slice(11, 16));
@@ -418,11 +423,15 @@ export function EditRecurrenceDialog({
               </div>
             ) : (
               <div className="space-y-1.5">
-                <Label>Horário</Label>
+                <Label>Hora de início</Label>
                 <Input
                   type="time"
                   value={scheduledTime}
                   onChange={(e) => {
+                    // 22/11/2026: a hora de fim fica igual; a duração ajusta-se.
+                    const keepEnd = endTimeFromDuration(scheduledTime, duration);
+                    if (keepEnd && /^\d{2}:\d{2}$/.test(e.target.value))
+                      setDuration(durationFromTimes(e.target.value, keepEnd));
                     setScheduledTime(e.target.value);
                     // SUP-318: mantém a hora igual se voltar a "Apenas esta ocorrência".
                     if (scheduledFor.length >= 16 && /^\d{2}:\d{2}$/.test(e.target.value))
@@ -431,15 +440,24 @@ export function EditRecurrenceDialog({
                 />
               </div>
             )}
-            <div className="space-y-1.5">
-              <Label>Duração (min)</Label>
+            <div className="space-y-1.5" data-testid="recurrence-end-time">
+              <Label>Hora de fim</Label>
               <Input
-                type="number"
-                min={0}
-                max={1440}
-                value={duration}
-                onChange={(e) => setDuration(Number(e.target.value) || 0)}
+                type="time"
+                value={endTimeFromDuration(
+                  scope === "this" ? scheduledFor.slice(11, 16) : scheduledTime,
+                  duration,
+                )}
+                onChange={(e) => {
+                  const start = scope === "this" ? scheduledFor.slice(11, 16) : scheduledTime;
+                  setDuration(e.target.value ? durationFromTimes(start, e.target.value) : 0);
+                }}
               />
+              {duration > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Duração: {Math.floor(duration / 60)}h{String(duration % 60).padStart(2, "0")}
+                </p>
+              )}
             </div>
 
             {scope !== "this" && recurrence?.frequency !== "custom" && (
