@@ -3943,5 +3943,25 @@
   "The series goes back to how it was and the tasks deleted by this edit come back. This can only be done once, within 24 hours, and only if no task of the series has been started since.",
   "De reeks wordt teruggezet zoals ze was en de taken die door deze wijziging verwijderd werden komen terug. Dit kan maar één keer, binnen 24 uur, en enkel als er intussen geen taak van de reeks gestart is.",
   "La série revient à son état précédent et les tâches supprimées par cette modification sont rétablies. Possible une seule fois, dans les 24 heures, et seulement si aucune tâche de la série n'a été démarrée entre-temps."
+ ],
+ "Precisa da mesma tarefa noutra data ou como recorrência nova?": [
+  "Need the same task on another date or as a new recurrence?",
+  "Dezelfde taak nodig op een andere datum of als nieuwe herhaling?",
+  "Besoin de la même tâche à une autre date ou en nouvelle récurrence ?"
+ ],
+ "Copiar tarefa": [
+  "Copy task",
+  "Taak kopiëren",
+  "Copier la tâche"
+ ],
+ "Cópia de uma tarefa: escolha a nova data ou ative a recorrência abaixo. A tarefa original não muda.": [
+  "Copy of a task: choose the new date or turn on the recurrence below. The original task does not change.",
+  "Kopie van een taak: kies de nieuwe datum of zet de herhaling hieronder aan. De oorspronkelijke taak verandert niet.",
+  "Copie d'une tâche : choisissez la nouvelle date ou activez la récurrence ci-dessous. La tâche d'origine ne change pas."
+ ],
+ "A cópia está no mesmo dia e hora da tarefa original. Escolha outra data ou ative a recorrência.": [
+  "The copy is on the same day and time as the original task. Choose another date or turn on the recurrence.",
+  "De kopie staat op dezelfde dag en hetzelfde uur als de oorspronkelijke taak. Kies een andere datum of zet de herhaling aan.",
+  "La copie est au même jour et à la même heure que la tâche d'origine. Choisissez une autre date ou activez la récurrence."
  ]
 }

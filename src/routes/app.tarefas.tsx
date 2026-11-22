@@ -89,6 +89,11 @@ function TasksPage() {
   const navigate = Route.useNavigate();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<TaskRow | null>(null);
+  // 22/11/2026: "Copiar tarefa" (na edição) abre uma nova tarefa com os mesmos dados.
+  const [copySource, setCopySource] = useState<{
+    values: TaskFormDraft;
+    origin: { startDate: string; startTime: string; assignees: string[] };
+  } | null>(null);
 
   // ----- Rascunho automático do formulário de tarefa (criar/editar) -----
   // O diálogo desmonta o TaskForm, por isso o rascunho vive aqui: o
@@ -1195,6 +1200,7 @@ function TasksPage() {
               onOpenChange={(v) => {
                 // Fechar por ESC/clique fora: mantém o rascunho com open:false.
                 if (!v && taskDraftValues && taskDraftDirty) taskDraft.save(taskDraftValues, { open: false });
+                if (!v) setCopySource(null);
                 setOpen(v);
               }}
             >
@@ -1206,26 +1212,30 @@ function TasksPage() {
               <DialogContent size="lg">
                 <ModalHeader
                   icon={ListTodo}
-                  title="Nova tarefa"
+                  title={copySource ? "Copiar tarefa" : "Nova tarefa"}
                   description="Crie uma tarefa e atribua a um colaborador."
                 />
                 <TaskForm
+                  key={copySource ? "copy" : "new"}
                   formId="task-form-create"
+                  copyOf={copySource?.origin ?? null}
                   members={withMemberDetails(activeMembers ?? [])}
                   clients={clientsList ?? []}
                   companyId={currentCompanyId}
                   userId={user!.id}
-                  draftValues={taskDraft.restored}
-                  draftSavedAt={taskDraft.savedAt}
-                  draftConflict={taskDraft.conflict}
+                  draftValues={copySource ? copySource.values : taskDraft.restored}
+                  draftSavedAt={copySource ? null : taskDraft.savedAt}
+                  draftConflict={copySource ? false : taskDraft.conflict}
                   onDraftValues={handleTaskDraftValues}
                   onDraftDiscard={clearTaskDraft}
                   onCancel={() => {
                     clearTaskDraft();
+                    setCopySource(null);
                     setOpen(false);
                   }}
                   onDone={(saved) => {
                     clearTaskDraft();
+                    setCopySource(null);
                     setOpen(false);
                     // A tarefa criada entra já na lista; a releitura completa segue em segundo plano.
                     if (currentCompanyId) void showSavedTasks(qc, currentCompanyId, saved);
@@ -1278,6 +1288,15 @@ function TasksPage() {
                 void showSavedTasks(qc, editing.company_id, saved);
               }}
               documentsSlot={<TaskDocuments taskId={editing.id} companyId={editing.company_id} canManage={isManager} />}
+              onCopy={(values) => {
+                clearTaskDraft();
+                setEditing(null);
+                setCopySource({
+                  values,
+                  origin: { startDate: values.startDate, startTime: values.startTime, assignees: values.assignees },
+                });
+                setOpen(true);
+              }}
               onEditSeries={
                 editing.recurrence_id
                   ? () => {

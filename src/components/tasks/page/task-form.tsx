@@ -34,7 +34,7 @@ import { toast } from "sonner";
 import { fetchClientSchedule, slotsForDate, nextDateForSchedule, describeSlot, chosenScheduleDateWarning, editScheduleName, savedScheduleSlotId, slotTimesForTeam, teamStartTimeFor, type ClientScheduleSlot } from "@/lib/tasks/client-schedule";
 import { clientTeamType } from "@/lib/tasks/client-team";
 import { addWallMinutes, resolveWallEndDate, distributeContractedMinutes, formatContractedMinutes } from "@/lib/tasks/contracted-hours";
-import { X, Upload, FileText, Search, AlertTriangle, Check, ChevronDown, Repeat } from "lucide-react";
+import { X, Upload, FileText, Search, AlertTriangle, Check, ChevronDown, Repeat, Copy } from "lucide-react";
 import { PUNCH_MODE_LABELS, type TaskRow, type PunchMode, checkTaskScheduleConflicts, type TaskScheduleConflict, previewRecurrenceDates } from "@/lib/tasks";
 
 import { RecurrenceForm, emptyRecurrence, type RecurrenceFormValue } from "@/components/tasks/RecurrenceForm";
@@ -101,6 +101,8 @@ export function TaskForm({
   onDone,
   documentsSlot,
   onEditSeries,
+  onCopy,
+  copyOf = null,
   draftValues = null,
   draftSavedAt = null,
   draftConflict = false,
@@ -131,6 +133,10 @@ export function TaskForm({
   documentsSlot?: ReactNode;
   /** SUP-318: tarefa de série — abre "Editar série" (esta e as futuras). */
   onEditSeries?: () => void;
+  /** 22/11/2026: "Copiar" (na edição) — abre uma nova tarefa com estes valores. */
+  onCopy?: (values: TaskFormDraft) => void;
+  /** Nova tarefa criada a partir de "Copiar": data/hora/funcionários da original. */
+  copyOf?: { startDate: string; startTime: string; assignees: string[] } | null;
   draftValues?: TaskFormDraft | null;
   draftSavedAt?: number | null;
   draftConflict?: boolean;
@@ -699,6 +705,44 @@ export function TaskForm({
             )}
           </div>
         )}
+        {initial && onCopy && (
+          <div className="flex flex-col gap-2 rounded-md border border-border bg-muted/40 p-3 text-xs sm:flex-row sm:items-center sm:justify-between">
+            <span>{tt("Precisa da mesma tarefa noutra data ou como recorrência nova?")}</span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              data-testid="task-copy"
+              onClick={() =>
+                onCopy({
+                  title,
+                  description,
+                  assignees,
+                  clientId,
+                  priority,
+                  startDate,
+                  startTime,
+                  endDate,
+                  endTime,
+                  graceMinutes,
+                  punchMode,
+                  recurrence: { ...recurrence, enabled: false },
+                  manualEndOverride: true,
+                })
+              }
+            >
+              <Copy className="h-3.5 w-3.5" /> {tt("Copiar tarefa")}
+            </Button>
+          </div>
+        )}
+        {copyOf && (
+          <p
+            data-testid="task-copy-note"
+            className="rounded-md border border-primary/30 bg-primary/5 p-3 text-xs"
+          >
+            {tt("Cópia de uma tarefa: escolha a nova data ou ative a recorrência abaixo. A tarefa original não muda.")}
+          </p>
+        )}
         {draftSavedAt !== null && (
           <DraftNotice
             savedAt={draftSavedAt}
@@ -728,6 +772,17 @@ export function TaskForm({
               if (assignees.length === 0) {
                 toast.error("Selecione pelo menos um funcionário para esta tarefa.");
                 document.getElementById("task-assignee-search")?.focus();
+                return;
+              }
+              // Cópia: não grava uma segunda tarefa igual no mesmo dia e hora.
+              if (
+                copyOf &&
+                !recurrence.enabled &&
+                startDate === copyOf.startDate &&
+                startTime === copyOf.startTime &&
+                assignees.some((id) => copyOf.assignees.includes(id))
+              ) {
+                toast.error(tt("A cópia está no mesmo dia e hora da tarefa original. Escolha outra data ou ative a recorrência."));
                 return;
               }
               if (!initial && recurrence.enabled && recurrence.frequency === "custom") {
