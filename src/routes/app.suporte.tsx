@@ -70,7 +70,9 @@ function SupportRouteContent() {
 }
 
 function SupportListPage() {
-  const { currentCompanyId, isSuperAdmin } = useAuth();
+  const { currentCompanyId, isSuperAdmin, isManager } = useAuth();
+  // 22/11/2026: funcionário → "Fale com a empresa" (pedidos à empresa, não ao sistema).
+  const employeeView = !isManager && !isSuperAdmin;
   const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<"" | SupportTicketStatus>("");
@@ -166,9 +168,13 @@ function SupportListPage() {
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-semibold tracking-tight">{tr("Central de Suporte")}</h1>
+          <h1 className="font-display text-2xl font-semibold tracking-tight">
+            {employeeView ? tr("Fale com a empresa") : tr("Meu Suporte")}
+          </h1>
           <p className="text-sm text-muted-foreground">
-            {tr("Envie pedidos, dúvidas e problemas diretamente à equipe do OmniBiz.")}
+            {employeeView
+              ? tr("Envie pedidos, dúvidas e problemas à sua empresa: horários, salário, férias, material e outros assuntos.")
+              : tr("Envie pedidos, dúvidas e problemas diretamente à equipe do OmniBiz.")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -178,7 +184,7 @@ function SupportListPage() {
             </Button>
           )}
           <Button onClick={() => setDialogOpen(true)} disabled={!currentCompanyId}>
-            <Plus className="mr-1.5 h-4 w-4" /> {tr("Novo ticket")}
+            <Plus className="mr-1.5 h-4 w-4" /> {employeeView ? tr("Novo pedido") : tr("Novo ticket")}
           </Button>
         </div>
       </header>
@@ -252,7 +258,9 @@ function SupportListPage() {
           <LifeBuoy className="h-10 w-10 text-muted-foreground" />
           <h2 className="mt-3 font-display text-lg font-semibold">{tr("Nenhum ticket")}</h2>
           <p className="mt-1 max-w-md text-sm text-muted-foreground">
-            {tr("Você ainda não abriu nenhum ticket. Use o botão “Novo ticket” para enviar sua primeira solicitação.")}
+            {employeeView
+              ? tr("Ainda não fez nenhum pedido. Use o botão “Novo pedido” para falar com a empresa.")
+              : tr("Você ainda não abriu nenhum ticket. Use o botão “Novo ticket” para enviar sua primeira solicitação.")}
           </p>
         </div>
       ) : (

@@ -204,10 +204,11 @@ function employeeGroups(employeeHasVehicle: boolean): NavGroup[] {
       items: [{ to: "/app/frota", label: "Frota", icon: Car, module: "fleet" }],
     });
   }
+  // 22/11/2026: para o funcionário é um pedido à empresa (RH, horário, material…), não ao sistema.
   groups.push({
     id: "suporte",
-    label: "Suporte",
-    items: [{ to: "/app/suporte", label: "Meu Suporte", icon: LifeBuoy, module: "support" }],
+    label: "Empresa",
+    items: [{ to: "/app/suporte", label: "Fale com a empresa", icon: MessageSquare, module: "support" }],
   });
   groups.push({ id: "conta", label: "Conta", items: [{ to: "/app/perfil", label: "Perfil", icon: UserCircle }] });
   return groups;
@@ -298,7 +299,8 @@ function managerGroups(args: { superAdminOperating: boolean; vertical: BusinessV
     {
       id: "suporte",
       label: "Suporte",
-      items: [{ to: "/app/suporte", label: "Central de Suporte", icon: LifeBuoy, module: "support" }],
+      // 22/11/2026: a gestão usa esta área para pedidos ao sistema (OmniBiz) e tickets da equipa.
+      items: [{ to: "/app/suporte", label: "Meu Suporte", icon: LifeBuoy, module: "support" }],
     },
     {
       id: "outros",

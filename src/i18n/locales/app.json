@@ -4053,5 +4053,40 @@
   "Resolved by manager",
   "Opgelost door de manager",
   "Résolu par le responsable"
+ ],
+ "Fale com a empresa": [
+  "Talk to the company",
+  "Contact met het bedrijf",
+  "Parler à l'entreprise"
+ ],
+ "Meu Suporte": [
+  "My Support",
+  "Mijn ondersteuning",
+  "Mon support"
+ ],
+ "Envie pedidos, dúvidas e problemas à sua empresa: horários, salário, férias, material e outros assuntos.": [
+  "Send requests, questions and problems to your company: schedules, salary, holidays, supplies and other matters.",
+  "Stuur aanvragen, vragen en problemen naar uw bedrijf: uurroosters, loon, verlof, materiaal en andere zaken.",
+  "Envoyez demandes, questions et problèmes à votre entreprise : horaires, salaire, congés, matériel et autres sujets."
+ ],
+ "Novo pedido": [
+  "New request",
+  "Nieuwe aanvraag",
+  "Nouvelle demande"
+ ],
+ "Ainda não fez nenhum pedido. Use o botão “Novo pedido” para falar com a empresa.": [
+  "You haven't made any request yet. Use the “New request” button to talk to the company.",
+  "U hebt nog geen aanvraag gedaan. Gebruik de knop “Nieuwe aanvraag” om contact op te nemen met het bedrijf.",
+  "Vous n'avez encore fait aucune demande. Utilisez le bouton « Nouvelle demande » pour parler à l'entreprise."
+ ],
+ "Novo pedido à empresa": [
+  "New request to the company",
+  "Nieuwe aanvraag aan het bedrijf",
+  "Nouvelle demande à l'entreprise"
+ ],
+ "O seu pedido vai para a empresa (Secretária). Explique o que precisa com o máximo de detalhes.": [
+  "Your request goes to the company (Secretary). Explain what you need in as much detail as possible.",
+  "Uw aanvraag gaat naar het bedrijf (secretariaat). Leg zo gedetailleerd mogelijk uit wat u nodig hebt.",
+  "Votre demande va à l'entreprise (secrétariat). Expliquez ce dont vous avez besoin avec un maximum de détails."
  ]
 }

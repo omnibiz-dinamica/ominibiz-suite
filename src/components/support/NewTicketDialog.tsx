@@ -30,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { tr } from "@/i18n";
 import { useAuth } from "@/lib/auth";
 import {
   ALLOWED_ATTACHMENT_MIME,
@@ -293,8 +294,12 @@ export function NewTicketDialog({
       <DialogContent size="lg">
         <ModalHeader
           icon={LifeBuoy}
-          title="Nova solicitação de suporte"
-          description="Envie diretamente para a equipe do OmniBiz. Preencha o máximo de detalhes possível."
+          title={canChooseDestination ? "Nova solicitação de suporte" : tr("Novo pedido à empresa")}
+          description={
+            canChooseDestination
+              ? "Envie diretamente para a equipe do OmniBiz. Preencha o máximo de detalhes possível."
+              : tr("O seu pedido vai para a empresa (Secretária). Explique o que precisa com o máximo de detalhes.")
+          }
         />
 
         <ModalBody className="space-y-4">
