@@ -4,12 +4,15 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { RecordHistoryMenu } from "@/components/history/RecordHistoryMenu";
-import { Clock, Pencil, Repeat, UserCog, Users, Trash2, CalendarDays, Building2, ChevronLeft, ChevronRight, FileText, Info as InfoIcon, MapPin as MapPinIcon, ChevronDown as ChevronDownIcon, StickyNote } from "lucide-react";
+import { Clock, Pencil, Repeat, UserCog, Users, Trash2, CalendarDays, Building2, ChevronLeft, ChevronRight, FileText, Info as InfoIcon, MapPin as MapPinIcon, ChevronDown as ChevronDownIcon, StickyNote, FileDown } from "lucide-react";
 import { STATUS_LABELS, STATUS_TONE, type TaskRow, availableActions, formatStartedLateMinutes, isVisuallyLate, resolveOperationalStatus, startedLateMinutes, AUTO_RECURRENCE_BADGE_LABEL, AUTO_RECURRENCE_BADGE_TITLE } from "@/lib/tasks";
 
 import { currentTaskCancellation, currentTaskRefusal } from "@/lib/task-refusal-view";
 
 import { taskCalendarDateKey, tasksForCalendarDay } from "@/lib/tasks/calendar-filter";
+import { downloadCalendarPdf, planCalendarPdf } from "@/lib/tasks/calendar-pdf";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
 import { sortTasksForList } from "@/lib/tasks/list-order";
 import { taskOperationalDay } from "@/lib/tasks/dashboard-counters";
 import { wallISOToDateInput, formatWallDate, formatWallTime, formatLocalTime } from "@/lib/wall-clock";
@@ -42,6 +45,8 @@ export function TaskPlanningCalendar({
 }) {
   const [mode, setMode] = useState<CalendarMode>("week");
   const [cursor, setCursor] = useState(() => new Date());
+  const [exporting, setExporting] = useState(false);
+  const { currentCompanyId } = useAuth();
   // Notificação: posiciona o calendário na data da tarefa aberta.
   const calendarFocusTaskId = tasksRouteApi.useSearch().task;
   const calendarFocusDay = useMemo(() => {
@@ -161,6 +166,50 @@ export function TaskPlanningCalendar({
     return labelA.localeCompare(labelB);
   });
 
+  // 22/11/2026: PDF da semana mostrada — selecionadas ou, sem seleção, todas as do calendário.
+  const exportWeekPdf = async () => {
+    const plan = planCalendarPdf({
+      tasks,
+      selectedIds: handlers.selectedTaskIds,
+      anyDayOfWeek: dateKey(cursor),
+      groupBy,
+      memberName,
+      clientName,
+    });
+    if (plan.taskCount === 0) {
+      toast.error(
+        plan.source === "selecionadas"
+          ? "Nenhuma das tarefas selecionadas está nesta semana."
+          : "Não há tarefas nesta semana.",
+      );
+      return;
+    }
+    setExporting(true);
+    try {
+      type CompanyBrand = { name?: string | null; primary_color?: string | null };
+      let company: CompanyBrand | null = null;
+      if (currentCompanyId) {
+        const { data } = await supabase
+          .from("companies")
+          .select("*")
+          .eq("id", currentCompanyId)
+          .maybeSingle();
+        company = (data as CompanyBrand | null) ?? null;
+      }
+      await downloadCalendarPdf(plan, {
+        groupBy,
+        companyName: company?.name ?? null,
+        primaryColor: company?.primary_color ?? null,
+      });
+      toast.success(`PDF da semana com ${plan.taskCount} tarefa(s).`);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setExporting(false);
+    }
+  };
+  const selectedCount = handlers.selectedTaskIds?.size ?? 0;
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card px-3 py-3">
@@ -188,6 +237,22 @@ export function TaskPlanningCalendar({
             <FilterChip key={key} label={label} active={mode === key} onClick={() => setMode(key)} />
           ))}
         </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          data-testid="calendar-export-pdf"
+          disabled={exporting}
+          title={
+            selectedCount > 0
+              ? `PDF da semana só com as ${selectedCount} tarefa(s) selecionada(s)`
+              : "PDF da semana com todas as tarefas do calendário"
+          }
+          onClick={() => void exportWeekPdf()}
+        >
+          <FileDown className="mr-1 h-4 w-4" />
+          {exporting ? "A gerar…" : selectedCount > 0 ? `PDF da semana (${selectedCount})` : "PDF da semana"}
+        </Button>
       </div>
 
       {clientFilterActive && groupEntries.length === 0 && (
