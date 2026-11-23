@@ -53,6 +53,7 @@ import { useT } from "@/i18n";
 import { wallISOToDateInput, wallDateToEndOfDayISO, wallDateTimeToISO, formatWallDate, formatWallTime } from "@/lib/wall-clock";
 import { dailyShiftDurationMinutes, taskDurationMinutes, LONG_STANDALONE_TASK_MINUTES } from "@/lib/tasks/daily-shift-duration";
 import { tt, taskMemberName } from "./shared";
+import { applyPushMoves, fetchPushDayTasks, planPushSchedule, wallDayBounds, type PushMove, type PushPlan } from "@/lib/tasks/push-schedule";
 import type { SavedTasksResult } from "@/lib/tasks/fresh-tasks";
 
 export function taskSaveErrorMessage(error: unknown): string {
@@ -269,6 +270,10 @@ export function TaskForm({
   const [scheduleConflicts, setScheduleConflicts] = useState<TaskScheduleConflict[]>([]);
   const [scheduleCheckError, setScheduleCheckError] = useState<string | null>(null);
   const confirmedConflictsRef = useRef(false);
+  // 23/11/2026: "Empurrar as seguintes" — plano mostrado no aviso de sobreposição.
+  const [pushPlans, setPushPlans] = useState<{ assigneeId: string; name: string; plan: PushPlan }[] | null>(null);
+  const [pushLoading, setPushLoading] = useState(false);
+  const pushMovesRef = useRef<PushMove[]>([]);
 
   const handleRecurrenceChange = (next: RecurrenceFormValue) => {
     // A data inicial da recorrência é do usuário: a data principal apenas
@@ -1318,6 +1323,22 @@ export function TaskForm({
                 toast.error(error.message);
                 return;
               }
+              // 23/11/2026: tarefa criada → empurra as seguintes do mesmo dia (se o gestor escolheu).
+              if (!initial && pushMovesRef.current.length > 0) {
+                const moves = pushMovesRef.current;
+                pushMovesRef.current = [];
+                try {
+                  const moved = await applyPushMoves(companyId, moves);
+                  toast.success(tt("{{n}} tarefa(s) seguinte(s) passada(s) para depois.", { n: moved }));
+                } catch (pushError) {
+                  toast.warning(
+                    tt("Tarefa criada, mas não foi possível mudar o horário das seguintes: {{msg}}", {
+                      msg: (pushError as Error)?.message ?? "",
+                    }),
+                    { duration: 15000 },
+                  );
+                }
+              }
               if (!initial && createdTaskIds.length > 0 && pendingDocs.length > 0) {
                 try {
                   const uploadedForAllTasks: TaskDocument[] = [];
@@ -1983,6 +2004,7 @@ export function TaskForm({
         onOpenChange={(open) => {
           if (!open) {
             setScheduleConflicts([]);
+            setPushPlans(null);
           }
         }}
       >
@@ -1995,7 +2017,45 @@ export function TaskForm({
               Uma ou mais pessoas selecionadas já possuem tarefas neste período. A criação continua disponível.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="max-h-72 space-y-3 overflow-y-auto rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+          {pushPlans && (
+            <div
+              data-testid="push-schedule-plan"
+              className="max-h-72 space-y-3 overflow-y-auto rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm"
+            >
+              {pushPlans.map(({ assigneeId, name, plan }) => (
+                <div key={assigneeId} className="space-y-1">
+                  <p className="font-semibold text-foreground">{name}</p>
+                  {plan.moves.length === 0 && plan.blocked.length === 0 && (
+                    <p className="text-muted-foreground">{tt("Nada para empurrar.")}</p>
+                  )}
+                  {plan.moves.map((m) => (
+                    <p key={m.id}>
+                      <span className="font-medium">{m.label}</span>: {formatWallTime(m.fromStart)}–{formatWallTime(m.fromEnd)} →{" "}
+                      <span className="font-semibold text-primary">
+                        {formatWallTime(m.toStart)}–{formatWallTime(m.toEnd)}
+                      </span>
+                    </p>
+                  ))}
+                  {plan.blocked.map((b) => (
+                    <p key={b.id} className="text-warning-foreground">
+                      ⚠ {b.label} ({formatWallTime(b.start)}–{formatWallTime(b.end)}):{" "}
+                      {b.reason === "started"
+                        ? tt("já iniciada ou com ponto — não muda")
+                        : b.reason === "past_midnight"
+                          ? tt("passaria da meia-noite — não muda")
+                          : tt("começa antes da nova tarefa — não muda")}
+                    </p>
+                  ))}
+                </div>
+              ))}
+              <p className="text-xs text-muted-foreground">
+                {tt("Só muda este dia; cada tarefa mantém a sua duração. A série recorrente não muda.")}
+              </p>
+            </div>
+          )}
+          <div
+            className={`max-h-72 space-y-3 overflow-y-auto rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm ${pushPlans ? "hidden" : ""}`}
+          >
             {assignees.map((assigneeId) => {
               const employeeConflicts = scheduleConflicts.filter((conflict) => conflict.assignee_id === assigneeId);
               const member = members.find((m) => m.id === assigneeId);
@@ -2040,18 +2100,82 @@ export function TaskForm({
               );
             })}
           </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setScheduleConflicts([])}>Voltar e ajustar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(event) => {
-                event.preventDefault();
-                confirmedConflictsRef.current = true;
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-row">
+            <AlertDialogCancel
+              onClick={() => {
                 setScheduleConflicts([]);
-                (document.getElementById(formId) as HTMLFormElement | null)?.requestSubmit();
+                setPushPlans(null);
               }}
             >
-              Criar mesmo assim
-            </AlertDialogAction>
+              Voltar e ajustar
+            </AlertDialogCancel>
+            {!initial && !recurrence.enabled && !pushPlans && (
+              <Button
+                type="button"
+                variant="outline"
+                data-testid="push-schedule-preview"
+                disabled={pushLoading}
+                onClick={async () => {
+                  setPushLoading(true);
+                  try {
+                    const byAssignee = new Map<string, { start: string; end: string }>();
+                    for (const c of scheduleConflicts) {
+                      if (!byAssignee.has(c.assignee_id)) byAssignee.set(c.assignee_id, { start: c.proposed_start, end: c.proposed_end });
+                    }
+                    const plans: { assigneeId: string; name: string; plan: PushPlan }[] = [];
+                    for (const [assigneeId, proposal] of byAssignee) {
+                      const dateKey = wallISOToDateInput(proposal.start);
+                      const dayTasks = await fetchPushDayTasks(companyId, assigneeId, dateKey);
+                      const member = members.find((m) => m.id === assigneeId);
+                      plans.push({
+                        assigneeId,
+                        name: member?.full_name?.trim() || member?.email?.trim() || tt("Funcionário"),
+                        plan: planPushSchedule(proposal.start, proposal.end, dayTasks, wallDayBounds(dateKey).end),
+                      });
+                    }
+                    setPushPlans(plans);
+                  } catch (planError) {
+                    toast.error(
+                      tt("Não foi possível calcular os novos horários: {{msg}}", {
+                        msg: (planError as Error)?.message ?? "",
+                      }),
+                    );
+                  } finally {
+                    setPushLoading(false);
+                  }
+                }}
+              >
+                {pushLoading ? tt("A calcular…") : tt("Empurrar as seguintes")}
+              </Button>
+            )}
+            {pushPlans ? (
+              <AlertDialogAction
+                data-testid="push-schedule-confirm"
+                disabled={pushPlans.every((p) => p.plan.moves.length === 0)}
+                onClick={(event) => {
+                  event.preventDefault();
+                  pushMovesRef.current = pushPlans.flatMap((p) => p.plan.moves);
+                  confirmedConflictsRef.current = true;
+                  setScheduleConflicts([]);
+                  setPushPlans(null);
+                  (document.getElementById(formId) as HTMLFormElement | null)?.requestSubmit();
+                }}
+              >
+                {tt("Empurrar e criar")}
+              </AlertDialogAction>
+            ) : (
+              <AlertDialogAction
+                onClick={(event) => {
+                  event.preventDefault();
+                  pushMovesRef.current = [];
+                  confirmedConflictsRef.current = true;
+                  setScheduleConflicts([]);
+                  (document.getElementById(formId) as HTMLFormElement | null)?.requestSubmit();
+                }}
+              >
+                Criar mesmo assim
+              </AlertDialogAction>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -4088,5 +4088,60 @@
   "Your request goes to the company (Secretary). Explain what you need in as much detail as possible.",
   "Uw aanvraag gaat naar het bedrijf (secretariaat). Leg zo gedetailleerd mogelijk uit wat u nodig hebt.",
   "Votre demande va à l'entreprise (secrétariat). Expliquez ce dont vous avez besoin avec un maximum de détails."
+ ],
+ "Empurrar as seguintes": [
+  "Push the next ones",
+  "De volgende opschuiven",
+  "Décaler les suivantes"
+ ],
+ "Empurrar e criar": [
+  "Push and create",
+  "Opschuiven en aanmaken",
+  "Décaler et créer"
+ ],
+ "A calcular…": [
+  "Calculating…",
+  "Berekenen…",
+  "Calcul…"
+ ],
+ "Nada para empurrar.": [
+  "Nothing to push.",
+  "Niets op te schuiven.",
+  "Rien à décaler."
+ ],
+ "já iniciada ou com ponto — não muda": [
+  "already started or clocked — not changed",
+  "al gestart of met prikking — verandert niet",
+  "déjà démarrée ou pointée — inchangée"
+ ],
+ "passaria da meia-noite — não muda": [
+  "would go past midnight — not changed",
+  "zou over middernacht gaan — verandert niet",
+  "dépasserait minuit — inchangée"
+ ],
+ "começa antes da nova tarefa — não muda": [
+  "starts before the new task — not changed",
+  "begint vóór de nieuwe taak — verandert niet",
+  "commence avant la nouvelle tâche — inchangée"
+ ],
+ "Só muda este dia; cada tarefa mantém a sua duração. A série recorrente não muda.": [
+  "Only this day changes; each task keeps its duration. The recurring series does not change.",
+  "Alleen deze dag verandert; elke taak behoudt haar duur. De reeks verandert niet.",
+  "Seul ce jour change ; chaque tâche garde sa durée. La série récurrente ne change pas."
+ ],
+ "{{n}} tarefa(s) seguinte(s) passada(s) para depois.": [
+  "{{n}} following task(s) moved later.",
+  "{{n}} volgende taak/taken naar later verschoven.",
+  "{{n}} tâche(s) suivante(s) décalée(s)."
+ ],
+ "Tarefa criada, mas não foi possível mudar o horário das seguintes: {{msg}}": [
+  "Task created, but the next ones could not be rescheduled: {{msg}}",
+  "Taak aangemaakt, maar de volgende konden niet verschoven worden: {{msg}}",
+  "Tâche créée, mais les suivantes n'ont pas pu être décalées : {{msg}}"
+ ],
+ "Não foi possível calcular os novos horários: {{msg}}": [
+  "Could not calculate the new times: {{msg}}",
+  "Kon de nieuwe uren niet berekenen: {{msg}}",
+  "Impossible de calculer les nouveaux horaires : {{msg}}"
  ]
 }
