@@ -278,6 +278,8 @@ export function TaskPlanningCalendar({
               : key === "__no_client__"
                 ? vacations
                 : [];
+        // 24/11/2026: largar uma tarefa na linha de outra pessoa passa-a para essa pessoa.
+        const laneAssigneeId = groupBy === "assignee" && key !== "__unassigned__" ? key : null;
         const title =
           groupBy === "all"
             ? "Meu calendário"
@@ -317,6 +319,7 @@ export function TaskPlanningCalendar({
                   clients={clients}
                   groupBy={groupBy}
                   handlers={handlers}
+                  dropAssigneeId={laneAssigneeId}
                 />
               </div>
             )}
@@ -348,6 +351,7 @@ export function TaskPlanningCalendar({
                     clients={clients}
                     groupBy={groupBy}
                     handlers={handlers}
+                    dropAssigneeId={laneAssigneeId}
                   />
                 ))}
               </div>
@@ -370,7 +374,7 @@ export function TaskPlanningCalendar({
                         if (!handlers.isManager) return;
                         event.preventDefault();
                         const taskId = event.dataTransfer.getData("text/task-id");
-                        if (taskId) handlers.onMoveDate(taskId, dateKey(day));
+                        if (taskId) handlers.onMoveDate(taskId, dateKey(day), laneAssigneeId);
                       }}
                     >
                       <div className="mb-2 flex items-center justify-between text-xs">
@@ -468,6 +472,7 @@ export function CalendarDayColumn({
   clients,
   groupBy,
   handlers,
+  dropAssigneeId = null,
 }: {
   label: string;
   dateKeyValue: string;
@@ -477,6 +482,8 @@ export function CalendarDayColumn({
   clients: ClientOption[];
   groupBy: "assignee" | "client" | "all";
   handlers: RowHandlers;
+  /** 24/11/2026: na vista por colaborador, largar aqui passa a tarefa para esta pessoa. */
+  dropAssigneeId?: string | null;
 }) {
   return (
     <div
@@ -488,7 +495,7 @@ export function CalendarDayColumn({
         if (!handlers.isManager) return;
         event.preventDefault();
         const taskId = event.dataTransfer.getData("text/task-id");
-        if (taskId) handlers.onMoveDate(taskId, dateKeyValue);
+        if (taskId) handlers.onMoveDate(taskId, dateKeyValue, dropAssigneeId);
       }}
     >
       {/* 22/11/2026 (tablet): o cabeçalho nunca sai da coluna (sábado/domingo vazios). */}

@@ -161,9 +161,9 @@ test("tarefas mostram endereço e instruções na lista e no calendário, e a ba
 });
 
 test("excluir um colega recalcula as horas divididas de quem fica na tarefa", () => {
-  // grupo guardado antes de excluir; só modo dividir (soma = horas contratadas do cliente)
+  // grupo guardado antes de excluir; 24/11/2026: o total é a soma das horas da equipa
   assert.match(tasksPage, /const rebalanceSnapshot = await snapshotGroupForRebalance\(ids,/);
-  assert.match(tasksPage, /Math\.abs\(total - contracted\) > 1\) return null;/);
+  assert.match(tasksPage, /const total = groupTotalMinutes\(group\);/);
   // não mexe em tarefas já iniciadas ou concluídas
   assert.match(tasksPage, /\["pendente", "autorizado"\]\.includes\(String\(t\.status\)\)/);
   // redistribui o total entre quem ficou

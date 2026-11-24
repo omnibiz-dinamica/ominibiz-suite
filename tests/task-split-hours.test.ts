@@ -60,8 +60,9 @@ test("edição: a divisão vem do banco e o gestor é avisado", () => {
   expect(form).toMatch(/"task_group_edit_occurrence"/);
   expect(form).toMatch(/Horas divididas por \$\{split\.split_people\} pessoas/);
   expect(form).toMatch(/split\?\.split_skipped === "started"/);
-  // prévia na edição: sem carga, só ao acrescentar (horário × pessoas que já estavam)
-  expect(form).toMatch(/if \(count < groupAssignees\.length\) return null;/);
+  // 24/11/2026: prévia também ao desmarcar (quem fica recebe as horas de quem saiu)
+  expect(form).not.toMatch(/if \(count < groupAssignees\.length\) return null;/);
+  expect(form).toContain("const editRebalanceSnapshot =");
   expect(form).toMatch(/minutes \* Math\.max\(groupAssignees\.length, 1\)/);
 });
 

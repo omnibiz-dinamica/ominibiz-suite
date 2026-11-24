@@ -15,6 +15,8 @@ import { CalendarX, Repeat, Trash2 } from "lucide-react";
 import { STATUS_LABELS, deleteTaskSeries, isOpenPunchError, type DeleteSeriesScope, type TaskRow } from "@/lib/tasks";
 import { formatWallDate, formatWallTime } from "@/lib/wall-clock";
 import { cn } from "@/lib/utils";
+import { applyGroupRebalance, snapshotGroupForRebalance } from "@/components/tasks/page/rebalance";
+import { formatContractedMinutes } from "@/lib/tasks/contracted-hours";
 
 /** Outro funcionário da mesma tarefa em equipa (mesmo task_group_id e mesmo dia). */
 export type GroupMate = { taskId: string; name: string; disabled?: boolean; note?: string };
@@ -121,7 +123,11 @@ export function DeleteRecurrenceDialog({
     if (!task) return;
     setSaving(true);
     try {
+      // 24/11/2026: só este dia → quem fica na equipa recebe as horas de quem saiu.
+      const rebalanceSnapshot =
+        scope === "single" ? await snapshotGroupForRebalance([task.id, ...selectedMates], () => null) : null;
       const res = await deleteTaskSeries(task.id, scope, reason);
+      const removedIds = new Set<string>([task.id]);
       // Mesmo âmbito para cada colega marcado (cada um tem a sua própria série).
       const mateFailures: string[] = [];
       for (const mateTaskId of selectedMates) {
@@ -130,8 +136,23 @@ export function DeleteRecurrenceDialog({
           res.deleted += r.deleted;
           res.cancelled += r.cancelled;
           res.kept += r.kept;
+          removedIds.add(mateTaskId);
         } catch (mateError) {
           mateFailures.push((mateError as Error).message);
+        }
+      }
+      if (rebalanceSnapshot) {
+        try {
+          const rb = await applyGroupRebalance(rebalanceSnapshot, removedIds);
+          if (rb.kind === "updated") {
+            toast.success(
+              `Horas recalculadas para quem ficou: ${formatContractedMinutes(rb.minutes[0] ?? 0)}${rb.count > 1 ? " cada" : ""}.`,
+            );
+          } else if (rb.kind === "skipped_started") {
+            toast.info("As horas de quem ficou não foram recalculadas porque a tarefa já foi iniciada ou concluída.");
+          }
+        } catch {
+          toast.warning("Ocorrência removida, mas não foi possível recalcular as horas de quem ficou.");
         }
       }
       if (mateFailures.length > 0) {

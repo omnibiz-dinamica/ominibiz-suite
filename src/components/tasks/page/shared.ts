@@ -117,7 +117,7 @@ export interface RowHandlers {
   onDelete: (t: TaskRow) => void;
   onTransition: (task: TaskRow, action: TaskAction) => void;
   onArchive: (id: string, archive: boolean) => void;
-  onMoveDate: (id: string, dateKey: string) => void;
+  onMoveDate: (id: string, dateKey: string, assigneeId?: string | null) => void;
   transitionPending: boolean;
   archivePending: boolean;
   completionNotes: ReadonlyMap<string, CompletionNote>;

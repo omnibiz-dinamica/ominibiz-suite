@@ -7,12 +7,15 @@ import { distributeContractedMinutes } from "@/lib/tasks/contracted-hours";
 
 import { wallISOToDateInput, wallDateTimeToISO, formatWallTime } from "@/lib/wall-clock";
 /**
- * Divisão de horas contratadas entre colegas da mesma tarefa (mesmo task_group_id e dia).
- * Antes de excluir, guarda o grupo; só considera "dividido" quando todos começam à mesma hora
- * e a soma das durações é igual às horas contratadas do cliente.
+ * Divisão de horas entre colegas da mesma tarefa (mesmo task_group_id e dia).
+ * 24/11/2026: o trabalho da tarefa é a SOMA das horas da equipa (2 pessoas × 1h = 2h).
+ * Quando alguém sai (excluir ou desmarcar na edição), quem fica divide essa soma
+ * (1 pessoa → 2h). Cada um mantém a sua entrada; a entrada alternativa da
+ * programação do cliente só se aplica quando todos começavam à mesma hora.
  */
 export type RebalanceTask = {
   id: string;
+  assigned_to?: string | null;
   scheduled_for: string | null;
   scheduled_end: string | null;
   recurrence_date: string | null;
@@ -69,6 +72,34 @@ export async function teamVariationsForGroup(
 export const rebalanceDayKey = (t: { recurrence_date: string | null; scheduled_for: string | null; due_at: string | null }) =>
   t.recurrence_date ?? (t.scheduled_for ?? t.due_at ?? "").slice(0, 10);
 
+/** Soma das durações (minutos) da equipa; null se alguma duração for inválida. */
+export function groupTotalMinutes(group: Pick<RebalanceTask, "scheduled_for" | "scheduled_end">[]): number | null {
+  const durations = group.map((t) =>
+    t.scheduled_for && t.scheduled_end
+      ? Math.round((Date.parse(t.scheduled_end) - Date.parse(t.scheduled_for)) / 60000)
+      : NaN,
+  );
+  if (durations.length === 0 || durations.some((m) => !(m > 0))) return null;
+  return durations.reduce((a, b) => a + b, 0);
+}
+
+/** Novo fim de cada um que fica (mesma regra de applyGroupRebalance, sem gravar). */
+export function planGroupRebalance(
+  group: RebalanceTask[],
+  removedIds: Set<string>,
+): { id: string; start: string; end: string; minutes: number }[] | null {
+  const remaining = group.filter((t) => !removedIds.has(t.id));
+  if (remaining.length === 0 || remaining.length === group.length) return null;
+  const total = groupTotalMinutes(group);
+  if (total == null) return null;
+  const shares = distributeContractedMinutes(total, remaining.length);
+  return remaining.map((t, index) => {
+    const minutes = shares[index] ?? shares[0] ?? 0;
+    const start = t.scheduled_for as string;
+    return { id: t.id, start, end: new Date(Date.parse(start) + minutes * 60000).toISOString(), minutes };
+  });
+}
+
 export async function snapshotGroupForRebalance(
   ids: string[],
   contractedOf: (clientId: string | null) => number | null,
@@ -83,7 +114,7 @@ export async function snapshotGroupForRebalance(
     if (!base?.task_group_id) return null;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: mates, error } = await (supabase.from("tasks" as never) as any)
-      .select("id, scheduled_for, scheduled_end, recurrence_date, due_at, status")
+      .select("id, assigned_to, scheduled_for, scheduled_end, recurrence_date, due_at, status")
       .eq("task_group_id", base.task_group_id)
       .is("deleted_at", null);
     if (error || !mates) return null;
@@ -92,20 +123,19 @@ export async function snapshotGroupForRebalance(
       (t) => rebalanceDayKey(t) === day && String(t.status) !== "cancelado",
     );
     if (group.length < 2) return null;
-    const start = group[0].scheduled_for;
-    if (!start || group.some((t) => t.scheduled_for !== start || !t.scheduled_end)) return null;
-    const durations = group.map((t) =>
-      Math.round((Date.parse(t.scheduled_end as string) - Date.parse(t.scheduled_for as string)) / 60000),
-    );
-    if (durations.some((m) => !(m > 0))) return null;
-    const total = durations.reduce((a, b) => a + b, 0);
-    const contracted = contractedOf(base.client_id ?? null);
-    if (contracted == null || Math.abs(total - contracted) > 1) return null;
+    if (group.some((t) => !t.scheduled_for || !t.scheduled_end)) return null;
+    const total = groupTotalMinutes(group);
+    if (total == null) return null;
+    void contractedOf; // 24/11/2026: a soma da equipa manda (antes só com horas contratadas iguais).
+    const start = group[0].scheduled_for as string;
+    const sameStart = group.every((t) => t.scheduled_for === start);
     let teamVariations: TeamStartVariation[] | undefined;
-    try {
-      teamVariations = await teamVariationsForGroup(base.client_id ?? null, base.schedule_name ?? null, start);
-    } catch {
-      teamVariations = undefined;
+    if (sameStart) {
+      try {
+        teamVariations = await teamVariationsForGroup(base.client_id ?? null, base.schedule_name ?? null, start);
+      } catch {
+        teamVariations = undefined;
+      }
     }
     return { total, group, teamVariations };
   } catch {

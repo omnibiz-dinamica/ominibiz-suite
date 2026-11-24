@@ -53,6 +53,7 @@ import { useT } from "@/i18n";
 import { wallISOToDateInput, wallDateToEndOfDayISO, wallDateTimeToISO, formatWallDate, formatWallTime } from "@/lib/wall-clock";
 import { dailyShiftDurationMinutes, taskDurationMinutes, LONG_STANDALONE_TASK_MINUTES } from "@/lib/tasks/daily-shift-duration";
 import { tt, taskMemberName } from "./shared";
+import { applyGroupRebalance, snapshotGroupForRebalance } from "./rebalance";
 import { applyPushMoves, fetchPushDayTasks, planPushSchedule, wallDayBounds, type PushMove, type PushPlan } from "@/lib/tasks/push-schedule";
 import type { SavedTasksResult } from "@/lib/tasks/fresh-tasks";
 
@@ -413,7 +414,7 @@ export function TaskForm({
     const count = new Set(assignees).size;
     if (!initial || !startTime || !endTime || count === groupAssignees.length) return null;
     if (selectedClient?.contracted_minutes) return selectedClient.contracted_minutes;
-    if (count < groupAssignees.length) return null;
+    // 24/11/2026: ao desmarcar alguém, quem fica recebe as horas dele (soma da equipa).
     const minutes = dailyShiftDurationMinutes(startTime, endTime);
     return minutes > 0 ? minutes * Math.max(groupAssignees.length, 1) : null;
   })();
@@ -1140,6 +1141,12 @@ export function TaskForm({
                   : selectedAssignees;
                 const { assigned_to: _ignored, ...rpcPayload } = payload;
                 void _ignored;
+                // 24/11/2026: desmarcar alguém da equipa → quem fica recebe as horas dele.
+                // Só quando o horário não foi mudado nesta edição (senão vale o que o gestor pôs).
+                const removingPeople = new Set(orderedAssignees).size < groupAssignees.length;
+                const timesUnchanged = startISO === initial.scheduled_for && endISO === initial.scheduled_end;
+                const editRebalanceSnapshot =
+                  removingPeople && timesUnchanged ? await snapshotGroupForRebalance([initial.id], () => null) : null;
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const res = await (supabase.rpc as any)("task_group_edit_occurrence", {
                   _task_id: initial.id,
@@ -1161,6 +1168,24 @@ export function TaskForm({
                   );
                 } else if (!error && split?.split_skipped === "started") {
                   toast.warning("As horas não foram divididas porque alguém desta tarefa já começou ou tem ponto.");
+                } else if (!error && editRebalanceSnapshot) {
+                  const removedIds = new Set(
+                    editRebalanceSnapshot.group
+                      .filter((t) => t.assigned_to && !orderedAssignees.includes(t.assigned_to))
+                      .map((t) => t.id),
+                  );
+                  try {
+                    const rb = await applyGroupRebalance(editRebalanceSnapshot, removedIds);
+                    if (rb.kind === "updated") {
+                      toast.info(
+                        `Horas recalculadas para quem ficou: ${formatContractedMinutes(rb.minutes[0] ?? 0)}${rb.count > 1 ? " cada" : ""}.`,
+                      );
+                    } else if (rb.kind === "skipped_started") {
+                      toast.warning("As horas de quem ficou não foram recalculadas porque a tarefa já foi iniciada.");
+                    }
+                  } catch {
+                    toast.warning("Tarefa gravada, mas não foi possível recalcular as horas de quem ficou.");
+                  }
                 }
               } else if (recurrence.enabled) {
                 // Horario e duracao da recorrencia sao derivados do topo do formulario.

@@ -32,6 +32,7 @@ import { useFormDraft } from "@/lib/form-draft";
 import { EditRecurrenceDialog } from "@/components/tasks/EditRecurrenceDialog";
 import type { RecurrenceRow } from "@/lib/tasks";
 import { isRefused } from "@/lib/tasks";
+import { taskCalendarDateKey } from "@/lib/tasks/calendar-filter";
 import { CancelTaskDialog } from "@/components/tasks/CancelTaskDialog";
 import { DeleteRecurrenceDialog, GroupMatesPicker, type GroupMate } from "@/components/tasks/DeleteRecurrenceDialog";
 import { MarkAbsentDialog } from "@/components/tasks/MarkAbsentDialog";
@@ -928,9 +929,30 @@ function TasksPage() {
   });
 
   const moveTaskDate = useMutation({
-    mutationFn: async ({ id, dateKey }: { id: string; dateKey: string }) => {
+    mutationFn: async ({ id, dateKey, assigneeId }: { id: string; dateKey: string; assigneeId?: string | null }) => {
       const task = (tasks ?? []).find((t) => t.id === id);
       if (!task) throw new Error("Tarefa nao encontrada");
+      // 24/11/2026: largada na linha de outra pessoa → passa também para essa pessoa.
+      const newAssignee = assigneeId && assigneeId !== task.assigned_to ? assigneeId : null;
+      if (newAssignee) {
+        if (task.status !== "pendente" && task.status !== "autorizado") {
+          throw new Error("Só tarefas pendentes ou autorizadas podem passar para outra pessoa.");
+        }
+        if (!(members ?? []).some((m) => m.id === newAssignee)) {
+          throw new Error("Esta pessoa não está na equipa da empresa.");
+        }
+        const sameTeamSameDay = task.task_group_id
+          ? (tasks ?? []).some(
+              (t) =>
+                t.id !== task.id &&
+                t.task_group_id === task.task_group_id &&
+                t.assigned_to === newAssignee &&
+                taskCalendarDateKey(t) === dateKey &&
+                t.status !== "cancelado",
+            )
+          : false;
+        if (sameTeamSameDay) throw new Error(`${memberDisplayName(newAssignee)} já está nesta tarefa neste dia.`);
+      }
       const startTime = formatWallTime(task.scheduled_for);
       const endTime = formatWallTime(task.scheduled_end);
       const scheduledFor = startTime ? wallDateTimeToISO(dateKey, startTime) : null;
@@ -946,13 +968,17 @@ function TasksPage() {
           scheduled_end: scheduledEnd,
           due_at: dueAt,
           recurrence_date: dateKey,
+          ...(newAssignee ? { assigned_to: newAssignee } : {}),
         })
         .eq("id", id);
       if (error) throw error;
+      return { newAssignee };
     },
-    onSuccess: () => {
+    onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
-      toast.success("Tarefa reagendada");
+      toast.success(
+        res?.newAssignee ? `Tarefa reagendada e passada para ${memberDisplayName(res.newAssignee)}` : "Tarefa reagendada",
+      );
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -1769,7 +1795,7 @@ function TasksPage() {
           onDelete={handleDeleteRequest}
           onTransition={handleTransition}
           onArchive={(id, archive) => archiveMut.mutate({ id, archive })}
-          onMoveDate={(id, dateKey) => moveTaskDate.mutate({ id, dateKey })}
+          onMoveDate={(id, dateKey, assigneeId) => moveTaskDate.mutate({ id, dateKey, assigneeId })}
           transitionPending={transition.isPending}
           archivePending={archiveMut.isPending}
           completionNotes={completionNoteByTask}
@@ -1819,7 +1845,7 @@ function TasksPage() {
             onDelete={handleDeleteRequest}
             onTransition={handleTransition}
             onArchive={(id, archive) => archiveMut.mutate({ id, archive })}
-            onMoveDate={(id, dateKey) => moveTaskDate.mutate({ id, dateKey })}
+            onMoveDate={(id, dateKey, assigneeId) => moveTaskDate.mutate({ id, dateKey, assigneeId })}
             transitionPending={transition.isPending}
             archivePending={archiveMut.isPending}
             completionNotes={completionNoteByTask}
@@ -1855,7 +1881,7 @@ function TasksPage() {
             onDelete={handleDeleteRequest}
             onTransition={handleTransition}
             onArchive={(id, archive) => archiveMut.mutate({ id, archive })}
-            onMoveDate={(id, dateKey) => moveTaskDate.mutate({ id, dateKey })}
+            onMoveDate={(id, dateKey, assigneeId) => moveTaskDate.mutate({ id, dateKey, assigneeId })}
             transitionPending={transition.isPending}
             archivePending={archiveMut.isPending}
             completionNotes={completionNoteByTask}
