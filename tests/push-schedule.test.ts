@@ -57,3 +57,20 @@ describe("Empurrar as seguintes (mesmo funcionário, mesmo dia)", () => {
     );
   });
 });
+
+import { findFreeSlot, overlappingTasks } from "../src/lib/tasks/push-schedule";
+
+describe("arrastar para um dia com tarefa no mesmo horário", () => {
+  const day = wallDayBounds(D);
+  test("sugere o primeiro horário livre com a mesma duração", () => {
+    const busy = [task("a", "08:00", "09:00"), task("b", "09:00", "10:30"), task("c", "12:00", "13:00")];
+    const slot = findFreeSlot(at("08:00"), 60, busy, day.start, day.end);
+    expect(slot && [hm(slot.start), hm(slot.end)]).toEqual(["10:30", "11:30"]);
+    expect(overlappingTasks(at("08:00"), at("09:00"), busy).map((t) => t.id)).toEqual(["a"]);
+  });
+  test("sem espaço até à meia-noite procura desde o início do dia; canceladas não ocupam", () => {
+    const busy = [task("a", "20:00", "23:59"), task("x", "06:00", "07:00", { status: "cancelado" })];
+    const slot = findFreeSlot(at("22:00"), 120, busy, day.start, day.end);
+    expect(slot && [hm(slot.start), hm(slot.end)]).toEqual(["00:00", "02:00"]);
+  });
+});

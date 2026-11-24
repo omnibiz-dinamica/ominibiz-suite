@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { RecordHistoryMenu } from "@/components/history/RecordHistoryMenu";
-import { Clock, Pencil, Repeat, UserCog, Users, Trash2, CalendarDays, Building2, ChevronLeft, ChevronRight, FileText, Info as InfoIcon, MapPin as MapPinIcon, ChevronDown as ChevronDownIcon, StickyNote, FileDown } from "lucide-react";
+import { GripVertical, Clock, Pencil, Repeat, UserCog, Users, Trash2, CalendarDays, Building2, ChevronLeft, ChevronRight, FileText, Info as InfoIcon, MapPin as MapPinIcon, ChevronDown as ChevronDownIcon, StickyNote, FileDown } from "lucide-react";
 import { STATUS_LABELS, STATUS_TONE, type TaskRow, availableActions, formatStartedLateMinutes, isVisuallyLate, resolveOperationalStatus, startedLateMinutes, AUTO_RECURRENCE_BADGE_LABEL, AUTO_RECURRENCE_BADGE_TITLE } from "@/lib/tasks";
 
 import { currentTaskCancellation, currentTaskRefusal } from "@/lib/task-refusal-view";
@@ -20,6 +20,80 @@ import { ClientOption, clientAddressCache, taskClientInstructions, taskHeading, 
 import type { CSSProperties } from "react";
 import { FilterChip, TaskRefusalHistory, PauseSummary, ActionButton, CompletionNoteBlock, ClientFilterEmptyState } from "./list";
 import { tr } from "@/i18n";
+
+/** 24/11/2026: evento do arrastar com o dedo (tablet/telemóvel sem arrastar nativo). */
+export const TOUCH_DROP_EVENT = "omnibiz:task-touch-drop";
+
+/**
+ * Arrastar com o dedo a partir da pega do cartão: segue o dedo, realça o dia por
+ * baixo (data-drop-date / data-drop-assignee) e, ao largar, envia TOUCH_DROP_EVENT.
+ * Com rato não faz nada (o arrastar nativo continua a funcionar).
+ */
+export function startTouchTaskDrag(event: React.PointerEvent<HTMLElement>, taskId: string, label: string) {
+  if (event.pointerType === "mouse") return;
+  event.preventDefault();
+  event.stopPropagation();
+  const ghost = document.createElement("div");
+  ghost.textContent = label;
+  ghost.setAttribute("data-testid", "touch-drag-ghost");
+  Object.assign(ghost.style, {
+    position: "fixed",
+    zIndex: "9999",
+    pointerEvents: "none",
+    maxWidth: "220px",
+    padding: "6px 10px",
+    borderRadius: "8px",
+    background: "hsl(var(--primary))",
+    color: "hsl(var(--primary-foreground))",
+    fontSize: "13px",
+    fontWeight: "600",
+    boxShadow: "0 6px 18px rgba(0,0,0,.25)",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+  } as Partial<CSSStyleDeclaration>);
+  document.body.appendChild(ghost);
+  const place = (x: number, y: number) => {
+    ghost.style.left = `${x + 14}px`;
+    ghost.style.top = `${y + 14}px`;
+  };
+  const zoneAt = (x: number, y: number) =>
+    (document.elementFromPoint(x, y) as HTMLElement | null)?.closest<HTMLElement>("[data-drop-date]") ?? null;
+  let lastZone: HTMLElement | null = null;
+  const highlight = (zone: HTMLElement | null) => {
+    if (zone === lastZone) return;
+    lastZone?.classList.remove("ring-2", "ring-primary");
+    zone?.classList.add("ring-2", "ring-primary");
+    lastZone = zone;
+  };
+  place(event.clientX, event.clientY);
+  const onMove = (ev: PointerEvent) => {
+    ev.preventDefault();
+    place(ev.clientX, ev.clientY);
+    highlight(zoneAt(ev.clientX, ev.clientY));
+    if (ev.clientY < 70) window.scrollBy(0, -18);
+    else if (ev.clientY > window.innerHeight - 70) window.scrollBy(0, 18);
+  };
+  const finish = (ev: PointerEvent) => {
+    window.removeEventListener("pointermove", onMove);
+    window.removeEventListener("pointerup", finish);
+    window.removeEventListener("pointercancel", finish);
+    highlight(null);
+    ghost.remove();
+    if (ev.type !== "pointerup") return;
+    const zone = zoneAt(ev.clientX, ev.clientY);
+    const dateKey = zone?.dataset.dropDate;
+    if (!dateKey) return;
+    window.dispatchEvent(
+      new CustomEvent(TOUCH_DROP_EVENT, {
+        detail: { taskId, dateKey, assigneeId: zone?.dataset.dropAssignee || null },
+      }),
+    );
+  };
+  window.addEventListener("pointermove", onMove, { passive: false });
+  window.addEventListener("pointerup", finish);
+  window.addEventListener("pointercancel", finish);
+}
 
 export function TaskPlanningCalendar({
   tasks,
@@ -46,6 +120,17 @@ export function TaskPlanningCalendar({
   onClearClientFilter?: () => void;
 }) {
   const [mode, setMode] = useState<CalendarMode>("week");
+  // 24/11/2026 (tablet): arrastar com o dedo — o cartão avisa onde foi largado.
+  useEffect(() => {
+    const onTouchDrop = (event: Event) => {
+      const detail = (event as CustomEvent<{ taskId: string; dateKey: string; assigneeId: string | null }>).detail;
+      if (detail?.taskId && detail.dateKey && handlers.isManager) {
+        handlers.onMoveDate(detail.taskId, detail.dateKey, detail.assigneeId);
+      }
+    };
+    window.addEventListener(TOUCH_DROP_EVENT, onTouchDrop);
+    return () => window.removeEventListener(TOUCH_DROP_EVENT, onTouchDrop);
+  }, [handlers]);
   const [cursor, setCursor] = useState(() => new Date());
   const [exporting, setExporting] = useState(false);
   const { currentCompanyId } = useAuth();
@@ -367,6 +452,8 @@ export function TaskPlanningCalendar({
                     <div
                       key={dateKey(day)}
                       className={`min-h-28 rounded-lg border border-border bg-background p-2 transition hover:border-primary/40 ${muted ? "opacity-50" : ""}`}
+                      data-drop-date={dateKey(day)}
+                      data-drop-assignee={laneAssigneeId ?? ""}
                       onDragOver={(event) => {
                         if (handlers.isManager) event.preventDefault();
                       }}
@@ -488,6 +575,8 @@ export function CalendarDayColumn({
   return (
     <div
       className="min-h-40 min-w-0 overflow-hidden rounded-lg border border-border bg-background transition hover:border-primary/40"
+      data-drop-date={dateKeyValue}
+      data-drop-assignee={dropAssigneeId ?? ""}
       onDragOver={(event) => {
         if (handlers.isManager) event.preventDefault();
       }}
@@ -907,6 +996,17 @@ export function CalendarTaskCard({
             ) : (
               <span />
             )}
+            <span className="ml-auto" />
+            <button
+              type="button"
+              data-testid="task-touch-drag-handle"
+              aria-label={tr("Arrastar para outro dia ou pessoa")}
+              title={tr("Arrastar para outro dia ou pessoa")}
+              className="mr-1 inline-flex h-7 w-7 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
+              onPointerDown={(event) => startTouchTaskDrag(event, task.id, taskHeading(task))}
+            >
+              <GripVertical className="h-4 w-4" />
+            </button>
             <Button
               size="sm"
               variant="ghost"

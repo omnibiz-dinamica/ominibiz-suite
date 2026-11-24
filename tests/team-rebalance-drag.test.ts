@@ -34,3 +34,20 @@ test("arrastar para outro dia na linha de outra pessoa passa a tarefa para essa 
   expect(page).toContain("...(newAssignee ? { assigned_to: newAssignee } : {}),");
   expect(page).toContain("já está nesta tarefa neste dia.");
 });
+
+test("tablet: arrastar com o dedo pela pega; zonas de largada com data e pessoa", () => {
+  const cal = readFileSync("src/components/tasks/page/calendar.tsx", "utf8");
+  expect(cal).toContain('data-testid="task-touch-drag-handle"');
+  expect(cal).toContain('if (event.pointerType === "mouse") return;');
+  expect(cal).toContain("data-drop-date={dateKeyValue}");
+  expect(cal).toContain('data-drop-assignee={laneAssigneeId ?? ""}');
+  expect(cal).toContain("window.addEventListener(TOUCH_DROP_EVENT, onTouchDrop);");
+});
+
+test("largar num horário ocupado: horário livre, empurrar as seguintes ou manter", () => {
+  const page = readFileSync("src/routes/app.tarefas.tsx", "utf8");
+  expect(page).toContain("onMoveDate={(id, dateKey, assigneeId) => void requestMoveTask(id, dateKey, assigneeId)}");
+  expect(page).toContain('data-testid="move-to-free-slot"');
+  expect(page).toContain('data-testid="move-and-push"');
+  expect(page).toContain("Manter os horários como estão (sobrepostos)");
+});

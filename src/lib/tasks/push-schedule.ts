@@ -149,3 +149,41 @@ export async function applyPushMoves(companyId: string, moves: PushMove[]): Prom
   }
   return done;
 }
+
+/**
+ * 24/11/2026 — primeiro horário livre do dia para uma tarefa com esta duração,
+ * a partir da hora desejada (e, se não couber até à meia-noite, desde o início do dia).
+ * Canceladas e ausentes não ocupam. Devolve null se não houver espaço.
+ */
+export function findFreeSlot(
+  desiredStart: string,
+  durationMinutes: number,
+  dayTasks: PushDayTask[],
+  dayStart: string,
+  dayEnd: string,
+): { start: string; end: string } | null {
+  const dur = durationMinutes * 60000;
+  if (!(dur > 0)) return null;
+  const busy = dayTasks
+    .filter((t) => !IGNORED.has(t.status) && t.start && t.end && ms(t.end) > ms(t.start))
+    .map((t) => [ms(t.start), ms(t.end)] as const)
+    .sort((a, b) => a[0] - b[0]);
+  const limit = ms(dayEnd);
+  const search = (from: number): number | null => {
+    let candidate = from;
+    for (const [s, e] of busy) {
+      if (candidate + dur <= s) break;
+      if (e > candidate) candidate = Math.max(candidate, e);
+    }
+    return candidate + dur <= limit ? candidate : null;
+  };
+  const found = search(ms(desiredStart)) ?? search(ms(dayStart));
+  return found == null ? null : { start: iso(found), end: iso(found + dur) };
+}
+
+/** Tarefas do dia que se sobrepõem ao intervalo (canceladas/ausentes não contam). */
+export function overlappingTasks(start: string, end: string, dayTasks: PushDayTask[]): PushDayTask[] {
+  const s = ms(start);
+  const e = ms(end);
+  return dayTasks.filter((t) => !IGNORED.has(t.status) && ms(t.start) < e && ms(t.end) > s);
+}

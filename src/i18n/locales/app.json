@@ -4143,5 +4143,10 @@
   "Could not calculate the new times: {{msg}}",
   "Kon de nieuwe uren niet berekenen: {{msg}}",
   "Impossible de calculer les nouveaux horaires : {{msg}}"
+ ],
+ "Arrastar para outro dia ou pessoa": [
+  "Drag to another day or person",
+  "Naar een andere dag of persoon slepen",
+  "Glisser vers un autre jour ou une autre personne"
  ]
 }

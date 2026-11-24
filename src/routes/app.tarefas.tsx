@@ -33,6 +33,17 @@ import { EditRecurrenceDialog } from "@/components/tasks/EditRecurrenceDialog";
 import type { RecurrenceRow } from "@/lib/tasks";
 import { isRefused } from "@/lib/tasks";
 import { taskCalendarDateKey } from "@/lib/tasks/calendar-filter";
+import {
+  applyPushMoves,
+  fetchPushDayTasks,
+  findFreeSlot,
+  overlappingTasks,
+  planPushSchedule,
+  wallDayBounds,
+  type PushDayTask,
+  type PushMove,
+  type PushPlan,
+} from "@/lib/tasks/push-schedule";
 import { CancelTaskDialog } from "@/components/tasks/CancelTaskDialog";
 import { DeleteRecurrenceDialog, GroupMatesPicker, type GroupMate } from "@/components/tasks/DeleteRecurrenceDialog";
 import { MarkAbsentDialog } from "@/components/tasks/MarkAbsentDialog";
@@ -928,8 +939,91 @@ function TasksPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // 24/11/2026: arrastar para um dia/pessoa que já tem tarefa a essa hora → escolher.
+  const [moveConflict, setMoveConflict] = useState<{
+    id: string;
+    dateKey: string;
+    assigneeId: string | null;
+    title: string;
+    who: string;
+    start: string;
+    end: string;
+    overlaps: PushDayTask[];
+    freeSlot: { start: string; end: string } | null;
+    pushPlan: PushPlan;
+  } | null>(null);
+  const [moveChecking, setMoveChecking] = useState(false);
+
+  /** Horário que a tarefa terá no dia de destino (mesma hora de parede). */
+  const movedTimes = (task: TaskRow, dateKey: string) => {
+    const startTime = formatWallTime(task.scheduled_for);
+    const endTime = formatWallTime(task.scheduled_end);
+    const scheduledFor = startTime ? wallDateTimeToISO(dateKey, startTime) : null;
+    const endDateKey = isOvernightTimeRange(startTime, endTime)
+      ? (addWallMinutes(dateKey, "00:00", 24 * 60)?.date ?? dateKey)
+      : dateKey;
+    const scheduledEnd = endTime ? wallDateTimeToISO(endDateKey, endTime) : null;
+    return { scheduledFor, scheduledEnd };
+  };
+
+  const requestMoveTask = async (id: string, dateKey: string, assigneeId?: string | null) => {
+    const task = (tasks ?? []).find((t) => t.id === id);
+    if (!task || !currentCompanyId || moveChecking) {
+      if (task) moveTaskDate.mutate({ id, dateKey, assigneeId });
+      return;
+    }
+    const target = assigneeId ?? task.assigned_to;
+    const { scheduledFor, scheduledEnd } = movedTimes(task, dateKey);
+    if (!target || !scheduledFor || !scheduledEnd) {
+      moveTaskDate.mutate({ id, dateKey, assigneeId });
+      return;
+    }
+    setMoveChecking(true);
+    try {
+      const day = wallDayBounds(dateKey);
+      const dayTasks = (await fetchPushDayTasks(currentCompanyId, target, dateKey)).filter((t) => t.id !== id);
+      const overlaps = overlappingTasks(scheduledFor, scheduledEnd, dayTasks);
+      if (overlaps.length === 0) {
+        moveTaskDate.mutate({ id, dateKey, assigneeId });
+        return;
+      }
+      const minutes = Math.round((Date.parse(scheduledEnd) - Date.parse(scheduledFor)) / 60000);
+      setMoveConflict({
+        id,
+        dateKey,
+        assigneeId: assigneeId ?? null,
+        title: task.title,
+        who: memberDisplayName(target),
+        start: scheduledFor,
+        end: scheduledEnd,
+        overlaps,
+        freeSlot: findFreeSlot(scheduledFor, minutes, dayTasks, day.start, day.end),
+        pushPlan: planPushSchedule(scheduledFor, scheduledEnd, dayTasks, day.end),
+      });
+    } catch {
+      // Sem conseguir verificar, mantém o comportamento anterior (move).
+      moveTaskDate.mutate({ id, dateKey, assigneeId });
+    } finally {
+      setMoveChecking(false);
+    }
+  };
+
   const moveTaskDate = useMutation({
-    mutationFn: async ({ id, dateKey, assigneeId }: { id: string; dateKey: string; assigneeId?: string | null }) => {
+    mutationFn: async ({
+      id,
+      dateKey,
+      assigneeId,
+      at,
+      pushMoves,
+    }: {
+      id: string;
+      dateKey: string;
+      assigneeId?: string | null;
+      /** Horário escolhido no aviso (ex.: primeiro horário livre). */
+      at?: { start: string; end: string };
+      /** Tarefas do dia a passar para depois (manter o horário da arrastada). */
+      pushMoves?: PushMove[];
+    }) => {
       const task = (tasks ?? []).find((t) => t.id === id);
       if (!task) throw new Error("Tarefa nao encontrada");
       // 24/11/2026: largada na linha de outra pessoa → passa também para essa pessoa.
@@ -953,13 +1047,9 @@ function TasksPage() {
           : false;
         if (sameTeamSameDay) throw new Error(`${memberDisplayName(newAssignee)} já está nesta tarefa neste dia.`);
       }
-      const startTime = formatWallTime(task.scheduled_for);
-      const endTime = formatWallTime(task.scheduled_end);
-      const scheduledFor = startTime ? wallDateTimeToISO(dateKey, startTime) : null;
-      const endDateKey = isOvernightTimeRange(startTime, endTime)
-        ? (addWallMinutes(dateKey, "00:00", 24 * 60)?.date ?? dateKey)
-        : dateKey;
-      const scheduledEnd = endTime ? wallDateTimeToISO(endDateKey, endTime) : null;
+      const computed = movedTimes(task, dateKey);
+      const scheduledFor = at?.start ?? computed.scheduledFor;
+      const scheduledEnd = at?.end ?? computed.scheduledEnd;
       const dueAt = scheduledEnd ?? wallDateToEndOfDayISO(dateKey);
       const { error } = await supabase
         .from("tasks")
@@ -972,12 +1062,23 @@ function TasksPage() {
         })
         .eq("id", id);
       if (error) throw error;
-      return { newAssignee };
+      let pushed = 0;
+      if (pushMoves && pushMoves.length > 0 && currentCompanyId) {
+        try {
+          pushed = await applyPushMoves(currentCompanyId, pushMoves);
+        } catch (pushError) {
+          toast.warning(
+            `Tarefa reagendada, mas não foi possível passar as seguintes para depois: ${(pushError as Error).message}`,
+          );
+        }
+      }
+      return { newAssignee, pushed };
     },
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
       toast.success(
-        res?.newAssignee ? `Tarefa reagendada e passada para ${memberDisplayName(res.newAssignee)}` : "Tarefa reagendada",
+        (res?.newAssignee ? `Tarefa reagendada e passada para ${memberDisplayName(res.newAssignee)}` : "Tarefa reagendada") +
+          (res?.pushed ? ` · ${res.pushed} tarefa(s) seguinte(s) passada(s) para depois` : ""),
       );
     },
     onError: (e: Error) => toast.error(e.message),
@@ -1420,6 +1521,98 @@ function TasksPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* 24/11/2026: arrastar para um horário já ocupado → escolher o que fazer. */}
+      <AlertDialog open={!!moveConflict} onOpenChange={(open) => !open && setMoveConflict(null)}>
+        <AlertDialogContent data-testid="move-conflict-dialog">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Já há tarefa neste horário</AlertDialogTitle>
+            <AlertDialogDescription>
+              {moveConflict && (
+                <>
+                  «{moveConflict.title}» ficaria em {formatWallDate(moveConflict.start)} das{" "}
+                  {formatWallTime(moveConflict.start)} às {formatWallTime(moveConflict.end)} para {moveConflict.who}, mas{" "}
+                  {moveConflict.who} já tem:{" "}
+                  {moveConflict.overlaps
+                    .map((t) => `${t.label} ${formatWallTime(t.start)}–${formatWallTime(t.end)}`)
+                    .join(" · ")}
+                  .
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {moveConflict && moveConflict.pushPlan.moves.length > 0 && (
+            <div className="space-y-1 rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs">
+              <p className="font-semibold">Se mantiver este horário, passam para depois:</p>
+              {moveConflict.pushPlan.moves.map((m) => (
+                <p key={m.id}>
+                  {m.label}: {formatWallTime(m.fromStart)}–{formatWallTime(m.fromEnd)} →{" "}
+                  <span className="font-semibold text-primary">
+                    {formatWallTime(m.toStart)}–{formatWallTime(m.toEnd)}
+                  </span>
+                </p>
+              ))}
+              {moveConflict.pushPlan.blocked
+                .filter((b) => b.reason !== "starts_before")
+                .map((b) => (
+                  <p key={b.id} className="text-warning-foreground">
+                    ⚠ {b.label} ({formatWallTime(b.start)}–{formatWallTime(b.end)}):{" "}
+                    {b.reason === "started" ? "já iniciada ou com ponto — não muda" : "passaria da meia-noite — não muda"}
+                  </p>
+                ))}
+            </div>
+          )}
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0">
+            {moveConflict?.freeSlot && (
+              <Button
+                data-testid="move-to-free-slot"
+                onClick={() => {
+                  const c = moveConflict;
+                  setMoveConflict(null);
+                  moveTaskDate.mutate({
+                    id: c.id,
+                    dateKey: c.dateKey,
+                    assigneeId: c.assigneeId,
+                    at: c.freeSlot ?? undefined,
+                  });
+                }}
+              >
+                Ir para o horário livre ({formatWallTime(moveConflict.freeSlot.start)}–
+                {formatWallTime(moveConflict.freeSlot.end)})
+              </Button>
+            )}
+            {moveConflict && moveConflict.pushPlan.moves.length > 0 && (
+              <Button
+                variant="outline"
+                data-testid="move-and-push"
+                onClick={() => {
+                  const c = moveConflict;
+                  setMoveConflict(null);
+                  moveTaskDate.mutate({
+                    id: c.id,
+                    dateKey: c.dateKey,
+                    assigneeId: c.assigneeId,
+                    pushMoves: c.pushPlan.moves,
+                  });
+                }}
+              >
+                Manter este horário e passar as seguintes para depois
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              onClick={() => {
+                const c = moveConflict;
+                setMoveConflict(null);
+                if (c) moveTaskDate.mutate({ id: c.id, dateKey: c.dateKey, assigneeId: c.assigneeId });
+              }}
+            >
+              Manter os horários como estão (sobrepostos)
+            </Button>
+            <AlertDialogCancel className="mt-0">Cancelar</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog
         open={!!bulkAction}
         onOpenChange={(open) => !open && !bulkActionMut.isPending && setBulkAction(null)}
@@ -1795,7 +1988,7 @@ function TasksPage() {
           onDelete={handleDeleteRequest}
           onTransition={handleTransition}
           onArchive={(id, archive) => archiveMut.mutate({ id, archive })}
-          onMoveDate={(id, dateKey, assigneeId) => moveTaskDate.mutate({ id, dateKey, assigneeId })}
+          onMoveDate={(id, dateKey, assigneeId) => void requestMoveTask(id, dateKey, assigneeId)}
           transitionPending={transition.isPending}
           archivePending={archiveMut.isPending}
           completionNotes={completionNoteByTask}
@@ -1845,7 +2038,7 @@ function TasksPage() {
             onDelete={handleDeleteRequest}
             onTransition={handleTransition}
             onArchive={(id, archive) => archiveMut.mutate({ id, archive })}
-            onMoveDate={(id, dateKey, assigneeId) => moveTaskDate.mutate({ id, dateKey, assigneeId })}
+            onMoveDate={(id, dateKey, assigneeId) => void requestMoveTask(id, dateKey, assigneeId)}
             transitionPending={transition.isPending}
             archivePending={archiveMut.isPending}
             completionNotes={completionNoteByTask}
@@ -1881,7 +2074,7 @@ function TasksPage() {
             onDelete={handleDeleteRequest}
             onTransition={handleTransition}
             onArchive={(id, archive) => archiveMut.mutate({ id, archive })}
-            onMoveDate={(id, dateKey, assigneeId) => moveTaskDate.mutate({ id, dateKey, assigneeId })}
+            onMoveDate={(id, dateKey, assigneeId) => void requestMoveTask(id, dateKey, assigneeId)}
             transitionPending={transition.isPending}
             archivePending={archiveMut.isPending}
             completionNotes={completionNoteByTask}
