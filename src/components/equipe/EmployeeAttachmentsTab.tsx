@@ -6,12 +6,13 @@
  */
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, FileSignature, Loader2, Trash2, Upload } from "lucide-react";
+import { Download, FileSignature, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { AttachmentUploadQueue } from "./AttachmentUploadQueue";
 import {
   Select,
   SelectContent,
@@ -20,7 +21,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  ATTACH_CATEGORIES,
   attachmentBadgeClass,
   attachmentStatusLabel,
   isPdfAttachment,
@@ -40,10 +40,8 @@ export function EmployeeAttachmentsTab({
   companyId: string;
 }) {
   const qc = useQueryClient();
-  const [category, setCategory] = useState("cc");
   const [visible, setVisible] = useState(false);
   const [action, setAction] = useState<AttachmentAction>("view");
-  const [busy, setBusy] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
 
   const list = useQuery({
@@ -62,48 +60,6 @@ export function EmployeeAttachmentsTab({
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ["employee-attachments", userId] });
     qc.invalidateQueries({ queryKey: ["employee-history"] });
-  };
-
-  const onPick = async (file: File) => {
-    const pdf = isPdfAttachment({ mime_type: file.type, file_name: file.name });
-    if (visible && action === "sign" && !pdf) {
-      toast.error("Para assinar, o arquivo tem de ser PDF.");
-      return;
-    }
-    setBusy(true);
-    try {
-      const safe = file.name.replace(/[^a-zA-Z0-9._-]+/g, "_");
-      const path = `${companyId}/${userId}/${Date.now()}-${safe}`;
-      const up = await supabase.storage.from("employee-docs").upload(path, file);
-      if (up.error) throw up.error;
-      const { error } = await attachmentsTable().insert({
-        profile_id: userId,
-        company_id: companyId,
-        category,
-        file_name: file.name,
-        storage_path: path,
-        mime_type: file.type,
-        size_bytes: file.size,
-        employee_visible: visible,
-        employee_action: visible ? action : "view",
-      });
-      if (error) {
-        await supabase.storage.from("employee-docs").remove([path]);
-        throw new Error(error.message);
-      }
-      toast.success(
-        visible
-          ? action === "sign"
-            ? "Anexo enviado. O funcionário vai ser pedido para assinar."
-            : "Anexo enviado. O funcionário vai ser pedido para ler."
-          : "Anexo adicionado (só gestão).",
-      );
-      refresh();
-    } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setBusy(false);
-    }
   };
 
   const update = async (it: EmployeeAttachment, patch: Partial<EmployeeAttachment>) => {
@@ -142,21 +98,6 @@ export function EmployeeAttachmentsTab({
     <div className="space-y-4">
       <div className="space-y-3 rounded-xl border border-dashed border-border p-4">
         <div className="flex flex-wrap items-end gap-3">
-          <div className="space-y-1.5">
-            <Label>Categoria</Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className="w-[220px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ATTACH_CATEGORIES.map((c) => (
-                  <SelectItem key={c.v} value={c.v}>
-                    {c.l}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
           <div className="flex items-center gap-2 pb-2">
             <Switch id="att-visible" checked={visible} onCheckedChange={setVisible} />
             <Label htmlFor="att-visible">Funcionário pode ver</Label>
@@ -175,21 +116,15 @@ export function EmployeeAttachmentsTab({
               </Select>
             </div>
           )}
-          <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border bg-primary px-4 py-2 text-sm text-primary-foreground hover:opacity-90">
-            <Upload className="h-4 w-4" /> {busy ? "Enviando…" : "Enviar arquivo"}
-            <input
-              type="file"
-              hidden
-              disabled={busy}
-              accept={visible && action === "sign" ? "application/pdf,.pdf" : undefined}
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) void onPick(f);
-                e.currentTarget.value = "";
-              }}
-            />
-          </label>
         </div>
+        {/* 26/11/2026 — vários arquivos de uma vez, cada um com o seu tipo, e análise do nº do documento. */}
+        <AttachmentUploadQueue
+          userId={userId}
+          companyId={companyId}
+          visible={visible}
+          action={action}
+          onSaved={refresh}
+        />
         <p className="text-xs text-muted-foreground">
           Com "Funcionário pode ver", o documento abre para ele ao entrar no sistema. Para assinar,
           a assinatura do perfil dele vai no local de "Assinatura" do PDF (ou onde ele tocar, em PDF
