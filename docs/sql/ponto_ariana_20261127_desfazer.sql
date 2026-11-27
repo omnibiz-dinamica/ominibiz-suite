@@ -36,7 +36,7 @@ WHERE b.kind = 'task' AND t.id = (b.row->>'id')::uuid;
 
 DELETE FROM public.time_entries_audit
 WHERE time_entry_id IN ('4d2de330-ecf0-435c-82ed-03e039d8d9ce', '891b8383-4ca6-4f69-94a8-8c9165dc9f64')
-  AND reason LIKE 'Correção 27/11: ponto%';
+  AND reason LIKE 'Correcao 27/11: ponto%';
 
 DROP TABLE public._bkp_ponto_ariana_20261127;
 COMMIT;
