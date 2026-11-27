@@ -54,8 +54,9 @@ BEGIN
 
   IF EXISTS (SELECT 1 FROM public.timesheet_periods
              WHERE employee_id = v_ariana AND company_id = v_te.company_id
-               AND period_year = 2026 AND period_month = 11 AND status <> 'em_aberto') THEN
-    RAISE EXCEPTION 'PARAR: a folha de novembro da Ariana já não está em aberto. Nada foi alterado.';
+               AND period_year = 2026 AND period_month = 11
+               AND status NOT IN ('em_aberto', 'aguardando_funcionario', 'aguardando_correcao')) THEN
+    RAISE EXCEPTION 'PARAR: a folha de novembro da Ariana já foi assinada ou fechada. Nada foi alterado.';
   END IF;
   IF NOT EXISTS (SELECT 1 FROM public.time_entries
                  WHERE id = '891b8383-4ca6-4f69-94a8-8c9165dc9f64' AND user_id = v_ariana
